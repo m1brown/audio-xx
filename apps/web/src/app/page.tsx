@@ -3070,6 +3070,39 @@ export default function Home() {
               manufacturerEvidence.length, factCandidates.length);
           }
 
+          // ── Independent-review evidence: READ ONLY ───────────────
+          // Site-level product knowledge. The assessment reads what is held
+          // and never acquires: four search-backed calls do not belong inside
+          // a listener's wait, and a first encounter with a product
+          // legitimately has none. Absence here is not a failure to identify
+          // the component — provenance already says what we know about it.
+          const reviewObservations: Record<string, unknown[]> = {};
+          if (factCandidates.length > 0) {
+            const reads = await Promise.race([
+              Promise.all(factCandidates.map(async (name) => {
+                try {
+                  const r = await fetch('/api/independent-reviews', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mode: 'read' }),
+                  });
+                  if (!r.ok) return [name, [] as unknown[]] as const;
+                  const j = await r.json();
+                  return [name, Array.isArray(j?.observations) ? j.observations : []] as const;
+                } catch { return [name, [] as unknown[]] as const; }
+              })),
+              new Promise<'deadline'>((r) => setTimeout(() => r('deadline'), 8000)),
+            ]);
+            if (reads !== 'deadline') {
+              for (const [name, items] of reads as Array<readonly [string, unknown[]]>) {
+                if (items.length > 0) reviewObservations[name] = items;
+              }
+            }
+            const totalObs = Object.values(reviewObservations).reduce((n, v) => n + v.length, 0);
+            console.log('[independent-reviews] read %d observation(s) for %d component(s)',
+              totalObs, factCandidates.length);
+          }
+
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
@@ -3078,6 +3111,7 @@ export default function Home() {
             corroborated,
             lookupUnknown,
             manufacturerEvidence as never,
+            reviewObservations as never,
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling

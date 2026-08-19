@@ -83,6 +83,20 @@ export interface AttributeRecord {
   value: string;
   tier: EvidenceTier;
   scope: 'product' | 'brand';
+  /**
+   * Where a premise came from, when its regime requires that to travel.
+   *
+   * Independent-review premises carry the publication that made the
+   * observation and, where the observation was conditioned, the condition. A
+   * relation resting on one may not be expressed without them: an unattributed
+   * review claim reads as Audio XX's own finding, and a conditioned claim
+   * stated flat is a claim the publication never made.
+   */
+  attribution?: {
+    publication?: string;
+    sourceUrl?: string;
+    condition?: string;
+  };
 }
 
 /**
@@ -209,11 +223,19 @@ export function licensedRelations(
     .map(({ r }) => {
       const a = attributes[r.premises[0]];
       const b = attributes[r.premises[1]];
+      const premises = [a, b];
       return {
         ...r,
         licensedTier: relationTier(a, b),
         licensedScope: relationScope(a, b),
-        brandScoped: [a, b].filter((x) => x.scope === 'brand').map((x) => x.component),
+        brandScoped: premises.filter((x) => x.scope === 'brand').map((x) => x.component),
+        citedPublications: [...new Set(premises
+          .filter((x) => x.tier === 'independent_review')
+          .map((x) => x.attribution?.publication)
+          .filter((p): p is string => !!p))],
+        conditions: [...new Set(premises
+          .map((x) => x.attribution?.condition)
+          .filter((c): c is string => !!c))],
       };
     });
 }
@@ -239,6 +261,10 @@ export interface LicensedRelation extends Relation {
   licensedScope: 'product' | 'brand';
   /** Components whose contribution rests on brand-scoped evidence. */
   brandScoped: string[];
+  /** Publications whose observation underwrites a premise of this relation. */
+  citedPublications: string[];
+  /** Conditions a premise depends on. Each must survive into the prose. */
+  conditions: string[];
 }
 
 /** Tokens that identify a component in prose. */
@@ -351,6 +377,29 @@ export function filterUnlicensedRelationalProse(
           // Scope survives anaphora, and EVERY brand-scoped component must be
           // attributed on its own account. Two brand-scoped components need two
           // attributions; one does not cover the other.
+          // A review-derived premise must name its publication where the
+          // observation is doing the epistemic work. Unattributed, it reads as
+          // Audio XX's own finding — the same failure as brand evidence
+          // becoming a product claim, one regime along.
+          const unattributedPubs = rel.citedPublications.filter(
+            (pub) => !sentenceNames(sentence, pub));
+          if (unattributedPubs.length > 0) {
+            dropped.push({ sentence: original.trim(),
+              reason: `review-derived premise not attributed (${unattributedPubs.join(', ')})` });
+            return null;
+          }
+
+          // A conditioned observation stated flat is a claim the publication
+          // never made. The condition is part of the licence, so it travels
+          // into the sentence or the sentence does not publish.
+          const droppedConditions = rel.conditions.filter(
+            (c) => !conditionStated(sentence, c));
+          if (droppedConditions.length > 0) {
+            dropped.push({ sentence: original.trim(),
+              reason: `premise condition dropped (${droppedConditions.join('; ')})` });
+            return null;
+          }
+
           if (rel.licensedScope === 'brand') {
             const unattributed = rel.brandScoped.filter((c) => {
               const source = named.includes(c) ? sentence : priorSentence;
@@ -448,6 +497,31 @@ export function normalizeToBrandScope(
  * are the words English uses to point backwards, not a vocabulary of ways to
  * describe audio.
  */
+/** Does the sentence name this publication? Punctuation-insensitive. */
+function sentenceNames(sentence: string, publication: string): boolean {
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return norm(sentence).includes(norm(publication));
+}
+
+/**
+ * Does the sentence carry this condition?
+ *
+ * Matched on the condition's own distinctive terms rather than its wording, so
+ * "after approximately 500 hours" is satisfied by "after 500 hours of use" but
+ * not by silence. Numbers count for more than words here: a break-in figure is
+ * the part a listener acts on.
+ */
+function conditionStated(sentence: string, condition: string): boolean {
+  const body = condition.replace(/^[a-z_]+:\s*/i, '');
+  const numbers = body.match(/\d+/g) ?? [];
+  if (numbers.length > 0) return numbers.every((n) => sentence.includes(n));
+  const terms = body.toLowerCase().split(/\W+/)
+    .filter((t) => t.length >= 4 && !['with', 'after', 'when', 'from', 'that', 'this'].includes(t));
+  if (terms.length === 0) return true;
+  const lower = sentence.toLowerCase();
+  return terms.some((t) => lower.includes(t));
+}
+
 const ANAPHORA =
   /(?:^|[\s,;(])(?:this|that|these|those|it|its|which|the former|the latter|the same|doing so)\b/i;
 

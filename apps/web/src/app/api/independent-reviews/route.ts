@@ -18,6 +18,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SOURCE_WHITELIST } from '@/lib/evidence/source-whitelist';
 import { admitAndStore, type ReviewCandidate } from '@/lib/evidence/independent-review-acquisition';
+import { readObservations } from '@/lib/evidence/independent-review-store';
 
 const TIMEOUT_MS = 20000;
 const RETRY_TIMEOUT_MS = 15000;
@@ -74,9 +75,11 @@ export async function POST(req: NextRequest) {
   const started = Date.now();
   let canonicalName = '';
   let productKey = '';
+  let mode: 'read' | 'acquire' = 'acquire';
   try {
     const body = await req.json().catch(() => ({}));
     canonicalName = typeof body?.name === 'string' ? body.name.slice(0, 160) : '';
+    mode = body?.mode === 'read' ? 'read' : 'acquire';
     productKey = typeof body?.productKey === 'string'
       ? body.productKey
       : canonicalName.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -89,6 +92,21 @@ export async function POST(req: NextRequest) {
   };
 
   if (!canonicalName || !productKey) return lookupUnknown('empty product identity');
+
+  // READ MODE. Assessments and every other consumer use this: independent
+  // reviews are site-level product knowledge, so a turn reads what is held and
+  // never acquires. Acquisition is a seeding concern, run out of band, because
+  // four search-backed calls do not belong inside a listener's wait.
+  if (mode === 'read') {
+    const stored = await readObservations(productKey, Date.now());
+    return NextResponse.json({
+      status: stored.length > 0 ? 'observations' : 'no_coverage',
+      observations: stored,
+      rejected: [],
+      source: 'store',
+    });
+  }
+
   const key = process.env.OPENAI_API_KEY;
   if (!key) return lookupUnknown('no api key');
 

@@ -19,6 +19,10 @@
 
 import type { ConsultationResponse } from './consultation';
 import type { EvidenceItem } from './evidence/evidence-types';
+import type { ReviewObservation } from './evidence/independent-review';
+import {
+  toAttributeRecords, findDisagreements, contextObservations,
+} from './evidence/independent-review-consumption';
 import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
@@ -573,6 +577,7 @@ export function buildProvisionalPrompt(
   corroborated?: string[],
   lookupUnknown?: string[],
   manufacturerEvidence?: EvidenceItem[],
+  reviewObservations?: Record<string, ReviewObservation[]>,
 ): { userPrompt: string; provenance: ComponentProvenance[] } {
   // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
   //
@@ -658,6 +663,43 @@ export function buildProvisionalPrompt(
         `- ${name}:\n` + items.map((i) => `    ${i.field}: ${i.value}`).join('\n')).join('\n')
     : '';
 
+  // Independent-review evidence. Attribution and conditions are stated here
+  // because they must survive into the prose: an unattributed review claim
+  // reads as Audio XX's own finding, and a conditioned claim stated flat is a
+  // claim the publication never made.
+  const reviewLines: string[] = [];
+  const disagreementLines: string[] = [];
+  for (const name of componentNames) {
+    const held = reviewObservations?.[name] ?? [];
+    if (held.length === 0) continue;
+    reviewLines.push(`- ${name}:`);
+    for (const o of held) {
+      const cond = o.condition ? ` [ONLY ${o.condition.description}]` : '';
+      const who = o.reviewer ? `${o.publication}, ${o.reviewer}` : o.publication;
+      reviewLines.push(`    (${o.observationType}) ${who}: ${o.claim}${cond}`);
+    }
+    for (const d of findDisagreements(name, held)) {
+      disagreementLines.push(`- ${name} on ${d.axis}: `
+        + d.positions.map((p) => `${p.publication} reports ${p.direction}`).join('; '));
+    }
+  }
+
+  const reviewContext = reviewLines.length > 0
+    ? `\n\nINDEPENDENT REVIEW EVIDENCE — published observations from approved `
+      + `publications about THESE EXACT products. Stronger than your own memory `
+      + `because it is attributable and checkable:\n${reviewLines.join('\n')}\n`
+      + `Where you rely on one of these, NAME THE PUBLICATION in the sentence. Where `
+      + `an observation carries a condition, state that condition in the same `
+      + `sentence — a conditioned finding reported flat is a claim the publication `
+      + `did not make. Do not aggregate, score, average or rank them.`
+    : '';
+
+  const disagreementContext = disagreementLines.length > 0
+    ? `\n\nSOURCES DISAGREE on the following. Do NOT pick a side, average them or `
+      + `resolve by majority. Say that approved sources differ, name them, and treat `
+      + `the axis as indeterminate:\n${disagreementLines.join('\n')}`
+    : '';
+
   const uncorroboratedContext = uncorroborated.length > 0
     ? `\n\nIDENTITY NOT VERIFIED — Audio XX could not confirm these products exist:\n`
       + `${uncorroborated.map((n) => `- ${n}${roleSuffix(n)}`).join('\n')}\n`
@@ -698,7 +740,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${reviewContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
@@ -735,10 +777,17 @@ export async function inferProvisionalSystemAssessment(
    * one listener's turn.
    */
   manufacturerEvidence?: EvidenceItem[],
+  /**
+   * Independent-review observations ALREADY HELD for these components, read
+   * from the site-level store. Read-only: the assessment never acquires. A
+   * first encounter with a product legitimately has none, and that absence is
+   * not a failure to identify it.
+   */
+  reviewObservations?: Record<string, ReviewObservation[]>,
 ): Promise<ConsultationResponse | null> {
   const { userPrompt, provenance } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
-    manufacturerEvidence,
+    manufacturerEvidence, reviewObservations,
   );
 
   try {
@@ -778,7 +827,7 @@ export async function inferProvisionalSystemAssessment(
 
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
-      manufacturerEvidence ?? [], provenance,
+      manufacturerEvidence ?? [], reviewObservations ?? {}, provenance,
     );
     if (!parsedResponse) return null;
 
@@ -802,6 +851,8 @@ export async function inferProvisionalSystemAssessment(
           // figure and collapses the whole answer into the fallback — the
           // exact defect the Magnepan sensitivity case established.
           ...(manufacturerEvidence ?? []).map((m) => m.value),
+          // A figure a publication measured and we cited is evidence we hold.
+          ...Object.values(reviewObservations ?? {}).flat().map((o) => o.claim),
           // The listener's own component names are facts THEY asserted. Someone
           // who writes "Zorblax ZX1 5 watt SET" has told us the power rating,
           // and reasoning from it is legitimate even though the product is
@@ -873,6 +924,7 @@ function parseSystemInferenceResponse(
   knownDescriptions: { name: string; source: 'product' | 'brand' }[] = [],
   corroborated: string[] = [],
   manufacturerEvidence: EvidenceItem[] = [],
+  reviewObservations: Record<string, ReviewObservation[]> = {},
   /**
    * The authoritative basis per component, passed in rather than recomputed.
    * Tier-bounded intensity needs it, and deriving it here would be a second
@@ -963,6 +1015,12 @@ function parseSystemInferenceResponse(
         tier: 'manufacturer',
         scope: 'product',
       });
+    }
+
+    // Review observations enter D-12 as premises, carrying their publication
+    // and condition so the expression layer can require both.
+    for (const name of componentNames) {
+      attributes.push(...toAttributeRecords(name, reviewObservations?.[name] ?? []));
     }
 
     const declaredSet: RelationSet = parsed.relationStatus === 'none_establishable'
