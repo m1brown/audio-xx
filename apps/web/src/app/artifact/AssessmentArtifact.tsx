@@ -307,8 +307,85 @@ const AXA_CSS = `
   .axa-axis{grid-template-columns:46px 1fr 46px}
   .axa-axis .rd{grid-column:1 / -1}
 }
+/* ── Print / PDF ────────────────────────────────────────────────────────
+ * Paper is its own medium. Until now print was the screen design
+ * photographed onto a page: 18px body, a 46px verdict and an unbounded
+ * measure, which is what made a saved assessment read as a printed webpage.
+ *
+ * Sizes are in pt because that is what a printer resolves; body sits at
+ * 10.5pt with tighter leading than screen, since a shorter line and a
+ * physically smaller face need less room to breathe.
+ *
+ * The token block is re-declared in full, not patched. Without it, printing
+ * from a browser in dark mode inherits the dark palette — the
+ * prefers-color-scheme query still matches at print time, and overriding
+ * only background and colour left every hairline, panel and accent on their
+ * dark values. */
 @media print{
-  .axa-root{background:#fff;color:#000;max-width:100%}
-  .axa-contradiction{display:none}
+  .axa-root{
+    --ground:#fff; --panel:#fff; --ink:#111; --ink-muted:#333; --ink-faint:#555;
+    --accent:#8A0E37; --hairline:#999;
+    background:#fff; color:#111; max-width:100%;
+    padding:0; margin:0 auto; font-size:10.5pt; -webkit-font-smoothing:auto;
+    /* Centred: the measure is narrower than the printable width, and
+     * left-locking it would leave a wide unexplained right margin. */
+  }
+  @page{ size:A4 portrait; margin:18mm 16mm; }
+
+  .axa-contradiction,.axa-actions,.axa-followup{display:none !important}
+
+  /* Measure: 68-78 characters, and ONE column. Capping only the prose left
+   * the ruled table and the panels running to the full page while the text
+   * stopped two-thirds across — which reads as an accident rather than a
+   * decision. Everything shares the measure so the page has a single edge. */
+  .axa-root{max-width:74ch}
+  .axa-p,.axa-reco,.axa-cost,.axa-evidence,.axa-standfirst{max-width:100%}
+
+  .axa-verdict{font-size:24pt;line-height:1.08;margin:0 0 8pt}
+  .axa-standfirst{font-size:12pt;line-height:1.4}
+  .axa-systemline{font-size:14pt;line-height:1.25}
+  .axa-p{font-size:10.5pt;line-height:1.42;margin:0 0 7pt}
+  .axa-reco{font-size:12pt;line-height:1.38}
+  .axa-cost{font-size:9.5pt;line-height:1.4}
+  .axa-evidence{font-size:9.5pt;line-height:1.4}
+  .axa-cond .axa-p{font-size:10pt}
+  .axa-label,.axa-sig .cap{font-size:8pt;letter-spacing:.14em;margin-bottom:4pt}
+  .axa-kicker,.axa-ident .who,.axa-ident .when,.axa-colophon{font-size:7.5pt}
+  .axa-plate .nm{font-size:8pt;line-height:1.2}
+  .axa-origins li{font-size:9.5pt;line-height:1.4;padding:5pt 0}
+  .axa-srcrow a{font-size:9.5pt}
+  .axa-chip{font-size:7pt;padding:1pt 4pt}
+
+  /* Vertical rhythm: screen uses generous silence, paper cannot afford it. */
+  .axa-section{margin-top:11pt}
+  .axa-verdictwrap{margin:12pt 0 6pt}
+  .axa-sig{margin:12pt 0 4pt}
+  .axa-strip{margin:12pt 0 4pt;gap:6pt}
+  .axa-divider{margin:12pt 0 2pt}
+  .axa-evsection{margin-top:14pt}
+  .axa-ident{margin-bottom:12pt;padding-bottom:5pt}
+
+  /* Nothing that reads as one unit may be split across a page. */
+  .axa-verdictwrap,.axa-sigtable,.axa-axis,.axa-cond,.axa-evblock,
+  .axa-plate,.axa-reco,.axa-srcrow{break-inside:avoid}
+  .axa-label,.axa-sig .cap,.axa-kicker{break-after:avoid}
+  .axa-section{break-inside:auto}
+
+  /* The tonal signature must survive greyscale. The committed pole is
+   * already named in words in the reading column, so the graph is
+   * supporting evidence rather than the only carrier — but the marker still
+   * has to be visible without colour, hence an outline on both states. */
+  .axa-track{background:#999}
+  .axa-track i{background:#8A0E37;border:.5pt solid #111;box-shadow:none}
+  .axa-track i.neu{background:#fff;border:1pt solid #111}
+
+  /* Photographs are screen assets at screen density. Printed small and
+   * deliberately, or they read as artefacts of the web page. */
+  .axa-plate .img{aspect-ratio:4/3;border:.5pt solid #999}
+  .axa-strip{grid-template-columns:repeat(4,1fr)}
+
+  .axa-evblock,.axa-cond{background:#fff;border:.5pt solid #999}
+  .axa-sigtable{border:.5pt solid #999}
+  .axa-axis{border-top:.5pt solid #999;padding:5pt 7pt}
 }
 `;
