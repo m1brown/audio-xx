@@ -81,10 +81,10 @@ export type EvidenceScope = 'product' | 'brand';
 /**
  * Where evidence came from.
  *
- * `quotedText` is required for any regime whose licence depends on being
- * checkable later — manufacturer and independent review both do. A fact that
- * cannot be quoted is not admitted, which is what keeps this auditable after
- * the page it came from changes.
+ * What makes an item checkable differs by regime — see `REQUIRES_QUOTATION`
+ * and `REQUIRES_PUBLICATION`. A manufacturer fact must carry the maker's own
+ * sentence; a review observation must carry the publication that made it.
+ * Both must carry a source URL.
  */
 export interface EvidenceAttribution {
   sourceUrl: string;
@@ -127,9 +127,34 @@ export const CLASS_TIER: Record<EvidenceClass, EvidenceTier> = {
   listener: 'listener',
 };
 
-/** Regimes whose admission requires a quotable source. */
+/**
+ * Regimes that may not be admitted without a source at all.
+ *
+ * What each regime must PROVE differs, which is why the two sets below are
+ * separate rather than one flag.
+ */
 export const REQUIRES_ATTRIBUTION: ReadonlySet<EvidenceClass> =
   new Set<EvidenceClass>(['manufacturer', 'independent_review']);
+
+/**
+ * Regimes where the quotation IS the evidence.
+ *
+ * A manufacturer fact is a figure, and quoting the sentence containing it is
+ * how a human checks later that we read it correctly.
+ *
+ * An independent review is a JUDGMENT, and the evidence is Audio XX's faithful
+ * paraphrase of it. Requiring a quote there would push us toward reproducing
+ * review prose, which the regime explicitly avoids — and a quote alone cannot
+ * even establish which product it was about. That class proves itself through
+ * attribution instead: publication, reviewer where available, source URL,
+ * exact product identity and observation type (founder decision, 2026-08-19).
+ */
+export const REQUIRES_QUOTATION: ReadonlySet<EvidenceClass> =
+  new Set<EvidenceClass>(['manufacturer']);
+
+/** Regimes that must name the publication that made the observation. */
+export const REQUIRES_PUBLICATION: ReadonlySet<EvidenceClass> =
+  new Set<EvidenceClass>(['independent_review']);
 
 /**
  * Is this item admissible under its own regime's rules?
@@ -141,9 +166,9 @@ export const REQUIRES_ATTRIBUTION: ReadonlySet<EvidenceClass> =
 export function isAdmissible(item: EvidenceItem): boolean {
   if (!item.productKey || !item.field || !item.value) return false;
   if (CLASS_TIER[item.evidenceClass] !== item.tier) return false;
-  if (REQUIRES_ATTRIBUTION.has(item.evidenceClass)) {
-    if (!item.attribution?.sourceUrl || !item.attribution?.quotedText) return false;
-  }
+  if (REQUIRES_ATTRIBUTION.has(item.evidenceClass) && !item.attribution?.sourceUrl) return false;
+  if (REQUIRES_QUOTATION.has(item.evidenceClass) && !item.attribution?.quotedText) return false;
+  if (REQUIRES_PUBLICATION.has(item.evidenceClass) && !item.attribution?.publication) return false;
   // Brand-scoped evidence about a specific product is a category error: the
   // scope says "this is about the maker" while the key says "this is about
   // this unit". Only brand_profile may be brand-scoped.

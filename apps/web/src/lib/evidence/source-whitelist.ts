@@ -35,6 +35,20 @@ export interface WhitelistedSource {
   perspective: string;
   /** URL for the publication homepage. */
   url: string;
+  /**
+   * Additional hosts this publication genuinely publishes on.
+   *
+   * NOT a widening of the whitelist — no publication is added, and a
+   * publication not listed here remains excluded. It corrects the domain
+   * record for one already approved: SoundStage! is a network that publishes
+   * the same editorial operation across soundstagehifi.com,
+   * soundstageultra.com and others, so a single homepage URL cannot recognise
+   * its own reviews.
+   *
+   * Listed explicitly rather than pattern-matched, because "any host starting
+   * with soundstage" would admit a domain anyone could register.
+   */
+  alternateDomains?: string[];
 }
 
 /**
@@ -95,6 +109,13 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
     tier: 'acceptable',
     perspective: 'North American publication network. Consistent methodology across reviewers.',
     url: 'https://www.soundstagenetwork.com/',
+    alternateDomains: [
+      'soundstagehifi.com',
+      'soundstageultra.com',
+      'soundstagesolo.com',
+      'soundstageaccess.com',
+      'soundstagesimplifi.com',
+    ],
   },
   {
     name: 'Tone Publications',
