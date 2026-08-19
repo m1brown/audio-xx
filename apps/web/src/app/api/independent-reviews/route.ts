@@ -41,7 +41,7 @@ Return ONLY this JSON, no prose, no markdown fences:
       "productName": "the product AS THE ARTICLE NAMES IT",
       "publication": "the publication name",
       "reviewer": "byline, or null",
-      "sourceUrl": "URL of the article itself",
+      "sourceUrl": "the article's own absolute https:// URL — NOT a title, citation or description",
       "publishedAt": "ISO date, or null",
       "observationType": "listening"|"measurement"|"comparison"|"positioning",
       "claim": "YOUR OWN one-sentence paraphrase of what they observed",
@@ -56,6 +56,10 @@ Return ONLY this JSON, no prose, no markdown fences:
 }
 
 Rules:
+- sourceUrl MUST be an absolute https:// address of the article on the
+  publication's own site. A title, a byline, a date or a citation string is not
+  a URL. If you cannot give the real URL for an observation, OMIT that
+  observation entirely — a claim we cannot check is worse than a gap.
 - PARAPHRASE. "claim" is your own sentence, not the article's. Use "quote" only
   where the exact wording carries something a paraphrase would lose, and keep it short.
 - EXACT PRODUCT. "productName" must be what the article reviewed. If the article
@@ -148,6 +152,22 @@ export async function POST(req: NextRequest) {
 
       const candidates = Array.isArray(parsed.observations) ? parsed.observations : [];
       const outcome = await admitAndStore(canonicalName, productKey, candidates, Date.now());
+
+      // A reply whose every candidate carried a title where a URL belongs is a
+      // DEFECTIVE REPLY, not a finding that no publication covers the product.
+      // Reporting it as no_coverage would repeat the defect this architecture
+      // has already paid for twice — a failure of our request presented as
+      // evidence about the world. Retryable; on the last attempt it becomes
+      // lookup_unknown rather than silence.
+      const urlShaped = new Set(['malformed_source_url', 'source_not_publication_domain']);
+      if (outcome.status === 'no_coverage'
+        && outcome.rejected.length > 0
+        && outcome.rejected.every((r) => urlShaped.has(r.reason as string))
+        && outcome.rejected.some((r) => !/^https?:\/\//i.test(r.detail ?? ''))) {
+        lastDetail = `every candidate carried a non-URL source (${outcome.rejected.length})`;
+        if (attempt < MAX_ATTEMPTS) continue;
+        return lookupUnknown(lastDetail);
+      }
 
       console.log('[independent-reviews] %s -> %s (%d admitted, %d rejected, %dms, attempt %d)',
         canonicalName, outcome.status,
