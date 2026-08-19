@@ -484,6 +484,52 @@ function reducer(state: ConversationState, action: Action): ConversationState {
   }
 }
 
+// ── Manufacturer evidence ─────────────────────────────
+//
+// Read from the site-level store; no path here ever populates it. A fact
+// about the Acora QRC-2 belongs to the QRC-2, not to one listener's turn.
+//
+// `cachedOnly` is the difference between a consumer and an acquirer. The
+// deterministic assessment path runs on every system read and must not pay
+// for a live lookup per component; the provisional path is already the slow
+// uncatalogued-system path, where the store is least likely to hold anything
+// and acquiring is the point.
+//
+// All lookups run in parallel under one deadline, and every failure simply
+// yields no facts — absence is a state the licensing layer already handles.
+
+const FACTS_BUDGET_MS = 20000;
+const CACHED_FACTS_BUDGET_MS = 2500;
+
+async function fetchManufacturerFacts(
+  names: string[],
+  opts: { cachedOnly?: boolean } = {},
+): Promise<Array<Record<string, unknown>>> {
+  if (names.length === 0) return [];
+  const cachedOnly = opts.cachedOnly === true;
+  const budget = cachedOnly ? CACHED_FACTS_BUDGET_MS : FACTS_BUDGET_MS;
+  const deadline = new Promise<'deadline'>((r) => setTimeout(() => r('deadline'), budget));
+  const lookups = Promise.all(names.map(async (name) => {
+    try {
+      const r = await fetch('/api/manufacturer-facts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, cachedOnly }),
+      });
+      if (!r.ok) return [];
+      const j = await r.json();
+      return Array.isArray(j?.facts) ? j.facts : [];
+    } catch { return []; }
+  }));
+  const settled = await Promise.race([lookups, deadline]);
+  const facts = settled === 'deadline'
+    ? []
+    : (settled as Array<Array<Record<string, unknown>>>).flat();
+  console.log('[manufacturer-facts] %d fact(s) for %d component(s)%s',
+    facts.length, names.length, cachedOnly ? ' (cached only)' : '');
+  return facts;
+}
+
 // ── Component ─────────────────────────────────────────
 
 export default function Home() {
@@ -2849,7 +2895,18 @@ export default function Home() {
         };
       }
 
-      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
+      // Manufacturer facts the store ALREADY holds, for the power/load
+      // compatibility path. Cache-only by construction: this runs on every
+      // system read, and a component whose sensitivity the maker published is
+      // one whose figure decides whether a pairing is assessable at all —
+      // but not one worth a live web search before the reader sees anything.
+      const assessmentFacts = await fetchManufacturerFacts(
+        assessmentSubjects.filter((m) => m.kind === 'product' && !m.parenthetical)
+          .map((m) => m.name),
+        { cachedOnly: true },
+      );
+
+      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile, assessmentFacts as never);
       if (assessmentResult) {
         // H1 demand telemetry — log each distinct unresolved model token once
         // (privacy-safe: a token the user typed, never the full string), so the
@@ -2993,38 +3050,15 @@ export default function Home() {
           }
 
           // ── Manufacturer evidence ────────────────────────────────
-          // Read from the site-level store; this path never populates it.
           // Fetched only for components whose identity is established, since a
-          // fact needs a product to belong to. All lookups run in parallel
-          // under one deadline, and every failure simply yields no facts —
-          // absence is a state the licensing layer already handles.
-          const FACTS_BUDGET_MS = 20000;
-          let manufacturerEvidence: Array<Record<string, unknown>> = [];
-          const factCandidates = orderedComponents
-            .filter((c) => corroborated.includes(c.displayName) || c.product || c.brandProfile)
-            .map((c) => c.displayName);
-          if (factCandidates.length > 0) {
-            const factsDeadline = new Promise<'deadline'>((r) =>
-              setTimeout(() => r('deadline'), FACTS_BUDGET_MS));
-            const factLookups = Promise.all(factCandidates.map(async (name) => {
-              try {
-                const r = await fetch('/api/manufacturer-facts', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ name }),
-                });
-                if (!r.ok) return [];
-                const j = await r.json();
-                return Array.isArray(j?.facts) ? j.facts : [];
-              } catch { return []; }
-            }));
-            const factsSettled = await Promise.race([factLookups, factsDeadline]);
-            manufacturerEvidence = factsSettled === 'deadline'
-              ? []
-              : (factsSettled as Array<Array<Record<string, unknown>>>).flat();
-            console.log('[manufacturer-facts] %d fact(s) for %d component(s)',
-              manufacturerEvidence.length, factCandidates.length);
-          }
+          // fact needs a product to belong to. This path MAY acquire: it is
+          // already the slow, uncatalogued-system path, and a component here
+          // is exactly the one the store is least likely to hold.
+          const manufacturerEvidence = await fetchManufacturerFacts(
+            orderedComponents
+              .filter((c) => corroborated.includes(c.displayName) || c.product || c.brandProfile)
+              .map((c) => c.displayName),
+          );
 
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,

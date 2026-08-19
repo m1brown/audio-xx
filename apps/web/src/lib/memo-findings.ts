@@ -317,6 +317,15 @@ export interface PowerMatchAssessment {
   /** Speaker sensitivity in dB, or null if not cataloged. */
   speakerSensitivityDb: number | null;
   /**
+   * Which evidence class supplied each figure, under the precedence
+   * catalog → manufacturer → listener-supplied → unknown. Recorded so a
+   * reader of this assessment can tell a curated figure from a first-party
+   * published one, and so neither can be confused with model recollection —
+   * which is not admissible here at all.
+   */
+  ampPowerProvenance?: 'catalog' | 'manufacturer' | 'listener' | 'unknown';
+  speakerSensitivityProvenance?: 'catalog' | 'manufacturer' | 'listener' | 'unknown';
+  /**
    * Compatibility tier:
    * - optimal: amp and speaker are well-matched for typical room levels
    * - adequate: workable with some headroom limitations

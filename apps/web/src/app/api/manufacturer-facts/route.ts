@@ -65,9 +65,20 @@ Rules:
 
 export async function POST(req: NextRequest) {
   let name = '';
+  /**
+   * Read the store and stop there — never acquire.
+   *
+   * The deterministic assessment path consumes facts on every system read,
+   * and a live web-search lookup per component on that path would turn a
+   * consumption site into an acquisition trigger with the latency and cost
+   * of one. Facts are site-level: acquired once, by the paths that already
+   * acquire, and read by everyone thereafter.
+   */
+  let cachedOnly = false;
   try {
     const body = await req.json().catch(() => ({}));
     name = typeof body?.name === 'string' ? body.name.slice(0, 120) : '';
+    cachedOnly = body?.cachedOnly === true;
   } catch { /* fall through */ }
 
   const productKey = productKeyFor(name);
@@ -82,6 +93,15 @@ export async function POST(req: NextRequest) {
   const cached = await readFacts(productKey, Date.now());
   if (cached.length > 0) {
     return NextResponse.json({ productKey, status: 'facts', facts: cached, cached: true, store: store() });
+  }
+
+  // Holding nothing is a complete answer for a consumer. It is NOT the same
+  // finding as "this product has no published specifications", which is why
+  // it reports its own status rather than borrowing `lookup_unknown`.
+  if (cachedOnly) {
+    return NextResponse.json({
+      productKey, status: 'no_cached_facts' as const, facts: [], store: store(),
+    });
   }
 
   const key = process.env.OPENAI_API_KEY;

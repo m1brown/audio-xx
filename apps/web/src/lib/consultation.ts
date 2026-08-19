@@ -108,6 +108,8 @@ import {
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { listenerPropertyLabel } from './listener-labels';
 import { isWhitelistedSource } from './evidence/source-whitelist';
+import { physicalFactsFor, productKeyFor } from './evidence/manufacturer-facts';
+import type { EvidenceItem } from './evidence/evidence-types';
 // StructuredMemoInputs is transitional — the canonical rendering path is
 // renderDeterministicMemo(findings, prose) without the third argument.
 // See memo-deterministic-renderer.ts header for the removal plan.
@@ -7895,13 +7897,75 @@ function surfaceAmpSpeakerInteraction(
 }
 
 /**
+ * Evidence precedence for a physical figure, strongest first.
+ *
+ * catalog  — curated, checked by us, and the only class we have edited.
+ * manufacturer — first-party published specification, attributable and
+ *                quotable, weaker than our own curation only because we have
+ *                not verified it ourselves.
+ * listener — a specification the listener stated in their own words. A fact
+ *            they supplied, usable where nothing stronger exists.
+ * unknown  — we do not hold the figure. Never a synonym for "fine".
+ *
+ * Model memory is deliberately absent. A recalled sensitivity figure is not
+ * evidence, and admitting it here would put a number the model invented into
+ * arithmetic that the reader will read as measured.
+ */
+export type PhysicalEvidenceProvenance =
+  'catalog' | 'manufacturer' | 'listener' | 'unknown';
+
+/**
+ * Select the strongest figure available under that precedence.
+ *
+ * Candidates arrive already ordered; the first one that holds a usable number
+ * wins. Written as a fold rather than a chain of `??` so the provenance and
+ * the value can never disagree about which source was used.
+ */
+function selectPhysicalFigure(
+  candidates: Array<{ provenance: PhysicalEvidenceProvenance; value: number | null | undefined }>,
+): { value: number | null; provenance: PhysicalEvidenceProvenance } {
+  for (const c of candidates) {
+    if (c.value != null && Number.isFinite(c.value)) {
+      return { value: c.value, provenance: c.provenance };
+    }
+  }
+  return { value: null, provenance: 'unknown' };
+}
+
+/**
+ * The manufacturer facts held for one component, projected to numbers.
+ *
+ * Filtering by product key before the adapter runs is what keeps one
+ * component's specification off another's: `physicalFactsFor` takes the first
+ * figure it finds per field and has no way to know which product an item
+ * belongs to.
+ */
+function manufacturerPhysicalFacts(
+  component: SystemComponent,
+  manufacturerEvidence: EvidenceItem[],
+): ReturnType<typeof physicalFactsFor> {
+  const key = productKeyFor(component.displayName);
+  return physicalFactsFor(manufacturerEvidence.filter((i) => i.productKey === key));
+}
+
+/**
  * Assess amp/speaker power match for a system.
  *
- * Finds the primary amplifier and primary speaker, reads their
- * power_watts and sensitivity_db fields, and classifies compatibility.
- * When no amp or no speaker exists, returns an 'unknown' assessment.
+ * Finds the primary amplifier and primary speaker, resolves power output and
+ * sensitivity under the evidence precedence above, and classifies
+ * compatibility. When no amp or no speaker exists, returns an 'unknown'
+ * assessment.
+ *
+ * `manufacturerEvidence` is READ here and never populated — these are
+ * site-level facts about products, not about this listener's turn. Passing
+ * none is a supported state: the assessment simply falls back to the evidence
+ * it already had, which is what every caller did before this parameter
+ * existed.
  */
-export function assessPowerMatch(components: SystemComponent[]): PowerMatchAssessment {
+export function assessPowerMatch(
+  components: SystemComponent[],
+  manufacturerEvidence: EvidenceItem[] = [],
+): PowerMatchAssessment {
   // Find the primary amplifier (prefer integrated > power amp > headphone amp)
   const ampCandidates = components.filter((c) => {
     const role = c.role.toLowerCase();
@@ -7923,6 +7987,9 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
       speakerName: speaker?.displayName ?? null,
       ampPowerWatts: amp?.product?.power_watts ?? null,
       speakerSensitivityDb: speaker?.product?.sensitivity_db ?? null,
+      ampPowerProvenance: amp?.product?.power_watts != null ? 'catalog' : 'unknown',
+      speakerSensitivityProvenance:
+        speaker?.product?.sensitivity_db != null ? 'catalog' : 'unknown',
       compatibility: 'unknown',
       estimatedMaxCleanSPL: null,
       relevantInteraction: null,
@@ -7938,8 +8005,30 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
     const v = m ? Number(m[1]) : NaN;
     return Number.isFinite(v) && v > 0 && v <= 2000 ? v : null;
   })();
-  const powerWatts = amp.product?.power_watts ?? statedWatts;
-  const sensitivityDb = speaker.product?.sensitivity_db ?? null;
+
+  // Manufacturer evidence sits between our catalog and the listener's own
+  // words. It is what makes an uncatalogued pairing assessable at all: before
+  // this, a speaker with no catalog row had no sensitivity, so
+  // `classifyPowerMatch` returned 'unknown' however plainly the maker
+  // published the figure.
+  const ampFacts = manufacturerPhysicalFacts(amp, manufacturerEvidence);
+  const speakerFacts = manufacturerPhysicalFacts(speaker, manufacturerEvidence);
+
+  const power = selectPhysicalFigure([
+    { provenance: 'catalog', value: amp.product?.power_watts },
+    { provenance: 'manufacturer', value: ampFacts.powerWatts },
+    { provenance: 'listener', value: statedWatts },
+  ]);
+  // No listener-stated fallback for sensitivity: nothing parses one today, and
+  // inventing a parser here would be a second acquisition path in the layer
+  // that is supposed to only consume.
+  const sensitivity = selectPhysicalFigure([
+    { provenance: 'catalog', value: speaker.product?.sensitivity_db },
+    { provenance: 'manufacturer', value: speakerFacts.sensitivityDb },
+  ]);
+
+  const powerWatts = power.value;
+  const sensitivityDb = sensitivity.value;
   const { compatibility, estimatedMaxCleanSPL } = classifyPowerMatch(powerWatts, sensitivityDb);
   const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivityDb);
 
@@ -7948,6 +8037,8 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
     speakerName: speaker.displayName,
     ampPowerWatts: powerWatts,
     speakerSensitivityDb: sensitivityDb,
+    ampPowerProvenance: power.provenance,
+    speakerSensitivityProvenance: sensitivity.provenance,
     compatibility,
     estimatedMaxCleanSPL,
     relevantInteraction,
@@ -8689,6 +8780,17 @@ export function buildSystemAssessment(
    * scoring, or product selection.
    */
   listenerProfile?: ListenerPreferenceProfile | null,
+  /**
+   * Manufacturer-published facts held for these components, read from the
+   * site-level store. CONSUMED here, never acquired: a published sensitivity
+   * belongs to the loudspeaker, not to this turn.
+   *
+   * Today only the physical subset is used, by the power/load compatibility
+   * path — which is the one place where a missing figure previously made a
+   * material interaction unassessable no matter how plainly the maker had
+   * published it.
+   */
+  manufacturerEvidence: EvidenceItem[] = [],
 ): SystemAssessmentResult {
   // ── Consumer-wireless short-circuit ──────────────────
   // Audio XX Playbook §3 (preference protection) + §6 (partial-knowledge
@@ -9542,7 +9644,8 @@ export function buildSystemAssessment(
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = systemTier === 'reference'
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
-    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence);
+    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence,
+      manufacturerEvidence);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint, componentLinks);
   // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
@@ -9606,6 +9709,7 @@ export function buildSystemAssessment(
     componentLinks,
     memoListenerPriorities,
     voicingCoherence,
+    manufacturerEvidence,
   );
 
   // ── System character opening (brief) ──────────────
@@ -13108,6 +13212,7 @@ function detectPrimaryConstraint(
   stacked: MemoStackedTraitInsight[],
   system: PrimaryAxisLeanings,
   coherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoPrimaryConstraint | undefined {
   const candidates: ConstraintCandidate[] = [];
 
@@ -13320,7 +13425,7 @@ function detectPrimaryConstraint(
   // are available, calculates estimated max clean SPL and flags
   // strained or mismatched pairings. Severity is high because power
   // mismatch is more fundamental than axis-based constraints.
-  const powerMatch = assessPowerMatch(components);
+  const powerMatch = assessPowerMatch(components, manufacturerEvidence);
   if (powerMatch.compatibility === 'mismatched' && powerMatch.ampName && powerMatch.speakerName) {
     const splNote = powerMatch.estimatedMaxCleanSPL != null
       ? ` Estimated max clean SPL is ~${Math.round(powerMatch.estimatedMaxCleanSPL)} dB — well below comfortable listening levels for dynamic music.`
@@ -15205,6 +15310,7 @@ function extractMemoFindings(
   perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
   precomputedListenerPriorities?: ListenerPriority[],
   voicingCoherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -15418,7 +15524,7 @@ function extractMemoFindings(
   const activeDACInference = inferActiveDAC(components);
 
   // ── Amp/speaker power-match assessment ──
-  const powerMatchAssessment = assessPowerMatch(components);
+  const powerMatchAssessment = assessPowerMatch(components, manufacturerEvidence);
 
   // ── Knowledge evidence (Phase 2A) ──
   const componentEngineering = extractComponentEngineering(components);
