@@ -11,7 +11,6 @@ import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 import {
   toCanonicalAssessment,
   validateDominantCharacter,
-  EVIDENCE_STATEMENT,
 } from '@/lib/artifact/canonical';
 
 const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
@@ -39,7 +38,11 @@ describe('CAM adapter — France reference', () => {
     // post-beta naming the responsible component).
     expect(cam.reading.dominantCharacter).toBeUndefined();
     expect(cam.reading.operatingCondition).toBeTruthy();
-    expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
+    // The statement is DERIVED from what the assessment stood on, not stamped.
+    // It was a constant, so every artifact claimed manufacturer documentation
+    // whether or not any was held.
+    expect(cam.evidence.statement).toMatch(/^Assessment based on /);
+    expect(cam.evidence.statement).toMatch(/curated catalogue/);
   });
 
   it('identity is consistent with the engine payload (no re-derivation)', () => {
@@ -78,7 +81,12 @@ describe('CAM adapter — France reference', () => {
     expect(cam.identity.tonalSignature).toBeDefined();
     expect(cam.identity.tonalSignature).toHaveLength(3);
     expect(cam.identity.verdict).toBe(payload.verdict);
-    expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
+    // Payload-only surfaces (saved snapshot, chat embed) keep the SAME
+    // statement the full assessment produced, because it travels in the
+    // payload. Re-deriving it here without findings would understate the
+    // evidence and quietly downgrade a saved assessment.
+    expect(cam.evidence.statement).toBe(payload.evidenceStatement);
+    expect(cam.evidence.statement).toMatch(/^Assessment based on /);
   });
 
   it('degrades gracefully only when axes are genuinely absent (no raw, no payload axes)', () => {

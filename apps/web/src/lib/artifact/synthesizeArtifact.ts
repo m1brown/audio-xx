@@ -38,6 +38,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import type { ArtifactPayload } from './types';
+import { evidenceStatementFor } from './canonical';
 import { getProductImage } from '@/lib/product-images';
 import { isCausalExplanationEnabled } from '@/lib/feature-flags';
 import { resolveCausalComponentsFromNames, evaluateCausal } from '@/lib/causal';
@@ -175,8 +176,25 @@ export function intentRead(axes: Record<string, string> | undefined): string {
 }
 
 // ── R8: equilibrium beat (restraint path: who plays which part) ─────────
-function equilibriumBeat(credit: string[], axes: Record<string, string> | undefined): string | null {
+/**
+ * Every clause here names a component and says what it DOES — "carries it
+ * without thinning it out" is a relational claim about that specific box, and
+ * under D-12 a named partner needs its own evidence. The beat was composed
+ * from SYSTEM axes alone, so it would say this about a component the engine
+ * had never identified.
+ *
+ * `readNames` is the licensing gate: if any component this sentence would name
+ * carries no axis evidence, there is no sentence. Withholding the beat costs a
+ * line of prose on an under-read system and keeps it intact on the coherent
+ * ones, which is the trade the doctrine already prescribes.
+ */
+function equilibriumBeat(
+  credit: string[],
+  axes: Record<string, string> | undefined,
+  readNames?: ReadonlySet<string>,
+): string | null {
   if (credit.length < 2) return null;
+  if (readNames && !credit.every((n) => readNames.has(n.trim().toLowerCase()))) return null;
   const last = credit[credit.length - 1];
   const upstreamParts = credit.slice(0, -1);
   const upstream = upstreamParts.join(' and ');
@@ -230,21 +248,44 @@ function costFor(category: string): string {
  * could not see. That is how "Magnepan LRS+ with a Rega Brio" — the textbook
  * current-starved pairing — came back as "Nothing here needs changing."
  *
- * A component is read when the engine produced axis values for it. Comparison
- * is on trimmed lowercase names because credit and per-component readings are
- * built from the same resolved list but not guaranteed to share casing.
+ * A component is read when the engine produced axis values for it AND those
+ * values carry evidence. The distinction is the whole guard: an unresolved
+ * component is still handed a full set of synthetic NEUTRAL axes so downstream
+ * shapes stay uniform, and testing key presence alone counted those
+ * placeholders as a reading. That is how the artifact path came back with
+ * "Nothing here needs changing." for a 2 W amplifier into an 84 dB loudspeaker
+ * it had never identified — and, in the same breath, "Acora QRC-2 carries it
+ * without thinning it out" about a component it could not read at all.
+ *
+ * `source !== 'inferred'` is the engine's own licensing predicate
+ * (`carriesAxisEvidence` in consultation.ts), applied here rather than
+ * re-derived, because two definitions of "read" is how the two surfaces came
+ * to disagree. A reading with no `source` at all is not failed on that ground:
+ * callers predating the field pass name/axes only, and their meaning is
+ * unchanged.
+ *
+ * Comparison is on trimmed lowercase names because credit and per-component
+ * readings are built from the same resolved list but not guaranteed to share
+ * casing.
  */
-export function assessedEveryComponent(
-  credit: string[],
-  perComponentAxes: Array<{ name?: string; axes?: Record<string, string> }> | undefined,
-): boolean {
-  if (credit.length === 0) return false;
-  const read = new Set(
+export function readComponentNames(
+  perComponentAxes: Array<{ name?: string; axes?: Record<string, string>; source?: string }> | undefined,
+): Set<string> {
+  return new Set(
     (perComponentAxes ?? [])
       .filter((p) => p && p.axes && Object.keys(p.axes).length > 0)
+      .filter((p) => p.source !== 'inferred')
       .map((p) => (p.name ?? '').trim().toLowerCase())
       .filter(Boolean),
   );
+}
+
+export function assessedEveryComponent(
+  credit: string[],
+  perComponentAxes: Array<{ name?: string; axes?: Record<string, string>; source?: string }> | undefined,
+): boolean {
+  if (credit.length === 0) return false;
+  const read = readComponentNames(perComponentAxes);
   return credit.every((name) => read.has(name.trim().toLowerCase()));
 }
 
@@ -400,7 +441,9 @@ export function synthesizeArtifact(result: any): SynthResult {
     contradictions.push('Engine reports no bottleneck but a Highest-Impact upgrade path exists.');
 
   // ── verdict + standfirst ─────────────────────────────────────────────
-  const assessedAll = assessedEveryComponent(credit, f.perComponentAxes);
+  const readNames = readComponentNames(f.perComponentAxes);
+  const assessedAll = credit.length > 0
+    && credit.every((n) => readNames.has(n.trim().toLowerCase()));
   const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature, assessedAll);
 
   // ── R1, R2 — recognition ─────────────────────────────────────────────
@@ -457,7 +500,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // reached it, so a system with fewer engine emissions still
     // produces a coherent (shorter) essay rather than an
     // over-padded skeleton.
-    const beat = equilibriumBeat(credit, f.systemAxes);
+    const beat = equilibriumBeat(credit, f.systemAxes, readNames);
 
     const strengths: string[] = (resp.assessmentStrengths ?? [])
       .map((s: string) => stripTrailingPeriod((s ?? '').trim()))
@@ -668,13 +711,22 @@ export function synthesizeArtifact(result: any): SynthResult {
   // the pipeline does not yet capture a stated listener priority or a
   // trade-off-directed action, so those are defined for the doctrine and future
   // envelopes but not yet produced here.
-  type RecommendationLicense = 'limitation' | 'tradeoff' | 'priority' | 'none';
+  type RecommendationLicense = 'limitation' | 'tradeoff' | 'priority' | 'none' | 'unassessable';
   // E3 (Doctrine D-11): verdict and recommendation must derive from the same
   // licensed state — the primary bottleneck. A bare upgrade path (`path0`) may
   // exist without a licensed bottleneck; when it does, the recommendation must
   // NOT fire from it. When there is no bottleneck, the coherent verdict forces
   // the no-change recommendation.
-  const recommendationLicense: RecommendationLicense = bottleneck ? 'limitation' : 'none';
+  //
+  // There are THREE states, not two. "No bottleneck" splits into one the engine
+  // earned by reading everything and one it merely failed to reach, and the
+  // license modelled only the first — so an under-read system took the verdict
+  // "I can't reach a verdict on this system yet" and closed, four lines later,
+  // with "There is nothing here to fix". Same defect as the verdict guard, one
+  // layer down: absence of a finding read as a finding of absence.
+  const recommendationLicense: RecommendationLicense = bottleneck
+    ? 'limitation'
+    : assessedAll ? 'none' : 'unassessable';
 
   let recommendation: string;
   if (recommendationLicense === 'none') {
@@ -693,6 +745,21 @@ export function synthesizeArtifact(result: any): SynthResult {
       recommendation = 'This system is already well balanced. A component change here would shift the presentation sideways — a different flavour, not an improvement.';
     }
   }
+  else if (recommendationLicense === 'unassessable') {
+    // Name what is missing. "Do nothing" stays available to the listener as a
+    // choice, but it is not something Audio XX can recommend on evidence it
+    // does not hold.
+    const unread = credit.filter((n) => !readNames.has(n.trim().toLowerCase()));
+    const which = unread.length === 1
+      ? `the ${unread[0]}`
+      : unread.length > 1
+        ? `${unread.slice(0, -1).join(', ')} and ${unread[unread.length - 1]}`
+        : 'one of these components';
+    recommendation = `I can't recommend a change here, and I can't tell you nothing needs changing either — `
+      + `${which} ${unread.length === 1 ? 'is not a component' : 'are not components'} I can read, `
+      + `so any interaction with the rest of the chain is unverified. Tell me more about `
+      + `${unread.length === 1 ? 'it' : 'them'}, or treat what follows as covering only the parts I could assess.`;
+  }
   else recommendation = recommendationFor(category, role);
 
   // R6 post-condition: bottleneck-named role must appear in the recommendation
@@ -707,7 +774,14 @@ export function synthesizeArtifact(result: any): SynthResult {
   // ── R7 — cost follows the same license as the recommendation ─────────
   const cost = recommendationLicense === 'none'
     ? 'If you want more of something, name the quality you’re looking for.'
-    : costFor(category);
+    : recommendationLicense === 'unassessable'
+      // No licensed change means no trade-off to price. Naming one would be a
+      // claim about a consequence of a change nobody established.
+      ? 'Naming the missing components is what turns this into an assessment.'
+      : costFor(category);
+
+  // Provenance travels with the payload — see ArtifactPayload.evidenceStatement.
+  const evidenceStatement = evidenceStatementFor({ findings: f as never });
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
 
@@ -769,6 +843,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     cost,
     date: today(),
     edition: editionFor(seed),
+    evidenceStatement,
     // Tonal axes travel WITH the payload so the three-axis Tonal Signature
     // graph survives payload-only surfaces (chat embed, saved snapshots).
     systemAxes: f.systemAxes && Object.keys(f.systemAxes).length > 0 ? f.systemAxes : undefined,

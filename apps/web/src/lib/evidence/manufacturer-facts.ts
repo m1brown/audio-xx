@@ -198,5 +198,31 @@ export function physicalFactsFor(items: EvidenceItem[]): PhysicalFacts {
   return out;
 }
 
+/**
+ * Which named subjects are worth a fact lookup.
+ *
+ * ONE definition, because two call sites deriving this separately is how the
+ * web assessment and the printed artifact come to disagree about the same
+ * system. Structurally typed on purpose: this asks only what a subject looks
+ * like, never what a loudspeaker is.
+ *
+ * A brand is excluded because a fact belongs to a product, and a parenthetical
+ * is excluded because "Job (Goldmund)" names a maker, not a second component.
+ */
+export function factCandidateNames(
+  subjects: ReadonlyArray<{ name: string; kind: string; parenthetical?: boolean }>,
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of subjects) {
+    if (s.kind !== 'product' || s.parenthetical) continue;
+    const key = productKeyFor(s.name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(s.name);
+  }
+  return out;
+}
+
 /** Exposed so no consumer quietly assumes `catalog` for a page read today. */
 export const MANUFACTURER_TIER: EvidenceTier = CLASS_TIER.manufacturer;

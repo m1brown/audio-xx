@@ -14,9 +14,68 @@
 import type { ArtifactPayload } from './types';
 import { committedPoles } from '../a3-artifact-case';
 
-/** The one evidence line shown on the artifact (detailed ledger is not exposed). */
+/**
+ * The one evidence line shown on the artifact (detailed ledger is not exposed).
+ *
+ * Kept as the fully-evidenced wording and NO LONGER emitted unconditionally.
+ * It was a constant: every artifact claimed "manufacturer documentation,
+ * designer statements" whether or not a single manufacturer fact was held, so
+ * the most prominent provenance statement in the product was the one thing in
+ * it not derived from evidence. `evidenceStatementFor` replaces the constant
+ * with the actual state; this remains the wording for the case where the claim
+ * is true.
+ */
 export const EVIDENCE_STATEMENT =
   'Assessment based on manufacturer documentation, designer statements, and Audio XX analysis.';
+
+/**
+ * Describe the evidence this assessment actually stood on.
+ *
+ * Reads the same provenance the engine reasoned from — per-component axis
+ * source, and the provenance recorded on the physical figures — so the label
+ * and the reasoning can never disagree. One derivation, no second opinion.
+ */
+export function evidenceStatementFor(raw?: {
+  findings?: {
+    perComponentAxes?: Array<{ source?: string }>;
+    powerMatchAssessment?: {
+      ampPowerProvenance?: string; speakerSensitivityProvenance?: string;
+    };
+  };
+}): string {
+  const axes = raw?.findings?.perComponentAxes ?? [];
+  const catalog = axes.filter((a) => a?.source === 'product').length;
+  const brand = axes.filter((a) => a?.source === 'brand').length;
+  const unread = axes.filter((a) => a?.source === 'inferred').length;
+
+  const pm = raw?.findings?.powerMatchAssessment;
+  const usedManufacturer = pm?.ampPowerProvenance === 'manufacturer'
+    || pm?.speakerSensitivityProvenance === 'manufacturer';
+
+  const parts: string[] = [];
+  if (catalog > 0) parts.push('Audio XX’s curated catalogue');
+  if (usedManufacturer) parts.push('manufacturer-published specifications');
+  if (brand > 0) parts.push('documented maker design philosophy');
+
+  const list = (xs: string[]) => xs.length === 1
+    ? xs[0]
+    : xs.length === 2
+      ? `${xs[0]} and ${xs[1]}`
+      : `${xs.slice(0, -1).join(', ')}, and ${xs[xs.length - 1]}`;
+
+  // With no sourced evidence at all, say that plainly rather than dressing
+  // interpretation up as a basis.
+  const basis = parts.length === 0
+    ? 'Audio XX analysis alone, with no verified product evidence'
+    : `${list(parts)}, interpreted by Audio XX`;
+
+  // Naming what was NOT established is the half that makes the rest credible.
+  const caveat = unread > 0
+    ? ` ${unread === 1 ? 'One component' : `${unread} components`} could not be `
+      + `identified; nothing here characterises ${unread === 1 ? 'it' : 'them'}.`
+    : '';
+  return `Assessment based on ${basis}.${caveat}`;
+}
 
 export interface AxisReading {
   axis: string;
@@ -68,6 +127,16 @@ export interface CanonicalAssessment {
     tonalSignature?: AxisReading[];
   };
   guidance: { recommendation: string; oneCost?: string };
+  /**
+   * The single quantified figure the assessment turns on, when one exists —
+   * the headroom ceiling on a power-matched pairing, for instance.
+   *
+   * It was reaching the web artifact and stopping there, so the printed and
+   * shared assessment lost the most concrete thing in it: "≈ 87 dB — the most
+   * this pairing plays cleanly" simply vanished. A canonical model that drops
+   * the number is not the same assessment rendered differently.
+   */
+  keyDatum?: { value: string; caption: string };
   reading: {
     engineering: string[];
     listeningSession: string[];
@@ -335,13 +404,21 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
       tonalSignature: tonalSignatureFromAxes(axes, axesNumeric),
     },
     guidance: { recommendation: payload.recommendation, oneCost: payload.cost },
+    keyDatum: payload.heroDatum,
     reading: {
       engineering: engineeringOut,
       listeningSession: raw ? composeListeningSession(raw, payload.recognition) : [],
       dominantCharacter,
       operatingCondition: operatingConditionOut,
     },
-    evidence: { statement: EVIDENCE_STATEMENT, primarySources: primarySources.length ? primarySources : undefined },
+    evidence: {
+      // Payload first: a saved snapshot or chat embed holds the payload and no
+      // engine findings, and re-deriving there would understate the evidence
+      // the assessment actually used. `raw` is the fallback for callers that
+      // build a CAM from a payload predating the field.
+      statement: payload.evidenceStatement ?? evidenceStatementFor(raw),
+      primarySources: primarySources.length ? primarySources : undefined,
+    },
     editorial: editorial.length ? editorial : undefined,
   };
 }

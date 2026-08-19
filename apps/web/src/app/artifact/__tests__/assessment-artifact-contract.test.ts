@@ -34,7 +34,7 @@ import AssessmentArtifact from '../AssessmentArtifact';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { buildSystemAssessment } from '@/lib/consultation';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
-import { toCanonicalAssessment, EVIDENCE_STATEMENT } from '@/lib/artifact/canonical';
+import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import type { ArtifactPayload } from '@/lib/artifact/types';
 
 const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
@@ -151,7 +151,9 @@ describe('GATE C — full artifact contract (every element structurally required
       expect(html).toContain('Recommendation');
       expect(html).toContain('Engineering');
       // provenance statement
-      expect(html).toContain(EVIDENCE_STATEMENT.slice(0, 40));
+      // Derived per assessment, so assert the invariant shape rather than a
+      // fixed string: every artifact states what it stood on.
+      expect(html).toMatch(/Assessment based on /);
     });
 
     it(`no empty sections and no duplicated section labels — ${mode.name}`, () => {

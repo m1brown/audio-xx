@@ -15,7 +15,7 @@ import AssessmentArtifact from '../AssessmentArtifact';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { buildSystemAssessment } from '@/lib/consultation';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
-import { toCanonicalAssessment, validateDominantCharacter, EVIDENCE_STATEMENT } from '@/lib/artifact/canonical';
+import { toCanonicalAssessment, validateDominantCharacter } from '@/lib/artifact/canonical';
 
 const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
 
@@ -49,7 +49,7 @@ describe('Assessment Renderer — France web artifact', () => {
     const iEng = html.indexOf(cam.reading.engineering[0].slice(0, 24));
     const iListen = html.indexOf(cam.reading.listeningSession[0].slice(0, 24));
     const iCond = html.indexOf(cam.reading.operatingCondition!.slice(0, 24));
-    const iEvidence = html.indexOf(EVIDENCE_STATEMENT);
+    const iEvidence = html.indexOf(cam.evidence.statement);
 
     for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iListen, iCond, iEvidence]) {
       expect(idx).toBeGreaterThan(-1);
@@ -81,7 +81,8 @@ describe('Assessment Renderer — France web artifact', () => {
 
   it('shows the single evidence statement and never the detailed ledger', () => {
     const html = render(franceCam());
-    expect(html).toContain(EVIDENCE_STATEMENT);
+    expect(html).toContain(franceCam().evidence.statement);
+    expect(franceCam().evidence.statement).toMatch(/^Assessment based on /);
     expect(html.toLowerCase()).not.toContain('source ledger');
     expect(html).not.toContain('axx-cls'); // no evidence-class chips
     // The internal editorial provenance ledger must never reach the public artifact.

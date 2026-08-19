@@ -25,6 +25,16 @@ export interface ArtifactPayload {
   caseParagraphs: string[];
   /** Present only when the engine reports an objective limit (e.g. power). */
   heroDatum?: { value: string; caption: string };
+  /**
+   * What this assessment actually stood on, in one line.
+   *
+   * Carried in the payload rather than derived by each renderer, because the
+   * payload is what a saved snapshot and a chat embed hold — they have no
+   * access to the engine findings, and a statement re-derived without them
+   * would understate the evidence the assessment genuinely used. Derived once,
+   * at synthesis, where the findings are in hand.
+   */
+  evidenceStatement?: string;
   pullQuote?: string;
   /** Peak 2 — one owned line (a change, or restraint). Mirrors engine leverage. */
   recommendation: string;

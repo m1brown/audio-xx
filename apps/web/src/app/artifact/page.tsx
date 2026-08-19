@@ -4,6 +4,9 @@ import AssessmentArtifact from './AssessmentArtifact';
 import ArtifactActions from './ArtifactActions';
 import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
+import { extractSubjectMatches } from '@/lib/intent';
+import { factCandidateNames } from '@/lib/evidence/manufacturer-facts';
+import { readFactsForNames } from '@/lib/evidence/manufacturer-fact-store';
 
 /**
  * Milestone 2 — live end-to-end artifact.
@@ -26,8 +29,18 @@ function resolveText(sp: ArtifactSearchParams): string {
     || PRESETS.flawed;
 }
 
-// Deduped per request: generateMetadata and the page share one engine run.
-const renderCached = cache((text: string) => runArtifactPipeline(text));
+/**
+ * Deduped per request: generateMetadata and the page share one engine run.
+ *
+ * The store read happens here, on the server, where `readFactsForNames` is
+ * directly reachable — no route hop, and no acquisition: `readFacts` only ever
+ * reads. Without this the artifact renders from strictly less evidence than
+ * the web assessment of the same system.
+ */
+const renderCached = cache(async (text: string) => {
+  const facts = await readFactsForNames(factCandidateNames(extractSubjectMatches(text)));
+  return runArtifactPipeline(text, facts);
+});
 
 /**
  * Sharing metadata (M4). A pasted assessment link is the product's
@@ -39,7 +52,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const sp = await searchParams;
   const text = resolveText(sp);
-  const rendered = renderCached(text);
+  const rendered = await renderCached(text);
   if (!rendered) return { title: 'System Assessment' };
   const p = rendered.payload;
   const title = p.verdict.replace(/\.\s*$/, '');
@@ -64,7 +77,7 @@ export default async function ArtifactPage(
   const text = resolveText(sp);
   const print = sp?.print === '1';
 
-  const rendered = renderCached(text);
+  const rendered = await renderCached(text);
 
   if (!rendered) {
     // MVP M1 failure path: never a dead end — send the reader back to the

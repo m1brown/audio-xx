@@ -55,6 +55,7 @@ import { buildPreferenceReflection } from '@/lib/preference-reflection';
 import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, isGearQuestionEscape, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
+import { factCandidateNames } from '@/lib/evidence/manufacturer-facts';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
 import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
@@ -2901,9 +2902,7 @@ export default function Home() {
       // one whose figure decides whether a pairing is assessable at all —
       // but not one worth a live web search before the reader sees anything.
       const assessmentFacts = await fetchManufacturerFacts(
-        assessmentSubjects.filter((m) => m.kind === 'product' && !m.parenthetical)
-          .map((m) => m.name),
-        { cachedOnly: true },
+        factCandidateNames(assessmentSubjects), { cachedOnly: true },
       );
 
       const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile, assessmentFacts as never);

@@ -17,7 +17,7 @@
 
 import { prisma } from '../prisma';
 import { isAdmissible, type EvidenceItem, type EvidenceTier } from './evidence-types';
-import { isFirstPartySource } from './manufacturer-facts';
+import { isFirstPartySource, productKeyFor } from './manufacturer-facts';
 
 /** Facts age slowly; a published specification does not change quietly. */
 export const FACT_TTL_MS = 180 * 24 * 60 * 60 * 1000;
@@ -111,6 +111,23 @@ export async function readFacts(productKey: string, now: number): Promise<Eviden
     console.warn('[manufacturer-facts] read failed: %s', String(err).slice(0, 160));
     return [];
   }
+}
+
+/**
+ * Every fact held for a set of named products — the server-side consumption
+ * entry point.
+ *
+ * Store-only by construction: `readFacts` never acquires, so a server render
+ * can consume evidence without the route hop the browser needs and without
+ * turning a page render into a web search. Failures collapse to absence.
+ */
+export async function readFactsForNames(
+  names: string[], now: number = Date.now(),
+): Promise<EvidenceItem[]> {
+  if (names.length === 0) return [];
+  const keys = [...new Set(names.map(productKeyFor).filter(Boolean))];
+  const perProduct = await Promise.all(keys.map((k) => readFacts(k, now)));
+  return perProduct.flat();
 }
 
 /** Persist admissible facts only. Never throws. */

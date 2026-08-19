@@ -11,6 +11,7 @@ import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 import { toCanonicalAssessment, type CanonicalAssessment } from '@/lib/artifact/canonical';
 import type { ArtifactPayload } from '@/lib/artifact/types';
+import type { EvidenceItem } from '@/lib/evidence/evidence-types';
 
 export interface PipelineResult {
   payload: ArtifactPayload;
@@ -21,11 +22,23 @@ export interface PipelineResult {
   canonical: CanonicalAssessment;
 }
 
-/** Run the full artifact pipeline. Null when the text does not resolve. */
-export function runArtifactPipeline(systemText: string): PipelineResult | null {
+/**
+ * Run the full artifact pipeline. Null when the text does not resolve.
+ *
+ * `manufacturerEvidence` is the same site-level evidence the web assessment
+ * consumes, passed in rather than read here so this stays synchronous and
+ * testable. Omitting it is what the artifact path did before, and it is why
+ * the printed assessment could report a pairing as unassessable while the web
+ * assessment of the identical system named the constraint — one canonical
+ * assessment cannot mean two answers depending on which surface asked.
+ */
+export function runArtifactPipeline(
+  systemText: string,
+  manufacturerEvidence: EvidenceItem[] = [],
+): PipelineResult | null {
   const subjects = extractSubjectMatches(systemText);
   const { desires } = detectIntent(systemText);
-  const result = buildSystemAssessment(systemText, subjects, null, desires);
+  const result = buildSystemAssessment(systemText, subjects, null, desires, null, manufacturerEvidence);
   if (!result || result.kind !== 'assessment') return null;
   const { payload, contradictions } = synthesizeArtifact(result);
   const canonical = toCanonicalAssessment(payload, result);
