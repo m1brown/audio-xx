@@ -29,7 +29,8 @@ import {
   type QuantityPremise,
 } from './evidence/physical-quantities';
 import {
-  licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
+  licensedRelations, validateRelations, permittedQuestionType, questionViolations,
+  stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
   type LicensedRelation,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
@@ -823,6 +824,13 @@ export function buildProvisionalPrompt(
     + (p.attribution?.publication ? ` [${p.attribution.publication}]` : '')
     + (p.attribution?.condition ? ` [ONLY ${p.attribution.condition}]` : ''));
 
+  // Premise visibility. The premise set is the whole contract between Audio XX
+  // and the model, and a premise that is selected but never referenced looks
+  // identical from the outside to one that was never selected — which is
+  // exactly how review evidence sat structurally unreachable for a whole slice.
+  console.warn('[d12] premises: %s', premiseLines.length
+    ? premiseLines.map((l) => l.trim()).join(' || ') : 'none');
+
   const premiseContext = premiseLines.length > 0
     ? `\n\nPREMISES AUDIO XX SUPPLIES — these are established evidence, already `
       + `selected as the best applicable for their component and axis. Reference them `
@@ -1280,6 +1288,15 @@ function parseSystemInferenceResponse(
     const systemRelations = surviving.map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.licensedTier,
     }));
+    console.warn('[d12] surviving relations: %s', surviving.length
+      ? surviving.map((r) =>
+        `${r.components.join(' \u00d7 ')} [${r.axis}/${r.kind}/${r.licensedTier}]`).join(' || ')
+      : 'none');
+    const refused = validateRelations(usable, attributes);
+    if (refused.length > 0) {
+      console.warn('[d12] relations refused: %s',
+        refused.map((v) => `${v.rule}: ${v.detail}`).join(' || '));
+    }
 
     // Evaluate consumes Explain. With no licensed relation there is nothing to
     // trade off, and a trade-off generated anyway would be adjective
