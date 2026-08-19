@@ -108,6 +108,9 @@ import {
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
 import { listenerPropertyLabel } from './listener-labels';
 import { isWhitelistedSource } from './evidence/source-whitelist';
+import { physicalFactsFor } from './evidence/manufacturer-facts';
+import type { EvidenceItem } from './evidence/evidence-types';
+import type { PhysicalFactSource } from './memo-findings';
 // StructuredMemoInputs is transitional — the canonical rendering path is
 // renderDeterministicMemo(findings, prose) without the third argument.
 // See memo-deterministic-renderer.ts header for the removal plan.
@@ -7901,7 +7904,47 @@ function surfaceAmpSpeakerInteraction(
  * power_watts and sensitivity_db fields, and classifies compatibility.
  * When no amp or no speaker exists, returns an 'unknown' assessment.
  */
-export function assessPowerMatch(components: SystemComponent[]): PowerMatchAssessment {
+/**
+ * Resolve one physical figure under the governing precedence.
+ *
+ * PRECEDENCE (founder, 2026-08-18):
+ *   1. curated/catalog product facts
+ *   2. manufacturer facts
+ *   3. listener-supplied explicit specifications, where already licensed
+ *   4. otherwise unknown
+ *
+ * Model memory is absent by construction — there is no branch that could
+ * admit it. That is deliberate: a remembered wattage is exactly the kind of
+ * plausible figure that would make a compatibility verdict feel authoritative
+ * while resting on nothing checkable.
+ */
+function resolveFigure(
+  catalogValue: number | null | undefined,
+  manufacturerValue: number | undefined,
+  listenerValue: number | null,
+): { value: number | null; source: PhysicalFactSource } {
+  if (catalogValue != null) return { value: catalogValue, source: 'catalog' };
+  if (manufacturerValue != null) return { value: manufacturerValue, source: 'manufacturer' };
+  if (listenerValue != null) return { value: listenerValue, source: 'listener' };
+  return { value: null, source: 'none' };
+}
+
+/** Manufacturer facts belonging to one component. */
+function factsFor(name: string, evidence: EvidenceItem[]): EvidenceItem[] {
+  const key = name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+  return evidence.filter((e) => e.productKey === key);
+}
+
+export function assessPowerMatch(
+  components: SystemComponent[],
+  /**
+   * Manufacturer-tier physical evidence, when the caller holds any. Consumed
+   * only where the catalog is silent — this does not broaden reasoning, it
+   * lets the existing compatibility machinery see evidence Audio XX already
+   * holds instead of reporting 'unknown' beside a published specification.
+   */
+  manufacturerEvidence: EvidenceItem[] = [],
+): PowerMatchAssessment {
   // Find the primary amplifier (prefer integrated > power amp > headphone amp)
   const ampCandidates = components.filter((c) => {
     const role = c.role.toLowerCase();
@@ -7938,16 +7981,27 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
     const v = m ? Number(m[1]) : NaN;
     return Number.isFinite(v) && v > 0 && v <= 2000 ? v : null;
   })();
-  const powerWatts = amp.product?.power_watts ?? statedWatts;
-  const sensitivityDb = speaker.product?.sensitivity_db ?? null;
-  const { compatibility, estimatedMaxCleanSPL } = classifyPowerMatch(powerWatts, sensitivityDb);
-  const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivityDb);
+  const ampFacts = physicalFactsFor(factsFor(amp.displayName, manufacturerEvidence));
+  const speakerFacts = physicalFactsFor(factsFor(speaker.displayName, manufacturerEvidence));
+
+  const power = resolveFigure(amp.product?.power_watts, ampFacts.powerWatts, statedWatts);
+  // Sensitivity has no listener-supplied form today: nobody writes their
+  // speaker's dB figure into a chain description, and inventing a parse for it
+  // would be a rule with no observed input.
+  const sensitivity = resolveFigure(
+    speaker.product?.sensitivity_db, speakerFacts.sensitivityDb, null);
+
+  const { compatibility, estimatedMaxCleanSPL } =
+    classifyPowerMatch(power.value, sensitivity.value);
+  const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivity.value);
 
   return {
     ampName: amp.displayName,
     speakerName: speaker.displayName,
-    ampPowerWatts: powerWatts,
-    speakerSensitivityDb: sensitivityDb,
+    ampPowerWatts: power.value,
+    speakerSensitivityDb: sensitivity.value,
+    powerSource: power.source,
+    sensitivitySource: sensitivity.source,
     compatibility,
     estimatedMaxCleanSPL,
     relevantInteraction,
@@ -8689,6 +8743,13 @@ export function buildSystemAssessment(
    * scoring, or product selection.
    */
   listenerProfile?: ListenerPreferenceProfile | null,
+  /**
+   * Manufacturer-tier physical evidence, when the caller holds any.
+   * Optional and additive: every existing call site behaves exactly as before,
+   * and the only consumer is the compatibility check, which uses it solely
+   * where the catalog is silent.
+   */
+  manufacturerEvidence: EvidenceItem[] = [],
 ): SystemAssessmentResult {
   // ── Consumer-wireless short-circuit ──────────────────
   // Audio XX Playbook §3 (preference protection) + §6 (partial-knowledge
@@ -9542,7 +9603,8 @@ export function buildSystemAssessment(
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = systemTier === 'reference'
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
-    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence);
+    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes,
+      voicingCoherence, manufacturerEvidence);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint, componentLinks);
   // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
@@ -9606,6 +9668,7 @@ export function buildSystemAssessment(
     componentLinks,
     memoListenerPriorities,
     voicingCoherence,
+    manufacturerEvidence,
   );
 
   // ── System character opening (brief) ──────────────
@@ -13108,6 +13171,7 @@ function detectPrimaryConstraint(
   stacked: MemoStackedTraitInsight[],
   system: PrimaryAxisLeanings,
   coherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoPrimaryConstraint | undefined {
   const candidates: ConstraintCandidate[] = [];
 
@@ -13320,7 +13384,7 @@ function detectPrimaryConstraint(
   // are available, calculates estimated max clean SPL and flags
   // strained or mismatched pairings. Severity is high because power
   // mismatch is more fundamental than axis-based constraints.
-  const powerMatch = assessPowerMatch(components);
+  const powerMatch = assessPowerMatch(components, manufacturerEvidence);
   if (powerMatch.compatibility === 'mismatched' && powerMatch.ampName && powerMatch.speakerName) {
     const splNote = powerMatch.estimatedMaxCleanSPL != null
       ? ` Estimated max clean SPL is ~${Math.round(powerMatch.estimatedMaxCleanSPL)} dB — well below comfortable listening levels for dynamic music.`
@@ -15205,6 +15269,7 @@ function extractMemoFindings(
   perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
   precomputedListenerPriorities?: ListenerPriority[],
   voicingCoherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -15418,7 +15483,7 @@ function extractMemoFindings(
   const activeDACInference = inferActiveDAC(components);
 
   // ── Amp/speaker power-match assessment ──
-  const powerMatchAssessment = assessPowerMatch(components);
+  const powerMatchAssessment = assessPowerMatch(components, manufacturerEvidence);
 
   // ── Knowledge evidence (Phase 2A) ──
   const componentEngineering = extractComponentEngineering(components);

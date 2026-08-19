@@ -307,7 +307,21 @@ export interface ActiveDACInference {
  * When data is missing for either side, compatibility is 'unknown'
  * and the assessment is invisible in the narrative.
  */
+/**
+ * Which evidence supplied each figure.
+ *
+ * Recorded because "we could not check" and "we checked using the maker's
+ * published rating" are different epistemic states that used to look
+ * identical from the outside, and because the precedence rule is only
+ * auditable if the selection is visible.
+ */
+export type PhysicalFactSource = 'catalog' | 'manufacturer' | 'listener' | 'none';
+
 export interface PowerMatchAssessment {
+  /** Where the amplifier's power figure came from. */
+  powerSource?: PhysicalFactSource;
+  /** Where the loudspeaker's sensitivity figure came from. */
+  sensitivitySource?: PhysicalFactSource;
   /** Display name of the amplifier, or null if no amp found. */
   ampName: string | null;
   /** Display name of the speaker, or null if no speaker found. */

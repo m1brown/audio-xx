@@ -2849,7 +2849,51 @@ export default function Home() {
         };
       }
 
-      const assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
+      let assessmentResult = buildSystemAssessment(accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires, state.listenerPreferenceProfile);
+
+      // ── Lazy manufacturer evidence for an unassessable pairing ──────
+      //
+      // Deliberately lazy. Catalog facts win by precedence, so fetching for
+      // every turn would buy nothing on the systems Audio XX already knows
+      // and would put a network round trip in front of each of them. The
+      // fetch happens only when the compatibility check actually came back
+      // unassessable AND both an amplifier and a loudspeaker are present —
+      // the one case where a published figure changes the verdict.
+      if (assessmentResult?.kind === 'assessment') {
+        const pm = assessmentResult.findings?.powerMatchAssessment;
+        const needsFigures = pm?.compatibility === 'unknown' && !!pm?.ampName && !!pm?.speakerName;
+        if (needsFigures) {
+          const wanted = [pm!.ampName!, pm!.speakerName!];
+          const settled = await Promise.race([
+            Promise.all(wanted.map(async (name) => {
+              try {
+                const r = await fetch('/api/manufacturer-facts', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+                });
+                if (!r.ok) return [];
+                const j = await r.json();
+                return Array.isArray(j?.facts) ? j.facts : [];
+              } catch { return []; }
+            })),
+            new Promise<'deadline'>((r) => setTimeout(() => r('deadline'), 20000)),
+          ]);
+          const evidence = settled === 'deadline'
+            ? []
+            : (settled as Array<Array<Record<string, unknown>>>).flat();
+          if (evidence.length > 0) {
+            // Rebuilt rather than patched: the compatibility result feeds the
+            // constraint layer, the verdict and the decision line, and
+            // rewriting one field would leave the others reasoning from the
+            // old 'unknown'.
+            assessmentResult = buildSystemAssessment(
+              accumulatedText, assessmentSubjects, turnCtx.activeSystem, turnCtx.desires,
+              state.listenerPreferenceProfile, evidence as never,
+            );
+            console.log('[power-match] rebuilt with %d manufacturer fact(s)', evidence.length);
+          }
+        }
+      }
       if (assessmentResult) {
         // H1 demand telemetry — log each distinct unresolved model token once
         // (privacy-safe: a token the user typed, never the full string), so the
