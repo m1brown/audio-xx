@@ -25,6 +25,9 @@ import {
 } from './evidence/independent-review-consumption';
 import { selectPremises, type PremiseCandidate } from './evidence/premise-selection';
 import {
+  parseQuantity, assessDriveCapability, transferFor, type QuantityPremise,
+} from './evidence/physical-quantities';
+import {
   licensedRelations, permittedQuestionType, questionViolations, stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
@@ -718,21 +721,19 @@ export function buildProvisionalPrompt(
   //
   // These premises therefore occupy the LEADING indices, stated explicitly, so
   // the model can point at them. Anything it adds continues the numbering.
-  const PHYSICAL_FIELD_AXIS: Record<string, string> = {
-    power_output: 'power_load', sensitivity: 'power_load', impedance: 'power_load',
-  };
-  const reviewCandidates: PremiseCandidate[] = [];
+  // Physical facts become TYPED QUANTITIES, not axis positions. "100 W RMS @
+  // 8 ohms" and "4 ohms" are not two points on one scale; conflating them is
+  // what licensed a drive conclusion the evidence never established.
+  const quantities: QuantityPremise[] = [];
   for (const item of manufacturerEvidence ?? []) {
-    const axis = PHYSICAL_FIELD_AXIS[item.field];
-    if (!axis) continue;
     const owner = componentNames.find((n) => productKeyish(n) === item.productKey);
     if (!owner) continue;
-    reviewCandidates.push({
-      component: owner, axis, value: `${item.field}: ${item.value}`,
-      source: 'manufacturer', tier: 'manufacturer', scope: 'product',
-      sourceUrl: item.attribution?.sourceUrl,
-    });
+    const q = parseQuantity(owner, item.field, item.value,
+      { sourceUrl: item.attribution?.sourceUrl });
+    if (q) quantities.push(q);
   }
+
+  const reviewCandidates: PremiseCandidate[] = [];
   for (const name of componentNames) {
     for (const rec of toAttributeRecords(name, reviewObservations?.[name] ?? [])) {
       reviewCandidates.push({
@@ -746,6 +747,46 @@ export function buildProvisionalPrompt(
   }
   const selection = selectPremises(reviewCandidates);
 
+  // The one combining rule, run by Audio XX rather than proposed by the model.
+  const findQ = (role: RegExp, quantity: QuantityPremise['quantity']) => {
+    const owner = componentNames.find((n) => role.test(
+      (unresolved ?? []).find((u) => u.name === n)?.role ?? ''));
+    return quantities.find((q) => q.quantity === quantity
+      && (!owner || q.subject === owner));
+  };
+  const ampPower = quantities.find((q) => q.quantity === 'power_output');
+  const spkImpedance = quantities.find((q) => q.quantity === 'nominal_impedance'
+    && q.subject !== ampPower?.subject);
+  const spkSensitivity = quantities.find((q) => q.quantity === 'sensitivity');
+  const drive = assessDriveCapability(ampPower, spkImpedance, spkSensitivity);
+  void findQ;
+
+  const quantityLines = quantities.map((q) =>
+    `  - ${q.subject}: ${q.quantity} = ${q.value} ${q.unit}`
+    + (q.specifiedIntoOhms != null ? ` (specified into ${q.specifiedIntoOhms}Ω)` : '')
+    + (q.qualifier && q.qualifier !== `${q.value} ${q.unit}` ? ` — as published: "${q.qualifier}"` : ''));
+
+  const driveLine = drive.status === 'load_mismatch'
+    ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. The amplifier's `
+      + `${drive.watts} W figure is specified into ${drive.specifiedIntoOhms}Ω, and the `
+      + `loudspeaker presents ${drive.loadOhms}Ω. Power into one load does NOT establish `
+      + `power into another, so what this amplifier delivers into ${drive.loadOhms}Ω is `
+      + `unknown from what we hold. Say this plainly as a gap in the evidence and name `
+      + `what would close it (${drive.missing}). Do NOT estimate it, do NOT call the `
+      + `pairing synergistic, effective, authoritative or well matched, and do NOT `
+      + `describe drive as adequate or inadequate.`
+    : drive.status === 'incomplete'
+      ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. Missing: ${drive.missing}. `
+        + `Do not characterise drive capability in either direction.`
+      : '';
+
+  const quantityContext = quantityLines.length > 0
+    ? `\n\nPUBLISHED PHYSICAL QUANTITIES — exact figures with the conditions they were `
+      + `specified under. A figure means nothing without its condition; never combine two `
+      + `of these unless Audio XX has told you the conclusion below:\n${quantityLines.join('\n')}`
+      + driveLine
+    : '';
+
   const premiseLines = selection.premises.map((p, i) =>
     `  P${i}. ${p.component} — ${p.axis} = ${p.value}`
     + (p.attribution?.publication ? ` [${p.attribution.publication}]` : '')
@@ -758,7 +799,12 @@ export function buildProvisionalPrompt(
       + `Do NOT restate these as your own attributes. Any attribute you add continues `
       + `the numbering from P${selection.premises.length}. Where a premise names a `
       + `publication, NAME THAT PUBLICATION in any sentence that uses it; where it `
-      + `carries a condition, state that condition in the same sentence.`
+      + `carries a condition, state that condition in the same sentence.\n`
+      + `A premise marked TRANSFER-LIMITED was heard through DIFFERENT electronics than `
+      + `this listener owns. Tonal findings from it transfer weakly and must be stated as `
+      + `what that reviewer heard in that system, never as what this system does. Findings `
+      + `about the product's own behaviour under level or load transfer better. Say which `
+      + `you are relying on.`
     : '';
 
   const unresolvedContext = selection.unresolved.length > 0
@@ -809,7 +855,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${quantityContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
