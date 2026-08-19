@@ -156,6 +156,62 @@ const PREFERRED_SET = new Set(
 /**
  * Returns true if a source name matches any whitelisted publication (either tier).
  */
+/**
+ * Every host an approved publication publishes on, mapped to its canonical name.
+ *
+ * The host is the verifiable half of a search result. A model can return any
+ * string as the publication name — "Hi-Fi+", "Stereophile Magazine",
+ * "SoundStage! Hi-Fi" — but it cannot invent which domain served the page.
+ * Resolution therefore starts here and treats the returned name as a claim to
+ * be confirmed rather than as the identity.
+ */
+const HOST_TO_PUBLICATION: Map<string, string> = (() => {
+  const m = new Map<string, string>();
+  const strip = (h: string) => h.toLowerCase().replace(/^www\./, '');
+  for (const entry of SOURCE_WHITELIST) {
+    try { m.set(strip(new URL(entry.url).host), entry.name); } catch { /* skip */ }
+    for (const alt of entry.alternateDomains ?? []) m.set(strip(alt), entry.name);
+  }
+  return m;
+})();
+
+/** The canonical publication that owns this host, if any. */
+export function publicationForHost(sourceUrl: string): string | undefined {
+  if (!sourceUrl || /\s/.test(sourceUrl)) return undefined;
+  try {
+    const u = new URL(sourceUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
+    const host = u.host.toLowerCase().replace(/^www\./, '');
+    const exact = HOST_TO_PUBLICATION.get(host);
+    if (exact) return exact;
+    // A subdomain of an approved host is still that publication.
+    for (const [owned, name] of HOST_TO_PUBLICATION) {
+      if (host.endsWith(`.${owned}`)) return name;
+    }
+    return undefined;
+  } catch { return undefined; }
+}
+
+/**
+ * The canonical name for a publication written loosely.
+ *
+ * "Hi-Fi+" and "HiFi+" are the same publication; storing them separately would
+ * split one source's evidence into two identities and make agreement look like
+ * two independent voices. Matching ignores punctuation and case only — it never
+ * guesses at an unlisted publication, so a name that is not on the whitelist
+ * still resolves to nothing.
+ */
+export function canonicalPublicationName(name: string): string | undefined {
+  if (!name?.trim()) return undefined;
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(name);
+  if (!target) return undefined;
+  for (const entry of SOURCE_WHITELIST) {
+    if (norm(entry.name) === target) return entry.name;
+  }
+  return undefined;
+}
+
 export function isWhitelistedSource(sourceName: string): boolean {
   return SOURCE_MAP.has(sourceName.toLowerCase());
 }
