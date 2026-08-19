@@ -1,7 +1,8 @@
 # Independent-review evidence — specification v1
 
-**Status:** specification only, 2026-08-19. NOT approved, NOT implemented.
-Reconciled against the ManufacturerFact architecture now live (`f136e43`).
+**Status:** APPROVED 2026-08-19 with three decisions, recorded in §2, §4a and
+§4b below. Not yet implemented. Reconciled against the ManufacturerFact
+architecture now live (`f136e43`).
 
 Governing architecture, unchanged:
 
@@ -63,19 +64,41 @@ interface IndependentReviewObservation {
   reviewer?: string;           // where the publication attributes one
   sourceUrl: string;           // the original article. Required.
   publishedAt?: string;        // ISO date where stated
+  productName: string;         // the product AS THE PUBLICATION NAMED IT
   observationType: ObservationType;
   claim: string;               // PARAPHRASE by default, Audio XX's words
-  quote?: string;              // short, only where justified — see §4
+  quote?: string;              // optional; only where exact wording matters
   axis?: string;               // present only for listening observations
   direction?: string;          // e.g. 'warm', 'detailed' — only with axis
+  condition?: ObservationCondition;   // see below — part of the licence
   retrievedAt: number;
 }
 
 type ObservationType =
   | 'listening'        // what the reviewer reports hearing
-  | 'measurement'      // a figure the publication measured itself
+  | 'measurement'      // a figure the publication measured on its sample
   | 'comparison'       // this product relative to a named other
   | 'positioning';     // market/reference placement, class listings, price context
+
+/**
+ * A material condition the observation depends on.
+ *
+ * DECISION (founder, 2026-08-19): an observation may carry a condition, and
+ * that condition is PART OF THE LICENCE. It cannot be consumed without it.
+ *
+ * The Reference 5 is the case that forced this: The Absolute Sound found it
+ * "relatively airless and bloomless" and then "glorious" after 500 hours.
+ * Storing either half without the condition misrepresents the source, and the
+ * condition is the only part a listener could act on.
+ *
+ * Modest and typed on purpose. Trying to model every possible condition now
+ * would be an ontology built ahead of any observed need; `other` plus a
+ * description absorbs what the five named kinds do not.
+ */
+interface ObservationCondition {
+  kind: 'break_in' | 'setup' | 'mode' | 'associated_equipment' | 'level' | 'other';
+  description: string;   // as the publication stated it, paraphrased
+}
 ```
 
 `observationType` is the load-bearing field. A measured THD figure, a
@@ -98,12 +121,27 @@ EvidenceItem {
 }
 ```
 
-**One change to the live contract is required.** `REQUIRES_ATTRIBUTION`
-currently demands `quotedText` for `independent_review`. Reviews are
-paraphrased by default, so the rule must become: **`sourceUrl` and
-`publication` are required; `quotedText` is optional.** That is a real
-loosening of a live invariant and should be an explicit decision, not a
-side effect — flagged rather than assumed.
+### DECISION 1 (founder, 2026-08-19) — attribution replaces quotation
+
+`REQUIRES_ATTRIBUTION` demanded `quotedText`. For this class the requirement
+becomes an ATTRIBUTION requirement instead. Every observation must retain:
+
+- a faithful paraphrase (`claim`)
+- **exact product identity** (`productName`, plus `productKey`)
+- `publication`
+- `reviewer` where the publication attributes one
+- `sourceUrl`
+- `observationType`
+
+Verbatim quotation is **optional**, used sparingly where exact wording
+materially matters.
+
+This is not a weakening. The quote was standing in for auditability, and the
+six fields above provide it better: a paraphrase with a source URL and a named
+publication can be checked, while a quote alone cannot even establish which
+product it was about. `manufacturer` keeps its quote requirement unchanged —
+there the quote IS the fact, because a specification is a figure rather than a
+judgment.
 
 ## 3. Acquisition and retrieval
 
@@ -130,22 +168,59 @@ Demand-driven, one product at a time, never bulk.
 the live ordering. A reviewer's account is attributable and checkable, and it
 is not the maker's own statement of what they built.
 
-**Scope is the sharp edge.** An observation is licensed **only for the exact
-product reviewed**. The Reference 5 SE is not the Reference 5; the SRB is not
-the QRC-2. Enforcement:
+### 4a. Exact-product scoping is a HARD ADMISSION REQUIREMENT
 
-- store the product name as the publication wrote it, alongside `productKey`
-- admission requires the article's own product designation to match the
-  requested identity under the **same all-tokens rule corroboration uses**
-- a sibling-model review is **not** admitted as weaker evidence. It is not
-  evidence about this product at all.
+DECISION (founder, 2026-08-19). Reference 5 SE evidence is **not weaker
+Reference 5 evidence — it is evidence about a different product**, unless an
+observation explicitly applies across variants.
+
+- store the product name as the publication wrote it (`productName`) alongside
+  `productKey`
+- admission requires the article's own designation to match the requested
+  identity under the **same all-tokens rule corroboration uses**, so a trailing
+  "SE" is a distinguishing token exactly as "Zenith" was for the invented dCS
+- a sibling-model review is **rejected at admission**, not down-tiered
+- an observation that the publication itself states applies across variants may
+  be admitted for each, with the cross-variant statement recorded in `claim`
+
+**Empty coverage is a legitimate result.** The whitelist is not widened to
+eliminate zeros. Butler MONAD A100 returning nothing is the correct outcome
+and is a passing acceptance test.
+
+### 4b. Conditions travel with the observation
+
+An observation carrying a `condition` may not be consumed without it. The
+symmetry with brand scope is exact: brand-scoped evidence must name its maker
+in the prose that uses it, and a conditioned observation must state its
+condition. The same publication-boundary machinery applies — an expression that
+drops the condition is dropped, not published.
+
+### 4c. Independent measurement does NOT outrank manufacturer specification
+
+DECISION (founder, 2026-08-19). No global precedence rule. They are separate
+evidence types describing different things:
+
+- **manufacturer specification** — what the maker publishes
+- **independent measurement** — what the publication measured on ITS sample,
+  under ITS stated conditions
+
+Both may coexist and both may disagree, and the disagreement is informative
+rather than an error to resolve. Consumers such as the compatibility
+calculation may later define **field-specific** precedence explicitly; until
+they do, **normalisation must never silently overwrite one with the other**.
+
+Consequence for the live code: `physicalFactsFor` already filters to
+`evidenceClass === 'manufacturer'` and therefore cannot absorb a review
+measurement by accident. Any future independent-measurement projection is a
+SEPARATE function, and any consumer wanting both states its own precedence at
+the point of use.
 
 **What each type may license:**
 
 | Type | May be a D-12 premise? | Notes |
 |---|---|---|
 | `listening` | Yes, on its axis | at `independent_review` tier; bounds any relation it enters |
-| `measurement` | Yes, physical domain | may feed the compatibility path **below** manufacturer facts |
+| `measurement` | Yes, physical domain | a SEPARATE type from manufacturer spec — see §4c, no global precedence |
 | `comparison` | **No** | a claim about a pair, not about this product alone |
 | `positioning` | **No** | Describe/stature only — never a sonic premise |
 
@@ -206,32 +281,68 @@ stronger Describe claim; where they differ, the disagreement is the finding.
 No numeric aggregate, no star rating, no "consensus score" — those are exactly
 the averaging §5 exists to prevent.
 
-## Narrow implementation sequence
+## Smallest implementation slice — proposed
 
-1. **Decide the attribution change in §2** — `quotedText` optional for this
-   class. Blocking, and a doctrine decision rather than an engineering one.
-2. Types + admission gate + whitelist/domain check. No network. Tests first,
-   including the Reference 5 SE and Acora sibling traps as negative fixtures.
-3. Store, its own table, mirroring the manufacturer-fact store's two rules.
-4. Acquisition route, three-state, demand-driven, one product per call.
-5. Read path: `EvidenceItem` mapping and derived disagreement detection.
-6. Assessment consumption — `listening` observations as D-12 premises only,
-   attributed in prose. `positioning` deliberately NOT wired yet.
-7. Acceptance on the beta products: dCS rich, ARC with the SE trap, Butler
-   empty, Acora sparse. **An empty result for Butler is a passing test.**
+**Slice 1: the admission contract. No network, no store, no consumption.**
 
-`marketPosition` and Critical Consensus follow separately, after this is
-stable.
+Everything that can be got wrong permanently is decided here, and all of it is
+testable offline against the four beta products.
 
-## Unresolved, needing a decision
+Ships:
 
-1. **§2 attribution loosening** — stated above.
-2. **Break-in and conditioned observations.** The Reference 5 evidence is
-   explicitly conditional ("after 500 hours"). Nothing in the current schema
-   can hold a condition, and dropping it would misrepresent the source. Options:
-   a `condition?: string` field, or refusing conditioned observations entirely.
-   I lean toward the field, but it widens the schema and I would rather you
-   chose.
-3. **Whether `measurement` may outrank a manufacturer figure.** A publication's
-   own bench measurement is arguably better evidence than a maker's published
-   claim. The live ordering says otherwise. I have not changed it.
+- `independent-review.ts` — `ObservationType`, `ObservationCondition`, the
+  observation shape, and `isReviewObservationAcceptable`
+- attribution requirement per §2 (paraphrase + exact product identity +
+  publication + reviewer where available + sourceUrl + observationType)
+- exact-variant admission per §4a, reusing corroboration's all-tokens rule
+- publication must be on `SOURCE_WHITELIST`; source host must match the
+  publication's own domain
+- `toEvidenceItem` mapping to the live common interface
+- the `REQUIRES_ATTRIBUTION` change in `evidence-types.ts`, scoped to this
+  class so `manufacturer` keeps its quote requirement
+
+Acceptance fixtures, exactly as you sequenced them:
+
+| Product | Role | Passing behaviour |
+|---|---|---|
+| **dCS Rossini APEX** | rich positive | listening, measurement and positioning observations all admitted from Stereophile / Mono & Stereo / Hi-Fi+ / Twittering Machines |
+| **ARC Reference 5** | variant + condition | TAS and SoundStage!Ultra admitted; **Stereophile's Ref 5 SE rejected at admission**; the 500-hour break-in observation admitted WITH its condition and rejected without it |
+| **Butler MONAD A100** | zero-coverage | admits nothing, and that is a PASS |
+| **Acora QRC-2** | sibling exclusion | SRB / VRC / SRC-1 / MRC-2 observations all rejected — different products, not weaker evidence |
+
+Why this is the right first cut: it is one logical area, it needs no
+infrastructure, and every rule the founder decided is exercised by a fixture
+rather than asserted in prose. If the admission contract is right, the
+remaining slices are plumbing of shapes already proven elsewhere.
+
+**Then, each its own slice, in order:**
+
+2. **Store** — own table, keyed by `(productKey, publication, observationType,
+   claim-hash)` so multiple observations coexist and none overwrites another.
+   Mirrors the manufacturer-fact store's two rules and its TEXT timestamp.
+3. **Acquisition route** — three-state, demand-driven, one product per call,
+   whitelist-restricted search, retrieve-and-paraphrase.
+4. **Read path** — `EvidenceItem` mapping plus derived disagreement detection
+   (§5). No stored aggregate.
+5. **Assessment consumption** — `listening` observations as D-12 premises only,
+   attributed and condition-stated in prose via the existing publication
+   boundary. `positioning` deliberately NOT wired.
+
+`marketPosition` and Critical Consensus follow separately. **No Critical
+Consensus UI in any of these slices.**
+
+## Decisions taken (2026-08-19)
+
+1. **Attribution replaces quotation** for this class — §2.
+2. **Conditioned observations admitted**, typed, condition part of the
+   licence — §1 and §4b.
+3. **No global measurement-over-specification rule** — separate types that may
+   coexist and disagree; field-specific precedence deferred to consumers;
+   normalisation never overwrites — §4c.
+
+Also fixed: exact-variant scoping is a hard admission requirement (§4a); empty
+approved coverage is a legitimate result and the whitelist is not widened to
+remove zeros; Critical Consensus stores no score, average or consensus field
+and remains a read-time projection (§7).
+
+Nothing further is blocked.
