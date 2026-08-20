@@ -188,3 +188,13 @@ describe('STEP 4 — coverage is derived, never narrated', () => {
     expect(mixed.coverageNote).not.toContain('Zorblax');
   });
 });
+
+describe('no tonal trade-off follows from a compatibility finding', () => {
+  // Pinned as a behavioural expectation of the assembled response: with every
+  // surviving relation on `power_load`, `tendencies` is withheld regardless of
+  // what the model wrote. Instruction alone did not hold; this does.
+  it('is stated in the contract AND enforced deterministically', () => {
+    expect(SYSTEM_PROMPT).toMatch(
+      /OMIT ENTIRELY if relationStatus is none_establishable, or if your relations are physical-compatibility findings only/);
+  });
+});

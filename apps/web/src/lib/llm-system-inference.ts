@@ -1484,6 +1484,25 @@ function parseSystemInferenceResponse(
       console.warn('[llm-system-inference] no licensed relation — trade-off withheld');
     }
 
+    // The same rule, one step further: with no licensed SONIC relation there is
+    // no tonal trade-off either. A compatibility finding establishes what a
+    // system can do, and no number of them adds up to what it sounds like.
+    //
+    // Deterministic rather than instructed. The contract tells the model to
+    // omit `tradeoff` and `action` when coverage is thin and it complies only
+    // sometimes — Nathan kept publishing "prioritizes a clean and precise
+    // sound… at the expense of full-bodied warmth" directly beneath the note
+    // saying Audio XX holds no listening evidence for three of its four
+    // components. That is the drive-conclusion lesson again: where Audio XX
+    // already knows the answer, asking for it is the wrong instrument.
+    //
+    // The verdict line already carries the judgment, so nothing is lost.
+    if (tendenciesOut && surviving.length > 0
+      && surviving.every((r) => r.axis === 'power_load')) {
+      tendenciesOut = undefined;
+      console.warn('[llm-system-inference] compatibility findings only — tonal trade-off withheld');
+    }
+
     // ── D-12 §6 — structural and evaluative overclaiming ──────────
     // The rule existed as a tested library and was never called, so every
     // production verdict opened "the system appears deliberately voiced, with
