@@ -157,8 +157,12 @@ describe('STEP 4 — coverage is derived, never narrated', () => {
     }
   });
 
-  it('forbids a thesis when coverage is thin', () => {
-    expect(userPrompt).toMatch(/OMIT "systemThesis" entirely/);
+  it('forbids every tonal slot when coverage is thin', () => {
+    // systemThesis alone was not enough. Nathan kept writing "high dynamic
+    // resolution and control" in `tradeoff` and `action`, contradicting the
+    // coverage note printed two paragraphs above it.
+    expect(userPrompt).toMatch(/OMIT "systemThesis", "tradeoff" AND "action" ENTIRELY/);
+    expect(userPrompt).toMatch(/do not\s+call any of it deliberate/);
   });
 
   it('stays silent when coverage is good', () => {

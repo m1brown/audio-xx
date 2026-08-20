@@ -1008,8 +1008,16 @@ export function buildProvisionalPrompt(
       + `components carry no product-specific sonic evidence: `
       + `${thinlyEvidenced.join(', ')}. Audio XX holds their published `
       + `specifications and has verified they exist, and nothing about how they `
-      + `sound. You may NOT characterise this system's tonal balance, and you must `
-      + `OMIT "systemThesis" entirely. Report the physical and compatibility `
+      + `sound. You may NOT characterise this system's tonal balance.\n`
+      + `OMIT "systemThesis", "tradeoff" AND "action" ENTIRELY. All three require `
+      + `tonal evidence this assessment does not have, and filling them means `
+      + `writing sentences that would fit any system — which is what this rule `
+      + `exists to prevent. Keep "interactionExplanation" to the compatibility `
+      + `findings themselves, or omit it too.\n`
+      + `In particular: do not say the system delivers resolution, control, `
+      + `clarity, transparency, staging, warmth, depth or authority, and do not `
+      + `call any of it deliberate. Those are claims about how it SOUNDS, and `
+      + `nothing here licenses one. Report the physical and compatibility `
       + `findings you do hold, and stop. Audio XX states this limitation to the `
       + `listener itself — do not apologise for it and do not describe any search.`
     : '';
