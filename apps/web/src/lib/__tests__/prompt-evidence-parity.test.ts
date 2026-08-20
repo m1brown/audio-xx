@@ -101,7 +101,13 @@ describe('a genuinely unresolved component still defers — and only then', () =
   });
 
   it('does not sweep the corroborated components into the unverified list', () => {
-    const section = userPrompt.match(/IDENTITY NOT VERIFIED[\s\S]*?(?=\n\nIDENTITY|$)/)?.[0] ?? '';
+    // Bounded at the next SECTION HEADING, not at end-of-prompt. The original
+    // pattern had no real terminator and ran to the end, so it passed only
+    // because nothing downstream happened to name a component. The evidence
+    // coverage section legitimately does, and swallowing it made this read as
+    // a licensing regression when it was an unterminated match.
+    const section = userPrompt.match(
+      /IDENTITY NOT VERIFIED[\s\S]*?(?=\n\n[A-Z][A-Z0-9 /—-]{4,}|$)/)?.[0] ?? '';
     for (const n of ALL_CORROBORATED) expect(section).not.toContain(n);
   });
 });

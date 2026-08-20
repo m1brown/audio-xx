@@ -25,7 +25,7 @@ import {
 } from './evidence/independent-review-consumption';
 import { selectPremises, type PremiseCandidate } from './evidence/premise-selection';
 import {
-  parseQuantities, assessDriveCapability, driveSentence, transferFor,
+  parseQuantities, assessDriveCapability, driveConclusionFor, transferFor,
   type QuantityPremise,
 } from './evidence/physical-quantities';
 import {
@@ -43,7 +43,12 @@ const INFERENCE_TIMEOUT_MS = 20000; // Longer than product inference — system 
 
 // ── System prompt ────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are Audio XX, a private audio advisory system. You provide calm, structured system assessments — never hype, never urgency, never affiliate tone.
+/**
+ * Exported so the output CONTRACT is testable. Which slots may be omitted is a
+ * product decision, not prompt wording — the essay shape lived here, and the
+ * only way to pin that it is gone is to assert against this string.
+ */
+export const SYSTEM_PROMPT = `You are Audio XX, a private audio advisory system. You provide calm, structured system assessments — never hype, never urgency, never affiliate tone.
 
 You are being asked to assess a hi-fi system where some or all components are NOT in your verified catalog. You must produce a useful provisional assessment based on your general knowledge of these components, but you MUST:
 
@@ -93,8 +98,13 @@ You are being asked to assess a hi-fi system where some or all components are NO
    nothing here obviously needs changing. That is a complete and respectable
    answer, and it is often the correct one.
 
-BE SHORT. Four or five paragraphs for the whole assessment. A reader should
-finish it, not survey it. Say each thing ONCE: if you have observed that two
+LENGTH IS AN OUTPUT, NOT A TARGET. Write as many paragraphs as you have
+licensed things to say, and no more. Four or five is a CEILING for a
+richly-evidenced system, not a quota for a sparse one. A one-finding assessment
+is one finding, its unresolved question and a diagnostic question — four
+sentences, and complete. Every optional field below may be omitted entirely,
+and omitting one is a correct answer, never a failure to try. Nothing is
+reconstructed to fill the space you leave. Say each thing ONCE: if you have observed that two
 components establish resolution while two supply density, that IS the thesis —
 do not restate it in the character paragraph, again in the trade-off, and again
 in a summary. Repetition reads as padding and spends the trust you need for the
@@ -119,7 +129,7 @@ licensed things to say is stronger than one that fills the space.
 Format your response as JSON with exactly these fields:
 {
   "verdict": "ONE sentence. Coherent / deliberately voiced / constrained / mismatched / indeterminate — and why.",
-  "systemThesis": "ONE paragraph. What this system as a whole is FOR — the single idea that explains the choices. Not a component list.",
+  "systemThesis": "OPTIONAL. ONE paragraph — what this system as a whole is FOR, the single idea that explains the choices. Not a component list. OMIT ENTIRELY unless you hold product-specific evidence for MOST of the chain: without it, any thesis is a sentence that would fit any system, and a sentence that fits any system tells this listener nothing.",
 
   "attributes": [
     { "component": "exact component name", "axis": "warm_bright|smooth_detailed|elastic_controlled|power_load", "value": "the position on that axis" }
@@ -129,10 +139,10 @@ Format your response as JSON with exactly these fields:
     { "components": ["A", "B"], "axis": "the SHARED axis", "kind": "reinforcement|counterweight|constraint", "premises": [0, 1] }
   ],
 
-  "interactionExplanation": "ONE or TWO paragraphs expressing the relations above in natural prose. Do not restate them mechanically and do not spell out the counterfactual — just say what the arrangement does.",
-  "tradeoff": "ONE paragraph. What the listener gains and gives up BECAUSE OF the relations above. Omit entirely if relationStatus is none_establishable.",
+  "interactionExplanation": "OPTIONAL. ONE or TWO paragraphs expressing the relations above in natural prose. Do not restate them mechanically and do not spell out the counterfactual — just say what the arrangement does. OMIT ENTIRELY if you declared no relations, and keep it to ONE paragraph if you declared one: a single narrow compatibility finding does not fill two paragraphs, and stretching it is how a licensed fact turns into an unlicensed generalisation.",
+  "tradeoff": "OPTIONAL. ONE paragraph. What the listener gains and gives up BECAUSE OF the relations above. OMIT ENTIRELY if relationStatus is none_establishable, or if your relations are physical-compatibility findings only — watts into a load establishes what a system can do, not what it sounds like, and no tonal trade-off follows from it.",
   "actionVerdict": "no_change" | "constraint" | "indeterminate",
-  "action": "ONE short paragraph. Does anything need changing? Distinguish an architectural choice from a deficiency.",
+  "action": "OPTIONAL. ONE short paragraph. Does anything need changing? Distinguish an architectural choice from a deficiency. OMIT ENTIRELY if the verdict already answers it — a second sentence saying nothing needs changing is padding, not emphasis.",
   "nextQuestion": "ONE question. See the QUESTION RULE below — its permitted kind is fixed by actionVerdict.",
 
   "componentKnowledge": [
@@ -554,6 +564,72 @@ export function verdictForVerdictLine(
   }
 }
 
+/**
+ * Rebuild the verdict from what Evaluate ACTUALLY established.
+ *
+ * THE DEFECT THIS FIXES. Nathan's verdict read "One licensed constraint stands
+ * out in this chain, and on the evidence available the chain reinforces its own
+ * direction." The only surviving relation was a REINFORCEMENT, and the only
+ * thing established was that an amplifier's published output covers a
+ * loudspeaker's published load. The line announced a constraint that did not
+ * exist and then implied a system-wide coherence finding from one narrow
+ * compatibility fact.
+ *
+ * The cause was that `actionVerdict` and the relation set were two independent
+ * accounts of the same judgment: the model supplied the first and the licensing
+ * layer computed the second, and nothing reconciled them. The relations are the
+ * evidence, so they win — and where they disagree with the model's own verdict,
+ * the relations are what the line reports.
+ *
+ * SCOPE IS THE SECOND RULE. A relation on `power_load` establishes what a system
+ * can DO, not what it sounds like. It may never produce a sentence about the
+ * chain's voicing, however many such relations survive, because no number of
+ * compatibility findings adds up to a tonal one.
+ */
+export function verdictFromEvidence(
+  declared: ActionVerdict | undefined,
+  relations: Array<{ kind: RelationKind; axis: string }>,
+  /** A named gap Audio XX holds, e.g. an unpublished sensitivity figure. */
+  openGap?: string,
+): string {
+  if (relations.length === 0) {
+    return openGap
+      ? `No system-level interaction is established on the evidence held, and `
+        + `${openGap} remains unresolved.`
+      : 'No system-level interaction is established on the evidence held.';
+  }
+
+  const kinds = new Set(relations.map((r) => r.kind));
+  const physicalOnly = relations.every((r) => r.axis === 'power_load');
+
+  // A constraint is the only finding that reorders a listener's priorities, so
+  // it leads whenever one survives — regardless of what the model declared.
+  if (kinds.has('constraint')) {
+    return 'One constraint in this chain bounds what the rest of it can do.';
+  }
+
+  if (physicalOnly) {
+    // Deliberately narrow. This is the Nathan case, and the whole point is that
+    // the line claims exactly the compatibility finding and nothing beyond it.
+    const lead = relations.length === 1
+      ? 'The evidence establishes one compatibility finding in this chain'
+      : `The evidence establishes ${relations.length} compatibility findings in this chain`;
+    return openGap
+      ? `${lead}, and leaves ${openGap} unresolved.`
+      : `${lead}, and nothing in it points to a mismatch.`;
+  }
+
+  const shape = kinds.has('counterweight') && kinds.has('reinforcement')
+    ? 'the chain both reinforces and counterweights itself'
+    : kinds.has('counterweight') ? 'the chain counterweights itself'
+      : 'the chain reinforces its own direction';
+
+  if (declared === 'indeterminate') {
+    return `The evidence does not yet support a system-level judgment, though ${shape}.`;
+  }
+  return `Nothing here obviously needs changing, and on the evidence available ${shape}.`;
+}
+
 /** Mirrors `productKeyFor` in the evidence layer, without importing the store. */
 function productKeyish(name: string): string {
   return name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -603,6 +679,12 @@ export function buildProvisionalPrompt(
   driveRelation?: LicensedRelation;
   /** That conclusion as prose, written by Audio XX rather than the model. */
   driveConclusion?: string;
+  /** A specific unpublished figure that would resolve what is still open. */
+  openGap?: string;
+  /** The question that gap makes worth asking. Outranks the model's own. */
+  gapQuestion?: string;
+  /** What Audio XX does not hold, derived from evidence rather than asserted. */
+  coverageNote?: string;
 } {
   // ── THE AUTHORITATIVE EVIDENCE STATE ────────────────────────────
   //
@@ -891,10 +973,69 @@ export function buildProvisionalPrompt(
       + `Do not describe the assessment as provisional, partial or indeterminate for `
       + `want of component identification — nothing here is unidentified.`;
 
+  // What Audio XX actually holds per component, counted rather than asserted.
+  // Step 4's coverage statement and the prompt's own length guidance both read
+  // from this one derivation, so the prose the model writes and the limitation
+  // the listener is shown cannot disagree.
+  const sonicPremiseHolders = new Set(selection.premises
+    .filter((p) => p.axis !== 'power_load')
+    .map((p) => p.component.toLowerCase().trim()));
+  const characterised = componentNames.filter((n) => {
+    const k = n.toLowerCase().trim();
+    return sonicPremiseHolders.has(k)
+      || knownDescriptions.some((d) => d.name.toLowerCase().trim() === k);
+  });
+  // A component whose IDENTITY was never confirmed is a different state from
+  // one that is confirmed but carries no sonic evidence, and it already has its
+  // own section and its own language. Sweeping the two together would have the
+  // coverage note assert "verified identity" for a product Audio XX could not
+  // confirm exists — the exact conflation the corroboration work was built to
+  // prevent, one layer along. Caught by the parity gate, not by inspection.
+  const identityUnconfirmed = new Set([
+    ...uncorroborated.map((n) => n.toLowerCase().trim()),
+    ...(lookupUnknown ?? []).map((n) => n.toLowerCase().trim()),
+  ]);
+  const thinlyEvidenced = componentNames.filter((n) =>
+    !characterised.includes(n) && !identityUnconfirmed.has(n.toLowerCase().trim()));
+
+  const coverageDirective = thinlyEvidenced.length > componentNames.length / 2
+    ? `\n\nEVIDENCE COVERAGE — ${thinlyEvidenced.length} of ${componentNames.length} `
+      + `components carry no product-specific sonic evidence: `
+      + `${thinlyEvidenced.join(', ')}. Audio XX holds their published `
+      + `specifications and has verified they exist, and nothing about how they `
+      + `sound. You may NOT characterise this system's tonal balance, and you must `
+      + `OMIT "systemThesis" entirely. Report the physical and compatibility `
+      + `findings you do hold, and stop. Audio XX states this limitation to the `
+      + `listener itself — do not apologise for it and do not describe any search.`
+    : '';
+
+  /**
+   * What Audio XX does not hold, stated to the listener.
+   *
+   * Derived from evidence and premise participation — never from search
+   * behaviour. Audio XX does not know whether a review of the Butler MONAD
+   * A100 exists; it knows only that it holds none. "We searched and found
+   * nothing" is a claim about the world that this state cannot support, and
+   * `lookupUnknown` is the separate field that tracks a check which did not
+   * complete.
+   *
+   * Stated only when it is MATERIAL — more than half the chain — because a
+   * limitation attached to one component in four is a footnote, and printing
+   * it every time would train the reader to skip it.
+   */
+  const coverageNote = thinlyEvidenced.length > componentNames.length / 2
+    ? `Audio XX does not hold enough product-specific listening evidence for `
+      + `${thinlyEvidenced.length === componentNames.length ? 'this chain'
+        : 'most of this chain'} — `
+      + `${thinlyEvidenced.join(', ')} — to make a defensible system-wide tonal `
+      + `judgment. What it holds for ${thinlyEvidenced.length === 1 ? 'it' : 'them'} `
+      + `is published specifications and verified identity.`
+    : undefined;
+
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${quantityContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${quantityContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}${coverageDirective}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
@@ -934,8 +1075,9 @@ ${closing}`;
       }
       : undefined;
 
-  const driveConclusion = (ampSubject && spkImpedance)
-    ? driveSentence(drive, ampSubject, spkImpedance.subject) : undefined;
+  const driveProse = (ampSubject && spkImpedance)
+    ? driveConclusionFor(drive, ampSubject, spkImpedance.subject) : undefined;
+  const driveConclusion = driveProse?.sentence;
 
   // Production visibility for the derived conclusion. `console.log` is stripped
   // from the production bundle and `console.warn` is not, which is why this is
@@ -949,6 +1091,9 @@ ${closing}`;
   return {
     userPrompt, provenance,
     driveConclusion,
+    openGap: driveProse?.gap,
+    gapQuestion: driveProse?.question,
+    coverageNote,
     suppliedPremises: selection.premises,
     supersededCandidates: selection.candidates.filter((c) => c.selected === false),
     unresolvedAxes: selection.unresolved,
@@ -1011,6 +1156,7 @@ export async function inferProvisionalSystemAssessment(
 ): Promise<ConsultationResponse | null> {
   const {
     userPrompt, provenance, suppliedPremises, driveRelation, driveConclusion,
+    openGap, gapQuestion, coverageNote,
   } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
     manufacturerEvidence, reviewObservations,
@@ -1054,6 +1200,7 @@ export async function inferProvisionalSystemAssessment(
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
       manufacturerEvidence ?? [], suppliedPremises, provenance, driveRelation,
+      openGap, gapQuestion, coverageNote,
     );
     if (!parsedResponse) return null;
 
@@ -1176,6 +1323,18 @@ function parseSystemInferenceResponse(
    * replays. A value this function needs is a value it takes.
    */
   driveRelation?: LicensedRelation,
+  /** A named, unpublished figure that would resolve what is still open. */
+  openGap?: string,
+  /**
+   * The question that gap makes worth asking.
+   *
+   * OUTRANKS the model's own `nextQuestion`. Audio XX knows precisely what it
+   * could not establish; the model is guessing at what the listener might want
+   * to be asked, and a guess should not displace a known open question.
+   */
+  gapQuestion?: string,
+  /** What Audio XX does not hold, derived from evidence rather than asserted. */
+  coverageNote?: string,
 ): ConsultationResponse | null {
   try {
     let cleaned = raw.trim();
@@ -1197,7 +1356,11 @@ function parseSystemInferenceResponse(
     const subject = componentNames.join(', ');
 
     let tendenciesOut = [parsed.tradeoff, parsed.action].filter(Boolean).join('\n\n') || undefined;
-    let questionOut = parsed.nextQuestion
+    // A known open question beats a guessed one. Where Audio XX established
+    // exactly which figure is missing, that is the question worth asking, and
+    // the model's generic alternative is not a competitor to it.
+    let questionOut = gapQuestion
+      || parsed.nextQuestion
       || OPEN_DIAGNOSTIC_QUESTION;
 
     // ── D-12 enforcement ──────────────────────────────────────────
@@ -1350,9 +1513,15 @@ function parseSystemInferenceResponse(
     };
 
     let verdictOut = clean(licenseRelational(parsed.verdict || undefined));
-    const philosophyOut = clean(licenseRelational(
+    const modelProse = clean(licenseRelational(
       [parsed.systemThesis, parsed.interactionExplanation].filter(Boolean).join('\n\n') || undefined,
     ));
+    // Audio XX's own coverage statement joins AFTER filtering. It names every
+    // thinly-evidenced component, so the positional default-deny rule would
+    // drop it outright — the engine censoring its own derived prose, which is
+    // the same mistake the drive conclusion already paid for once.
+    const philosophyOut = [modelProse, coverageNote].filter(Boolean).join('\n\n')
+      || undefined;
     tendenciesOut = clean(licenseRelational(tendenciesOut));
 
     if (scopeRepairs.length > 0) {
@@ -1370,16 +1539,19 @@ function parseSystemInferenceResponse(
     // a failure rather than as restraint. It is also the one field that can be
     // rebuilt without inventing anything, because the judgment itself is
     // already structured — `actionVerdict` plus the relations that survived.
+    // The verdict is the one field that may not simply vanish: it is the
+    // judgment the whole assessment hangs from, and a blank first line reads as
+    // a failure rather than as restraint. It is also the one field that can be
+    // rebuilt without inventing anything, because the judgment itself is
+    // already structured — the relations that survived, plus any named gap.
+    //
+    // Rebuilt from the RELATIONS, not from the model's `actionVerdict`. Those
+    // were two independent accounts of one judgment and nothing reconciled
+    // them, which is how Nathan announced a constraint that did not exist.
     if (!verdictOut) {
-      const kinds = new Set(surviving.map((r) => r.kind));
-      const shape = kinds.has('constraint') ? 'one component bounds what the others can do'
-        : kinds.has('counterweight') && kinds.has('reinforcement')
-          ? 'the chain both reinforces and counterweights itself'
-          : kinds.has('counterweight') ? 'the chain counterweights itself'
-            : kinds.has('reinforcement') ? 'the chain reinforces its own direction'
-              : undefined;
-      verdictOut = verdictForVerdictLine(parsed.actionVerdict, shape);
+      verdictOut = verdictFromEvidence(parsed.actionVerdict, surviving, openGap);
     }
+
     if (overclaims.length > 0) {
       console.warn('[llm-system-inference] D-12 §6 — dropped %d overclaiming sentence(s): %s',
         overclaims.length, overclaims.map((o) => `${o.kind}: ${o.sentence.slice(0, 70)}`).join(' | '));
@@ -1389,7 +1561,13 @@ function parseSystemInferenceResponse(
     // question under a no-change verdict retracts the verdict it follows.
     const verdictForQuestion: ActionVerdict = parsed.actionVerdict ?? 'no_change';
     const required = permittedQuestionType(verdictForQuestion);
-    const qIssues = questionViolations(questionOut, required);
+    // A question generated from a licensed gap is exempt from the
+    // open-diagnostic rule. That rule exists to stop a question NAMING a fault
+    // the assessment did not find; here Audio XX established precisely what it
+    // could not settle, so asking about it is reporting a finding rather than
+    // seeding a hypothesis.
+    const qIssues = questionOut === gapQuestion
+      ? [] : questionViolations(questionOut, required);
     if (qIssues.length > 0) {
       console.warn('[llm-system-inference] question violated %s: %s', required, qIssues.join('; '));
       questionOut = required === 'missing_evidence'

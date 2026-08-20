@@ -302,6 +302,53 @@ export function transferFor(conditionKind?: string): EvidenceTransfer {
  * combining them is ours. Nothing about it needs a language model, and asking
  * one to repeat a fact we already hold only introduces a way to lose it.
  */
+export interface DriveConclusion {
+  /** Audio XX's own prose for the finding. */
+  sentence: string;
+  /**
+   * The specific unpublished figure that would resolve what is still open,
+   * phrased for use inside another sentence.
+   *
+   * Promoted out of the prose deliberately. This is the most actionable thing
+   * the assessment holds — a named figure, a known owner, and a known unlock —
+   * and buried mid-paragraph it read as a caveat rather than as the next step.
+   */
+  gap?: string;
+  /** The question that gap makes worth asking. */
+  question?: string;
+}
+
+export function driveConclusionFor(
+  drive: DriveAssessment,
+  ampName: string,
+  speakerName: string,
+): DriveConclusion | undefined {
+  const sentence = driveSentence(drive, ampName, speakerName);
+  if (!sentence) return undefined;
+
+  if (drive.status === 'incomplete' && drive.watts != null) {
+    return {
+      sentence,
+      gap: `the ${speakerName}'s sensitivity`,
+      // Deliberately about the listener's EXPERIENCE, not about the figure.
+      // Asking for a specification is homework; asking whether they are running
+      // out of level is a question only they can answer, and their answer
+      // decides whether the missing figure matters at all.
+      question: 'Are you running into any limit on volume or dynamic range?',
+    };
+  }
+
+  if (drive.status === 'load_mismatch') {
+    return {
+      sentence,
+      gap: `${ampName}'s output into ${drive.loadOhms} ohms`,
+      question: 'How loud do you usually listen, and how large is the room?',
+    };
+  }
+
+  return { sentence };
+}
+
 export function driveSentence(
   drive: DriveAssessment,
   ampName: string,
