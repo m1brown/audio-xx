@@ -113,8 +113,22 @@ describe('STEP 3 — the named gap is promoted, not buried', () => {
   it('keeps the accurate formulation of what sensitivity settles', () => {
     // Sensitivity alone does not determine in-room level. The licensed claim is
     // that without it the evidence held is insufficient to estimate headroom.
+    // The first version of this test asserted against phrasings I had guessed
+    // at and missed the phrasing actually shipped ("what would settle how loud
+    // the pairing plays in your room"), so it now asserts the REQUIRED wording
+    // rather than a list of wordings to avoid.
     expect(c.sentence).toMatch(/sensitivity is not published/);
-    expect(c.sentence).not.toMatch(/sensitivity determines|how loud .* will play|sets the level/i);
+    expect(c.sentence).toMatch(/not sufficient to estimate .* acoustic headroom reliably/);
+    expect(c.sentence).not.toMatch(/how loud|settle|in your room|determines/i);
+  });
+
+  it('never lets an absent figure be reported as a fault', () => {
+    // Nathan's first run under the new contract: "This system is materially
+    // mismatched due to the lack of sensitivity information."
+    expect(c.sentence).not.toMatch(/mismatch|compromis|at risk|may or may not/i);
+    const v = verdictFromEvidence('constraint',
+      [{ kind: 'reinforcement', axis: 'power_load' }], c.gap);
+    expect(v).not.toMatch(/mismatch|constraint|compromis/i);
   });
 
   it('offers no gap when drive is fully established', () => {

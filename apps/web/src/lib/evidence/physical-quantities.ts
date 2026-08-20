@@ -376,8 +376,8 @@ export function driveSentence(
       + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
       + `which is the load the ${speakerName} presents, so output at the `
       + `relevant load is established. The ${speakerName}'s sensitivity is not `
-      + `published, and that is what would settle how loud the pairing plays `
-      + `in your room.`;
+      + `published, so the evidence held is not sufficient to estimate this `
+      + `system's acoustic headroom reliably.`;
   }
 
   if (drive.status === 'load_mismatch') {

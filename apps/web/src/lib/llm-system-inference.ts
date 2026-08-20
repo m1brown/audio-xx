@@ -886,9 +886,14 @@ export function buildProvisionalPrompt(
           + `, which is the load this loudspeaker presents, so output at the relevant `
           + `load IS established. YOU MUST STATE THIS in "signature", citing the figure `
           + `and the load together. What is missing is ${drive.missing}, which is what `
-          + `would settle how loud the pairing plays in a given room — name that `
+          + `would be needed to estimate acoustic headroom reliably — name that `
           + `specific gap in the same breath rather than calling drive unknown. Do not `
-          + `characterise the pairing as synergistic or well matched.`
+          + `characterise the pairing as synergistic or well matched.\n`
+          + `A MISSING FIGURE IS NOT A FAULT. Do not call this system mismatched, `
+          + `constrained, compromised or at risk because a specification is `
+          + `unpublished, and do not say the speakers "may or may not" be driven `
+          + `properly. Absence of evidence is not evidence of a defect; it is an open `
+          + `question, and Audio XX asks the listener about it directly.`
         : drive.status === 'incomplete'
           ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. Missing: `
             + `${drive.missing}. Do not characterise drive capability in either direction.`
@@ -1548,7 +1553,16 @@ function parseSystemInferenceResponse(
     // Rebuilt from the RELATIONS, not from the model's `actionVerdict`. Those
     // were two independent accounts of one judgment and nothing reconciled
     // them, which is how Nathan announced a constraint that did not exist.
-    if (!verdictOut) {
+    // Rebuilt when the model supplied nothing — and ALSO when Audio XX holds an
+    // open gap and the surviving relations are physical only. In that state the
+    // model reliably mistakes a missing figure for a fault: Nathan's first run
+    // under this contract led with "This system is materially mismatched due to
+    // the lack of sensitivity information", which asserts a defect from an
+    // absence and is a worse failure than the padding it replaced. Audio XX
+    // knows exactly what it established, so Audio XX states it.
+    const physicalOnly = surviving.length > 0
+      && surviving.every((r) => r.axis === 'power_load');
+    if (!verdictOut || (openGap && physicalOnly)) {
       verdictOut = verdictFromEvidence(parsed.actionVerdict, surviving, openGap);
     }
 
