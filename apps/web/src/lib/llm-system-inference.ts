@@ -1115,9 +1115,14 @@ ${closing}`;
 }
 
 /**
- * Put Audio XX's own derived conclusion at the head of the signature.
+ * Attach Audio XX's own derived prose — the drive conclusion and the coverage
+ * statement — to a response that has already cleared every gate.
  *
- * Applied AFTER the D-7 gate, deliberately. That gate audits what the MODEL
+ * Applied AFTER the D-7 gate, deliberately, and this is load-bearing for BOTH
+ * values. The coverage note names every thinly-evidenced component, so run
+ * through the gate it reads as unlicensed characterisation of products we said
+ * we cannot characterise, and the entire assessment collapses into the licensed
+ * fallback. That happened in production the first time it was wired in. That gate audits what the MODEL
  * wrote against the evidence we hold, and this sentence was not written by the
  * model — it was computed by the drive rule from published figures. Running it
  * through first is the engine auditing itself: the gate matches prose against
@@ -1125,15 +1130,20 @@ ${closing}`;
  * typical @ 4 Ohms" to "200 watts into 4 ohms", and the whole assessment
  * collapses into the fallback over a restatement of its own evidence.
  */
-function leadWithDriveConclusion(
+function applyDerivedProse(
   response: ConsultationResponse,
   driveConclusion?: string,
+  coverageNote?: string,
 ): ConsultationResponse {
-  if (!driveConclusion) return response;
   const existing = response.systemSignature?.trim();
+  const philosophy = [response.philosophy, coverageNote].filter(Boolean).join('\n\n')
+    || undefined;
   return {
     ...response,
-    systemSignature: existing ? `${driveConclusion} ${existing}` : driveConclusion,
+    systemSignature: driveConclusion
+      ? (existing ? `${driveConclusion} ${existing}` : driveConclusion)
+      : response.systemSignature,
+    philosophy,
   };
 }
 
@@ -1264,9 +1274,9 @@ export async function inferProvisionalSystemAssessment(
         // The derived conclusion survives the fallback. A listener whose gear
         // we cannot characterise is exactly the one for whom a published
         // figure at their own load is the most useful thing we have.
-        return leadWithDriveConclusion(
+        return applyDerivedProse(
           buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster),
-          driveConclusion);
+          driveConclusion, coverageNote);
       }
     }
     // Provenance is computed from EVIDENCE, before and independently of the
@@ -1283,7 +1293,7 @@ export async function inferProvisionalSystemAssessment(
     // Literally the same array the prompt was built from, not a recomputation.
     // Two derivations of one fact are two chances to disagree.
     parsedResponse.componentProvenance = provenance;
-    return leadWithDriveConclusion(parsedResponse, driveConclusion);
+    return applyDerivedProse(parsedResponse, driveConclusion, coverageNote);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');
@@ -1557,12 +1567,16 @@ function parseSystemInferenceResponse(
     const modelProse = clean(licenseRelational(
       [parsed.systemThesis, parsed.interactionExplanation].filter(Boolean).join('\n\n') || undefined,
     ));
-    // Audio XX's own coverage statement joins AFTER filtering. It names every
-    // thinly-evidenced component, so the positional default-deny rule would
-    // drop it outright — the engine censoring its own derived prose, which is
-    // the same mistake the drive conclusion already paid for once.
-    const philosophyOut = [modelProse, coverageNote].filter(Boolean).join('\n\n')
-      || undefined;
+    // Audio XX's own coverage statement is NOT added here. It names every
+    // thinly-evidenced component, so it fails two checks it was never subject
+    // to: the positional default-deny rule inside this function, and the D-7
+    // licensing gate that runs on the returned prose in the caller. Adding it
+    // here sent the whole assessment to the licensed fallback — the engine
+    // censoring its own derived prose, which is the same mistake the drive
+    // conclusion already paid for once and which I repeated here.
+    //
+    // It is applied by `applyDerivedProse` in the caller, after every gate.
+    const philosophyOut = modelProse;
     tendenciesOut = clean(licenseRelational(tendenciesOut));
 
     if (scopeRepairs.length > 0) {
