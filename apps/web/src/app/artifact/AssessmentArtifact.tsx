@@ -122,10 +122,16 @@ export default function AssessmentArtifact(
           </ul>
         )}
 
-        <section className="axa-section">
-          <p className="axa-label">Recognition</p>
-          <p className="axa-p">{a.identity.recognition}</p>
-        </section>
+        {/* Recognition is absent when no axis is committed — there is then no
+            evidenced characteristic to report. Rendering the label over an
+            empty paragraph would reinstate the section for layout's sake,
+            which is the habit the evidence-led rule exists to break. */}
+        {a.identity.recognition && (
+          <section className="axa-section">
+            <p className="axa-label">Recognition</p>
+            <p className="axa-p">{a.identity.recognition}</p>
+          </section>
+        )}
 
         <section className="axa-section">
           <p className="axa-label">Recommendation</p>

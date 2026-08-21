@@ -38,7 +38,11 @@ describe('v2 Assessment Artifact dispatch', () => {
     const raw = runEngine('Assess my system: Holo May (KTE), Decware SE84UFO, Magnepan LRS+');
     const { payload } = synthesizeArtifact(raw);
     expect(payload.verdict).toMatch(/amplifier|speakers/i);
-    expect(payload.recognition.startsWith('This system is built for')).toBe(true);
+    // Recognition reports an evidenced characteristic, never what the system
+    // was "built for" — the axes licence a reading of behaviour and nothing
+    // about anyone's intent.
+    expect(payload.recognition).not.toMatch(/built for|chosen for|asked to|assembled for/i);
+    if (payload.recognition) expect(payload.recognition).toMatch(/^This system reads /);
     expect(payload.recommendation).toMatch(/power mismatch|amplifier|speakers/i);
     expect(payload.heroDatum?.value).toMatch(/dB$/);
     // R1: recognition must not equal the standfirst.
@@ -54,7 +58,8 @@ describe('v2 Assessment Artifact dispatch', () => {
     const { payload } = synthesizeArtifact(raw);
     expect(payload.verdict).toBe('Nothing here needs changing.');
     expect(payload.recommendation).toMatch(/nothing here to fix — only flavours to trade|already well balanced/);
-    expect(payload.recognition.startsWith('This system is built for')).toBe(true);
+    expect(payload.recognition).not.toMatch(/built for|chosen for|asked to|assembled for/i);
+    if (payload.recognition) expect(payload.recognition).toMatch(/^This system reads /);
     // R8: no forbidden refrain in the restraint case.
     const judgment = [payload.recognition, ...payload.caseParagraphs].join(' ');
     expect(judgment).not.toMatch(/it is balanced|no weak link|nothing (?:here )?needs changing|nothing needs fixing/i);

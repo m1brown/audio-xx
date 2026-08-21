@@ -14,7 +14,41 @@
 import type { ArtifactPayload } from './types';
 import { committedPoles } from '../a3-artifact-case';
 
-/** The one evidence line shown on the artifact (detailed ledger is not exposed). */
+/**
+ * The one evidence line shown on the artifact, derived from the classes
+ * ACTUALLY used for this assessment.
+ *
+ * It was previously a module constant asserting "manufacturer documentation,
+ * designer statements, and Audio XX analysis" on every assessment ever
+ * rendered, whatever had been consulted. That is a claim about provenance the
+ * runtime state does not support — the same defect as a coverage note claiming
+ * a search was performed, and the reason the detailed ledger is kept internal
+ * is precisely that provenance claims must be true.
+ *
+ * Manufacturer documentation and designer statements are asserted only where a
+ * primary source of that class is actually attached. Audio XX analysis is
+ * always true of a rendered assessment: the reading, the axes and the verdict
+ * are ours.
+ */
+export function evidenceStatement(sources: PrimarySource[]): string {
+  const classes = new Set(sources.map((s) => s.evidenceClass));
+  const parts: string[] = [];
+  if (classes.has('manufacturer') || classes.has('manual') || classes.has('technical')) {
+    parts.push('manufacturer documentation');
+  }
+  if (classes.has('designer')) parts.push('designer statements');
+  parts.push('Audio XX analysis');
+  const list = parts.length > 1
+    ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
+    : parts[0];
+  return `Assessment based on ${list}.`;
+}
+
+/**
+ * @deprecated Retained only for fixtures that predate runtime derivation.
+ * Production reads `evidenceStatement()`; this asserts source classes that may
+ * not have been used.
+ */
 export const EVIDENCE_STATEMENT =
   'Assessment based on manufacturer documentation, designer statements, and Audio XX analysis.';
 
@@ -162,28 +196,83 @@ function findVoicedComponent(raw: any): string | undefined {
   return voiced?.name;
 }
 
-function composeListeningSession(raw: any, recognition: string): string[] {
-  const strengths: string[] = raw?.response?.assessmentStrengths ?? [];
+/**
+ * What the listener will hear — emitted ONLY where the evidence licenses a
+ * prediction about listening.
+ *
+ * THE DEFECT THIS FIXES. The previous version opened with one hard-coded
+ * sentence — "Put on something with air and inner detail… leading edges are
+ * clean and quick, and the image extends wide without being pushed forward" —
+ * and read neither the verdict nor the bottleneck. `strengths` and
+ * `recognition` were received and explicitly discarded. So the 5W SET into an
+ * 86 dB Magnepan, whose verdict is "The amplifier can't drive these speakers",
+ * received the same passage, byte-identical, as the coherent Leben/Cornwall
+ * reference — promising clean leading edges and a wide image to a listener
+ * whose amplifier will be clipping first.
+ *
+ * The section could not contradict the verdict because it could not see it.
+ * That is the same failure `composeDominantCharacter()` was removed for in
+ * August 2026, and the fix here is the one that function did not get: a gate,
+ * not an exception.
+ *
+ * TWO CONDITIONS, both required.
+ *
+ *   No diagnosed bottleneck. A constraint IS the listening experience. What a
+ *   listener hears from an under-driven system is the constraint, and a tonal
+ *   prediction alongside it is not merely padding — it contradicts the
+ *   assessment's own verdict.
+ *
+ *   At least one committed axis. With every axis neutral there is no character
+ *   to predict FROM, and the passage would describe nothing this system does.
+ *
+ * Neither holds → the section is absent. It is not replaced.
+ */
+function composeListeningSession(raw: any): string[] {
+  if (raw?.findings?.bottleneck) return [];
+
+  const axes: Record<string, string> = raw?.findings?.systemAxes ?? {};
+  const committed = Object.entries(axes)
+    .filter(([, v]) => v && v !== 'neutral' && v !== 'balanced');
+  if (committed.length === 0) return [];
+
+  // The opening now derives from the committed axis rather than asserting
+  // detail and imaging for every system. A warm-committed system was being
+  // told to listen for "air and inner detail" on the same evidence.
+  const value = (k: string) => axes[k];
+  let first: string;
+  if (value('warm_bright') === 'warm' || value('smooth_detailed') === 'smooth') {
+    first = 'Put on something with body and tone and the system\u2019s priorities are '
+      + 'audible immediately: notes have weight and decay, and nothing is pushed '
+      + 'forward to seem more resolved than it is.';
+  } else if (value('smooth_detailed') === 'detailed' || value('warm_bright') === 'bright') {
+    first = 'Put on something with air and inner detail and the system\u2019s priorities '
+      + 'are audible immediately: leading edges are clean and quick, and the image '
+      + 'extends wide without being pushed forward.';
+  } else {
+    first = 'Put on something you know well and the system\u2019s priorities are audible '
+      + 'immediately in how it handles dynamics rather than in its tonal colour.';
+  }
+
   const voiced = findVoicedComponent(raw);
-  const base = `Put on something with air and inner detail and the system's priorities are audible immediately: leading edges are clean and quick, and the image extends wide without being pushed forward.`;
-  const first = voiced
-    ? `${base} The ${voiced}'s warmth keeps that resolution from reading as clinical.`
-    : base;
+  if (voiced && value('smooth_detailed') === 'detailed') {
+    first += ` The ${voiced}\u2019s warmth keeps that resolution from reading as clinical.`;
+  }
+
   // Phase 3 (cohesive voice): the closing observation must belong to THIS
   // system's character — the previous universal "detail offered rather than
   // asserted" line appeared verbatim on every assessment, including tone-first
   // systems where it was not the story.
-  const axesForClose: Record<string, string> = raw?.findings?.systemAxes ?? {};
   let second: string;
-  if (axesForClose.warm_bright === 'warm' || axesForClose.smooth_detailed === 'smooth') {
-    second = `Over a long evening the character holds. The warmth stays present without turning soft, and the system remains easy to live with at volume and after hours.`;
-  } else if (axesForClose.smooth_detailed === 'detailed') {
-    second = `Over a long evening the character holds. The detail is offered rather than asserted, so the system stays easy to live with at volume and after hours.`;
+  if (value('warm_bright') === 'warm' || value('smooth_detailed') === 'smooth') {
+    second = 'Over a long evening the character holds. The warmth stays present without '
+      + 'turning soft, and the system remains easy to live with at volume and after hours.';
+  } else if (value('smooth_detailed') === 'detailed') {
+    second = 'Over a long evening the character holds. The detail is offered rather than '
+      + 'asserted, so the system stays easy to live with at volume and after hours.';
   } else {
-    second = `Over a long evening the character holds. Nothing pushes forward and nothing falls away, so the system stays easy to live with at volume and after hours.`;
+    second = 'Over a long evening the character holds. Nothing pushes forward and nothing '
+      + 'falls away, so the system stays easy to live with at volume and after hours.';
   }
-  // If the engine named a strength, prefer the first line to reflect it, but keep it observational.
-  void strengths; void recognition;
   return [first, second];
 }
 
@@ -337,11 +426,14 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     guidance: { recommendation: payload.recommendation, oneCost: payload.cost },
     reading: {
       engineering: engineeringOut,
-      listeningSession: raw ? composeListeningSession(raw, payload.recognition) : [],
+      listeningSession: raw ? composeListeningSession(raw) : [],
       dominantCharacter,
       operatingCondition: operatingConditionOut,
     },
-    evidence: { statement: EVIDENCE_STATEMENT, primarySources: primarySources.length ? primarySources : undefined },
+    evidence: {
+      statement: evidenceStatement(primarySources),
+      primarySources: primarySources.length ? primarySources : undefined,
+    },
     editorial: editorial.length ? editorial : undefined,
   };
 }

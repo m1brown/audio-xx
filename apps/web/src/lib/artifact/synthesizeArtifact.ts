@@ -132,6 +132,22 @@ const INTENT_PRIMARY: Record<string, Record<string, string>> = {
   },
 };
 
+/**
+ * Behavioural readings only. Each says what the system DOES on that axis.
+ * No verb of choosing, asking, building or trading appears in any value.
+ */
+const CHARACTER_PRIMARY: Record<string, Record<string, string>> = {
+  warm_bright: { warm: 'tonally warm', bright: 'tonally bright' },
+  smooth_detailed: { smooth: 'smooth and continuous', detailed: 'high in resolution' },
+  elastic_controlled: { elastic: 'rhythmically elastic', controlled: 'tightly controlled' },
+};
+
+const CHARACTER_SECOND: Record<string, Record<string, string>> = {
+  warm_bright: { warm: 'with tonal weight', bright: 'with a lit top end' },
+  smooth_detailed: { smooth: 'with detail held back from the front', detailed: 'with detail well forward' },
+  elastic_controlled: { elastic: 'with unforced dynamics', controlled: 'with firm dynamic grip' },
+};
+
 const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
   warm_bright: {
     warm:    'detail and air preserved through careful choices downstream',
@@ -153,26 +169,41 @@ const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
   },
 };
 
-export function intentRead(axes: Record<string, string> | undefined): string {
-  // Pick the strongest non-neutral axis for the primary clause; the next-
-  // strongest non-neutral axis (if any) supplies the qualifier. If every
-  // axis reads neutral, fall back to the unambiguous balance phrasing — a
-  // valid intent statement, never the tonal signature.
+/**
+ * What this system's evidenced character IS — never what it was FOR.
+ *
+ * WHY THIS REPLACED `intentRead`. Every output of the previous function was an
+ * owner-intent claim: "built for resolution and detail, with composure left to
+ * the speaker", "built for balance — no single quality asked to dominate". The
+ * axes licence a reading of how a system behaves; nothing in them licenses a
+ * claim about what anyone chose, asked for, or built toward. "Asked to
+ * dominate" and "left to the speaker" attribute a decision to a person Audio XX
+ * has never met, from evidence that is entirely about behaviour.
+ *
+ * This is the same rule D-12 §6 already enforces on the conversational path,
+ * where sentences containing "deliberately voiced" and "the components have
+ * been selected to complement" are stripped as intent overclaims. The catalog
+ * artifact was generating them structurally instead of catching them.
+ *
+ * Returns undefined when no axis is committed. There is no neutral fallback:
+ * a system that commits to nothing has no characteristic to report, and the
+ * section is then absent rather than filled.
+ */
+export function characterRead(axes: Record<string, string> | undefined): string | undefined {
   const ranked: string[] = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
-  const present = ranked.filter((k) => axes && axes[k] && axes[k] !== 'neutral' && axes[k] !== 'balanced');
-  if (!axes || present.length === 0) {
-    return 'built for balance — no single quality asked to dominate';
-  }
+  const present = ranked.filter((k) =>
+    axes && axes[k] && axes[k] !== 'neutral' && axes[k] !== 'balanced');
+  if (!axes || present.length === 0) return undefined;
+
   const primaryKey = present[0];
-  const primaryVal = axes[primaryKey];
-  const primary = INTENT_PRIMARY[primaryKey]?.[primaryVal] ?? 'balance across the three tonal axes';
-  const qualKey = present[1] ?? ranked.find((k) => k !== primaryKey);
-  const qualVal = qualKey ? (axes[qualKey] ?? 'neutral') : 'neutral';
-  const qualifier = qualKey ? (INTENT_QUALIFIER[qualKey]?.[qualVal] ?? '') : '';
-  return qualifier
-    ? `built for ${primary}, with ${qualifier}`
-    : `built for ${primary}`;
+  const primary = CHARACTER_PRIMARY[primaryKey]?.[axes[primaryKey]];
+  if (!primary) return undefined;
+
+  const secondKey = present[1];
+  const second = secondKey ? CHARACTER_SECOND[secondKey]?.[axes[secondKey]] : undefined;
+  return second ? `${primary}, ${second}` : primary;
 }
+
 
 // ── R8: equilibrium beat (restraint path: who plays which part) ─────────
 function equilibriumBeat(credit: string[], axes: Record<string, string> | undefined): string | null {
@@ -408,10 +439,16 @@ export function synthesizeArtifact(result: any): SynthResult {
   // signature. intentRead() now derives an intent phrase for every axis
   // combination the engine emits, so there is no signature fallback path.
   // R1 is enforced as a final post-condition.
-  let recognition = `This system is ${intentRead(f.systemAxes)}.`;
-  if (standfirst && norm(recognition) === norm(standfirst)) {
-    recognition = 'A system worth assessing.';
-    contradictions.push('R1: recognition would duplicate the standfirst; falling back to neutral lead.');
+  // Recognition reports an EVIDENCED CHARACTERISTIC, or is absent. It no
+  // longer asserts what the system was "built for": the axes licence a reading
+  // of behaviour and nothing about anyone's intent. Where no axis is committed
+  // there is nothing to report and the section does not render — it is not
+  // backfilled with a neutral line.
+  const character = characterRead(f.systemAxes);
+  let recognition = character ? `This system reads ${character}.` : '';
+  if (recognition && standfirst && norm(recognition) === norm(standfirst)) {
+    recognition = '';
+    contradictions.push('R1: recognition would duplicate the standfirst; omitted.');
   }
 
   // ── R3, R4, R5, R8 — case paragraphs ─────────────────────────────────

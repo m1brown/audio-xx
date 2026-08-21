@@ -501,6 +501,23 @@ export function filterUnlicensedRelationalProse(
    * are invisible and the rule behaves exactly as it did before.
    */
   componentRoles: ComponentRole[] = [],
+  /**
+   * The premise set, so a CONDITIONED observation keeps its condition even in a
+   * single-component sentence.
+   *
+   * GOVERNING RULE (founder, 2026-08-21):
+   *
+   *   A material condition is part of the evidence licence regardless of
+   *   whether the claim is Describe or Explain.
+   *
+   * Condition enforcement previously lived only on relations, so Nathan
+   * published "The dCS Rossini Apex is established as providing controlled and
+   * smooth dynamics… according to Stereophile" while the observation behind it
+   * held only under a direct A/B against the earlier Rossini. Stated flat, that
+   * is a claim the publication never made — the same defect the relational rule
+   * already caught, one claim-type along.
+   */
+  premises: AttributeRecord[] = [],
 ): {
   prose: string | undefined;
   dropped: Array<{ sentence: string; reason: string }>;
@@ -545,10 +562,33 @@ export function filterUnlicensedRelationalProse(
       const priorSentence = antecedentSentence;
       if (named.length > 0) { antecedent = named[0]; antecedentSentence = sentence; }
 
-      // One component, or none: Describe. Always publishable — the repair
-      // restricts Explain, and silencing description would be the
-      // over-correction, not the fix.
-      if (touched.length < 2) return sentence;
+      // One component, or none: Describe. Publishable — the repair restricts
+      // Explain, and silencing description would be the over-correction — but
+      // a conditioned observation still carries its condition into the
+      // sentence or does not publish.
+      //
+      // Reliance is detected by the sentence NAMING THE PUBLICATION. That is
+      // the structural marker: a sentence citing Stereophile about a component
+      // whose Stereophile premise is conditioned is resting on that
+      // observation, whatever else it says. (A sentence that uses review
+      // content without citing it is not reached by this rule; that is an
+      // attribution failure, and a separate one.)
+      if (touched.length < 2) {
+        const relied = premises.filter((p) =>
+          p.attribution?.condition
+          && p.attribution.publication
+          && touched.includes(p.component)
+          && sentenceNames(sentence, p.attribution.publication));
+        const missing = relied
+          .filter((p) => !conditionStated(sentence, p.attribution!.condition!, p.component))
+          .map((p) => p.attribution!.condition!);
+        if (missing.length > 0) {
+          dropped.push({ sentence: original.trim(),
+            reason: `premise condition dropped (${[...new Set(missing)].join('; ')})` });
+          return null;
+        }
+        return sentence;
+      }
 
       // Two or more: every pair must be licensed. No connective test, no
       // vocabulary. Naming a second component IS the thing that requires a
@@ -702,12 +742,21 @@ function sentenceNames(sentence: string, publication: string): boolean {
  * not by silence. Numbers count for more than words here: a break-in figure is
  * the part a listener acts on.
  */
-function conditionStated(sentence: string, condition: string): boolean {
+function conditionStated(sentence: string, condition: string, subject?: string): boolean {
   const body = condition.replace(/^[a-z_]+:\s*/i, '');
   const numbers = body.match(/\d+/g) ?? [];
   if (numbers.length > 0) return numbers.every((n) => sentence.includes(n));
+
+  // Words belonging to the SUBJECT'S OWN NAME cannot evidence the condition.
+  // "direct A/B comparison with the earlier Rossini DAC" shares "Rossini" with
+  // the dCS Rossini Apex, so merely naming the product read as stating the
+  // condition and the flat claim published. Naming what a claim is about is
+  // not the same as saying when it holds.
+  const subjectWords = new Set((subject ?? '').toLowerCase().split(/\W+/).filter(Boolean));
   const terms = body.toLowerCase().split(/\W+/)
-    .filter((t) => t.length >= 4 && !['with', 'after', 'when', 'from', 'that', 'this'].includes(t));
+    .filter((t) => t.length >= 4
+      && !['with', 'after', 'when', 'from', 'that', 'this'].includes(t)
+      && !subjectWords.has(t));
   if (terms.length === 0) return true;
   const lower = sentence.toLowerCase();
   return terms.some((t) => lower.includes(t));

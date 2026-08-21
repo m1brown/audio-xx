@@ -52,7 +52,10 @@ describe('France identity is detail-forward and committed', () => {
     const id = deriveIdentity(raw);
     expect(id.committedAxes.smooth_detailed).toBe('detailed');
     expect(id.signature.toLowerCase()).toMatch(/detail/);
-    expect(id.recognition.toLowerCase()).toMatch(/resolution and detail/);
+    // Behavioural reading, not an intent claim (2026-08-21). The identity is
+    // unchanged — detail-forward and committed — only the register is.
+    expect(id.recognition.toLowerCase()).toMatch(/high in resolution/);
+    expect(id.recognition).not.toMatch(/built for|asked to/i);
   });
 
   it('toArtifactCaseContext carries the established identity to the A3 layer', () => {
@@ -60,7 +63,7 @@ describe('France identity is detail-forward and committed', () => {
     expect(ctx).not.toBeNull();
     expect(ctx.committedAxes?.smooth_detailed).toBe('detailed');
     expect(ctx.signature?.toLowerCase()).toMatch(/detail/);
-    expect(ctx.recognition?.toLowerCase()).toMatch(/resolution and detail/);
+    expect(ctx.recognition?.toLowerCase()).toMatch(/high in resolution/);
   });
 
   it('the prompt presents identity as fixed and forbids contradiction', () => {

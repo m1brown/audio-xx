@@ -247,3 +247,62 @@ describe('a role noun is a reference, not a description', () => {
     expect(filterUnlicensedRelationalProse(s, drive, NAMES).prose?.trim()).toBe(s);
   });
 });
+
+describe('a condition is part of the licence for Describe too', () => {
+  // Nathan published "The dCS Rossini Apex is established as providing
+  // controlled and smooth dynamics... according to Stereophile" while the
+  // observation behind it held only under a direct A/B against the earlier
+  // Rossini. Condition enforcement lived on relations only.
+  const CONDITIONED: AttributeRecord = {
+    component: 'dCS Rossini Apex', axis: 'smooth_detailed', value: 'smooth',
+    tier: 'independent_review', scope: 'product',
+    attribution: {
+      publication: 'Stereophile',
+      condition: 'other: direct A/B comparison with the earlier Rossini DAC under the same setup',
+    },
+  };
+  const UNCONDITIONAL: AttributeRecord = {
+    component: 'Acora QRC-2', axis: 'smooth_detailed', value: 'smooth',
+    tier: 'independent_review', scope: 'product',
+    attribution: { publication: 'SoundStage!' },
+  };
+  const run = (s: string, prem = [CONDITIONED, UNCONDITIONAL]) =>
+    filterUnlicensedRelationalProse(s, [], NAMES, [], prem);
+
+  it('REJECTS the conditioned observation stated flat', () => {
+    const r = run('The dCS Rossini Apex is established as providing controlled and '
+      + 'smooth dynamics, with impressive measured performance according to Stereophile.');
+    expect(r.prose?.trim()).toBeFalsy();
+    expect(r.dropped[0].reason).toContain('premise condition dropped');
+  });
+
+  it('PUBLISHES it with the publication and the material condition', () => {
+    const s = 'Stereophile heard the dCS Rossini Apex as smoother than the earlier '
+      + 'Rossini DAC in a direct comparison under the same setup.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('publishes a genuinely unconditional product observation normally', () => {
+    const s = 'SoundStage! heard the Acora QRC-2 as smooth.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('leaves a sentence that cites no publication alone', () => {
+    // Reliance is marked by citation. This rule does not guess at it.
+    const s = 'The dCS Rossini Apex is a DAC and streamer.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('is inert when no premises are supplied', () => {
+    const s = 'The dCS Rossini Apex is smooth, according to Stereophile.';
+    expect(filterUnlicensedRelationalProse(s, [], NAMES).prose?.trim()).toBe(s);
+  });
+
+  it('leaves relational condition enforcement unchanged', () => {
+    const rel = licensedRelations(relSet(), [ACORA_OWN, DCS_BRAND]);
+    const flat = 'Stereophile heard the Acora QRC-2 as smooth, which offsets the '
+      + 'detail dCS designs are typically associated with.';
+    expect(filterUnlicensedRelationalProse(flat, rel, NAMES, [], []).prose?.trim())
+      .toBeFalsy();
+  });
+});

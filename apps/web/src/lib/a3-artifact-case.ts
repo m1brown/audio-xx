@@ -25,7 +25,7 @@
 
 import { AUDIO_XX_DOCTRINE } from './a3-character';
 import {
-  intentRead,
+  characterRead,
   verdictAndStandfirst,
   roleNoun,
   stripTrailingPeriod,
@@ -125,7 +125,10 @@ export function deriveIdentity(raw: any): EstablishedIdentity {
     role = '';
   }
   const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature);
-  const recognition = `This system is ${intentRead(f.systemAxes)}.`;
+  // Behavioural reading, never an intent claim — see `characterRead`. Empty
+  // when no axis is committed, so the section is absent rather than filled.
+  const character = characterRead(f.systemAxes);
+  const recognition = character ? `This system reads ${character}.` : '';
   return {
     signature,
     recognition,

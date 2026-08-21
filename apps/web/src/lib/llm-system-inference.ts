@@ -1547,7 +1547,7 @@ function parseSystemInferenceResponse(
     const scopeRepairs: Array<{ from: string; to: string }> = [];
     const licenseRelational = (prose: string | undefined) => {
       const { prose: out, dropped, normalized } = filterUnlicensedRelationalProse(
-        prose, surviving, componentNames, componentRoles);
+        prose, surviving, componentNames, componentRoles, attributes);
       relationalDrops.push(...dropped);
       scopeRepairs.push(...normalized);
       return out;
