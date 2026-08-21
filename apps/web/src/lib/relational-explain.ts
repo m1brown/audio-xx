@@ -355,6 +355,97 @@ export function referencesComponentSet(sentence: string): boolean {
   return COLLECTIVE_REFERENCE.test(sentence);
 }
 
+/**
+ * A component's role in the chain, so a role noun can be resolved to a product.
+ *
+ * THE ESCAPE THIS CLOSES. The positional rule requires a licence when a
+ * sentence NAMES a second component. It said nothing about referring to one by
+ * its job, so two live sentences walked out of production:
+ *
+ *   "This synergy likely results in a compelling performance that balances the
+ *    dCS's smoothness and the amplifier's robust power supply."
+ *   "The system is coherent, with key synergy between the amplifier and
+ *    speakers founded on high sensitivity."
+ *
+ * The first names one component and points at a second by role; the second
+ * names none and points at two. Both assert interactions that no surviving
+ * relation licensed.
+ *
+ * This is reference resolution, not vocabulary. "Synergy" is not the problem —
+ * it would become "partnership", then "match", then "pairing". The problem is
+ * that "the amplifier" IS the Butler Monads, and a sentence saying so in fewer
+ * words makes exactly the same claim.
+ */
+export interface ComponentRole {
+  name: string;
+  /** Chain role: 'amplifier', 'speaker', 'dac', 'preamplifier', … */
+  role: string;
+}
+
+/**
+ * Role nouns, each mapped to the chain roles it can denote.
+ *
+ * Definite reference only, exactly as with collective references: "the
+ * amplifier" and "your speakers" point at this listener's components, while a
+ * bare "amplifier power is worth having" is a generic use of the word.
+ */
+const ROLE_NOUNS: Array<{ pattern: RegExp; roles: string[] }> = [
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:power\s+)?amps?\b/i, roles: ['amplifier', 'integrated'] },
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:power\s+)?amplifiers?\b/i, roles: ['amplifier', 'integrated'] },
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:pre-?amp|pre-?amplifier|line\s?stage)s?\b/i, roles: ['preamplifier'] },
+  { pattern: /\b(?:the|your|its|their|these|those)\s+(?:loud)?speakers?\b/i, roles: ['speaker'] },
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:dac|d\/a\s+converter)\b/i, roles: ['dac'] },
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:streamer|transport)\b/i, roles: ['streamer', 'dac', 'source'] },
+  { pattern: /\b(?:the|your|its|their|this)\s+(?:turntable|record\s+player)\b/i, roles: ['turntable'] },
+  { pattern: /\b(?:the|your|its|their|these|those)\s+headphones?\b/i, roles: ['headphone'] },
+];
+
+/**
+ * Components a sentence points at by role rather than by name.
+ *
+ * A role noun matching NOTHING in the chain resolves to nothing and is left
+ * alone — it is a generic use of the word, not a reference. A role matching
+ * SEVERAL components resolves to all of them, because the sentence has not
+ * distinguished between them and we must not guess which one it meant.
+ */
+/** Role words, for detecting a coordination that shares one determiner. */
+const ROLE_WORD = '(?:power\\s+)?(?:amps?|amplifiers?|pre-?amps?|pre-?amplifiers?|'
+  + 'line\\s?stages?|(?:loud)?speakers?|dacs?|streamers?|transports?|'
+  + 'turntables?|headphones?)';
+
+/**
+ * Give every member of a coordinated list its own determiner.
+ *
+ * "the amplifier and speakers" carries ONE "the" across two role nouns, so a
+ * pattern requiring a determiner sees the amplifier and misses the speakers —
+ * which is how "key synergy between the amplifier and speakers founded on high
+ * sensitivity" survived the first version of this rule. Rewriting it to "the
+ * amplifier and the speakers" changes nothing about meaning and lets one
+ * pattern set handle both shapes.
+ */
+function distributeDeterminers(sentence: string): string {
+  const coordination = new RegExp(
+    `\\b(the|your|its|their|these|those)\\s+(${ROLE_WORD}(?:\\s*(?:,|and|or)\\s+${ROLE_WORD})+)\\b`,
+    'gi');
+  return sentence.replace(coordination, (_m, det: string, list: string) =>
+    list.split(/\s*(?:,|\band\b|\bor\b)\s+/i)
+      .filter(Boolean)
+      .map((part) => `${det} ${part.trim()}`)
+      .join(' and '));
+}
+
+export function rolesIn(sentence: string, roles: ComponentRole[]): string[] {
+  const expanded = distributeDeterminers(sentence);
+  const hits: string[] = [];
+  for (const { pattern, roles: denoted } of ROLE_NOUNS) {
+    if (!pattern.test(expanded)) continue;
+    for (const c of roles) {
+      if (denoted.includes(c.role.toLowerCase().trim())) hits.push(c.name);
+    }
+  }
+  return [...new Set(hits)];
+}
+
 function namesIn(sentence: string, componentNames: string[]): string[] {
   return componentNames.filter((n) =>
     componentTokens(n).some((t) => new RegExp(`\\b${t}\\b`, 'i').test(sentence)));
@@ -404,6 +495,12 @@ export function filterUnlicensedRelationalProse(
   prose: string | undefined,
   surviving: LicensedRelation[],
   componentNames: string[],
+  /**
+   * Chain roles, so "the amplifier" resolves to the product filling that role
+   * before the default-deny rule runs. Optional: without it, role references
+   * are invisible and the rule behaves exactly as it did before.
+   */
+  componentRoles: ComponentRole[] = [],
 ): {
   prose: string | undefined;
   dropped: Array<{ sentence: string; reason: string }>;
@@ -436,7 +533,12 @@ export function filterUnlicensedRelationalProse(
       // the whole set is what puts an aggregate claim under the same rule as a
       // two-component one, instead of under no rule at all.
       const collective = referencesComponentSet(sentence) ? componentNames : [];
-      const touched = [...new Set([...named, ...referred, ...collective])];
+      // A role noun IS a reference to the component holding that role. Resolved
+      // before the licence check, so naming one component and pointing at
+      // another by its job requires exactly the relation that writing both
+      // names out would have required.
+      const byRole = rolesIn(sentence, componentRoles);
+      const touched = [...new Set([...named, ...referred, ...collective, ...byRole])];
 
       // Capture the antecedent BEFORE advancing it: this sentence's own names
       // must not become the source we check its own anaphora against.
@@ -459,7 +561,8 @@ export function filterUnlicensedRelationalProse(
             dropped.push({ sentence: sentence.trim(),
               reason: `no licensed relation between ${touched[i]} and ${touched[j]}`
                 + (collective.length ? ' (via collective reference to the components)'
-                  : referred.length ? ` (via anaphora to ${antecedent})` : '') });
+                  : byRole.length && !named.includes(touched[j]) ? ' (via role reference)'
+                    : referred.length ? ` (via anaphora to ${antecedent})` : '') });
             return null;
           }
           // Scope survives anaphora, and EVERY brand-scoped component must be

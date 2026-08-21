@@ -32,7 +32,7 @@ import {
   licensedRelations, validateRelations, permittedQuestionType, questionViolations,
   stripOverclaims,
   filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
-  type LicensedRelation,
+  type LicensedRelation, type ComponentRole,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
 } from './relational-explain';
@@ -1166,6 +1166,13 @@ export async function inferProvisionalSystemAssessment(
    * not a failure to identify it.
    */
   reviewObservations?: Record<string, ReviewObservation[]>,
+  /**
+   * Each component's role in the chain, so the publication boundary can resolve
+   * "the amplifier" to the product filling that role. Without it, a sentence
+   * that points at a second component by its job rather than its name escapes
+   * relational licensing entirely.
+   */
+  componentRoles?: ComponentRole[],
 ): Promise<ConsultationResponse | null> {
   const {
     userPrompt, provenance, suppliedPremises, driveRelation, driveConclusion,
@@ -1213,7 +1220,7 @@ export async function inferProvisionalSystemAssessment(
     const parsedResponse = parseSystemInferenceResponse(
       content, componentNames, knownDescriptions, corroborated ?? [],
       manufacturerEvidence ?? [], suppliedPremises, provenance, driveRelation,
-      openGap, gapQuestion, coverageNote,
+      openGap, gapQuestion, coverageNote, componentRoles ?? [],
     );
     if (!parsedResponse) return null;
 
@@ -1348,6 +1355,8 @@ function parseSystemInferenceResponse(
   gapQuestion?: string,
   /** What Audio XX does not hold, derived from evidence rather than asserted. */
   coverageNote?: string,
+  /** Chain roles, so role references resolve before the licence check. */
+  componentRoles: ComponentRole[] = [],
 ): ConsultationResponse | null {
   try {
     let cleaned = raw.trim();
@@ -1538,7 +1547,7 @@ function parseSystemInferenceResponse(
     const scopeRepairs: Array<{ from: string; to: string }> = [];
     const licenseRelational = (prose: string | undefined) => {
       const { prose: out, dropped, normalized } = filterUnlicensedRelationalProse(
-        prose, surviving, componentNames);
+        prose, surviving, componentNames, componentRoles);
       relationalDrops.push(...dropped);
       scopeRepairs.push(...normalized);
       return out;

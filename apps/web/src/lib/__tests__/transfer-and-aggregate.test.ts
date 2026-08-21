@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   licensedRelations, validateRelations, filterUnlicensedRelationalProse,
-  premiseTransfer, referencesComponentSet,
+  premiseTransfer, referencesComponentSet, rolesIn,
   type AttributeRecord, type RelationSet,
 } from '../relational-explain';
 
@@ -164,6 +164,86 @@ describe('positive controls — restraint must not become muteness', () => {
     }];
     const s = 'Published figures put the Butler Monads at 200 watts into 4 ohms, which '
       + 'is the load the Acora QRC-2 presents.';
+    expect(filterUnlicensedRelationalProse(s, drive, NAMES).prose?.trim()).toBe(s);
+  });
+});
+
+describe('a role noun is a reference, not a description', () => {
+  const ROLES = [
+    { name: 'dCS Rossini Apex', role: 'dac' },
+    { name: 'ARC ref 5', role: 'preamplifier' },
+    { name: 'Butler Monads', role: 'amplifier' },
+    { name: 'Acora QRC-2', role: 'speaker' },
+  ];
+  // Only the derived drive relation survives, exactly as in Nathan's live run.
+  const drive = [{
+    components: ['Butler Monads', 'Acora QRC-2'] as [string, string],
+    axis: 'power_load', kind: 'reinforcement' as const,
+    premises: [0, 0] as [number, number],
+    licensedTier: 'manufacturer' as const, licensedScope: 'product' as const,
+    brandScoped: [], citedPublications: [], conditions: [],
+  }];
+  const run = (s: string, rel = drive) =>
+    filterUnlicensedRelationalProse(s, rel, NAMES, ROLES);
+
+  it('resolves a role noun to the component holding that role', () => {
+    expect(rolesIn('the amplifier is working hard', ROLES)).toEqual(['Butler Monads']);
+    expect(rolesIn('the speakers present a 4 ohm load', ROLES)).toEqual(['Acora QRC-2']);
+    expect(rolesIn('the DAC and the preamp', ROLES).sort())
+      .toEqual(['ARC ref 5', 'dCS Rossini Apex']);
+  });
+
+  it('leaves a role noun that matches nothing in the chain alone', () => {
+    expect(rolesIn('the turntable would be a separate question', ROLES)).toEqual([]);
+  });
+
+  it('DROPS the Nathan escape', () => {
+    const r = run('This synergy likely results in a compelling performance that '
+      + "balances the dCS's smoothness and the amplifier's robust power supply.");
+    expect(r.prose?.trim()).toBeFalsy();
+    expect(r.dropped[0].reason).toContain('no licensed relation');
+  });
+
+  it('DROPS the low-evidence escape, which names nobody at all', () => {
+    const r = filterUnlicensedRelationalProse(
+      'The system is coherent, with key synergy between the amplifier and '
+      + 'speakers founded on high sensitivity.', [], NAMES, ROLES);
+    expect(r.prose?.trim()).toBeFalsy();
+  });
+
+  it('drops the rephrasings, because the rule never reads the verb', () => {
+    for (const s of ["The amplifier partners the dCS's smoothness well.",
+      'The amplifier is a fine match for the dCS Rossini Apex.',
+      'The dCS Rossini Apex is well served by the amplifier.']) {
+      expect(run(s).prose?.trim(), s).toBeFalsy();
+    }
+  });
+
+  // ── positive controls ──────────────────────────────────────────
+  it('keeps a single-component role reference', () => {
+    const s = 'The Butler Monads publish 200 watts into 4 ohms, and the amplifier '
+      + 'is specified into that load directly.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('keeps a LICENSED amplifier-to-speaker relation stated by role', () => {
+    const s = 'The amplifier publishes 200 watts into 4 ohms, which is the load '
+      + 'the speakers present.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('keeps a system-level non-relational statement', () => {
+    const s = 'The system is coherent, with a smooth and controlled character.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('keeps single-component description that uses no role noun', () => {
+    const s = 'The Acora QRC-2 presents a 4 ohm load.';
+    expect(run(s).prose?.trim()).toBe(s);
+  });
+
+  it('is inert when no roles are supplied', () => {
+    const s = "This balances the dCS's smoothness and the amplifier's power supply.";
     expect(filterUnlicensedRelationalProse(s, drive, NAMES).prose?.trim()).toBe(s);
   });
 });

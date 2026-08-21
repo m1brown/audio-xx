@@ -3124,6 +3124,9 @@ export default function Home() {
             lookupUnknown,
             manufacturerEvidence as never,
             reviewObservations as never,
+            // Roles travel with the components so the publication boundary can
+            // resolve "the amplifier" to the product holding that role.
+            orderedComponents.map((c) => ({ name: c.displayName, role: c.role })),
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling
