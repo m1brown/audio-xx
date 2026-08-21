@@ -101,7 +101,7 @@ describe('EVIDENCE statement reflects the classes actually used', () => {
   it('never asserts designer statements without one', () => {
     const s = evidenceStatement([
       { label: 'Spec sheet', url: 'https://example.test', evidenceClass: 'manufacturer' }]);
-    expect(s).toBe('Assessment based on manufacturer documentation, and Audio XX analysis.');
+    expect(s).toBe('Assessment based on manufacturer documentation and Audio XX analysis.');
     expect(s).not.toMatch(/designer/);
   });
 

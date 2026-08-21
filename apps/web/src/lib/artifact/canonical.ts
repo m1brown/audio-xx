@@ -38,9 +38,10 @@ export function evidenceStatement(sources: PrimarySource[]): string {
   }
   if (classes.has('designer')) parts.push('designer statements');
   parts.push('Audio XX analysis');
-  const list = parts.length > 1
+  // Two items take no comma; three or more take the serial comma.
+  const list = parts.length > 2
     ? `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
-    : parts[0];
+    : parts.join(' and ');
   return `Assessment based on ${list}.`;
 }
 
