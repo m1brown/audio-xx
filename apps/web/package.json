@@ -13,7 +13,7 @@
     "lint": "next lint",
     "qa:regress:visual": "playwright test -c playwright.visual.config.ts",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:push": "node ../../scripts/guard-prisma-push.mjs",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
