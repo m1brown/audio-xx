@@ -754,6 +754,12 @@ export interface AdvisoryResponse {
   artifactViewToken?: string;
   /** Public capability, present only after an explicit Share. */
   artifactShareToken?: string;
+  /**
+   * Component-scoped product knowledge. Rendered outside the relational
+   * publication boundary — every line has one subject, so D-12 was never its
+   * business.
+   */
+  componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
 
   // ── 0. Audio Profile ──────────────────────────────────
   /** Structured listener profile — system, sonic priorities, context. */
@@ -2152,6 +2158,7 @@ export function consultationToAdvisory(
     spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
     systemSignature: isComparison ? undefined : c.systemSignature,
+    componentDossiers: isComparison ? undefined : c.componentDossiers,
 
     // Pass 18: Brand Authority Preview — pass through unchanged for
     // non-comparison responses. Comparison flows never populate this

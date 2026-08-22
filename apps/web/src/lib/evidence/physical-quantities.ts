@@ -47,6 +47,16 @@ export interface QuantityPremise {
   specifiedIntoOhms?: number;
   sourceUrl?: string;
   publication?: string;
+  /**
+   * The owning component's chain role.
+   *
+   * Required to tell amplifier output from any other watt figure. Eversolo
+   * publishes `power_output: 13 W` for a streaming DAC, and the drive rule
+   * selected the amplifier as the FIRST component exposing a `power_output`
+   * field — which for the FRANCE system is the streamer. A figure is not
+   * amplifier output because it is measured in watts.
+   */
+  role?: string;
 }
 
 /**
@@ -68,7 +78,7 @@ export function parseQuantities(
   subject: string,
   field: string,
   raw: string,
-  meta: { sourceUrl?: string; publication?: string } = {},
+  meta: { sourceUrl?: string; publication?: string; role?: string } = {},
 ): QuantityPremise[] {
   const text = String(raw ?? '').replace(/[\u2010-\u2015\u2212]/g, '-');
   const base = { subject, ...meta };
@@ -123,7 +133,7 @@ export function parseQuantity(
   subject: string,
   field: string,
   raw: string,
-  meta: { sourceUrl?: string; publication?: string } = {},
+  meta: { sourceUrl?: string; publication?: string; role?: string } = {},
 ): QuantityPremise | null {
   return parseQuantities(subject, field, raw, meta)[0] ?? null;
 }
@@ -177,6 +187,22 @@ export type DriveAssessment =
  * and a typical is an average, and a claim about a listener's own unit should
  * rest on the guarantee.
  */
+/** Roles whose published watts describe amplifier output into a load. */
+const AMPLIFYING_ROLES = new Set(['amplifier', 'integrated']);
+
+/**
+ * Amplifier power figures only.
+ *
+ * A `power_output` figure on a source component is a different quantity that
+ * happens to share a unit — consumption, or a headphone stage. Where the role
+ * is UNKNOWN the figure is excluded rather than assumed: an unlabelled watt
+ * figure is exactly the case that produced the collision.
+ */
+export function amplifierPowers(quantities: QuantityPremise[]): QuantityPremise[] {
+  return quantities.filter((q) =>
+    q.quantity === 'power_output' && !!q.role && AMPLIFYING_ROLES.has(q.role));
+}
+
 export function powerForLoad(
   powers: QuantityPremise[],
   loadOhms: number | undefined,

@@ -26,6 +26,7 @@ import {
 import { selectPremises, type PremiseCandidate } from './evidence/premise-selection';
 import {
   parseQuantities, assessDriveCapability, driveConclusionFor, transferFor,
+  amplifierPowers,
   type QuantityPremise,
 } from './evidence/physical-quantities';
 import {
@@ -668,6 +669,8 @@ export function buildProvisionalPrompt(
   lookupUnknown?: string[],
   manufacturerEvidence?: EvidenceItem[],
   reviewObservations?: Record<string, ReviewObservation[]>,
+  /** Chain roles — required to tell amplifier output from any other watt figure. */
+  componentRoles?: ComponentRole[],
 ): {
   userPrompt: string;
   provenance: ComponentProvenance[];
@@ -826,8 +829,10 @@ export function buildProvisionalPrompt(
     if (!owner) continue;
     // Plural: one published field routinely states a whole power table, and
     // the figure at the listener's own load is usually not the first one.
+    const ownerRole = (componentRoles ?? []).find((r) => r.name === owner)?.role
+      ?? (unresolved ?? []).find((u) => u.name === owner)?.role;
     quantities.push(...parseQuantities(owner, item.field, item.value,
-      { sourceUrl: item.attribution?.sourceUrl }));
+      { sourceUrl: item.attribution?.sourceUrl, role: ownerRole }));
   }
 
   const reviewCandidates: PremiseCandidate[] = [];
@@ -847,9 +852,12 @@ export function buildProvisionalPrompt(
   // The one combining rule, run by Audio XX rather than proposed by the model.
   // Every power figure the amplifier publishes is offered, so the rule can pick
   // the one specified into THIS loudspeaker's load rather than the first listed.
-  const ampSubject = quantities.find((q) => q.quantity === 'power_output')?.subject;
-  const ampPowers = quantities.filter((q) => q.quantity === 'power_output'
-    && q.subject === ampSubject);
+  // Selected by ROLE, never by position. The FRANCE system pairs a streaming
+  // DAC publishing 13 W with an amplifier publishing nothing; picking the
+  // first `power_output` in the chain made the streamer the amplifier.
+  const ampCandidates = amplifierPowers(quantities);
+  const ampSubject = ampCandidates[0]?.subject;
+  const ampPowers = ampCandidates.filter((q) => q.subject === ampSubject);
   const spkImpedance = quantities.find((q) => q.quantity === 'nominal_impedance'
     && q.subject !== ampSubject);
   const spkSensitivity = quantities.find((q) => q.quantity === 'sensitivity'
@@ -1211,7 +1219,7 @@ export async function inferProvisionalSystemAssessment(
     openGap, gapQuestion, coverageNote,
   } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
-    manufacturerEvidence, reviewObservations,
+    manufacturerEvidence, reviewObservations, componentRoles,
   );
 
   try {

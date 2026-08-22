@@ -41,6 +41,7 @@ import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
 import ArtifactActionsInline from './ArtifactActionsInline';
+import ComponentDossiers from './ComponentDossiers';
 import AssessmentArtifactV2 from '../../app/artifact/AssessmentArtifact';
 import { synthesizeArtifact } from '../../lib/artifact/synthesizeArtifact';
 import '../../app/artifact/artifact.css';
@@ -5488,7 +5489,11 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
   // action appeared. The token's presence is the only condition that matters;
   // which renderer drew the assessment is not.
   const artifactActions = (
-    <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
+    <>
+      {/* Component-scoped: single-subject facts, outside the relational filter. */}
+      <ComponentDossiers dossiers={advisory.componentDossiers} />
+      <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
+    </>
   );
 
   // ── Trailing block: Continue Exploring, then Product Resources ──────

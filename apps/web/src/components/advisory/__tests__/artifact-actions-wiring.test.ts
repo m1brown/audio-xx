@@ -94,7 +94,8 @@ describe('the actions are mounted once, for every assessment format', () => {
     // The first attempt mounted inside the artifact and memo branches. Nathan
     // renders through StandardFormat, so the snapshot was created, the token
     // returned, and no action appeared.
-    const site = msg.slice(msg.indexOf('const artifactActions'), msg.indexOf('const artifactActions') + 220);
+    const start = msg.indexOf('const artifactActions');
+    const site = msg.slice(start, msg.indexOf(');', start));
     expect(site).toMatch(/viewToken=\{advisory\.artifactViewToken\}/);
     expect(site).not.toMatch(/isMemoFormat|StandardFormat|SYSTEM_ASSESSMENT_ARTIFACT_ENABLED/);
   });

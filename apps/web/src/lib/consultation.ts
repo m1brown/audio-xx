@@ -153,6 +153,8 @@ export interface ConsultationResponse {
   source?: ConsultationSource;
   /** System signature — one-sentence sonic identity characterization. */
   systemSignature?: string;
+  /** Component-scoped product knowledge; see AdvisoryResponse.componentDossiers. */
+  componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
   /**
    * Comparison summary — renders first for comparison responses.
    * A concise contrast of the two subjects, answering the question
