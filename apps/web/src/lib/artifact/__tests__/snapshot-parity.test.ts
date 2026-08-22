@@ -1,0 +1,210 @@
+import { describe, it, expect, vi } from 'vitest';
+import {
+  ASSESSMENT_SCHEMA_V1, snapshotFromCanonical, snapshotFromProvisional,
+  freezeSnapshot, parseSnapshot,
+} from '../snapshot';
+import { runArtifactPipeline } from '@/product/assessment-pipeline';
+
+/**
+ * The snapshot -> artifact semantic-parity boundary.
+ *
+ * ACCEPTANCE (founder, 2026-08-22): take the exact assessment visible in the
+ * conversation, create its snapshot, open the artifact, and compare the
+ * listener-visible semantic state. No reasoning function may execute between
+ * those two states.
+ */
+
+const CREATED = '2026-08-22T10:00:00.000Z';
+const meta = { engineVersion: 'test', createdAt: CREATED };
+
+// ── Control 3: Nathan — the provisional path, captured from PRODUCTION ──
+// Reproduced verbatim from the 22 August production run. Nathan cannot be
+// generated in a unit test (his path calls corroboration, evidence reads and
+// the model), and that is exactly why the snapshot must carry the result.
+const NATHAN_CONVERSATION = {
+  subject: 'dCS Rossini Apex, ARC ref 5, Butler Monads, Acora QRC-2',
+  systemSignature:
+    'Published figures put the Butler Monads at 200 watts into 4 ohms, which is the '
+    + "load the Acora QRC-2 presents, so output at the relevant load is established. The "
+    + "Acora QRC-2's sensitivity is not published, so the evidence held is not sufficient "
+    + "to estimate this system's acoustic headroom reliably. The evidence establishes one "
+    + "compatibility finding in this chain, and leaves the Acora QRC-2's sensitivity unresolved.",
+  philosophy:
+    'Audio XX does not hold enough product-specific listening evidence for most of this '
+    + 'chain — ARC ref 5, Butler Monads, Acora QRC-2 — to make a defensible system-wide '
+    + 'tonal judgment. What it holds for them is published specifications and verified identity.',
+  tendencies: undefined,
+  followUp: 'Are you running into any limit on volume or dynamic range?',
+  actionVerdict: 'no_change',
+  systemRelations: [{
+    components: ['Butler Monads', 'Acora QRC-2'] as [string, string],
+    axis: 'power_load', kind: 'reinforcement', tier: 'manufacturer',
+  }],
+  componentProvenance: [
+    { name: 'dCS Rossini Apex', basis: 'brand' },
+    { name: 'ARC ref 5', basis: 'model' },
+    { name: 'Butler Monads', basis: 'model' },
+    { name: 'Acora QRC-2', basis: 'model' },
+  ],
+};
+
+describe('CONTROL 1 — Nathan renders at all', () => {
+  const snap = snapshotFromProvisional(NATHAN_CONVERSATION, {
+    ...meta,
+    components: [
+      { name: 'dCS Rossini Apex', role: 'dac' }, { name: 'ARC ref 5', role: 'preamplifier' },
+      { name: 'Butler Monads', role: 'amplifier' }, { name: 'Acora QRC-2', role: 'speaker' },
+    ],
+  });
+
+  it('produces a snapshot where the live route produced a failure page', () => {
+    // Production /artifact?system=<Nathan>: "I couldn't read that as a
+    // system — an assessment needs at least two named components."
+    expect(snap.schema).toBe(ASSESSMENT_SCHEMA_V1);
+    expect(snap.origin).toBe('provisional');
+    expect(snap.components).toHaveLength(4);
+  });
+
+  it('preserves the derived quantity finding verbatim', () => {
+    expect(snap.verdict).toBe(NATHAN_CONVERSATION.systemSignature);
+    expect(snap.verdict).toContain('200 watts into 4 ohms');
+    expect(snap.verdict).toContain('not sufficient to estimate');
+  });
+
+  it('preserves the coverage limitation and the diagnostic question', () => {
+    expect(snap.sections[0].paragraphs[0]).toContain('does not hold enough product-specific');
+    expect(snap.question).toBe('Are you running into any limit on volume or dynamic range?');
+  });
+
+  it('preserves the licensed relation and the per-component basis', () => {
+    expect(snap.relations).toEqual([{
+      components: ['Butler Monads', 'Acora QRC-2'],
+      axis: 'power_load', kind: 'reinforcement', tier: 'manufacturer',
+    }]);
+    expect(snap.components.find((c) => c.name === 'dCS Rossini Apex')?.basis).toBe('brand');
+    expect(snap.components.find((c) => c.name === 'ARC ref 5')?.basis).toBe('model');
+  });
+
+  it('invents no evidence classes it does not hold', () => {
+    expect(snap.evidenceStatement).not.toMatch(/manufacturer documentation|designer statements/);
+  });
+
+  it('survives a storage round trip unchanged', () => {
+    expect(parseSnapshot(freezeSnapshot(snap))).toEqual(snap);
+  });
+});
+
+// ── Controls 2 and 3: the catalog path ──────────────────────────────
+const catalogSnapshot = (text: string) => {
+  const r = runArtifactPipeline(text)!;
+  expect(r).toBeTruthy();
+  return { cam: r.canonical, snap: snapshotFromCanonical(r.canonical, meta) };
+};
+
+describe('CONTROL 2 — Leben/Cornwall keeps its identity', () => {
+  const { cam, snap } = catalogSnapshot('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
+
+  it('carries the verdict, standfirst and recognition unchanged', () => {
+    expect(snap.verdict).toBe(cam.identity.verdict);
+    expect(snap.standfirst).toBe(cam.identity.signature);
+    expect(snap.recognition).toBe(cam.identity.recognition || undefined);
+  });
+
+  it('carries every reading section unchanged', () => {
+    const eng = snap.sections.find((s) => s.label === 'Engineering');
+    expect(eng?.paragraphs).toEqual(cam.reading.engineering);
+    const ls = snap.sections.find((s) => s.label === 'Listening Session');
+    expect(ls?.paragraphs).toEqual(cam.reading.listeningSession);
+    expect(snap.operatingCondition).toBe(cam.reading.operatingCondition);
+  });
+
+  it('carries the tonal signature and the evidence statement unchanged', () => {
+    expect(snap.tonalSignature).toEqual(cam.identity.tonalSignature);
+    expect(snap.evidenceStatement).toBe(cam.evidence.statement);
+  });
+
+  it('never renders richness the assessment did not have', () => {
+    // Sections exist only where the assessment produced them.
+    for (const s of snap.sections) expect(s.paragraphs.length).toBeGreaterThan(0);
+  });
+});
+
+describe('CONTROL 3 — Magnepan preserves its constraint', () => {
+  const { cam, snap } = catalogSnapshot('Assess my system: Amp: Zorblax ZX1 5 watt SET Speakers: Magnepan LRS+');
+
+  it('leads with the constraint', () => {
+    expect(snap.verdict).toMatch(/can't drive these speakers|need more power/);
+    expect(snap.verdict).toBe(cam.identity.verdict);
+  });
+
+  it('keeps Recognition absent, as the constraint requires', () => {
+    expect(snap.recognition).toBeUndefined();
+  });
+
+  it('keeps the Listening Session omitted', () => {
+    expect(snap.sections.find((s) => s.label === 'Listening Session')).toBeUndefined();
+  });
+
+  it('keeps the recommendation and operating condition', () => {
+    expect(snap.recommendation).toBe(cam.guidance.recommendation);
+    expect(snap.operatingCondition).toBe(cam.reading.operatingCondition);
+  });
+});
+
+describe('IMMUTABILITY — a snapshot is a value, not a query', () => {
+  it('is fully self-contained: no input text, no re-run key', () => {
+    const { snap } = catalogSnapshot('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
+    const json = freezeSnapshot(snap);
+    // The engine input must not travel with the snapshot. Carrying it is what
+    // made re-derivation possible, and anything that CAN re-derive eventually does.
+    expect(json).not.toContain('Assess my system');
+    expect(Object.keys(snap)).not.toContain('systemText');
+  });
+
+  it('identifies its own schema version', () => {
+    const { snap } = catalogSnapshot('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
+    expect(snap.schema).toBe('axx.assessment.v1');
+    expect(snap.engineVersion).toBe('test');
+  });
+
+  it('refuses a schema it cannot faithfully display', () => {
+    expect(parseSnapshot('{"schema":"axx.assessment.v2","verdict":"x","sections":[]}')).toBeNull();
+    expect(parseSnapshot('not json')).toBeNull();
+  });
+});
+
+describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
+  it('renders with every reasoning entry point rigged to throw', async () => {
+    vi.resetModules();
+    const boom = (name: string) => () => { throw new Error(`REASONING EXECUTED: ${name}`); };
+    vi.doMock('@/lib/consultation', () => ({ buildSystemAssessment: boom('buildSystemAssessment') }));
+    vi.doMock('@/lib/llm-system-inference', () => ({
+      inferProvisionalSystemAssessment: boom('inferProvisionalSystemAssessment'),
+      buildProvisionalPrompt: boom('buildProvisionalPrompt'),
+    }));
+    vi.doMock('@/lib/evidence/manufacturer-facts', () => ({ physicalFactsFor: boom('physicalFactsFor') }));
+    vi.doMock('@/lib/evidence/independent-review-acquisition', () => ({ admitAndStore: boom('admitAndStore') }));
+    vi.doMock('@/product/assessment-pipeline', () => ({ runArtifactPipeline: boom('runArtifactPipeline') }));
+
+    const mod = await import('../snapshot');
+    const stored = freezeSnapshot(mod.snapshotFromProvisional(NATHAN_CONVERSATION, {
+      ...meta, components: [{ name: 'Butler Monads' }, { name: 'Acora QRC-2' }],
+    }));
+    const reopened = mod.parseSnapshot(stored);
+
+    expect(reopened?.verdict).toContain('200 watts into 4 ohms');
+    expect(reopened?.question).toBe('Are you running into any limit on volume or dynamic range?');
+    vi.doUnmock('@/lib/consultation');
+    vi.resetModules();
+  });
+
+  it('imports no reasoning module at all', async () => {
+    const fs = await import('node:fs/promises');
+    const src = await fs.readFile(new URL('../snapshot.ts', import.meta.url), 'utf8');
+    const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+    // Type-only import of the CAM is the single dependency, and it carries no
+    // runtime code. Anything else here is a path back to reasoning.
+    expect(imports).toEqual(['./canonical']);
+    expect(src).toMatch(/import type \{[^}]+\} from '\.\/canonical'/);
+  });
+});

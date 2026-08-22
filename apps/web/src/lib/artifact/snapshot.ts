@@ -1,0 +1,255 @@
+/**
+ * Assessment Snapshot — the frozen representation of an assessment Audio XX
+ * already produced.
+ *
+ * GOVERNING DOCTRINE (founder, 2026-08-22):
+ *
+ *   An Assessment Artifact is a frozen representation of an assessment Audio XX
+ *   already produced. Opening, printing or sharing it must never cause the
+ *   system to reassess the equipment.
+ *
+ * THE DEFECT THIS FIXES. `/artifact?system=<text>` carried the ENGINE INPUT and
+ * re-ran `buildSystemAssessment` on every open. Three consequences, all
+ * observed on production:
+ *
+ *   Nathan did not render at all — "I couldn't read that as a system" — because
+ *   his components are uncatalogued and the artifact route implements only the
+ *   deterministic catalog path.
+ *
+ *   Leben/Cornwall rendered a DIFFERENT assessment from the conversation: a
+ *   different product resolved (CS600X, not CS600), a different axis value
+ *   (detailed, not balanced) and a different standfirst.
+ *
+ *   Every open re-derived against whatever the engine had become, so a link
+ *   shared today would say something else next month.
+ *
+ * The authoritative object is therefore the assessment RESULT, not the input.
+ * This module defines that result as a self-contained value: everything the
+ * artifact renders and nothing it would need to recompute.
+ *
+ * WHY NOT `ArtifactPayload`. The existing `AssessmentSnapshot` row stores one,
+ * and it is not sufficient. `toCanonicalAssessment(payload, raw)` reads `raw`
+ * for the listening session, and `primarySources` are looked up from catalog
+ * data at render time — so a stored payload still re-derives, and still drifts
+ * when the catalog changes. A snapshot has to hold the RESOLVED output.
+ *
+ * WHY ONE SHAPE FOR TWO PATHS. Audio XX has two reasoning paths — the
+ * deterministic catalog path and the provisional path for uncatalogued systems
+ * — and the artifact surface implemented only the first. One snapshot shape
+ * with two adapters is what makes "one assessment, multiple surfaces" true
+ * rather than aspirational.
+ */
+import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
+
+export const ASSESSMENT_SCHEMA_V1 = 'axx.assessment.v1' as const;
+
+/** One titled block of assessment prose, in reading order. */
+export interface SnapshotSection {
+  /** Rendered heading. Absent = unlabelled prose, as the conversation shows it. */
+  label?: string;
+  paragraphs: string[];
+}
+
+/** A licensed relation, recorded as it was licensed. Never re-derived. */
+export interface SnapshotRelation {
+  components: [string, string];
+  axis: string;
+  kind: string;
+  tier: string;
+  publications?: string[];
+  conditions?: string[];
+}
+
+export interface AssessmentSnapshotV1 {
+  /** Identifies the frozen historical representation. */
+  schema: typeof ASSESSMENT_SCHEMA_V1;
+  /** ISO instant the assessment was produced. */
+  createdAt: string;
+  /** Engine build that produced it. Provenance only — never a re-run key. */
+  engineVersion: string;
+  /**
+   * Which reasoning path produced this assessment.
+   *
+   * Recorded for provenance and rendering shape. It is NOT a re-derivation
+   * key: nothing downstream may consult it to decide how to reassess.
+   */
+  origin: 'catalog' | 'provisional';
+
+  /** Component identities AS DISPLAYED, with the basis shown beside them. */
+  components: Array<{ name: string; role?: string; basis?: string }>;
+
+  verdict: string;
+  standfirst?: string;
+  actionVerdict?: string;
+  recognition?: string;
+  tonalSignature?: AxisReading[];
+  recommendation?: string;
+  cost?: string;
+
+  /** The assessment body, in reading order. */
+  sections: SnapshotSection[];
+  operatingCondition?: string;
+  /** The diagnostic question the assessment closed on. */
+  question?: string;
+
+  relations?: SnapshotRelation[];
+  /** What Audio XX did not hold, as stated to the listener. */
+  coverageNote?: string;
+  evidenceStatement: string;
+  primarySources?: PrimarySource[];
+}
+
+/** The shape the provisional path produces, narrowed to what a snapshot needs. */
+export interface ProvisionalAssessmentLike {
+  subject?: string;
+  systemSignature?: string;
+  philosophy?: string;
+  tendencies?: string;
+  followUp?: string;
+  actionVerdict?: string;
+  systemRelations?: Array<{
+    components: [string, string]; axis: string; kind: string; tier: string;
+  }>;
+  componentProvenance?: Array<{ name: string; basis: string }>;
+}
+
+const paragraphs = (v: string | undefined): string[] =>
+  (v ?? '').split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+
+/**
+ * Freeze a catalog-path assessment.
+ *
+ * Reads the Canonical Assessment Model, which is already the presentation-
+ * neutral boundary the renderer consumes — so this copies resolved values and
+ * computes nothing. `coverageNote` has no catalog-path equivalent; the
+ * evidence statement carries that role there.
+ */
+export function snapshotFromCanonical(
+  cam: CanonicalAssessment,
+  meta: { engineVersion: string; createdAt: string; actionVerdict?: string },
+): AssessmentSnapshotV1 {
+  const sections: SnapshotSection[] = [];
+  if (cam.reading.engineering.length) {
+    sections.push({ label: 'Engineering', paragraphs: cam.reading.engineering });
+  }
+  if (cam.reading.listeningSession.length) {
+    sections.push({ label: 'Listening Session', paragraphs: cam.reading.listeningSession });
+  }
+  if (cam.reading.dominantCharacter) {
+    sections.push({ paragraphs: [cam.reading.dominantCharacter] });
+  }
+
+  return {
+    schema: ASSESSMENT_SCHEMA_V1,
+    createdAt: meta.createdAt,
+    engineVersion: meta.engineVersion,
+    origin: 'catalog',
+    components: cam.subject.components.map((c) => ({ name: c.name })),
+    verdict: cam.identity.verdict,
+    standfirst: cam.identity.signature,
+    actionVerdict: meta.actionVerdict,
+    recognition: cam.identity.recognition || undefined,
+    tonalSignature: cam.identity.tonalSignature,
+    recommendation: cam.guidance.recommendation,
+    cost: cam.guidance.oneCost,
+    sections,
+    operatingCondition: cam.reading.operatingCondition,
+    evidenceStatement: cam.evidence.statement,
+    primarySources: cam.evidence.primarySources,
+  };
+}
+
+/**
+ * Freeze a provisional-path assessment.
+ *
+ * This is the path the artifact surface never had. Nathan's assessment —
+ * derived quantity finding, named gap, coverage limitation, diagnostic
+ * question — existed only inside the conversation and could not be viewed,
+ * printed or shared at all.
+ *
+ * The conversation renders `systemSignature` as the lead and `philosophy` /
+ * `tendencies` as unlabelled prose, so the snapshot records them unlabelled
+ * too. Section LABELS are a rendering decision; inventing them here would be
+ * the artifact reinterpreting the assessment, which is the whole defect.
+ */
+export function snapshotFromProvisional(
+  response: ProvisionalAssessmentLike,
+  meta: {
+    engineVersion: string;
+    createdAt: string;
+    components: Array<{ name: string; role?: string }>;
+    /** The coverage statement, when the assessment carried one. */
+    coverageNote?: string;
+  },
+): AssessmentSnapshotV1 {
+  const basisFor = new Map(
+    (response.componentProvenance ?? []).map((p) => [p.name, p.basis]));
+
+  const body = [...paragraphs(response.philosophy), ...paragraphs(response.tendencies)];
+  // The coverage statement is already inside `philosophy` when the engine
+  // emitted one — it is appended there after filtering. Recording it a second
+  // time as a section would print it twice.
+  const sections: SnapshotSection[] = body.length ? [{ paragraphs: body }] : [];
+
+  return {
+    schema: ASSESSMENT_SCHEMA_V1,
+    createdAt: meta.createdAt,
+    engineVersion: meta.engineVersion,
+    origin: 'provisional',
+    components: meta.components.map((c) => ({
+      name: c.name, role: c.role, basis: basisFor.get(c.name),
+    })),
+    verdict: response.systemSignature ?? '',
+    actionVerdict: response.actionVerdict,
+    sections,
+    question: response.followUp,
+    relations: (response.systemRelations ?? []).map((r) => ({
+      components: r.components, axis: r.axis, kind: r.kind, tier: r.tier,
+    })),
+    coverageNote: meta.coverageNote,
+    // The provisional path states its evidence position in prose — the
+    // coverage note — rather than in a source line. Asserting source classes
+    // it does not hold would be the fixed-string defect returning.
+    evidenceStatement: 'Assessment based on Audio XX analysis of the components as described.',
+  };
+}
+
+/**
+ * Serialize for storage, with stable key order so equal snapshots compare equal.
+ *
+ * Hand-rolled because `JSON.stringify(v, Object.keys(v).sort())` does NOT sort
+ * keys — the second argument is a recursive ALLOWLIST, so it silently deleted
+ * every nested key that did not happen to appear at the top level. That
+ * emptied `sections[]` on the way into storage. Caught by the round-trip test;
+ * it would otherwise have corrupted every snapshot ever written.
+ */
+export function freezeSnapshot(s: AssessmentSnapshotV1): string {
+  const stable = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(stable);
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.keys(v as Record<string, unknown>).sort()
+        .map((k) => [k, stable((v as Record<string, unknown>)[k])]));
+    }
+    return v;
+  };
+  return JSON.stringify(stable(s));
+}
+
+/**
+ * Read a stored snapshot.
+ *
+ * Rejects an unknown schema rather than best-effort rendering it. A snapshot
+ * whose shape we do not recognise is a historical record we cannot faithfully
+ * display, and displaying it approximately is the same failure as re-running
+ * it: the listener sees something other than what was assessed.
+ */
+export function parseSnapshot(json: string): AssessmentSnapshotV1 | null {
+  try {
+    const v = JSON.parse(json) as AssessmentSnapshotV1;
+    if (v?.schema !== ASSESSMENT_SCHEMA_V1) return null;
+    if (typeof v.verdict !== 'string' || !Array.isArray(v.sections)) return null;
+    return v;
+  } catch {
+    return null;
+  }
+}
