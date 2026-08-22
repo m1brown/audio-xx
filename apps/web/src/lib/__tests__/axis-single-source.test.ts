@@ -66,6 +66,17 @@ describe('FRANCE regression — the authoritative values', () => {
     expect(prose).toMatch(/WLM Diva Monitor/);
     expect(prose).toMatch(/not established/);
   });
+
+  it('NO OTHER Engineering sentence asserts uniform agreement', () => {
+    // Two closing sentences bracketed the split paragraph on production:
+    // "Nothing upstream works against the speaker's own behaviour" before it
+    // and "Each stage carries the same character forward" after. Both claim
+    // the agreement the middle paragraph had just denied.
+    const prose = synthesizeArtifact(raw).payload.caseParagraphs.join(' ');
+    expect(prose).not.toMatch(/Each stage carries the same character forward/);
+    expect(prose).not.toMatch(/Nothing upstream works against the speaker/);
+    expect(prose).not.toMatch(/every stage in the chain leans toward/);
+  });
 });
 
 describe('NO SURFACE MAY CONTRADICT THE GRAPH', () => {
@@ -97,6 +108,14 @@ describe('NO SURFACE MAY CONTRADICT THE GRAPH', () => {
       }
     });
   }
+
+  it('a genuinely agreeing system KEEPS its agreement prose', () => {
+    // The positive control. Suppressing agreement everywhere would be the
+    // over-correction; the claim must survive where the field supports it.
+    const raw = run('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
+    const prose = synthesizeArtifact(raw).payload.caseParagraphs.join(' ');
+    expect(prose).toMatch(/lean the same way|carries that direction forward|character forward/);
+  });
 
   it('identity and the rendered payload never disagree', () => {
     for (const q of systems) {

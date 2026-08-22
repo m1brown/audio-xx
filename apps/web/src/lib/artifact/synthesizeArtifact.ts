@@ -529,6 +529,22 @@ export function synthesizeArtifact(result: any): SynthResult {
       const m = s.match(/^([A-Z][\w+\-]+(?:\s+[A-Z0-9][\w+\-]*)*)/);
       return (m ? m[1] : '').toLowerCase();
     }
+    // Does EVERY component with a reading lean the same way on some axis?
+    //
+    // Computed once, before any prose. Two separate closing sentences assert
+    // uniform agreement, and on FRANCE they appeared on either side of a
+    // paragraph reporting a split field — "Nothing upstream works against the
+    // speaker's own behaviour" and "Each stage carries the same character
+    // forward" bracketing "the components do not all lean the same way". An
+    // agreement claim needs an agreeing field, wherever it is generated.
+    const agreeAxes: Array<{ name: string; axes: Record<string, string> }> =
+      Array.isArray(f.perComponentAxes) ? f.perComponentAxes : [];
+    const componentsAgree = agreeAxes.length >= 2
+      && ['warm_bright', 'smooth_detailed', 'elastic_controlled'].some((axis) => {
+        const p = classifyAxis(axis, agreeAxes);
+        return p.kind === 'agreement' && p.count >= agreeAxes.length;
+      });
+
     // ── Paragraph 1: the thesis — the equilibrium beat.
     // Names how the components trade roles. Weaves in the first
     // strength only when it names a DIFFERENT component than the
@@ -554,7 +570,11 @@ export function synthesizeArtifact(result: any): SynthResult {
         // fights what the speaker is trying to do", which asserted a purchasing
         // decision and an intention for the loudspeaker from evidence that is
         // entirely about behaviour.
-        caseParagraphs.push(`${beat} Nothing upstream works against the speaker's own behaviour.`);
+        // The agreement half of this close is only true where the components
+        // actually agree; otherwise the beat stands alone.
+        caseParagraphs.push(componentsAgree
+          ? `${beat} Nothing upstream works against the speaker's own behaviour.`
+          : beat);
       } else {
         // Beat + a specific "and here's what X brings" close on a
         // fresh subject.
@@ -686,8 +706,10 @@ export function synthesizeArtifact(result: any): SynthResult {
     // sign-off.
     const closing: string[] = [];
     if (prefNote) closing.push(prefNote);
-    closing.push('Each stage carries the same character forward, and none of them is working against another');
-    caseParagraphs.push(closing.join('. ') + '.');
+    if (componentsAgree) {
+      closing.push('Each stage carries the same character forward, and none of them is working against another');
+    }
+    if (closing.length > 0) caseParagraphs.push(closing.join('. ') + '.');
 
     // Doctrine D-8 (Recommendation Licensing): the Assessment must not carry a
     // forward-looking upgrade paragraph. The previous "If you ever want more, …"
