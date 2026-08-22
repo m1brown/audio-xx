@@ -20,6 +20,7 @@ import { notFound } from 'next/navigation';
 import { readForView } from '@/product/assessment-snapshot';
 import { prismaSnapshotPort } from '@/product/snapshot-port-prisma';
 import SnapshotArtifact from '../SnapshotArtifact';
+import AutoPrint from '../AutoPrint';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,10 +30,19 @@ export const metadata: Metadata = {
 };
 
 export default async function PrivateArtifactPage(
-  { params }: { params: Promise<{ id: string }> },
+  { params, searchParams }: {
+    params: Promise<{ id: string }>;
+    searchParams: Promise<{ print?: string }>;
+  },
 ) {
   const { id } = await params;
+  const { print } = await searchParams;
   const snapshot = await readForView(prismaSnapshotPort, id);
   if (!snapshot) notFound();
-  return <SnapshotArtifact snapshot={snapshot} />;
+  return (
+    <>
+      {print === '1' && <AutoPrint />}
+      <SnapshotArtifact snapshot={snapshot} />
+    </>
+  );
 }

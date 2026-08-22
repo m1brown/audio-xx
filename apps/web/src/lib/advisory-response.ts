@@ -743,6 +743,17 @@ export interface AdvisoryResponse {
   fallbackReason?: FallbackReason;
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
+  /**
+   * Capability for the frozen artifact of THIS assessment.
+   *
+   * Private: View, Print and Save PDF read it. Absent until the snapshot is
+   * stored, and absent for good if storage was unavailable — the actions
+   * simply do not appear, because offering an artifact that cannot be opened
+   * is worse than offering none.
+   */
+  artifactViewToken?: string;
+  /** Public capability, present only after an explicit Share. */
+  artifactShareToken?: string;
 
   // ── 0. Audio Profile ──────────────────────────────────
   /** Structured listener profile — system, sonic priorities, context. */

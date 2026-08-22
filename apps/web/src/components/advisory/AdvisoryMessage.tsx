@@ -40,6 +40,7 @@ import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
+import ArtifactActionsInline from './ArtifactActionsInline';
 import AssessmentArtifactV2 from '../../app/artifact/AssessmentArtifact';
 import { synthesizeArtifact } from '../../lib/artifact/synthesizeArtifact';
 import '../../app/artifact/artifact.css';
@@ -5459,11 +5460,20 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       content = (
         <>
           <SystemAssessmentArtifact advisory={advisory} />
+          <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
           <TrackAssessmentEmbed />
         </>
       );
     } else {
-      content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+      // The provisional path — the one the artifact surface never had. Nathan's
+      // assessment could not be viewed, printed or shared at all before the
+      // snapshot boundary existed.
+      content = (
+        <>
+          <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />
+          <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
+        </>
+      );
     }
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;

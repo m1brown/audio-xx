@@ -86,6 +86,10 @@ import { collectUnmatchedModels } from '@/lib/unmatched-telemetry';
 // A3 hybrid advisor (WS31 — flag-gated, known-system advisory only; default OFF).
 import { a3Enabled, a3IsAdvisoryQuestion, runA3Advisor } from '@/lib/a3-advisor';
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
+import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
+import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
+import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
 import { parseTasteProfile, topTraits, isProfileEmpty, type TasteProfile } from '@/lib/taste-profile';
@@ -342,6 +346,7 @@ type Action =
   | { type: 'ADD_GLOSSARY'; entry: GlossaryResult }
   | { type: 'ADD_ADVISORY'; advisory: AdvisoryResponse; id?: string }
   | { type: 'UPDATE_ADVISORY'; id: string; advisory: AdvisoryResponse }
+  | { type: 'SET_ARTIFACT_TOKEN'; id: string; viewToken: string }
   | { type: 'ADD_NOTE'; content: string }
   | { type: 'SET_MODE'; mode: ConversationMode }
   | { type: 'SET_REASONING'; reasoning: ReasoningResult }
@@ -416,6 +421,19 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         messages: state.messages.map((m) =>
           m.role === 'assistant' && m.kind === 'advisory' && 'id' in m && m.id === action.id
             ? { ...m, advisory: action.advisory }
+            : m,
+        ),
+      };
+
+    // Attach the artifact capability to an assessment already on screen.
+    // A separate action from UPDATE_ADVISORY so freezing can never rewrite the
+    // assessment the listener is reading — it only adds the way to open it.
+    case 'SET_ARTIFACT_TOKEN':
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.role === 'assistant' && m.kind === 'advisory' && 'id' in m && m.id === action.id
+            ? { ...m, advisory: { ...m.advisory, artifactViewToken: action.viewToken } }
             : m,
         ),
       };
@@ -3188,8 +3206,24 @@ export default function Home() {
             // instead of the old amber warning box.
             provisionalAdvisory.reasoningMode = 'expanded';
             provisionalAdvisory.fallbackReason = 'low_confidence_system';
-            dispatchAdvisory(provisionalAdvisory, advisoryId());
+            const provisionalMsgId = advisoryId();
+            dispatchAdvisory(provisionalAdvisory, provisionalMsgId);
             mark('assessment rendered');
+
+            // Freeze what the listener was just shown. Built from the SAME
+            // response object the conversation rendered, so parity is a
+            // property of construction rather than something to verify later.
+            void createArtifactSnapshot(snapshotFromProvisional(provisional, {
+              engineVersion: 'prod',
+              createdAt: new Date().toISOString(),
+              components: orderedComponents.map((c) => ({
+                name: c.displayName, role: c.role,
+              })),
+            })).then((viewToken) => {
+              if (viewToken) {
+                dispatch({ type: 'SET_ARTIFACT_TOKEN', id: provisionalMsgId, viewToken });
+              }
+            });
             dispatch({ type: 'SET_LOADING', value: false });
             return;
           }
@@ -3222,6 +3256,24 @@ export default function Home() {
           deterministicAdvisory.__rawAssessment = assessmentResult;
         }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
+
+        // Same result object the conversation rendered — synthesised into the
+        // Canonical Assessment Model and frozen. `synthesizeArtifact` is a
+        // RENDERING step over a completed result, not a second assessment: it
+        // recognises nothing and consults no evidence.
+        try {
+          const synth = synthesizeArtifact(assessmentResult);
+          const cam = toCanonicalAssessment(synth.payload, assessmentResult);
+          void createArtifactSnapshot(snapshotFromCanonical(cam, {
+            engineVersion: 'prod',
+            createdAt: new Date().toISOString(),
+            actionVerdict: assessmentResult.response?.actionVerdict,
+          })).then((viewToken) => {
+            if (viewToken) {
+              dispatch({ type: 'SET_ARTIFACT_TOKEN', id: assessmentMsgId, viewToken });
+            }
+          });
+        } catch { /* the assessment stands even when the artifact cannot be frozen */ }
         // Validation telemetry (Workstream 25B): assessment delivered.
         trackEvent('assessment_completed', {
           id: assessmentMsgId,

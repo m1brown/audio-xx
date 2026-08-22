@@ -44,7 +44,12 @@ describe('render-only routes cannot reach reasoning', () => {
   it('the private route resolves by view token only', () => {
     const src = read('app/artifact/[id]/page.tsx');
     expect(src).toMatch(/readForView/);
-    expect(src).not.toMatch(/readForShare|runArtifactPipeline|searchParams/);
+    expect(src).not.toMatch(/readForShare|runArtifactPipeline/);
+    // It reads ONE search param, `print`, to arm the dialog. What matters is
+    // that no input can select or alter which assessment is rendered — the
+    // snapshot is chosen by the path token and nothing else.
+    expect(src).not.toMatch(/\bsystem\b\s*[?:]/);
+    expect(src).toMatch(/searchParams: Promise<\{ print\?: string \}>/);
   });
 
   it('the public route resolves by share token only', () => {
