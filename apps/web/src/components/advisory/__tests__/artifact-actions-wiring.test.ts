@@ -82,3 +82,20 @@ describe('the conversation freezes what it rendered', () => {
     expect(page).toMatch(/the assessment stands even when the artifact cannot be frozen/);
   });
 });
+
+describe('the actions are mounted once, for every assessment format', () => {
+  const msg = read('components/advisory/AdvisoryMessage.tsx');
+
+  it('renders from ONE site, not per format', () => {
+    expect((msg.match(/<ArtifactActionsInline/g) ?? []).length).toBe(1);
+  });
+
+  it('is gated only on the token, never on the renderer', () => {
+    // The first attempt mounted inside the artifact and memo branches. Nathan
+    // renders through StandardFormat, so the snapshot was created, the token
+    // returned, and no action appeared.
+    const site = msg.slice(msg.indexOf('const artifactActions'), msg.indexOf('const artifactActions') + 220);
+    expect(site).toMatch(/viewToken=\{advisory\.artifactViewToken\}/);
+    expect(site).not.toMatch(/isMemoFormat|StandardFormat|SYSTEM_ASSESSMENT_ARTIFACT_ENABLED/);
+  });
+});

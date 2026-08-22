@@ -5460,20 +5460,11 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       content = (
         <>
           <SystemAssessmentArtifact advisory={advisory} />
-          <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
           <TrackAssessmentEmbed />
         </>
       );
     } else {
-      // The provisional path — the one the artifact surface never had. Nathan's
-      // assessment could not be viewed, printed or shared at all before the
-      // snapshot boundary existed.
-      content = (
-        <>
-          <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />
-          <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
-        </>
-      );
+      content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
     }
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;
@@ -5489,6 +5480,16 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       !!advisory.decisiveRecommendation, !!advisory.options);
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   }
+
+  // ── Artifact actions ────────────────────────────────────────────────
+  // Mounted ONCE here rather than per format. The first attempt attached them
+  // to the artifact and memo branches, and Nathan renders through
+  // StandardFormat — so the snapshot was created, the token returned, and no
+  // action appeared. The token's presence is the only condition that matters;
+  // which renderer drew the assessment is not.
+  const artifactActions = (
+    <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
+  );
 
   // ── Trailing block: Continue Exploring, then Product Resources ──────
   // Only on the four response types the editorial brief names — assessment,
@@ -5535,6 +5536,7 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       options={advisory.options}
     >
       {content}
+      {artifactActions}
       {footer && <ResponseFooter groups={footer.groups} resources={footer.resources} />}
     </ProductImageProvider>
   );
