@@ -68,9 +68,11 @@ describe('LISTENING SESSION earns its presence or is absent', () => {
 
 describe('RECOGNITION reports character, never intent', () => {
   it('uses no verb of choosing, asking or building', () => {
+    // Numeric aggregates now — see `axis-poles.ts`. The categorical field is
+    // no longer an independent truth for a system-level pole.
     for (const axes of [
-      { warm_bright: 'warm' }, { smooth_detailed: 'detailed' },
-      { elastic_controlled: 'elastic', warm_bright: 'bright' },
+      { warm_bright: -1 }, { smooth_detailed: 1 },
+      { elastic_controlled: -1, warm_bright: 1 },
     ]) {
       const r = characterRead(axes)!;
       expect(r, JSON.stringify(axes)).toBeTruthy();
@@ -78,16 +80,27 @@ describe('RECOGNITION reports character, never intent', () => {
     }
   });
 
-  it('reads the committed axis behaviourally', () => {
-    expect(characterRead({ smooth_detailed: 'detailed' })).toBe('high in resolution');
-    expect(characterRead({ warm_bright: 'warm', elastic_controlled: 'controlled' }))
+  it('reads the committed axis behaviourally, strongest first', () => {
+    expect(characterRead({ smooth_detailed: 1 })).toBe('high in resolution');
+    // Ranked by magnitude: the strongest commitment leads.
+    expect(characterRead({ warm_bright: -1, elastic_controlled: 0.6 }))
       .toBe('tonally warm, with firm dynamic grip');
+  });
+
+  it('IS SILENT on an axis inside the balanced band', () => {
+    // THE FRANCE DEFECT. smooth_detailed aggregates to +0.1 — dead centre —
+    // and was rendered "with detail held back from the front" beside a graph
+    // reading Balanced and an Engineering line saying two of three components
+    // lean DETAILED. Three values, one axis, one page.
+    const r = characterRead({ warm_bright: -0.6, smooth_detailed: 0.1, elastic_controlled: -0.8 });
+    expect(r).toBe('rhythmically elastic, with tonal weight');
+    expect(r).not.toMatch(/detail|resolution|smooth/i);
   });
 
   it('is ABSENT when nothing is committed — no neutral fallback', () => {
     // The old function returned "built for balance — no single quality asked to
     // dominate", which is an intent claim manufactured from an absence.
-    expect(characterRead({ warm_bright: 'neutral', smooth_detailed: 'balanced' })).toBeUndefined();
+    expect(characterRead({ warm_bright: 0.1, smooth_detailed: -0.2 })).toBeUndefined();
     expect(characterRead(undefined)).toBeUndefined();
     expect(characterRead({})).toBeUndefined();
   });
@@ -164,12 +177,12 @@ describe('RECOGNITION under a diagnosed physical constraint', () => {
     // A power mismatch says nothing about tonal balance. A warm system is
     // still warm, and blanket suppression would be the over-correction.
     const p = synth({ bottleneck: { category: 'power_match', role: 'speakers' },
-      systemAxes: { warm_bright: 'warm', elastic_controlled: 'controlled' } });
+      systemAxisNumeric: { warm_bright: -1, elastic_controlled: 1 } });
     expect(p.recognition).toBe('This system reads tonally warm.');
   });
 
   it('leaves a coherent system untouched', () => {
-    const p = synth({ systemAxes: { smooth_detailed: 'detailed', elastic_controlled: 'elastic' } });
+    const p = synth({ systemAxisNumeric: { smooth_detailed: 1, elastic_controlled: -0.5 } });
     expect(p.recognition).toMatch(/^This system reads high in resolution/);
   });
 });

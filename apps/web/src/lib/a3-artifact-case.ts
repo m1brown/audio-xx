@@ -24,6 +24,7 @@
  */
 
 import { AUDIO_XX_DOCTRINE } from './a3-character';
+import { committedSystemAxes, IDENTITY_AXES as NUMERIC_IDENTITY_AXES } from './axis-poles';
 import {
   characterRead,
   verdictAndStandfirst,
@@ -127,14 +128,23 @@ export function deriveIdentity(raw: any): EstablishedIdentity {
   const { verdict, standfirst } = verdictAndStandfirst(bottleneck, category, role, signature);
   // Behavioural reading, never an intent claim — see `characterRead`. Empty
   // when no axis is committed, so the section is absent rather than filled.
-  const character = characterRead(f.systemAxes);
+  // Numeric aggregate only — see `axis-poles.ts`. Reading the categorical
+  // `systemAxes` here would reintroduce the FRANCE contradiction one surface
+  // along.
+  const character = characterRead(f.systemAxisNumeric);
   const recognition = character ? `This system reads ${character}.` : '';
   return {
     signature,
     recognition,
     verdict,
     standfirst,
-    committedAxes: committedPoles(f.systemAxes),
+    // Numeric aggregate, like every other system-level pole. `committedPoles`
+    // reads the categorical field and would disagree with the graph on any
+    // axis sitting inside the balanced band.
+    // Identity spans four axes; Recognition reads only the three tonal ones.
+    committedAxes: Object.fromEntries(
+      committedSystemAxes(f.systemAxisNumeric, NUMERIC_IDENTITY_AXES)
+        .map((c) => [c.axis, c.value])),
   };
 }
 

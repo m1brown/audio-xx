@@ -50,11 +50,15 @@ describe('France identity is detail-forward and committed', () => {
   it('committed axes name the detailed pole', () => {
     const raw = franceRaw();
     const id = deriveIdentity(raw);
+    // committedAxes now derives from `systemAxisNumeric` like every other
+    // system-level pole (2026-08-22). This fixture aggregates to +0.64 on
+    // smooth_detailed, well outside the balanced band, so the identity is
+    // unchanged — it is still detail-forward and still committed.
     expect(id.committedAxes.smooth_detailed).toBe('detailed');
     expect(id.signature.toLowerCase()).toMatch(/detail/);
-    // Behavioural reading, not an intent claim (2026-08-21). The identity is
-    // unchanged — detail-forward and committed — only the register is.
-    expect(id.recognition.toLowerCase()).toMatch(/high in resolution/);
+    // Recognition ranks by MAGNITUDE, so the strongest commitment leads:
+    // elasticity (0.86) ahead of resolution (0.64).
+    expect(id.recognition.toLowerCase()).toMatch(/rhythmically elastic, with detail well forward/);
     expect(id.recognition).not.toMatch(/built for|asked to/i);
   });
 
@@ -63,7 +67,7 @@ describe('France identity is detail-forward and committed', () => {
     expect(ctx).not.toBeNull();
     expect(ctx.committedAxes?.smooth_detailed).toBe('detailed');
     expect(ctx.signature?.toLowerCase()).toMatch(/detail/);
-    expect(ctx.recognition?.toLowerCase()).toMatch(/high in resolution/);
+    expect(ctx.recognition?.toLowerCase()).toMatch(/detail well forward/);
   });
 
   it('the prompt presents identity as fixed and forbids contradiction', () => {

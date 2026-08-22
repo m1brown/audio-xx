@@ -38,6 +38,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 import type { ArtifactPayload } from './types';
+import { classifyAxis, committedSystemAxes } from '../axis-poles';
 import { getProductImage } from '@/lib/product-images';
 import { isCausalExplanationEnabled } from '@/lib/feature-flags';
 import { resolveCausalComponentsFromNames, evaluateCausal } from '@/lib/causal';
@@ -163,18 +164,25 @@ const CONSTRAINED_AXES: Record<string, string[]> = {
   dac_limitation: ['smooth_detailed'],
 };
 
-export function characterRead(axes: Record<string, string> | undefined): string | undefined {
-  const ranked: string[] = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
-  const present = ranked.filter((k) =>
-    axes && axes[k] && axes[k] !== 'neutral' && axes[k] !== 'balanced');
-  if (!axes || present.length === 0) return undefined;
+export function characterRead(
+  numeric: Record<string, number> | undefined,
+): string | undefined {
+  // Reads the NUMERIC aggregate exclusively. The previous version read the
+  // categorical `systemAxes`, which diverges from the graph whenever a
+  // categorical pole falls inside the balanced band — FRANCE's smooth_detailed
+  // sits at +0.1 and was rendered "with detail held back from the front" beside
+  // a graph reading Balanced and an Engineering line saying two of three
+  // components lean DETAILED. Inside the band, Recognition is silent on that
+  // axis; it does not reach for component counts to manufacture a direction.
+  const committed = committedSystemAxes(numeric);
+  if (committed.length === 0) return undefined;
 
-  const primaryKey = present[0];
-  const primary = CHARACTER_PRIMARY[primaryKey]?.[axes[primaryKey]];
+  const primary = CHARACTER_PRIMARY[committed[0].axis]?.[committed[0].value];
   if (!primary) return undefined;
 
-  const secondKey = present[1];
-  const second = secondKey ? CHARACTER_SECOND[secondKey]?.[axes[secondKey]] : undefined;
+  const second = committed[1]
+    ? CHARACTER_SECOND[committed[1].axis]?.[committed[1].value]
+    : undefined;
   return second ? `${primary}, ${second}` : primary;
 }
 
@@ -442,7 +450,12 @@ export function synthesizeArtifact(result: any): SynthResult {
     ? Object.fromEntries(Object.entries(f.systemAxes as Record<string, string>)
       .filter(([k]) => !constrainedAxes.includes(k)))
     : f.systemAxes;
-  const character = characterRead(readableAxes);
+  // Constrained axes are withheld, then the rest are read numerically.
+  const readableNumeric = constrainedAxes.length > 0 && f.systemAxisNumeric
+    ? Object.fromEntries(Object.entries(f.systemAxisNumeric as Record<string, number>)
+      .filter(([k]) => !constrainedAxes.includes(k)))
+    : (f.systemAxisNumeric as Record<string, number> | undefined);
+  const character = characterRead(readableNumeric);
   let recognition = character ? `This system reads ${character}.` : '';
   if (recognition && standfirst && norm(recognition) === norm(standfirst)) {
     recognition = '';
@@ -604,30 +617,50 @@ export function synthesizeArtifact(result: any): SynthResult {
           : `${sharedTraits.slice(0, -1).join(', ')}, and ${sharedTraits[sharedTraits.length - 1]}`;
       caseParagraphs.push(`Why it hangs together: every stage in the chain leans toward ${traitList}. When the source leans that way, the amplifier leans that way, and the speaker leans that way, the character is not diluted at any handoff — it accumulates. Shared voicing rather than complementary correction.`);
     } else if (perComponentAxes.length >= 2) {
-      // Non-coherent balanced systems: describe the axis mix
-      // explicitly so the reader sees the deliberate lean per
-      // component. Pick the axis where the largest number of
-      // components agree and name it.
+      // AGREEMENT, OPPOSITION AND HETEROGENEITY ARE DIFFERENT FINDINGS.
+      //
+      // The previous version picked whichever axis had the most components on
+      // one side and called it coherence. On FRANCE that produced "on ease vs.
+      // resolution, 2 of the 3 components lean the same way (detailed)" — while
+      // the third component, the LOUDSPEAKER, leaned smooth. It counted the
+      // majority and discarded the component that disagreed and matters most.
+      //
+      // A split field may become a COUNTERWEIGHT only where a licensed
+      // relation supports that reading. Replacing a false agreement story with
+      // an equally unsupported opposition story would be the same error
+      // pointing the other way, so an unlicensed split says only that the
+      // components do not all lean the same way.
       const AXES = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
       const AXIS_LABEL: Record<string, string> = {
         warm_bright: 'warmth vs. clarity',
         smooth_detailed: 'ease vs. resolution',
         elastic_controlled: 'elasticity vs. composure',
       };
-      let bestAxis: string | null = null;
-      let bestCount = 0;
-      let bestSide = '';
-      for (const axis of AXES) {
-        const sides: Record<string, number> = {};
-        for (const c of perComponentAxes) {
-          const v = c.axes?.[axis];
-          if (v && v !== 'neutral') sides[v] = (sides[v] ?? 0) + 1;
+
+      const patterns = AXES.map((axis) => ({ axis, pattern: classifyAxis(axis, perComponentAxes) }));
+
+      // Full agreement across every component with a reading — the only
+      // pattern that licenses the coherence sentence.
+      const agreed = patterns.find((p) => p.pattern.kind === 'agreement'
+        && p.pattern.count >= perComponentAxes.length);
+
+      if (agreed && agreed.pattern.kind === 'agreement') {
+        caseParagraphs.push(`Why it hangs together: on ${AXIS_LABEL[agreed.axis]}, every component `
+          + `leans the same way (${agreed.pattern.side}). Each stage carries that direction `
+          + `forward instead of correcting the one before.`);
+      } else {
+        const split = patterns.find((p) => p.pattern.kind === 'split');
+        if (split && split.pattern.kind === 'split') {
+          const [a1, a2] = split.pattern.sides;
+          const list = (xs: string[]) => xs.length === 1 ? xs[0]
+            : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+          caseParagraphs.push(`On ${AXIS_LABEL[split.axis]} the components do not all lean the `
+            + `same way: ${list(a1.components)} ${a1.components.length === 1 ? 'reads' : 'read'} `
+            + `${a1.side}, while ${list(a2.components)} `
+            + `${a2.components.length === 1 ? 'reads' : 'read'} ${a2.side}. Audio XX holds no `
+            + `licensed relation between them on that axis, so whether they offset one another `
+            + `or simply differ is not established.`);
         }
-        const [side, count] = Object.entries(sides).sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
-        if (count > bestCount) { bestAxis = axis; bestCount = count; bestSide = side; }
-      }
-      if (bestAxis && bestCount >= 2) {
-        caseParagraphs.push(`Why it hangs together: on ${AXIS_LABEL[bestAxis]}, ${bestCount} of the ${perComponentAxes.length} components lean the same way (${bestSide}). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.`);
       }
     }
 
