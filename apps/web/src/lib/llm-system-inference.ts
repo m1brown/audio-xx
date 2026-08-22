@@ -1134,9 +1134,31 @@ function applyDerivedProse(
   response: ConsultationResponse,
   driveConclusion?: string,
   coverageNote?: string,
+  openGap?: string,
 ): ConsultationResponse {
   const existing = response.systemSignature?.trim();
-  const philosophy = [response.philosophy, coverageNote].filter(Boolean).join('\n\n')
+
+  // Drop a model paragraph that only restates the gap the lead already
+  // carries. Nathan's lead named the unpublished sensitivity twice — once in
+  // Audio XX's derived sentence and again as "However, the lack of published
+  // sensitivity data for the Acora QRC-2 means we cannot fully assess the
+  // system's headroom." The second adds nothing; it exists because a prose
+  // slot did. Short is complete when the evidence is short.
+  const gapNoun = openGap?.replace(/^the\s+/i, '').replace(/'s\s+/, ' ');
+  const gapWords = (gapNoun ?? '').toLowerCase().split(/\s+/).filter((w) => w.length >= 5);
+  const restatesGap = (para: string) => {
+    if (gapWords.length === 0) return false;
+    const lower = para.toLowerCase();
+    return gapWords.every((w) => lower.includes(w));
+  };
+  const keptModelProse = (response.philosophy ?? '')
+    .split(/\n\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => !(driveConclusion && restatesGap(p)))
+    .join('\n\n') || undefined;
+
+  const philosophy = [keptModelProse, coverageNote].filter(Boolean).join('\n\n')
     || undefined;
   return {
     ...response,
@@ -1276,7 +1298,7 @@ export async function inferProvisionalSystemAssessment(
         // figure at their own load is the most useful thing we have.
         return applyDerivedProse(
           buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster),
-          driveConclusion, coverageNote);
+          driveConclusion, coverageNote, openGap);
       }
     }
     // Provenance is computed from EVIDENCE, before and independently of the
@@ -1293,7 +1315,7 @@ export async function inferProvisionalSystemAssessment(
     // Literally the same array the prompt was built from, not a recomputation.
     // Two derivations of one fact are two chances to disagree.
     parsedResponse.componentProvenance = provenance;
-    return applyDerivedProse(parsedResponse, driveConclusion, coverageNote);
+    return applyDerivedProse(parsedResponse, driveConclusion, coverageNote, openGap);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');

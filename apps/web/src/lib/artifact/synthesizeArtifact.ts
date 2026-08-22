@@ -111,27 +111,6 @@ export function roleNoun(role: string | undefined): string {
 // We derive intent from each axis independently and compose, instead of a
 // fixed lookup. Every axis the engine emits maps to a "what the builder was
 // after" phrase, so there is no path that falls back to the signature.
-const INTENT_PRIMARY: Record<string, Record<string, string>> = {
-  warm_bright: {
-    warm:    'tone and presence',
-    bright:  'resolution and speed',
-    neutral: 'tonal neutrality',
-    balanced:'tonal balance',
-  },
-  smooth_detailed: {
-    smooth:  'ease and continuity',
-    detailed:'resolution and detail',
-    neutral: 'a clean read of the recording',
-    balanced:'a clean read of the recording',
-  },
-  elastic_controlled: {
-    elastic:  'rhythmic life',
-    controlled:'composure and grip',
-    neutral:  'composure',
-    balanced: 'composure',
-  },
-};
-
 /**
  * Behavioural readings only. Each says what the system DOES on that axis.
  * No verb of choosing, asking, building or trading appears in any value.
@@ -148,26 +127,6 @@ const CHARACTER_SECOND: Record<string, Record<string, string>> = {
   elastic_controlled: { elastic: 'with unforced dynamics', controlled: 'with firm dynamic grip' },
 };
 
-const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
-  warm_bright: {
-    warm:    'detail and air preserved through careful choices downstream',
-    bright:  'tonal weight asked of the speaker',
-    neutral: 'character allowed to come from the recording, not the chain',
-    balanced:'character allowed to come from the recording, not the chain',
-  },
-  smooth_detailed: {
-    smooth:  'detail offered rather than asserted',
-    detailed:'long-session ease asked of the speaker',
-    neutral: 'no single quality asked to dominate',
-    balanced:'no single quality asked to dominate',
-  },
-  elastic_controlled: {
-    elastic:  'composure left to the speaker',
-    controlled:'a little bloom traded for grip',
-    neutral:  'no axis asked to lead',
-    balanced: 'no axis asked to lead',
-  },
-};
 
 /**
  * What this system's evidenced character IS — never what it was FOR.
@@ -189,6 +148,21 @@ const INTENT_QUALIFIER: Record<string, Record<string, string>> = {
  * a system that commits to nothing has no characteristic to report, and the
  * section is then absent rather than filled.
  */
+/**
+ * Which tonal axes a diagnosed constraint makes unreadable.
+ *
+ * A constraint is a finding that the system does not operate as its parts
+ * would suggest. The axes it governs are therefore not reportable as
+ * character: a power mismatch shows up first as dynamics and control, so
+ * `elastic_controlled` cannot be read off components that are not being
+ * driven properly. Tonal balance is untouched by it and continues to publish.
+ */
+const CONSTRAINED_AXES: Record<string, string[]> = {
+  power_match: ['elastic_controlled', 'smooth_detailed'],
+  speaker_scale: ['elastic_controlled'],
+  dac_limitation: ['smooth_detailed'],
+};
+
 export function characterRead(axes: Record<string, string> | undefined): string | undefined {
   const ranked: string[] = ['warm_bright', 'smooth_detailed', 'elastic_controlled'];
   const present = ranked.filter((k) =>
@@ -444,7 +418,31 @@ export function synthesizeArtifact(result: any): SynthResult {
   // of behaviour and nothing about anyone's intent. Where no axis is committed
   // there is nothing to report and the section does not render — it is not
   // backfilled with a neutral line.
-  const character = characterRead(f.systemAxes);
+  // Recognition under a diagnosed physical constraint.
+  //
+  // The 5W SET into an 86 dB Magnepan reported "The amplifier can't drive
+  // these speakers" and then "This system reads high in resolution, with firm
+  // dynamic grip." The second claim is read off the tonal axes, which are
+  // aggregated from what each component does IN ISOLATION — and the constraint
+  // is precisely a finding that this system does not operate under those
+  // conditions at normal levels. Firm dynamic grip is the specific thing an
+  // amplifier clipping into a hard load does not deliver.
+  //
+  // Not a blanket suppression. A constraint bounds the axes it acts on, not
+  // every axis: a power mismatch says nothing about tonal balance, and a
+  // listener whose system is warm still has a warm system. So the axes the
+  // constraint governs are withheld and the rest are reported normally. Where
+  // that leaves nothing, Recognition is absent — which is honest, because a
+  // system whose only committed axes are the constrained ones has no
+  // publishable character until the constraint is resolved.
+  const constrainedAxes = bottleneck
+    ? (CONSTRAINED_AXES[category] ?? [])
+    : [];
+  const readableAxes = constrainedAxes.length > 0 && f.systemAxes
+    ? Object.fromEntries(Object.entries(f.systemAxes as Record<string, string>)
+      .filter(([k]) => !constrainedAxes.includes(k)))
+    : f.systemAxes;
+  const character = characterRead(readableAxes);
   let recognition = character ? `This system reads ${character}.` : '';
   if (recognition && standfirst && norm(recognition) === norm(standfirst)) {
     recognition = '';
@@ -538,12 +536,18 @@ export function synthesizeArtifact(result: any): SynthResult {
        * has the same effect, so both fall back to the general close. */
       const weavable = !!subj && !asContribution(s0).includes('—');
       if (alreadyCovered || !weavable) {
-        // Beat + a general "chosen for" close.
-        caseParagraphs.push(`${beat} None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.`);
+        // Beat + a general behavioural close. The former close read "None of
+        // that is an accident — the chain upstream has been chosen so nothing
+        // fights what the speaker is trying to do", which asserted a purchasing
+        // decision and an intention for the loudspeaker from evidence that is
+        // entirely about behaviour.
+        caseParagraphs.push(`${beat} Nothing upstream works against the speaker's own behaviour.`);
       } else {
         // Beat + a specific "and here's what X brings" close on a
         // fresh subject.
-        caseParagraphs.push(`${beat} None of that is an accident — ${asContribution(s0)}, and the rest of the chain has been chosen so that it can.`);
+        const contribution = asContribution(s0);
+        caseParagraphs.push(`${beat} ${contribution.charAt(0).toUpperCase()}${contribution.slice(1)}, `
+          + 'and nothing downstream works against it.');
       }
     } else if (beat) {
       caseParagraphs.push(beat);
@@ -598,7 +602,7 @@ export function synthesizeArtifact(result: any): SynthResult {
         : sharedTraits.length === 2
           ? `${sharedTraits[0]} and ${sharedTraits[1]}`
           : `${sharedTraits.slice(0, -1).join(', ')}, and ${sharedTraits[sharedTraits.length - 1]}`;
-      caseParagraphs.push(`Why it hangs together: every stage in the chain leans toward ${traitList}. When the source leans that way, the amplifier leans that way, and the speaker leans that way, the character isn't diluted at any handoff — it's amplified by design. This is what happens when components are chosen for shared voicing rather than complementary correction.`);
+      caseParagraphs.push(`Why it hangs together: every stage in the chain leans toward ${traitList}. When the source leans that way, the amplifier leans that way, and the speaker leans that way, the character is not diluted at any handoff — it accumulates. Shared voicing rather than complementary correction.`);
     } else if (perComponentAxes.length >= 2) {
       // Non-coherent balanced systems: describe the axis mix
       // explicitly so the reader sees the deliberate lean per
@@ -641,7 +645,7 @@ export function synthesizeArtifact(result: any): SynthResult {
       caseParagraphs.push(`The trade — ${lowerFirst(limit)}.`);
     } else if (coherentTradeoffs.length > 0) {
       const first = String(coherentTradeoffs[0]).trim().replace(/[.]+$/, '');
-      caseParagraphs.push(`What it gives up on purpose: ${lowerFirst(first)}. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.`);
+      caseParagraphs.push(`What it gives up: ${lowerFirst(first)}. That is the cost of the lean — a chain that agrees with itself cannot pull in both directions at once.`);
     }
 
     // ── Paragraph 4: the closing — listener-fit + refrain in one
@@ -649,7 +653,7 @@ export function synthesizeArtifact(result: any): SynthResult {
     // sign-off.
     const closing: string[] = [];
     if (prefNote) closing.push(prefNote);
-    closing.push('Each component is doing what it was chosen for, and nothing is asking it to do more');
+    closing.push('Each stage carries the same character forward, and none of them is working against another');
     caseParagraphs.push(closing.join('. ') + '.');
 
     // Doctrine D-8 (Recommendation Licensing): the Assessment must not carry a
@@ -723,9 +727,9 @@ export function synthesizeArtifact(result: any): SynthResult {
     // quality.
     const ax = f.systemAxes ?? {};
     if (ax.warm_bright === 'warm' || ax.smooth_detailed === 'smooth') {
-      recommendation = 'There is nothing here to fix — only flavours to trade. This system was assembled for tone, and a different component would change its character rather than improve it. If the warmth still pleases you, stop here.';
+      recommendation = 'There is nothing here to fix — only flavours to trade. The chain leans toward tone throughout, so a different component would move that character sideways rather than raise it. If the warmth still pleases you, stop here.';
     } else if (ax.smooth_detailed === 'detailed' || ax.warm_bright === 'bright') {
-      recommendation = 'There is nothing here to fix — only flavours to trade. This system was assembled for resolution, and a change would soften that commitment rather than better it. If the detail still rewards you, stop here.';
+      recommendation = 'There is nothing here to fix — only flavours to trade. The chain leans toward resolution throughout, so a change would soften that character rather than better it. If the detail still rewards you, stop here.';
     } else {
       recommendation = 'This system is already well balanced. A component change here would shift the presentation sideways — a different flavour, not an improvement.';
     }

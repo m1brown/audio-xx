@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evidenceStatement, toCanonicalAssessment } from '../canonical';
-import { characterRead } from '../synthesizeArtifact';
+import { characterRead, synthesizeArtifact } from '../synthesizeArtifact';
 import type { ArtifactPayload } from '../types';
 
 /**
@@ -116,5 +116,60 @@ describe('EVIDENCE statement reflects the classes actually used', () => {
     expect(evidenceStatement([
       { label: 'Manual', url: 'https://a.test', evidenceClass: 'manual' }]))
       .toMatch(/manufacturer documentation/);
+  });
+});
+
+describe('no section infers why the owner chose anything', () => {
+  const INTENT =
+    /assembled for|chosen for|has been chosen|was chosen|built for|asked to|selected to|by design|on purpose|deliberate/i;
+
+  it('holds for every prose string in the synthesizer', async () => {
+    const fs = await import('node:fs/promises');
+    const src = await fs.readFile(
+      new URL('../synthesizeArtifact.ts', import.meta.url), 'utf8');
+    // Prose literals only. Comments legitimately quote the old defect, and a
+    // crude match over raw source grabs code fragments as well as sentences.
+    const re = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    const offenders: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const lit = m[1] ?? m[2] ?? m[3];
+      if (lit && /\s/.test(lit) && lit.split(/\s+/).length >= 5 && INTENT.test(lit)) {
+        offenders.push(lit.slice(0, 70));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('RECOGNITION under a diagnosed physical constraint', () => {
+  // Recognition is produced by the SYNTHESIZER, not the CAM adapter — the
+  // adapter passes `payload.recognition` straight through, so a fixture that
+  // hard-codes it tests nothing.
+  const synth = (findings: Record<string, unknown>) => synthesizeArtifact({
+    findings: { systemChain: { names: ['Amp', 'Speakers'] }, ...findings },
+    response: { assessmentStrengths: [], assessmentLimitations: [], upgradePaths: [] },
+  }).payload;
+
+  it('withholds the axes the constraint governs', () => {
+    // Live defect: "The amplifier can't drive these speakers." followed by
+    // "This system reads high in resolution, with firm dynamic grip." Firm
+    // grip is exactly what a clipping amplifier does not deliver.
+    const p = synth({ bottleneck: { category: 'power_match', role: 'speakers' },
+      systemAxes: { smooth_detailed: 'detailed', elastic_controlled: 'controlled' } });
+    expect(p.recognition).toBe('');
+  });
+
+  it('still reports an axis the constraint does NOT govern', () => {
+    // A power mismatch says nothing about tonal balance. A warm system is
+    // still warm, and blanket suppression would be the over-correction.
+    const p = synth({ bottleneck: { category: 'power_match', role: 'speakers' },
+      systemAxes: { warm_bright: 'warm', elastic_controlled: 'controlled' } });
+    expect(p.recognition).toBe('This system reads tonally warm.');
+  });
+
+  it('leaves a coherent system untouched', () => {
+    const p = synth({ systemAxes: { smooth_detailed: 'detailed', elastic_controlled: 'elastic' } });
+    expect(p.recognition).toMatch(/^This system reads high in resolution/);
   });
 });
