@@ -6,6 +6,18 @@ import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
 
 /**
+ * @deprecated LEGACY generate-from-input route. NOT the artifact contract.
+ *
+ * `?system=` carries the ENGINE INPUT and re-runs `buildSystemAssessment` on
+ * every open, so this route RE-ASSESSES rather than rendering an assessment.
+ * On production that meant Nathan's uncatalogued system did not render at all,
+ * and Leben/Cornwall rendered a different assessment from the conversation
+ * (CS600X not CS600, detailed not balanced).
+ *
+ * The canonical artifact is `/artifact/[viewToken]` — a frozen snapshot,
+ * render-only. Print, Share and View Assessment must never route here. Kept
+ * only so existing links do not 404; do not build new product flows on it.
+ *
  * Milestone 2 — live end-to-end artifact.
  *
  * `?system=<free text>` runs the real engine and synthesizes the artifact.

@@ -125,19 +125,37 @@ model System {
 // Engine evolution never rewrites history: re-assessing appends a new row.
 model AssessmentSnapshot {
   id            String   @id @default(cuid())
-  systemId      String   @map("system_id")
-  system        System   @relation(fields: [systemId], references: [id], onDelete: Cascade)
-  userId        String   @map("user_id")
-  /** Canonical engine input (the /artifact?system= payload, decoded). */
-  systemText    String   @map("system_text")
-  /** Synthesized ArtifactPayload as rendered — JSON string. */
-  payloadJson   String   @map("payload_json")
+  /**
+   * Unguessable capability for View/Print. The DB id is never a URL.
+   *
+   * NULLABLE rather than defaulted: a UNIQUE column with a constant default
+   * admits exactly one row, so `@default("")` made the second snapshot fail to
+   * insert. SQLite permits many NULLs in a unique index, which is what lets
+   * pre-existing rows coexist with tokenised ones.
+   */
+  viewToken     String?  @unique @map("view_token")
+  /** Minted ONLY by an explicit Share. Null = never shared. */
+  shareToken    String?  @unique @map("share_token")
+  /** Nullable: an anonymous listener may create, view and print a snapshot. */
+  systemId      String?  @map("system_id")
+  system        System?  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  userId        String?  @map("user_id")
+  /** Legacy: canonical engine input. Retained for old rows; never read by the
+   *  artifact, because carrying the input is what made re-derivation possible. */
+  systemText    String   @map("system_text") @default("")
+  /** Legacy: synthesized ArtifactPayload. Superseded by snapshotJson. */
+  payloadJson   String   @map("payload_json") @default("")
+  /** The frozen AssessmentSnapshotV1 — the authoritative rendered state. */
+  snapshotJson  String   @map("snapshot_json") @default("")
+  /** Schema of snapshotJson, e.g. "axx.assessment.v1". */
+  schemaVersion String   @map("schema_version") @default("")
   engineVersion String   @map("engine_version")
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([systemId])
   @@map("assessment_snapshots")
 }
+
 
 model Component {
   id               String            @id @default(cuid())
