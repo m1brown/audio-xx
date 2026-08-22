@@ -99,3 +99,20 @@ describe('the actions are mounted once, for every assessment format', () => {
     expect(site).not.toMatch(/isMemoFormat|StandardFormat|SYSTEM_ASSESSMENT_ARTIFACT_ENABLED/);
   });
 });
+
+describe('the capability survives a later advisory update', () => {
+  const page = read('app/page.tsx');
+
+  it('UPDATE_ADVISORY preserves the artifact tokens', () => {
+    // The catalog path splices a character line into `systemContext` AFTER
+    // dispatch, rebuilding the advisory from the original object. Whichever
+    // async write landed second used to win, and on production that meant the
+    // snapshot was created, the token returned, and no action appeared.
+    const branch = page.slice(page.indexOf("case 'UPDATE_ADVISORY'"),
+      page.indexOf("case 'SET_ARTIFACT_TOKEN'"));
+    expect(branch).toMatch(/artifactViewToken:\s*\n?\s*action\.advisory\.artifactViewToken \?\? m\.advisory\.artifactViewToken/);
+    expect(branch).toMatch(/artifactShareToken:/);
+    // It must not simply replace the advisory wholesale any more.
+    expect(branch).not.toMatch(/\{ \.\.\.m, advisory: action\.advisory \}/);
+  });
+});

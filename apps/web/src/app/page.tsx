@@ -420,7 +420,24 @@ function reducer(state: ConversationState, action: Action): ConversationState {
         ...state,
         messages: state.messages.map((m) =>
           m.role === 'assistant' && m.kind === 'advisory' && 'id' in m && m.id === action.id
-            ? { ...m, advisory: action.advisory }
+            ? {
+              ...m,
+              advisory: {
+                ...action.advisory,
+                // The artifact capability belongs to the MESSAGE, not to the
+                // advisory payload being recomputed. Without this, whichever
+                // of two async writes landed second won: the catalog path
+                // splices a character line into `systemContext` after
+                // dispatch, and that update — built from the ORIGINAL
+                // advisory object — silently dropped the token the snapshot
+                // had just attached. On production the snapshot was created,
+                // the token returned, and the actions never appeared.
+                artifactViewToken:
+                  action.advisory.artifactViewToken ?? m.advisory.artifactViewToken,
+                artifactShareToken:
+                  action.advisory.artifactShareToken ?? m.advisory.artifactShareToken,
+              },
+            }
             : m,
         ),
       };
