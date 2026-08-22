@@ -90,6 +90,34 @@ import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
 import { dossierFor } from '@/lib/evidence/product-dossier';
 import { presentDossier } from '@/lib/evidence/dossier-presentation';
 import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-product-facts';
+
+/**
+ * Component dossiers for one assessment.
+ *
+ * Shared by both reasoning paths. The first wiring attached them only to the
+ * provisional path, and FRANCE is a catalogued system — so the dossiers were
+ * built and never rendered, the same format-specific mistake the artifact
+ * actions made a pass earlier.
+ */
+function buildDossierViews(
+  components: Array<{ displayName: string; role: string }>,
+  manufacturerEvidence: Array<Record<string, unknown>>,
+) {
+  return components.map((c) => {
+    const key = c.displayName.toLowerCase()
+      .replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+    const heldSpecs = manufacturerEvidence
+      .filter((m) => m.productKey === key)
+      .map((m) => ({
+        field: String(m.field), value: String(m.value),
+        sourceUrl: (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl,
+      }));
+    return presentDossier(dossierFor(key, c.displayName, {
+      authoredFacts: FRANCE_FACTS, heldSpecs, role: c.role,
+      unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
+    }));
+  }).filter((v) => v.primary.length > 0 || v.gaps.length > 0);
+}
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 import { toCanonicalAssessment } from '@/lib/artifact/canonical';
@@ -3156,22 +3184,9 @@ export default function Home() {
           // evidence already fetched. No acquisition, no reasoning: a
           // projection over authored product facts plus the manufacturer
           // specifications this turn already read.
-          const dossierViews = orderedComponents.map((c) => {
-            const key = c.displayName.toLowerCase()
-              .replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
-            const heldSpecs = (manufacturerEvidence as Array<Record<string, unknown>>)
-              .filter((m) => m.productKey === key)
-              .map((m) => ({
-                field: String(m.field), value: String(m.value),
-                sourceUrl: (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl,
-              }));
-            return presentDossier(dossierFor(key, c.displayName, {
-              authoredFacts: FRANCE_FACTS,
-              heldSpecs,
-              role: c.role,
-              unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
-            }));
-          }).filter((v) => v.primary.length > 0 || v.gaps.length > 0);
+          const dossierViews = buildDossierViews(
+            orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+            manufacturerEvidence as Array<Record<string, unknown>>);
 
           mark('evidence read');
           const provisional = await inferProvisionalSystemAssessment(
@@ -3289,6 +3304,10 @@ export default function Home() {
         }
 
         const assessmentMsgId = advisoryId();
+        assessmentResult.response.componentDossiers = buildDossierViews(
+          (assessmentResult.components ?? []).map((c: { displayName: string; role: string }) =>
+            ({ displayName: c.displayName, role: c.role })),
+          []);
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and
