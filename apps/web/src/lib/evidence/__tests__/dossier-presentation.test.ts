@@ -72,3 +72,47 @@ describe('absence surfaces only when it is decision-relevant', () => {
     expect(eversolo().gaps).toEqual([]);
   });
 });
+
+describe('the FRANCE chain produces dossiers for every component', () => {
+  // The first wiring read `assessmentResult.components`, which is EMPTY on the
+  // catalog path — so dossiers were built for nothing and the region never
+  // rendered. `systemChain` is the authoritative list.
+  const CHAIN = [
+    { displayName: 'Eversolo DMP-A6', role: 'streamer' },
+    { displayName: 'JOB Integrated', role: 'integrated' },
+    { displayName: 'WLM Diva Monitor', role: 'speaker' },
+  ];
+
+  const views = CHAIN.map((c) => {
+    const key = c.displayName.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+    return presentDossier(dossierFor(key, c.displayName, {
+      authoredFacts: FRANCE_FACTS, role: c.role, unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
+    }));
+  });
+
+  it('every FRANCE component gets a non-empty dossier', () => {
+    for (const v of views) {
+      expect(v.primary.length + v.gaps.length, v.displayName).toBeGreaterThan(0);
+    }
+  });
+
+  it('Eversolo leads with lineage and the parent company', () => {
+    const labels = views[0].primary.map((l) => l.label);
+    expect(labels).toContain('Superseded by');
+    expect(labels).toContain('Brand');
+  });
+
+  it('JOB shows the Goldmund relationship and marks reported facts', () => {
+    const lines = [...views[1].primary, ...views[1].secondary];
+    expect(lines.find((l) => l.label === 'Brand')?.value).toContain('Goldmund');
+    expect(lines.find((l) => l.label === 'Designed in')?.standing).toBe('reported');
+    expect(views[1].gaps[0]).toContain('rated output');
+  });
+
+  it('WLM shows lineage and the decision-relevant gap, not the aggregator specs', () => {
+    const v = views[2];
+    expect(v.primary.find((l) => l.label === 'Superseded by')?.value).toBe('Diva MK IV');
+    expect(JSON.stringify(v)).not.toContain('97');
+    expect(v.gaps[0]).toContain('sensitivity');
+  });
+});

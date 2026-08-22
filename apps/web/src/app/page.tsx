@@ -99,6 +99,27 @@ import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-p
  * built and never rendered, the same format-specific mistake the artifact
  * actions made a pass earlier.
  */
+/**
+ * Chain-role labels -> the dossier's role vocabulary.
+ *
+ * `systemChain.roles` carries display labels ("Streamer", "Speakers"); spec
+ * roles are keyed on the engine vocabulary. An unmapped label yields
+ * undefined, which leaves a specification's role UNKNOWN rather than guessed —
+ * the distinction that closes the power-output collision.
+ */
+function dossierRole(label: string | undefined): string | undefined {
+  const l = (label ?? '').toLowerCase().replace(/s$/, '');
+  if (l.includes('integrated')) return 'integrated';
+  if (l.includes('amplifier') || l === 'amp') return 'amplifier';
+  if (l.includes('speaker') || l.includes('loudspeaker')) return 'speaker';
+  if (l.includes('headphone')) return 'headphone';
+  if (l.includes('preamp')) return 'preamplifier';
+  if (l.includes('streamer')) return 'streamer';
+  if (l.includes('dac') || l.includes('source')) return 'dac';
+  if (l.includes('turntable')) return 'turntable';
+  return undefined;
+}
+
 function buildDossierViews(
   components: Array<{ displayName: string; role: string }>,
   manufacturerEvidence: Array<Record<string, unknown>>,
@@ -3304,9 +3325,15 @@ export default function Home() {
         }
 
         const assessmentMsgId = advisoryId();
+        // `systemChain` is the authoritative, role-sorted, catalog-resolved
+        // component list. `assessmentResult.components` is empty on this path,
+        // which is why the first wiring produced no dossiers at all.
+        const chain = assessmentResult.findings?.systemChain;
         assessmentResult.response.componentDossiers = buildDossierViews(
-          (assessmentResult.components ?? []).map((c: { displayName: string; role: string }) =>
-            ({ displayName: c.displayName, role: c.role })),
+          (chain?.names ?? []).map((name: string, i: number) => ({
+            displayName: name,
+            role: dossierRole(chain?.roles?.[i]) ?? '',
+          })),
           []);
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
