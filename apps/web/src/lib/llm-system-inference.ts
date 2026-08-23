@@ -682,6 +682,8 @@ export function buildProvisionalPrompt(
   driveRelation?: LicensedRelation;
   /** That conclusion as prose, written by Audio XX rather than the model. */
   driveConclusion?: string;
+  /** The material limitation on it, kept separate so it can be subordinate. */
+  driveQualification?: string;
   /** A specific unpublished figure that would resolve what is still open. */
   openGap?: string;
   /** The question that gap makes worth asking. Outranks the model's own. */
@@ -1098,7 +1100,8 @@ ${closing}`;
 
   const driveProse = (ampSubject && spkImpedance)
     ? driveConclusionFor(drive, ampSubject, spkImpedance.subject) : undefined;
-  const driveConclusion = driveProse?.sentence;
+  const driveConclusion = driveProse?.finding || driveProse?.sentence;
+  const driveQualification = driveProse?.qualification;
 
   // Production visibility for the derived conclusion. `console.log` is stripped
   // from the production bundle and `console.warn` is not, which is why this is
@@ -1112,6 +1115,7 @@ ${closing}`;
   return {
     userPrompt, provenance,
     driveConclusion,
+    driveQualification,
     openGap: driveProse?.gap,
     gapQuestion: driveProse?.question,
     coverageNote,
@@ -1163,6 +1167,7 @@ function applyDerivedProse(
   coverageNote?: string,
   openGap?: string,
   componentRoles?: ComponentRole[],
+  driveQualification?: string,
 ): ConsultationResponse {
   const existing = response.systemSignature?.trim();
 
@@ -1227,9 +1232,15 @@ function applyDerivedProse(
     || undefined;
   return {
     ...response,
-    systemSignature: driveConclusion
-      ? (existing ? `${driveConclusion} ${existing}` : driveConclusion)
-      : response.systemSignature,
+    // A derived conclusion IS the principal finding. The rebuilt verdict line
+    // that used to follow it — "The evidence establishes one compatibility
+    // finding in this chain, and leaves the Acora QRC-2's sensitivity
+    // unresolved" — carried no proposition the finding and its qualification
+    // did not already state: the first clause restated the establishment, the
+    // second restated the gap. Dropped at the generating layer, not hidden in
+    // presentation.
+    systemSignature: driveConclusion || response.systemSignature,
+    qualification: driveQualification ?? response.qualification,
     philosophy,
   };
 }
@@ -1273,7 +1284,7 @@ export async function inferProvisionalSystemAssessment(
 ): Promise<ConsultationResponse | null> {
   const {
     userPrompt, provenance, suppliedPremises, driveRelation, driveConclusion,
-    openGap, gapQuestion, coverageNote,
+    driveQualification, openGap, gapQuestion, coverageNote,
   } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
     manufacturerEvidence, reviewObservations, componentRoles,
@@ -1363,7 +1374,7 @@ export async function inferProvisionalSystemAssessment(
         // figure at their own load is the most useful thing we have.
         return applyDerivedProse(
           buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster),
-          driveConclusion, coverageNote, openGap, componentRoles);
+          driveConclusion, coverageNote, openGap, componentRoles, driveQualification);
       }
     }
     // Provenance is computed from EVIDENCE, before and independently of the
@@ -1381,7 +1392,7 @@ export async function inferProvisionalSystemAssessment(
     // Two derivations of one fact are two chances to disagree.
     parsedResponse.componentProvenance = provenance;
     return applyDerivedProse(parsedResponse, driveConclusion, coverageNote, openGap,
-      componentRoles);
+      componentRoles, driveQualification);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');

@@ -57,6 +57,11 @@
   letter-spacing: -0.012em; margin: 0 0 0.75rem;
   text-wrap: balance;
 }
+/* The finding's material limitation: one register down, still substantive. */
+.axx-qualification {
+  font-size: 1.02rem; line-height: 1.45; color: var(--muted);
+  margin: 0 0 0.9rem; max-width: 34rem;
+}
 /* Subordinate to the finding, and clearly its qualification. */
 .axx-standfirst {
   font-size: 0.95rem; line-height: 1.5; font-style: italic;
@@ -150,6 +155,7 @@
     font-size: 10pt; line-height: 1.5; color: #000;
   }
   .axx-verdict { font-size: 17pt; line-height: 1.24; }
+  .axx-qualification { font-size: 11pt; }
   .axx-standfirst { font-size: 10.5pt; margin-bottom: 14pt; }
   .axx-section { font-size: 7.5pt; }
   .axx-cname { font-size: 11pt; }

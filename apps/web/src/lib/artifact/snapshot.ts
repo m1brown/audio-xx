@@ -80,6 +80,8 @@ export interface AssessmentSnapshotV1 {
   components: Array<{ name: string; role?: string; basis?: string }>;
 
   verdict: string;
+  /** A material limitation on the verdict. Rendered subordinate to it. */
+  qualification?: string;
   standfirst?: string;
   actionVerdict?: string;
   recognition?: string;
@@ -118,6 +120,7 @@ export interface AssessmentSnapshotV1 {
 export interface ProvisionalAssessmentLike {
   subject?: string;
   systemSignature?: string;
+  qualification?: string;
   philosophy?: string;
   tendencies?: string;
   followUp?: string;
@@ -220,6 +223,7 @@ export function snapshotFromProvisional(
       name: c.name, role: c.role, basis: basisFor.get(c.name),
     })),
     verdict: response.systemSignature ?? '',
+    qualification: response.qualification,
     actionVerdict: response.actionVerdict,
     sections,
     question: response.followUp,

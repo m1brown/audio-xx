@@ -329,8 +329,24 @@ export function transferFor(conditionKind?: string): EvidenceTransfer {
  * one to repeat a fact we already hold only introduces a way to lose it.
  */
 export interface DriveConclusion {
-  /** Audio XX's own prose for the finding. */
+  /** Audio XX's own prose for the finding. Finding + qualification, joined. */
   sentence: string;
+  /**
+   * The principal finding on its own — what the evidence ESTABLISHES.
+   *
+   * Split from its qualification because presentation cannot subordinate half
+   * a string. Nathan's lead carried the established output, the missing
+   * sensitivity and a summary restatement in one field, so every renderer had
+   * to show all three at the same weight or none.
+   */
+  finding: string;
+  /**
+   * The material limitation on that finding, where one exists.
+   *
+   * A general shape, not a drive-specific one: any derived conclusion may
+   * establish something and simultaneously bound it.
+   */
+  qualification?: string;
   /**
    * The specific unpublished figure that would resolve what is still open,
    * phrased for use inside another sentence.
@@ -352,9 +368,14 @@ export function driveConclusionFor(
   const sentence = driveSentence(drive, ampName, speakerName);
   if (!sentence) return undefined;
 
+  // The generating layer owns the split. Splitting prose in a renderer would
+  // be heuristic sentence-chopping, and a renderer that guesses at clause
+  // boundaries eventually guesses wrong.
+  const parts = splitFindingAndQualification(drive, ampName, speakerName);
+
   if (drive.status === 'incomplete' && drive.watts != null) {
     return {
-      sentence,
+      sentence, ...parts,
       gap: `the ${speakerName}'s sensitivity`,
       // Deliberately about the listener's EXPERIENCE, not about the figure.
       // Asking for a specification is homework; asking whether they are running
@@ -366,13 +387,61 @@ export function driveConclusionFor(
 
   if (drive.status === 'load_mismatch') {
     return {
-      sentence,
+      sentence, ...parts,
       gap: `${ampName}'s output into ${drive.loadOhms} ohms`,
       question: 'How loud do you usually listen, and how large is the room?',
     };
   }
 
-  return { sentence };
+  return { sentence, ...parts };
+}
+
+/**
+ * The same conclusion, as its two propositions.
+ *
+ * Authored here rather than derived by splitting `sentence`, so the two stay
+ * in step: a change to one is a change to the other in the same place.
+ */
+function splitFindingAndQualification(
+  drive: DriveAssessment,
+  ampName: string,
+  speakerName: string,
+): { finding: string; qualification?: string } {
+  const ohms = (n: number) => `${n} ohms`;
+  const put = (name: string, figure: string) => `Published figures put the ${name} at ${figure}`;
+
+  if (drive.status === 'assessable') {
+    return {
+      finding: `${put(ampName, `${drive.watts} watts`
+        + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
+        + `the load the ${speakerName} presents, and the ${speakerName} at `
+        + `${drive.sensitivityDb} dB — the pairing is amply powered.`,
+    };
+  }
+
+  if (drive.status === 'incomplete' && drive.watts != null) {
+    return {
+      finding: `${put(ampName, `${drive.watts} watts`
+        + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
+        + `which is the load the ${speakerName} presents, so output at the `
+        + `relevant load is established.`,
+      qualification: `The ${speakerName}'s sensitivity is not published, so the `
+        + `evidence held is not sufficient to estimate this system's acoustic `
+        + `headroom reliably.`,
+    };
+  }
+
+  if (drive.status === 'load_mismatch') {
+    return {
+      finding: `${put(ampName, `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`)}, `
+        + `while the ${speakerName} presents ${ohms(drive.loadOhms)}.`,
+      qualification: `What the amplifier delivers into ${ohms(drive.loadOhms)} is not `
+        + `published, so drive cannot be established from the figures — worth `
+        + `putting to the manufacturer directly.`,
+    };
+  }
+
+  return { finding: '' };
 }
 
 export function driveSentence(

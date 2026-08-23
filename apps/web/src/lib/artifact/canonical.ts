@@ -172,13 +172,19 @@ function tonalSignatureFromAxes(
   // Unified path (2026-08-13): plot the same role-weighted numeric averages
   // the signature prose reads — one aggregation, so graph and prose cannot
   // contradict each other, and the marker carries degree, not just direction.
-  if (numeric && TONAL_AXES.every((a) => typeof numeric[a.key] === 'number')) {
-    return TONAL_AXES.map((a) => numericToReading(a, numeric[a.key]));
+  // Only axes the state actually CARRIES are plotted. A constraint removes the
+  // axes it governs from the payload, and mapping over all three regardless
+  // re-emitted them as "neutral" — so the Magnepan control withheld
+  // smooth_detailed and elastic_controlled from Recognition and plotted them
+  // anyway, one line below.
+  const present = TONAL_AXES.filter((a) => typeof numeric?.[a.key] === 'number');
+  if (numeric && present.length > 0) {
+    return present.map((a) => numericToReading(a, numeric[a.key]));
   }
   // Legacy payloads (saved snapshots predating systemAxisNumeric): the
-  // original categorical three-position mapping.
+  // original categorical three-position mapping, over carried axes only.
   if (!axes) return undefined;
-  return TONAL_AXES.map((a) => {
+  return TONAL_AXES.filter((a) => !!axes[a.key]).map((a) => {
     const v = axes[a.key];
     if (v === a.leftPole) return { axis: a.key, left: a.left, right: a.right, pole: 'left' as const, position: 24 };
     if (v === a.rightPole) return { axis: a.key, left: a.left, right: a.right, pole: 'right' as const, position: 78 };
@@ -378,9 +384,15 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
   // the payload (Stabilization Gate 1). The three-axis Tonal Signature graph is
   // structurally required; it must render on payload-only surfaces (chat embed,
   // saved snapshots) — not only where a call site happens to thread `raw`.
-  const axes: Record<string, string> | undefined = raw?.findings?.systemAxes ?? payload.systemAxes;
+  // PAYLOAD FIRST. The payload's axis state is constraint-bounded; the raw
+  // findings are not. Reading `raw` first meant the Tonal Signature graph
+  // plotted the axes a diagnosed constraint had already removed — the Magnepan
+  // control showed "Detailed / Controlled" beneath a Recognition that
+  // correctly withheld both. `raw` remains the fallback for payloads that
+  // predate the bounded fields.
+  const axes: Record<string, string> | undefined = payload.systemAxes ?? raw?.findings?.systemAxes;
   const axesNumeric: Record<string, number> | undefined =
-    raw?.findings?.systemAxisNumeric ?? payload.systemAxisNumeric;
+    payload.systemAxisNumeric ?? raw?.findings?.systemAxisNumeric;
   const limitations: string[] = raw?.response?.assessmentLimitations ?? [];
   const limitation = limitations[0];
   const { engineering, operatingCondition } = splitEngineeringAndCondition(payload.caseParagraphs ?? [], limitation);

@@ -13,7 +13,7 @@
  * Structure, not sentences. The presentation layer emits typed lines; this
  * component lays them out and adds no words of its own.
  */
-import React, { useState } from 'react';
+import React from 'react';
 import type { DossierView } from '@/lib/evidence/dossier-presentation';
 import { COLOR } from '@/lib/editorial-tokens';
 
@@ -40,7 +40,6 @@ function Line({ l }: { l: DossierView['primary'][number] }) {
 }
 
 export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView[] }) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   // Render-worthiness is decided in the presentation layer; a component with
   // only detail-level knowledge still gets a card, because holding four
   // published specifications and showing nothing is worse than a short card.
@@ -74,22 +73,14 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
             </p>
           ))}
 
-          {d.hasDetail && (
-            <>
-              <button
-                type="button"
-                onClick={() => setOpen((o) => ({ ...o, [d.displayName]: !o[d.displayName] }))}
-                style={{ ...label, background: 'none', border: 'none', padding: '0.5rem 0 0 0', cursor: 'pointer' }}
-              >
-                {open[d.displayName] ? '− Less' : '+ More detail'}
-              </button>
-              {open[d.displayName] && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  {d.secondary.map((l, i) => <Line key={i} l={l} />)}
-                </div>
-              )}
-            </>
-          )}
+          {/* No progressive disclosure. Once a fact has been admitted to the
+              DossierView, hiding it behind a second interaction is the
+              presentation layer overruling a selection decision already made.
+              Selection stays with `presentDossier`; display shows what it
+              chose. Depth varies by component, and one with three useful facts
+              is simply shorter than one with ten. */}
+          {d.secondary.map((l, i) => <Line key={`s${i}`} l={l} />)}
+
         </div>
       ))}
     </section>

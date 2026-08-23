@@ -751,6 +751,8 @@ export interface AdvisoryResponse {
    * simply do not appear, because offering an artifact that cannot be opened
    * is worse than offering none.
    */
+  /** A material limitation on the principal finding. Rendered subordinate. */
+  qualification?: string;
   artifactViewToken?: string;
   /** Public capability, present only after an explicit Share. */
   artifactShareToken?: string;
@@ -2158,6 +2160,7 @@ export function consultationToAdvisory(
     spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
     systemSignature: isComparison ? undefined : c.systemSignature,
+    qualification: isComparison ? undefined : c.qualification,
     componentDossiers: isComparison ? undefined : c.componentDossiers,
 
     // Pass 18: Brand Authority Preview — pass through unchanged for

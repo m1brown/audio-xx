@@ -158,6 +158,27 @@ const CHARACTER_SECOND: Record<string, Record<string, string>> = {
  * `elastic_controlled` cannot be read off components that are not being
  * driven properly. Tonal balance is untouched by it and continues to publish.
  */
+/**
+ * The system character state a constraint leaves publishable.
+ *
+ * The single derivation every character surface consumes — graph, Recognition,
+ * standfirst and identity. Exported so `deriveIdentity` reads the same state
+ * rather than the raw findings; identity is a character claim like any other,
+ * and it was committing to axes the constraint had already silenced.
+ */
+export function readableAxisState(
+  f: { systemAxes?: Record<string, string>; systemAxisNumeric?: Record<string, number> },
+  bottleneck: unknown,
+  category: string,
+): { categorical?: Record<string, string>; numeric?: Record<string, number> } {
+  const governed = bottleneck ? (CONSTRAINED_AXES[category] ?? []) : [];
+  if (governed.length === 0) return { categorical: f.systemAxes, numeric: f.systemAxisNumeric };
+  const drop = <T,>(m: Record<string, T> | undefined) => (m
+    ? Object.fromEntries(Object.entries(m).filter(([k]) => !governed.includes(k)))
+    : undefined);
+  return { categorical: drop(f.systemAxes), numeric: drop(f.systemAxisNumeric) };
+}
+
 const CONSTRAINED_AXES: Record<string, string[]> = {
   power_match: ['elastic_controlled', 'smooth_detailed'],
   speaker_scale: ['elastic_controlled'],
@@ -443,19 +464,20 @@ export function synthesizeArtifact(result: any): SynthResult {
   // that leaves nothing, Recognition is absent — which is honest, because a
   // system whose only committed axes are the constrained ones has no
   // publishable character until the constraint is resolved.
-  const constrainedAxes = bottleneck
-    ? (CONSTRAINED_AXES[category] ?? [])
-    : [];
-  const readableAxes = constrainedAxes.length > 0 && f.systemAxes
-    ? Object.fromEntries(Object.entries(f.systemAxes as Record<string, string>)
-      .filter(([k]) => !constrainedAxes.includes(k)))
-    : f.systemAxes;
-  // Constrained axes are withheld, then the rest are read numerically.
-  const readableNumeric = constrainedAxes.length > 0 && f.systemAxisNumeric
-    ? Object.fromEntries(Object.entries(f.systemAxisNumeric as Record<string, number>)
-      .filter(([k]) => !constrainedAxes.includes(k)))
-    : (f.systemAxisNumeric as Record<string, number> | undefined);
+  const readable = readableAxisState(f, bottleneck, category);
+  const readableCategorical = readable.categorical;
+  const readableNumeric = readable.numeric;
   const character = characterRead(readableNumeric);
+
+  // ONE CONSTRAINED CHARACTER STATE, MANY RENDERERS. `readableAxisState`
+  // above is the single derivation; the graph, Recognition, the standfirst
+  // and `deriveIdentity` all consume it. Previously only Recognition was
+  // bounded, so the Magnepan control withheld smooth_detailed and
+  // elastic_controlled from Recognition and plotted "Detailed / Controlled"
+  // on the graph one line below. A graph is a Describe claim about system
+  // character and may not publish an axis the same evidence state forbids
+  // Recognition to publish. Bounded here rather than exempted in the graph:
+  // an exception would leave the next renderer to rediscover the defect.
   let recognition = character ? `This system reads ${character}.` : '';
   if (recognition && standfirst && norm(recognition) === norm(standfirst)) {
     recognition = '';
@@ -867,10 +889,14 @@ export function synthesizeArtifact(result: any): SynthResult {
     edition: editionFor(seed),
     // Tonal axes travel WITH the payload so the three-axis Tonal Signature
     // graph survives payload-only surfaces (chat embed, saved snapshots).
-    systemAxes: f.systemAxes && Object.keys(f.systemAxes).length > 0 ? f.systemAxes : undefined,
+    // Constraint-bounded. The payload's axis state is the system CHARACTER
+    // state, and every renderer that reads it — graph included — is bound by
+    // the same constraint that silences Recognition.
+    systemAxes: readableCategorical && Object.keys(readableCategorical).length > 0
+      ? readableCategorical : undefined,
     // Numeric averages travel too (tonal-signature unification, 2026-08-13):
     // the graph plots these; the signature prose reads the same values.
-    systemAxisNumeric: f.systemAxisNumeric,
+    systemAxisNumeric: readableNumeric,
   };
 
   return { payload, contradictions };

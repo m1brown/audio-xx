@@ -153,6 +153,14 @@ export interface ConsultationResponse {
   source?: ConsultationSource;
   /** System signature — one-sentence sonic identity characterization. */
   systemSignature?: string;
+  /**
+   * A material limitation on the principal finding.
+   *
+   * General, not drive-specific: any derived conclusion may establish
+   * something and bound it in the same breath. Kept separate so presentation
+   * can subordinate it without splitting prose heuristically.
+   */
+  qualification?: string;
   /** Component-scoped product knowledge; see AdvisoryResponse.componentDossiers. */
   componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
   /**

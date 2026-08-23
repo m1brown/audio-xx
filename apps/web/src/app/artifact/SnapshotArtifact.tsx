@@ -121,6 +121,9 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
       <section aria-label="The system assessed">
         <p className="axx-credit">{s.components.map((c) => c.name).join(' · ')}</p>
         <p className="axx-verdict">{s.verdict}</p>
+        {/* Subordinate to the finding it bounds — one register down, never
+            competing with it for the eye. */}
+        {s.qualification && <p className="axx-qualification">{s.qualification}</p>}
         {s.standfirst && <p className="axx-standfirst">{s.standfirst}</p>}
       </section>
 
