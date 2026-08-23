@@ -472,9 +472,19 @@ Lock tests:
 
 Both must be green before any commit touching the resolver, the catalog, or the product-image overlay.
 
+### Image admission invariant
+
+A user-visible product image is admissible only when exact identity, approved provenance, and a recorded basis to display are each established **independently**. None may be inferred from another. Images have zero evidentiary authority — never a premise, never a licence, never an identity claim for other evidence. No image is preferable to the wrong image; absence is a finished state and there is no coverage target.
+
+Every user-visible path resolves through `apps/web/src/lib/images/admission.ts`. Do not add a resolver that reads `PRODUCT_IMAGE_URLS` or a catalog `imageUrl` directly — that is how three paths ended up enforcing three different rules.
+
+Enforcement is staged at `identity`; moving it to `full` is a founder decision costing 143 of 156 registry rows. Cross-brand leakage and prohibited hosts are **never** staged. Full doctrine: `docs/image-governance.md`. Audit: `docs/audits/image-admission.json`.
+
+Lock tests: `apps/web/src/lib/images/__tests__/admission-boundary.test.ts` (47), `production-controls.test.ts` (14), `registry-audit.test.ts` (4), `product-identity.test.ts` (13).
+
 ### F4 reviewer-data exclusion
 
-Overlay entries in `apps/web/src/lib/product-images.ts` carrying `source.tier === 'review_publication'` are intentionally gated out of user-rendered output by `getProductImage` / `getProductImageEntry`.
+Overlay entries in `apps/web/src/lib/product-images.ts` carrying `source.tier === 'review_publication'` are gated out of user-rendered output. This is now one clause of the admission state above rather than a standalone check, so it applies on every resolver instead of only the two that remembered it.
 
 Do not change a tier value or remove the gate check without explicit human approval. F4 protects institutional discipline independent of what looks like good engineering.
 
