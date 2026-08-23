@@ -95,3 +95,22 @@ describe("Nathan's admitted facts are all visible without any user action", () =
     }
   });
 });
+
+describe('the qualification renders once, with its finding', () => {
+  const MSG = readFileSync(join(ROOT, 'components/advisory/AdvisoryMessage.tsx'), 'utf8');
+
+  it('never appears as a sibling outside the finding conditional', () => {
+    // Rendered as a sibling it fired once per signature block and printed the
+    // sensitivity sentence twice on Nathan.
+    expect(MSG).not.toMatch(/\}\)\}\s*\n\s*\{\/\*[^*]*\*\/\}\s*\n\s*\{a\.qualification &&/);
+  });
+
+  it('is guarded by the same condition as the finding', () => {
+    // Every occurrence sits inside a block that also renders systemSignature.
+    for (const m of MSG.matchAll(/\{a\.qualification && \(/g)) {
+      const before = MSG.slice(Math.max(0, m.index! - 900), m.index!);
+      expect(before, 'qualification detached from its finding')
+        .toMatch(/a\.systemSignature/);
+    }
+  });
+});

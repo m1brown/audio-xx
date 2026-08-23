@@ -4634,32 +4634,16 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           fontWeight: 500,
         }}>
           {a.systemSignature}
+          {/* The finding's material limitation, one register down. Inside the
+              same conditional as the finding it bounds: rendered as a sibling
+              it appeared once per signature block and printed twice. */}
+          {a.qualification && (
+            <span style={{ display: 'block', marginTop: '0.55rem', fontWeight: 400, color: COLORS.textMuted }}>
+              {a.qualification}
+            </span>
+          )}
         </p>
       )}
-      {/* The finding's material limitation. Rendered wherever the finding is,
-          one register down — split at the generating layer so presentation
-          never has to guess where the finding ends. */}
-      {a.qualification && (
-        <p style={{
-          margin: '-0.9rem 0 1.5rem 0', fontSize: '0.95rem', lineHeight: 1.55,
-          color: COLORS.textMuted,
-        }}>
-          {a.qualification}
-        </p>
-      )}
-
-      {/* The finding's material limitation. Rendered wherever the finding is,
-          one register down — split at the generating layer so presentation
-          never has to guess where the finding ends. */}
-      {a.qualification && (
-        <p style={{
-          margin: '-0.9rem 0 1.5rem 0', fontSize: '0.95rem', lineHeight: 1.55,
-          color: COLORS.textMuted,
-        }}>
-          {a.qualification}
-        </p>
-      )}
-
 
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
