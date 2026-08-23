@@ -32,7 +32,7 @@ import {
 import {
   licensedRelations, validateRelations, permittedQuestionType, questionViolations,
   stripOverclaims,
-  filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION,
+  filterUnlicensedRelationalProse, OPEN_DIAGNOSTIC_QUESTION, rolesIn,
   type LicensedRelation, type ComponentRole,
   type ActionVerdict, type AttributeRecord, type RelationKind, type RelationSet,
   type EvidenceTier,
@@ -1138,32 +1138,89 @@ ${closing}`;
  * typical @ 4 Ohms" to "200 watts into 4 ohms", and the whole assessment
  * collapses into the fallback over a restatement of its own evidence.
  */
+/**
+ * Test seam for the derived-prose rules.
+ *
+ * `applyDerivedProse` is internal and the inference path around it needs a
+ * network, so the redundancy rule would otherwise only be testable through a
+ * live model call — which is how the paraphrase escape reached production
+ * unnoticed in the first place.
+ */
+export function applyDerivedProseForTest(
+  response: Partial<ConsultationResponse>,
+  driveConclusion?: string,
+  coverageNote?: string,
+  openGap?: string,
+  componentRoles?: ComponentRole[],
+): ConsultationResponse {
+  return applyDerivedProse(
+    response as ConsultationResponse, driveConclusion, coverageNote, openGap, componentRoles);
+}
+
 function applyDerivedProse(
   response: ConsultationResponse,
   driveConclusion?: string,
   coverageNote?: string,
   openGap?: string,
+  componentRoles?: ComponentRole[],
 ): ConsultationResponse {
   const existing = response.systemSignature?.trim();
 
   // Drop a model paragraph that only restates the gap the lead already
-  // carries. Nathan's lead named the unpublished sensitivity twice — once in
-  // Audio XX's derived sentence and again as "However, the lack of published
-  // sensitivity data for the Acora QRC-2 means we cannot fully assess the
-  // system's headroom." The second adds nothing; it exists because a prose
-  // slot did. Short is complete when the evidence is short.
-  const gapNoun = openGap?.replace(/^the\s+/i, '').replace(/'s\s+/, ' ');
-  const gapWords = (gapNoun ?? '').toLowerCase().split(/\s+/).filter((w) => w.length >= 5);
-  const restatesGap = (para: string) => {
-    if (gapWords.length === 0) return false;
-    const lower = para.toLowerCase();
-    return gapWords.every((w) => lower.includes(w));
+  // carries. Nathan's lead named the unpublished sensitivity, and the model
+  // then added "However, the absence of specific sensitivity data for the
+  // speakers does leave some question regarding the overall acoustic
+  // headroom." — the same gap, contributing nothing.
+  //
+  // The first version matched the gap's literal product tokens, so the model
+  // escaped it by saying "the speakers". That is the role-reference escape one
+  // layer along, and the fix is the same machinery: resolve role nouns and
+  // anaphora BEFORE deciding whether a paragraph is a restatement.
+  //
+  // GOVERNING RULE (founder, 2026-08-23): if a paragraph restates an
+  // already-published named gap — by product name, role noun or anaphora — it
+  // does not publish unless it adds independently licensed information.
+  //
+  // "Adds information" is read structurally rather than semantically: a
+  // paragraph contributes something when it carries a FIGURE or names a SOURCE
+  // the lead did not. Prose that merely rephrases carries neither.
+  const significant = (t: string) => new Set(
+    t.toLowerCase().match(/[a-z][a-z'-]{4,}/g) ?? []);
+  const leadWords = significant(driveConclusion ?? '');
+  const gapSubject = openGap
+    ? (componentRoles ?? []).map((r) => r.name)
+      .find((n) => openGap.toLowerCase().includes(n.toLowerCase()))
+    : undefined;
+
+  const restatesGap = (para: string): boolean => {
+    if (!driveConclusion || !openGap) return false;
+
+    // Does the paragraph point at the gap's subject at all?
+    const named = gapSubject
+      ? new RegExp(gapSubject.split(/\s+/)[0], 'i').test(para) : false;
+    const byRole = gapSubject
+      ? rolesIn(para, componentRoles ?? []).includes(gapSubject) : false;
+    if (!named && !byRole) return false;
+
+    // Does it discuss the same thing the lead already resolved? The gap's own
+    // terms are taken from the LEAD, not from a hand-maintained list.
+    const shared = [...significant(para)].filter((w) => leadWords.has(w));
+    if (shared.length === 0) return false;
+
+    // Does it add a figure or a source the lead did not carry?
+    const paraFigures = (para.match(/\d+(?:\.\d+)?/g) ?? []);
+    const leadFigures = new Set(driveConclusion.match(/\d+(?:\.\d+)?/g) ?? []);
+    if (paraFigures.some((n) => !leadFigures.has(n))) return false;
+    if (/\b(?:Stereophile|SoundStage|Darko|HiFi\+|Hifi News|The Absolute Sound|Mono and Stereo|Twittering Machines)\b/i.test(para)) return false;
+
+    return true;
   };
+
   const keptModelProse = (response.philosophy ?? '')
     .split(/\n\n+/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .filter((p) => !(driveConclusion && restatesGap(p)))
+    .filter((p) => !restatesGap(p))
     .join('\n\n') || undefined;
 
   const philosophy = [keptModelProse, coverageNote].filter(Boolean).join('\n\n')
@@ -1306,7 +1363,7 @@ export async function inferProvisionalSystemAssessment(
         // figure at their own load is the most useful thing we have.
         return applyDerivedProse(
           buildLicensedProvisionalResponse(componentNames, knownDescriptions, unresolvedRoster),
-          driveConclusion, coverageNote, openGap);
+          driveConclusion, coverageNote, openGap, componentRoles);
       }
     }
     // Provenance is computed from EVIDENCE, before and independently of the
@@ -1323,7 +1380,8 @@ export async function inferProvisionalSystemAssessment(
     // Literally the same array the prompt was built from, not a recomputation.
     // Two derivations of one fact are two chances to disagree.
     parsedResponse.componentProvenance = provenance;
-    return applyDerivedProse(parsedResponse, driveConclusion, coverageNote, openGap);
+    return applyDerivedProse(parsedResponse, driveConclusion, coverageNote, openGap,
+      componentRoles);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') {
       console.warn('[llm-system-inference] Timed out after', INFERENCE_TIMEOUT_MS, 'ms');

@@ -41,7 +41,10 @@ function Line({ l }: { l: DossierView['primary'][number] }) {
 
 export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView[] }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
-  const present = (dossiers ?? []).filter((d) => d.primary.length > 0 || d.gaps.length > 0);
+  // Render-worthiness is decided in the presentation layer; a component with
+  // only detail-level knowledge still gets a card, because holding four
+  // published specifications and showing nothing is worse than a short card.
+  const present = (dossiers ?? []);
   if (present.length === 0) return null;
 
   return (
@@ -56,6 +59,11 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
             {d.displayName}
           </p>
           {d.primary.map((l, i) => <Line key={i} l={l} />)}
+          {d.detailSummary && (
+            <p style={{ margin: 0, fontSize: '0.84rem', color: COLOR.textMuted }}>
+              {d.detailSummary}
+            </p>
+          )}
 
           {d.gaps.map((g, i) => (
             <p key={i} style={{
@@ -66,7 +74,7 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
             </p>
           ))}
 
-          {d.secondary.length > 0 && (
+          {d.hasDetail && (
             <>
               <button
                 type="button"

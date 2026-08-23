@@ -91,11 +91,24 @@ export interface UnknownField {
   wouldCloseWith?: string;
 }
 
+/** One admitted review observation, as the dossier exposes it. */
+export interface ReviewCoverage {
+  publication: string;
+  claim: string;
+  /** "kind: description", preserved verbatim. Part of the licence. */
+  condition?: string;
+  /** Made through other equipment — the finding travels weakly. */
+  transferLimited?: boolean;
+  sourceUrl?: string;
+}
+
 export interface ProductDossier {
   productKey: string;
   displayName: string;
   facts: ProductFact[];
   unknowns: UnknownField[];
+  /** Independent-review evidence HELD for this product. Never a conclusion. */
+  reviews: ReviewCoverage[];
 }
 
 // ── Type ③ admission ────────────────────────────────────────────────
@@ -240,6 +253,17 @@ export function dossierFor(
     role?: string;
     brandOriginCountry?: string;
     unknowns?: UnknownField[];
+    /**
+     * Admitted review observations. Exposed as COVERAGE — that Audio XX holds
+     * a named publication's observation — with each observation carrying its
+     * attribution, its condition and its transfer limitation. Appearing in a
+     * dossier grants nothing: these do not become system conclusions, and the
+     * licensing that governs them is unchanged.
+     */
+    reviews?: Array<{
+      publication?: string; claim?: string; sourceUrl?: string;
+      condition?: { kind?: string; description?: string };
+    }>;
   } = {},
 ): ProductDossier {
   const facts: ProductFact[] = [];
@@ -271,7 +295,19 @@ export function dossierFor(
     });
   }
 
-  return { productKey, displayName, facts, unknowns: input.unknowns ?? [] };
+  const reviews: ReviewCoverage[] = (input.reviews ?? [])
+    .filter((r) => !!r.publication && !!r.claim)
+    .map((r) => ({
+      publication: r.publication as string,
+      claim: r.claim as string,
+      condition: r.condition?.description
+        ? `${r.condition.kind ?? 'other'}: ${r.condition.description}`
+        : undefined,
+      transferLimited: r.condition?.kind === 'associated_equipment',
+      sourceUrl: r.sourceUrl,
+    }));
+
+  return { productKey, displayName, facts, unknowns: input.unknowns ?? [], reviews };
 }
 
 /** The dossier's own view of a spec, for the drive rule to consult. */

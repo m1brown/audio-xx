@@ -88,7 +88,7 @@ import { a3Enabled, a3IsAdvisoryQuestion, runA3Advisor } from '@/lib/a3-advisor'
 import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
 import { dossierFor } from '@/lib/evidence/product-dossier';
-import { presentDossier } from '@/lib/evidence/dossier-presentation';
+import { presentDossier, worthRendering } from '@/lib/evidence/dossier-presentation';
 import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-product-facts';
 
 /**
@@ -123,6 +123,7 @@ function dossierRole(label: string | undefined): string | undefined {
 function buildDossierViews(
   components: Array<{ displayName: string; role: string }>,
   manufacturerEvidence: Array<Record<string, unknown>>,
+  reviewObservations: Record<string, Array<Record<string, unknown>>> = {},
 ) {
   return components.map((c) => {
     const key = c.displayName.toLowerCase()
@@ -136,8 +137,9 @@ function buildDossierViews(
     return presentDossier(dossierFor(key, c.displayName, {
       authoredFacts: FRANCE_FACTS, heldSpecs, role: c.role,
       unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
+      reviews: (reviewObservations[c.displayName] ?? []) as never,
     }));
-  }).filter((v) => v.primary.length > 0 || v.gaps.length > 0);
+  }).filter(worthRendering);
 }
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
@@ -3207,7 +3209,8 @@ export default function Home() {
           // specifications this turn already read.
           const dossierViews = buildDossierViews(
             orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
-            manufacturerEvidence as Array<Record<string, unknown>>);
+            manufacturerEvidence as Array<Record<string, unknown>>,
+            reviewObservations as Record<string, Array<Record<string, unknown>>>);
 
           mark('evidence read');
           const provisional = await inferProvisionalSystemAssessment(

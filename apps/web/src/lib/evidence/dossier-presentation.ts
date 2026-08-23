@@ -36,6 +36,17 @@ export interface DossierView {
   secondary: DossierLine[];
   /** Absences worth stating. Usually empty. */
   gaps: string[];
+  /**
+   * Whether Audio XX holds anything worth opening the expansion for.
+   *
+   * A component used to vanish entirely when none of its facts happened to
+   * land in the primary bucket — the ARC Reference 5 holds four published
+   * specifications including its tube complement and rendered nothing at all.
+   * Richness must track knowledge held, not which bucket a field falls into.
+   */
+  hasDetail: boolean;
+  /** Shown when nothing is primary, so the expansion does not look empty. */
+  detailSummary?: string;
 }
 
 const LABELS: Partial<Record<DossierPredicate, string>> = {
@@ -84,6 +95,27 @@ export function presentDossier(d: ProductDossier): DossierView {
   const primary: DossierLine[] = [];
   const secondary: DossierLine[] = [];
 
+  // Review COVERAGE is primary — that a named publication has written about
+  // this product is ownership-relevant on its own. The observations themselves
+  // sit behind detail, each keeping its attribution and condition.
+  if (d.reviews.length > 0) {
+    primary.push({
+      label: 'Independent review',
+      value: [...new Set(d.reviews.map((r) => r.publication))].join(', '),
+    });
+    for (const r of d.reviews) {
+      secondary.push({
+        label: r.publication,
+        value: r.claim
+          + (r.condition ? ` — only ${r.condition.replace(/^[a-z_]+:\s*/i, '')}` : '')
+          + (r.transferLimited ? ' (heard through other electronics)' : ''),
+        standing: 'measured',
+        publication: r.publication,
+        sourceUrl: r.sourceUrl,
+      });
+    }
+  }
+
   for (const p of PRIMARY) {
     for (const f of d.facts.filter((x) => x.predicate === p)) primary.push(toLine(f));
   }
@@ -104,5 +136,23 @@ export function presentDossier(d: ProductDossier): DossierView {
     .filter((u) => u.decisionRelevant && u.wouldCloseWith)
     .map((u) => u.wouldCloseWith as string);
 
-  return { displayName: d.displayName, primary, secondary, gaps };
+  // Dimensions and weight alone are not knowledge worth a card. Anything else
+  // — architecture, a tube or driver complement, a response figure, review
+  // coverage — is.
+  const SHIPPING = new Set(['dimensions', 'weight']);
+  const meaningfulSecondary = secondary.filter((l) => !SHIPPING.has(l.label));
+  const hasDetail = secondary.length > 0;
+
+  const detailSummary = primary.length === 0 && meaningfulSecondary.length > 0
+    ? `${secondary.length} published ${secondary.length === 1 ? 'detail' : 'details'} held`
+    : undefined;
+
+  return {
+    displayName: d.displayName, primary, secondary, gaps, hasDetail, detailSummary,
+  };
+}
+
+/** Does Audio XX hold enough about this product to be worth a card? */
+export function worthRendering(v: DossierView): boolean {
+  return v.primary.length > 0 || v.gaps.length > 0 || !!v.detailSummary;
 }
