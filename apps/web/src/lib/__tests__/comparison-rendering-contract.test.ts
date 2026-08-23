@@ -120,12 +120,19 @@ describe('gearResponseToAdvisory — comparison rendering contract', () => {
     expect(identities).toContain('chord qutest');
     expect(identities).toContain('denafrips pontus ii');
 
-    // Each entry must carry a resolvable imageUrl string (the resolver
-    // chain may fall back to placeholders, but the field must be present
-    // for the comparison block to render image slots).
+    // AMENDED 2026-08-23. This required every entry to carry a non-empty
+    // imageUrl. That held only because a catalog `imageUrl` was passed
+    // through verbatim, which is the bypass the admission boundary closed —
+    // an un-provenanced catalog URL is now withheld, and `undefined` is the
+    // correct answer when no admissible asset exists for that exact product.
+    //
+    // What the contract actually requires is that the field is never an
+    // EMPTY STRING, since the renderer's `hasImages` gate distinguishes
+    // "omit the image slots" from "render an empty one".
     for (const img of advisory.comparisonImages!) {
+      if (img.imageUrl === undefined) continue;
       expect(typeof img.imageUrl).toBe('string');
-      expect(img.imageUrl!.length).toBeGreaterThan(0);
+      expect(img.imageUrl.length).toBeGreaterThan(0);
     }
   });
 

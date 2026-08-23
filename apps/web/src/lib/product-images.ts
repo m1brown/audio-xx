@@ -1,10 +1,13 @@
 /**
  * Audio XX — Product image overlay.
  *
- * Resolves an image URL for a product by (brand, name). Used as a fallback
- * when the catalog's own `imageUrl` field is empty. Catalog entries that
- * carry their own `imageUrl` always take precedence over this mapping —
- * the adapter layer wires this as `p.imageUrl ?? getProductImage(...)`.
+ * Resolves an image URL for a product by (brand, name).
+ *
+ * Every user-visible path runs through the admission boundary in
+ * `lib/images/admission.ts`: exact identity, approved provenance, and a
+ * recorded basis to display, each established independently. A catalog
+ * `imageUrl` is governed on the same terms — it used to take precedence
+ * outright, which exempted it from both identity and provenance policy.
  *
  * Rendering contract (enforced by AdvisoryProductCard):
  *   - Known product → returns a stable manufacturer/CDN URL
@@ -15,13 +18,18 @@
  * Portability note: this module contains no audio-domain reasoning. It is
  * a key-based lookup that would work unchanged in any product-card domain.
  *
- * Maintenance: each entry here is a (brand + name) substring keyed to a
- * canonical image URL. Additions are cheap — just append to the map. Keys
- * are normalized to lowercase, alphanumeric + spaces, and matched as
- * substrings so "harbeth p3esr" covers "Harbeth P3ESR XD" too.
+ * Maintenance: each entry is a (brand + name) key naming EXACTLY one product.
+ * Keys are compared as token multisets, so "harbeth p3esr" does NOT cover
+ * "Harbeth P3ESR XD" — a different product needs its own row. Adding a row is
+ * not sufficient to display it; see the admission boundary below.
  */
 
 import { keyNamesProduct } from '@/lib/images/product-identity';
+import {
+  admissionState, isDisplayable, admitUnregisteredImage,
+  variantDisagreement, assetCorroboratesKey,
+  type GovernedImage, type AdmissionState,
+} from '@/lib/images/admission';
 function normalize(s: string | undefined): string {
   if (!s) return '';
   return s
@@ -276,8 +284,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Vinnie Rossi — Positive Feedback review (the legacy L2i collection
   // page is no longer hosted at vinnierossi.com)
-  { key: 'vinnie rossi l2i',    url: 'https://positive-feedback.com/wp-content/uploads/2020/09/L2i-SE-Front-Silver-1.jpg',
-    source: { tier: 'review_publication', site: 'positive-feedback.com', credit: 'Positive Feedback', captured: '2026-05-08' } },
+  // REMOVED 2026-08-23 — wrong variant. This key is the Vinnie Rossi L2i;
+  // the asset is `L2i-SE-Front-Silver-1.jpg`, a photograph of the L2i-SE.
+  // Two independent grounds, either sufficient: the variant is wrong, and the
+  // host is a review publication (F4). The URL is recorded here rather than in
+  // the table so the removal stays explicable without being resolvable:
+  //   https://positive-feedback.com/wp-content/uploads/2020/09/L2i-SE-Front-Silver-1.jpg
+  // No replacement. The legacy L2i collection page is no longer hosted at
+  // vinnierossi.com, and no image is preferable to the successor's photograph.
 
   // ── Round 2 amplifier additions (2026-05-08) ─────────────
 
@@ -706,6 +720,95 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'manufacturer', site: 'vpidirect.com', credit: 'VPI Industries', captured: '2026-05-08' } },
 ];
 
+// ── The admission boundary ─────────────────────────────
+//
+// Every user-visible image resolves through here, whether it came from this
+// registry or from a catalog `imageUrl`. Before this existed the catalog was
+// a second trust boundary: `p.imageUrl ?? getProductImage(...)` let a catalog
+// URL win outright, so the exact-identity and provenance rules applied only
+// to assets that happened to be curated in this file.
+//
+// See lib/images/admission.ts for the invariant and the state derivation.
+
+/**
+ * Keys whose asset is also claimed by a MORE SPECIFIC key.
+ *
+ * `chord mojo` and `chord mojo 2` pointed at the same file, so the original
+ * Mojo was illustrated with a photograph of the Mojo 2. Neither the filename
+ * check nor exact key matching catches this: the matcher was right and the
+ * table was wrong, and `Mojo-2-...jpg` names no token from the variant list.
+ *
+ * The signal is structural rather than lexical, and it must be narrow. Many
+ * keys deliberately share a URL as ALIASES of one product — `qualio iq` and
+ * `qualio audio iq`, `altec model 19` and `altec lansing model 19`, `1995
+ * immanis` and `raal requisite 1995 immanis`. Those differ by how the BRAND is
+ * written, which the identity rule expressly permits.
+ *
+ * What distinguishes a conflict is where the extra tokens sit. An alias varies
+ * at the front; a variant appends at the END. So a key is conflicted only when
+ * another key sharing its asset EXTENDS it — same tokens, in order, plus a
+ * suffix. `chord mojo` is a prefix of `chord mojo 2`; `qualio iq` is not a
+ * prefix of `qualio audio iq`.
+ */
+const CONFLICTED_KEYS: ReadonlySet<string> = (() => {
+  const byUrl = new Map<string, string[]>();
+  for (const e of PRODUCT_IMAGE_URLS) {
+    if (!e.url) continue;
+    byUrl.set(e.url, [...(byUrl.get(e.url) ?? []), e.key]);
+  }
+  const conflicted = new Set<string>();
+  for (const keys of byUrl.values()) {
+    if (keys.length < 2) continue;
+    for (const a of keys) {
+      const at = keyTokens(a);
+      for (const b of keys) {
+        if (a === b) continue;
+        const bt = keyTokens(b);
+        if (bt.length > at.length && at.every((t, i) => bt[i] === t)) conflicted.add(a);
+      }
+    }
+  }
+  return conflicted;
+})();
+
+function keyTokens(k: string): string[] {
+  return k.toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, ' ')
+    .trim().split(' ').filter(Boolean);
+}
+
+/** Lift a registry row into the governed form. Derived, never stored. */
+function governed(entry: { key: string; url: string; source?: ImageSource }): GovernedImage {
+  const disagreement = entry.url ? variantDisagreement(entry.key, entry.url) : undefined;
+  return {
+    key: entry.key,
+    url: entry.url,
+    identityStatus: (disagreement || CONFLICTED_KEYS.has(entry.key))
+      ? 'known_wrong'
+      : (entry.url && assetCorroboratesKey(entry.key, entry.url) ? 'corroborated' : 'unverified'),
+    identityNote: disagreement
+      ? `asset asserts '${disagreement}', which the key does not name`
+      : (CONFLICTED_KEYS.has(entry.key)
+        ? 'a more specific key claims this same asset'
+        : undefined),
+    // A row with no source block records no provenance at all. That is an
+    // unanswered question, not a lenient default.
+    sourceClass: entry.source?.tier ?? 'unclassified',
+    rightsBasis: entry.source?.rightsBasis ? 'published_terms' : 'none_recorded',
+    termsUrl: entry.source?.termsUrl,
+    rightsCheckedAt: entry.source?.rightsCheckedAt,
+    credit: entry.source?.credit,
+    captured: entry.source?.captured,
+    hosting: entry.url.startsWith('/') ? 'local' : 'remote',
+  };
+}
+
+/** The whole registry, governed. Exported for the audit and the lock tests. */
+export const GOVERNED_REGISTRY: ReadonlyArray<GovernedImage & { state: AdmissionState }> =
+  PRODUCT_IMAGE_URLS.map((e) => {
+    const g = governed(e);
+    return { ...g, state: admissionState(g) };
+  });
+
 /**
  * Resolve an image for a product by brand + name.
  *
@@ -745,14 +848,16 @@ export function getProductImageEntry(
   brand: string | undefined,
   name: string | undefined,
 ): ResolvedProductImage | undefined {
-  const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
-  if (!haystack) return undefined;
+  if (!normalize(`${brand ?? ''} ${name ?? ''}`)) return undefined;
   for (const entry of PRODUCT_IMAGE_URLS) {
-    if (haystack.includes(entry.key)) {
-      if (entry.source?.tier === 'review_publication') continue;
-      if (entry.url === '') return undefined;
-      return { url: entry.url, source: entry.source };
-    }
+    // EXACT identity, never substring — this function kept the substring match
+    // after `getProductImage` was fixed, so the CS600/CS600X class of defect
+    // stayed reachable through the attribution path alone.
+    if (!keyNamesProduct(entry.key, { brand, name })) continue;
+    // Intentionally uncurated. Stop rather than fall through.
+    if (entry.url === '') return undefined;
+    if (!isDisplayable(governed(entry))) continue;
+    return { url: entry.url, source: entry.source };
   }
   return undefined;
 }
@@ -798,46 +903,30 @@ export function getProductImage(
       //   F4 reviewer-data exclusion rule. Match falls through to the
       //   next entry (typically a less specific match or none), which
       //   means callers fall back to the category placeholder.
-      if (entry.source?.tier === 'review_publication') continue;
-      // Empty string = intentionally uncurated for this key. Stop and
-      // return undefined so the substring match doesn't fall through to
-      // a less-specific entry that would ship the wrong product image.
-      return entry.url === '' ? undefined : entry.url;
-    }
-  }
-  return undefined;
-}
-
-// ── Brand-level fallback ────────────────────────────────
-//
-// Scans the existing PRODUCT_IMAGE_URLS map for any entry whose key
-// starts with the normalized brand name. Returns the first match —
-// no new external URLs, just reuses what's already curated.
-
-/** @internal Cache brand→URL so repeated lookups are O(1). */
-const _brandCache = new Map<string, string | undefined>();
-
-/**
- * Return an existing product image for the same brand, if any entry
- * in PRODUCT_IMAGE_URLS matches. No new external URLs — reuses the
- * curated overlay map. Returns undefined when the brand has zero coverage.
- */
-export function getBrandImage(brand: string | undefined): string | undefined {
-  if (!brand) return undefined;
-  const key = normalize(brand);
-  if (!key) return undefined;
-  if (_brandCache.has(key)) return _brandCache.get(key);
-  for (const entry of PRODUCT_IMAGE_URLS) {
-    if (entry.key.startsWith(key)) {
-      // F4 gate: skip review_publication-hosted images (see getProductImage).
-      if (entry.source?.tier === 'review_publication') continue;
-      _brandCache.set(key, entry.url);
+      // Empty string = intentionally uncurated for this key. Stop rather
+      // than fall through to a less-specific entry.
+      if (entry.url === '') return undefined;
+      // The F4 reviewer gate is now one clause of the admission state, which
+      // also withholds wrong-variant, un-provenanced and unverified assets.
+      if (!isDisplayable(governed(entry))) continue;
       return entry.url;
     }
   }
-  _brandCache.set(key, undefined);
   return undefined;
 }
+
+// ── Brand-level fallback: REMOVED 2026-08-23 ───────────
+//
+// `getBrandImage(brand)` returned the first registry entry whose key merely
+// STARTED WITH the brand name, so any DeVore product could be illustrated
+// with whichever DeVore photograph appeared first in the table. That is the
+// substring defect at brand scope: a reader takes a photograph as confirmation
+// that Audio XX knows which product they own, and a sibling model is exactly
+// the wrong thing to confirm.
+//
+// It had no callers outside this file. Deleted rather than deprecated, and
+// deliberately not replaced with a narrower fallback — exact product imagery
+// or no imagery. Absence is a finished state.
 
 // ── Category placeholders ──────────────────────────────
 //
@@ -862,7 +951,7 @@ const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
 // ── Canonical image resolver (2026-05-11) ──────────────
 //
 // Single entry point that consumers should prefer over the raw
-// `getProductImage` / `getBrandImage` helpers. The resolver returns:
+// `getProductImage` helper. The resolver returns:
 //   - the chosen URL (always a string — never undefined)
 //   - the confidence tag for that URL
 //   - the source path that produced it
@@ -877,10 +966,8 @@ const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
 //      image when the catalog has none. These are hand-keyed to the
 //      product line so they are not cross-product substitutions.
 //   3. Otherwise the category placeholder renders. Brand-family
-//      fallback (`getBrandImage`) is intentionally NOT used here — the
-//      task's "never silently substitute a clearly different product"
-//      rule treats sibling-product images as substitution. The helper
-//      remains available for explicit opt-in only.
+//      fallback is not available anywhere — sibling-product imagery is
+//      substitution, and the helper that did it has been deleted.
 //
 // The returned URL is always renderable; consumers do not need to
 // check for empty strings or null. Cards always have visual weight.
@@ -940,13 +1027,16 @@ export function resolveProductImageWithConfidence(args: {
     category,
   } = args;
 
-  // 1. Catalog `imageUrl` — curator's explicit choice. Honor it.
-  if (catalogUrl && catalogUrl.length > 0) {
+  // 1. Catalog `imageUrl` — governed on the same terms as everything else.
+  //    Honouring a curator's choice unconditionally is how an un-provenanced
+  //    URL bypassed identity and provenance policy entirely.
+  const admittedCatalog = admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogUrl);
+  if (admittedCatalog) {
     const confidence: ImageConfidence =
       catalogConfidence
       ?? (catalogVerified ? 'high' : 'medium');
     return {
-      url: catalogUrl,
+      url: admittedCatalog,
       confidence,
       source: catalogVerified ? 'catalog-verified' : 'catalog',
     };
@@ -978,10 +1068,9 @@ export function getGenericPlaceholder(category?: string): string {
 
 /**
  * Full image resolution chain for product cards:
- *   1. product.imageUrl (catalog field)
+ *   1. product.imageUrl (catalog field) — GOVERNED, see below
  *   2. getProductImage(brand, name) (curated overlay map)
- *   3. getBrandImage(brand) (first existing entry for same brand)
- *   4. getGenericPlaceholder(category) (static local SVG)
+ *   3. getGenericPlaceholder(category) (static local SVG)
  *
  * Always returns a string — no card should ever render without an image.
  *
@@ -999,9 +1088,8 @@ export function resolveProductImage(
   category?: string,
 ): string {
   return (
-    catalogImageUrl
+    admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogImageUrl)
     ?? getProductImage(brand, name)
-    ?? getBrandImage(brand)
     ?? getGenericPlaceholder(category)
   );
 }
@@ -1014,10 +1102,15 @@ export function resolveProductImage(
  * (placeholder) is worse than gracefully omitting the image block.
  *
  * Chain:
- *   1. catalogImageUrl (product.imageUrl from the catalog)
- *   2. getProductImage(brand, name) (curated overlay map — substring
- *      key match against normalized brand+name)
- *   3. undefined  ← does NOT fall through to brand-image or placeholder
+ *   1. catalogImageUrl, PASSED THROUGH THE ADMISSION BOUNDARY. It used to win
+ *      outright — `catalogImageUrl ?? getProductImage(...)` — which made the
+ *      catalog an alternate trust boundary: a catalog URL faced neither the
+ *      exact-identity test nor the provenance test that every curated entry
+ *      faces. A suppressed catalog URL falls through to step 2 rather than
+ *      blocking it, because the question is which asset may be SHOWN, not
+ *      which field was populated first.
+ *   2. getProductImage(brand, name) (curated overlay map — exact identity)
+ *   3. undefined  ← does NOT fall through to a placeholder
  *
  * Renderer contract: callers downstream (the comparison artifact's
  * `hasImages` gate, `EditorialProductSection`'s image block, etc.)
@@ -1031,5 +1124,8 @@ export function resolveProductImageStrict(
   name: string | undefined,
   catalogImageUrl?: string,
 ): string | undefined {
-  return catalogImageUrl ?? getProductImage(brand, name);
+  return (
+    admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogImageUrl)
+    ?? getProductImage(brand, name)
+  );
 }

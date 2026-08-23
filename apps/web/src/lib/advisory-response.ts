@@ -32,7 +32,7 @@ import type { PreferenceProtectionResult } from './preference-protection';
 import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
-import { getProductImage, resolveProductImage, resolveProductImageStrict, getBrandImage, getGenericPlaceholder } from './product-images';
+import { getProductImage, resolveProductImage, resolveProductImageStrict, getGenericPlaceholder } from './product-images';
 import { getLegacyMapping } from './products/legacy-models';
 
 // ── Country code to name ──────────────────────────────
