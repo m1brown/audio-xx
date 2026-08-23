@@ -196,6 +196,7 @@ const PROHIBITED = new Set<ImageSourceClass>(['review_publication', 'retailer', 
 const INELIGIBLE_HOSTS = [
   'tmraudio.com',      // The Music Room — used-gear reseller, ruled ineligible
   'ebay.', 'reverb.com', 'audiogon.com', 'usaudiomart.com', 'hifishark.com',
+  'media-amazon.com', // marketplace listing images — retailer assets, Tier I/II excludes them
   '6moons.com',        // standing exclusion — never used, displayed or linked
 ];
 

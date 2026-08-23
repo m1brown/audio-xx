@@ -161,44 +161,160 @@ None of these were resolved autonomously; each needs a call.
    690) are served by Audio XX itself, and hosting a file answers neither who
    photographed it nor under what permission.
 
-## Phase 5 — local hosting: design only
+## Rights-regularization backlog
 
-**Not implemented. No assets were downloaded.** Recorded so the decision is
-made on a design rather than on a migration already half-done.
+**No outreach was attempted.** Permission is never inferred, and asking is a
+founder decision, not an overnight one.
 
-The founder's prior — an immutable governed asset ID rather than a raw URL —
-survives testing, for a reason the audit itself demonstrates rather than
-assumes:
+The `legacy_rights_pending` class is small (12) and entirely single-asset, so
+ranking it would answer the wrong question. The set that actually needs
+regularizing is everything **currently displayed**: 140 assets, **90 with no
+recorded credit at all**, spread across 90 distinct holders.
+
+| displayed assets | holder | class |
+| ---: | --- | --- |
+| 6 | `www.schiit.com` | unclassified |
+| 6 | `static.wixstatic.com` (Denafrips, Crayon, others) | unclassified |
+| 5 | `chordelectronics.co.uk` | unclassified |
+| 4 | local (`/brand-heroes`, `/images/products`) | unclassified |
+| 4 | DeVore Fidelity | manufacturer |
+| 3 | `www.hegel.com` | unclassified |
+| 3 | `dam.focal-naim.com` | unclassified |
+| 3 | Kitsune HiFi | authorized_dealer |
+| 3 | `magnepan.com` | unclassified |
+| 3 | `store.hifiman.com` | unclassified |
+
+**60 holders have exactly one displayed asset.** That long tail is the real
+shape of the problem: regularizing the top ten covers roughly 40 assets, and
+the remaining hundred would need ~80 separate conversations. Any plan that
+depends on clearing the tail will not finish.
+
+Ranked by likely effort-to-yield:
+
+1. **Documentable without outreach.** Makers publishing press or media-kit
+   terms — Schiit, Chord, Hegel, Focal/Naim, Magnepan, HiFiMan, Topping. Their
+   terms pages may already answer the question; reading one is cheap, and a
+   recorded `published_terms` + `termsUrl` + `rightsCheckedAt` moves an asset
+   to `admissible` with no correspondence at all. **Start here.**
+2. **Dealers with an existing relationship.** Kitsune HiFi, Shenzhen Audio,
+   Bloom Audio, Enleum. A dealer that wants the referral is the likeliest
+   affirmative yes, and affiliate income already depends on these relationships.
+3. **Direct outreach to small makers.** DeVore, Boenicke, Auditorium 23, EMT,
+   SPEC, Sugden. Small enough to reach a decision-maker; these are also the
+   brands the editorial roadmap cares most about.
+4. **Generic CDNs.** `static.wixstatic.com` (6) cannot be attributed by
+   hostname. Provenance has to come from the **embedding page**, so the source
+   page must be recorded before the asset means anything.
+5. **The tail.** 60 single-asset holders. Recommend deciding per *product
+   demand* rather than per asset, consistent with demand-driven coverage.
+
+**A finding, not a recommendation:** two WiiM assets were being served from
+`m.media-amazon.com` — marketplace listing images, a retailer class the Tier
+I/II rule already excludes. They escaped only because those rows carry no tier.
+The host is now on the prohibited list, consistent with the reseller ruling
+already made.
+
+## Local hosting — architecture, design only
+
+**Nothing was downloaded.** Recorded so the decision is made on a design rather
+than on a migration already half-done.
+
+The strong prior — an immutable governed asset ID rather than a mutable URL —
+**survives stress-testing**, for a reason the audit produced rather than assumed:
 
 > The Eversolo DMP-A6 product URL now serves the **Gen 2**. The maker replaced
-> the page in place; the URL did not move, the product it describes did. (See
-> `docs/defects/mutable-first-party-citation.md`.)
+> the page in place; the URL did not move, the product it describes did.
+> (`docs/defects/mutable-first-party-citation.md`)
 
-A remote URL is therefore not a stable reference to an image. It is a reference
-to *whatever that path serves today*, which is exactly the property that let a
-successor's photograph reach a reader. An asset ID fixes the bytes; a URL fixes
-only the address.
+A remote URL is therefore not a reference to an image. It is a reference to
+*whatever that path serves today* — precisely the property that let a
+successor's photograph reach a reader.
 
-What a migration would need, and why each part is load-bearing:
+### Where the prior nearly fails, and why it still holds
 
-1. **Content-addressed IDs.** The ID derives from the bytes, so re-fetching a
-   changed remote file yields a *different* ID rather than silently replacing
-   the asset behind the same reference.
-2. **Provenance travels with the asset, not the row.** `sourceUrl`,
-   `rightsBasis`, `termsUrl`, `rightsCheckedAt`, `credit`, `captured` belong to
-   the stored asset. Today they sit on a registry row and are lost the moment
-   the row is edited.
-3. **Local hosting does not create rights.** Copying a file changes where it is
-   served and nothing about whether it may be shown. A migration that quietly
-   upgraded `none_recorded` to admissible would launder the exact gap the
-   staging exists to keep visible — the most likely way this goes wrong.
-4. **Migration is per-asset and gated on admission.** Only rows that are already
-   displayable are candidates. Downloading suppressed assets would build a
-   library of material we have no basis to use.
-5. **Drift detection stays.** Re-fetching a source URL and finding different
-   bytes is a *signal* — the maker changed the page — and should raise the
-   citation-drift question, not silently update.
+A content hash alone is **not** sufficient as the identity. It answers "are
+these bytes the ones we captured", which is integrity, not identity — the same
+bytes can be re-keyed to the wrong product, which is exactly how the L2i-SE
+photograph came to be filed under the L2i. Content addressing would not have
+caught a single one of the eight wrong rows found here, because in every case
+the file was intact and the *claim about it* was wrong.
 
-The cost is real: 153 remote assets, storage, and a fetch pipeline. It is
-worth doing only after the enforcement-level decision, because `full`
-enforcement may leave far fewer assets worth hosting.
+So the durable reference must be a **governed asset ID** whose record carries
+identity, with the content hash as one field inside it rather than as the ID:
+
+| field | why it is load-bearing |
+| --- | --- |
+| `assetId` | opaque, immutable, the only thing a snapshot stores |
+| `productIdentity` | exact brand + model + variant tokens — the claim being made |
+| `contentHash` | integrity and duplicate detection; **not** identity |
+| `sourceUrl`, `sourcePage` | the page is the provenance, not the file path — the answer for generic CDNs |
+| `rightsBasis`, `termsUrl`, `rightsCheckedAt`, `rightsReviewDate` | terms change; a rights record without an expiry silently rots |
+| `credit`, `attribution` | what renders beside the image |
+| `capturedAt`, `mimeType`, `width`, `height` | retrieval facts |
+| `identityStatus`, `sourceClass` | unchanged, still independent |
+
+Decisions this design takes:
+
+- **Duplicate files, distinct assets.** Two products may legitimately share
+  bytes (an alias), and two rows sharing bytes may be a defect (Mojo / Mojo 2).
+  Deduplicating by hash would erase the distinction the conflict detector
+  depends on. Store once, reference twice, keep the identity claims separate.
+- **Changed terms revoke.** `rightsReviewDate` passing moves an asset back to
+  `legacy_rights_pending`, not silently onward. A rights record must be able to
+  expire, or the grandfather clause returns by the back door.
+- **Snapshots store the `assetId` only.** A frozen assessment must stay valid
+  when an asset is later withdrawn — and, more importantly, must not be a route
+  by which a suppressed image returns. A lock test already asserts the snapshot
+  module contains no image URL at all.
+- **Migration is gated on admission and never creates rights.** Only
+  already-displayable assets are candidates; copying a file changes where it is
+  served and nothing about whether it may be shown. A migration that quietly
+  upgraded `none_recorded` to `admissible` would launder the exact gap the
+  staging exists to keep visible. **This is the most likely way this goes wrong.**
+- **Re-fetch differences are signals, not updates.** Different bytes at the same
+  URL means the maker changed the page; that raises the citation-drift question
+  rather than replacing the asset.
+
+Cost: 153 remote assets. Worth doing only **after** the enforcement decision,
+since `full` may leave far fewer assets worth hosting.
+
+## `/brand-heroes` — a separate question
+
+18 files, 16 rendered as brand-authority illustrations. **Governed separately
+and deliberately so:** a brand hero answers "what does this maker stand for",
+where a product image answers "is this the box you own". Applying an
+exact-variant identity rule to an asset that makes no variant claim would be
+the wrong test.
+
+Their provenance is **better** than the product registry's: 16 of 16 rendered
+heroes carry a credit *and* a first-party source URL, which 90 displayed
+product assets do not.
+
+| finding | detail |
+| --- | --- |
+| rights basis recorded | **0 of 18** |
+| fair use *asserted* | `accuphase-e3000.jpg`, `goldmund-telos-670.jpg` |
+| also used as product imagery | `marantz-2220b.jpg`, `goldmund-telos-690.jpg`, `leben-cs600.jpg` |
+| hosting | all local — none can 404 or be swapped underneath us |
+
+Two issues, neither of which is a deletion:
+
+1. **"Curated under fair-use product reference" is a rights *claim*, not a
+   record.** Fair use is a defence raised after the fact, not a permission
+   granted in advance, and writing it into a credit line asserts a legal
+   conclusion the evidence does not contain. It should be represented as
+   `rightsBasis: none_recorded` with the reasoning kept as a note — the same
+   discipline applied to every other unproven claim.
+2. **Three heroes are also product photographs.** `leben-cs600.jpg` and
+   `marantz-2220b.jpg` resolve through governed registry rows, which is
+   legitimate. `goldmund-telos-690.jpg` was wired in as a catalog `imageUrl`;
+   that route is now closed and it falls through to the first-party
+   goldmund.com asset. This crossover is the thing to watch — an asset curated
+   to illustrate a *brand*, reused to assert which *product* someone owns.
+
+**Recommended transition policy** (not applied): keep all 18 rendering. Record
+`published_terms` where the maker's site answers it, replace the two fair-use
+assertions with honest `none_recorded`, and treat any hero that doubles as a
+product photograph as a **product** asset subject to the full identity rule.
+Nothing here is a correctness or prohibited-source violation, so nothing is
+deleted or replaced.

@@ -4,7 +4,7 @@
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
     "registry": 156,
-    "registryDisplayed": 140,
+    "registryDisplayed": 138,
     "catalog": 29,
     "catalogDisplayed": 25
   },
@@ -157,7 +157,7 @@
       "key": "wiim pro plus",
       "url": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
       "state": "provenance_ineligible",
-      "displayed": true,
+      "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",
@@ -167,7 +167,7 @@
       "key": "wiim pro",
       "url": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "state": "provenance_ineligible",
-      "displayed": true,
+      "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",

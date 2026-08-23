@@ -1,0 +1,213 @@
+{
+  "note": "Brand-authority illustrations. Governed SEPARATELY from product images.",
+  "total": 18,
+  "renderedAsBrandHero": 16,
+  "withCredit": 16,
+  "withSourceUrl": 16,
+  "withRightsBasis": 0,
+  "fairUseAsserted": [
+    "accuphase-e3000.jpg",
+    "goldmund-telos-670.jpg"
+  ],
+  "alsoUsedAsProductImage": [
+    "goldmund-telos-690.jpg",
+    "leben-cs600.jpg",
+    "marantz-2220b.jpg"
+  ],
+  "rows": [
+    {
+      "file": "a23-hommage-cinema.jpg",
+      "url": "/brand-heroes/a23-hommage-cinema.jpg",
+      "bytes": 181995,
+      "renderedAsBrandHero": true,
+      "credit": "Auditorium 23",
+      "sourceUrl": "http://www.auditorium-23.de/Hommage/Cinema.html",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "accuphase-e3000.jpg",
+      "url": "/brand-heroes/accuphase-e3000.jpg",
+      "bytes": 51450,
+      "renderedAsBrandHero": true,
+      "credit": "Accuphase Laboratory (curated under fair-use product reference)",
+      "sourceUrl": "https://www.accuphase.com/model/photo/e-3000.jpg",
+      "rightsClaim": "fair_use_asserted",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "audio-note-an-elx-hemp.jpg",
+      "url": "/brand-heroes/audio-note-an-elx-hemp.jpg",
+      "bytes": 74397,
+      "renderedAsBrandHero": true,
+      "credit": "Audio Note UK",
+      "sourceUrl": "https://www.audionote.co.uk/loudspeakers",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "audio-note-ongaku-transformer.jpg",
+      "url": "/brand-heroes/audio-note-ongaku-transformer.jpg",
+      "bytes": 179837,
+      "renderedAsBrandHero": true,
+      "credit": "Audio Note UK",
+      "sourceUrl": "https://www.audionote.co.uk/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "boenicke-w11.jpg",
+      "url": "/brand-heroes/boenicke-w11.jpg",
+      "bytes": 37745,
+      "renderedAsBrandHero": true,
+      "credit": "Boenicke Audio",
+      "sourceUrl": "https://boenicke-audio.ch/products/loudspeakers/w11/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "devore-o96.jpg",
+      "url": "/brand-heroes/devore-o96.jpg",
+      "bytes": 145718,
+      "renderedAsBrandHero": true,
+      "credit": "DeVore Fidelity",
+      "sourceUrl": "https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "emt-jsd-novel.jpg",
+      "url": "/brand-heroes/emt-jsd-novel.jpg",
+      "bytes": 26611,
+      "renderedAsBrandHero": true,
+      "credit": "EMT Tontechnik",
+      "sourceUrl": "https://emt-tontechnik.ch/cartridge.html",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "goldmund-telos-670.jpg",
+      "url": "/brand-heroes/goldmund-telos-670.jpg",
+      "bytes": 140254,
+      "renderedAsBrandHero": true,
+      "credit": "Goldmund (curated under fair-use product reference)",
+      "sourceUrl": "https://goldmund.com/power-amplifiers/telos-670-integrated-amplifier/",
+      "rightsClaim": "fair_use_asserted",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "goldmund-telos-690.jpg",
+      "url": "/brand-heroes/goldmund-telos-690.jpg",
+      "bytes": 208429,
+      "renderedAsBrandHero": false,
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": true,
+      "hosting": "local"
+    },
+    {
+      "file": "kef-blade-two-meta.jpg",
+      "url": "/brand-heroes/kef-blade-two-meta.jpg",
+      "bytes": 45834,
+      "renderedAsBrandHero": true,
+      "credit": "KEF",
+      "sourceUrl": "https://us.kef.com/products/blade-two",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "leben-cs600.jpg",
+      "url": "/brand-heroes/leben-cs600.jpg",
+      "bytes": 20601,
+      "renderedAsBrandHero": true,
+      "credit": "Leben Hi-Fi Stereo Company",
+      "sourceUrl": "https://lebenhifi.com/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": true,
+      "hosting": "local"
+    },
+    {
+      "file": "marantz-2220b.jpg",
+      "url": "/brand-heroes/marantz-2220b.jpg",
+      "bytes": 36625,
+      "renderedAsBrandHero": false,
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": true,
+      "hosting": "local"
+    },
+    {
+      "file": "naim-separates-stack.jpg",
+      "url": "/brand-heroes/naim-separates-stack.jpg",
+      "bytes": 75343,
+      "renderedAsBrandHero": true,
+      "credit": "Naim Audio",
+      "sourceUrl": "https://www.naimaudio.com/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "naim-uniti-nova.jpg",
+      "url": "/brand-heroes/naim-uniti-nova.jpg",
+      "bytes": 193206,
+      "renderedAsBrandHero": true,
+      "credit": "Naim Audio",
+      "sourceUrl": "https://www.naimaudio.com/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "pass-labs-xa25.jpg",
+      "url": "/brand-heroes/pass-labs-xa25.jpg",
+      "bytes": 88906,
+      "renderedAsBrandHero": true,
+      "credit": "Pass Labs",
+      "sourceUrl": "https://www.passlabs.com/products/xa25/",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "shindo-cortese-300b.jpg",
+      "url": "/brand-heroes/shindo-cortese-300b.jpg",
+      "bytes": 78958,
+      "renderedAsBrandHero": true,
+      "credit": "Shindo Laboratory",
+      "sourceUrl": "http://www.shindo-laboratory.co.jp/English/C_300B_21.jpg",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "spec-rpa-mg1.png",
+      "url": "/brand-heroes/spec-rpa-mg1.png",
+      "bytes": 230084,
+      "renderedAsBrandHero": true,
+      "credit": "SPEC Corporation",
+      "sourceUrl": "https://www.spec-corp.co.jp/audio/RPA-MG1/index.html",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    },
+    {
+      "file": "sugden-masterclass-ia4.jpg",
+      "url": "/brand-heroes/sugden-masterclass-ia4.jpg",
+      "bytes": 91690,
+      "renderedAsBrandHero": true,
+      "credit": "Sugden Audio",
+      "sourceUrl": "https://www.sugdenaudio.com/ia-4-integrated-amplifier",
+      "rightsClaim": "none_recorded",
+      "alsoUsedAsProductImage": false,
+      "hosting": "local"
+    }
+  ]
+}

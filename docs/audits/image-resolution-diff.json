@@ -10,10 +10,10 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 186,
+  "changedResolutions": 204,
   "byKind": {
-    "suppressed": 102,
-    "substituted": 84
+    "suppressed": 114,
+    "substituted": 90
   },
   "rows": [
     {
@@ -1356,6 +1356,138 @@
       "after": "/images/placeholders/amplifier.svg",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (wiim pro plus)"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "getProductImageEntry",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "resolveProductImageStrict",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "resolveProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "getProductImageEntry",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "resolveProductImageStrict",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "resolveProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "WiiM Pro",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "getProductImageEntry",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "resolveProductImageStrict",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "resolveProductImage",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass unclassified"
+    },
+    {
+      "product": "wiim pro plus",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "Wilson Audio Sabrina X",

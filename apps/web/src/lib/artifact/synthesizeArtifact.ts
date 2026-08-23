@@ -829,12 +829,16 @@ export function synthesizeArtifact(result: any): SynthResult {
 
   const seed = credit.join('|') + '|' + (bottleneck ? category : 'keep');
 
-  // Component photos — look each named component up in the product-images
-  // map and surface a small editorial strip in the artifact. The lookup
-  // is substring-based against `normalize("brand name")`, so passing the
-  // full chain entry (which already contains brand + name) is enough to
-  // hit the key. Components without a matched URL render as null and are
-  // omitted from the strip (no broken-image placeholders).
+  // Component photos — the ONE presentation concern in this module, and the
+  // only place an image may touch the payload. It flows into
+  // `payload.componentPhotos` and nowhere else: no prose, axis, verdict or
+  // recommendation reads it, which is the image/reasoning decoupling a lock
+  // test in images/__tests__/production-controls.test.ts asserts structurally.
+  //
+  // The lookup goes through the governed admission boundary, so a wrong
+  // variant, a prohibited host or an un-provenanced asset yields null and the
+  // component is simply omitted. It was SUBSTRING-matched until 2026-08-23,
+  // which is how a component could be illustrated with a sibling's photograph.
   const componentPhotos = credit.map((nm, i): { src: string; alt: string } | null => {
     const haystack = full[i] || nm;
     const url = getProductImage(undefined, haystack);
