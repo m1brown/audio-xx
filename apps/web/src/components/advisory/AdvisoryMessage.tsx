@@ -1968,6 +1968,11 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
               fontWeight: 500,
             }}>
               {renderText(a.systemSignature)}
+              {a.qualification && (
+                <span style={{ display: 'block', marginTop: '0.6rem', color: COLORS.textMuted }}>
+                  {renderText(a.qualification)}
+                </span>
+              )}
             </p>
           </AdvisorySection>
           <SectionDivider />
@@ -4631,6 +4636,30 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           {a.systemSignature}
         </p>
       )}
+      {/* The finding's material limitation. Rendered wherever the finding is,
+          one register down — split at the generating layer so presentation
+          never has to guess where the finding ends. */}
+      {a.qualification && (
+        <p style={{
+          margin: '-0.9rem 0 1.5rem 0', fontSize: '0.95rem', lineHeight: 1.55,
+          color: COLORS.textMuted,
+        }}>
+          {a.qualification}
+        </p>
+      )}
+
+      {/* The finding's material limitation. Rendered wherever the finding is,
+          one register down — split at the generating layer so presentation
+          never has to guess where the finding ends. */}
+      {a.qualification && (
+        <p style={{
+          margin: '-0.9rem 0 1.5rem 0', fontSize: '0.95rem', lineHeight: 1.55,
+          color: COLORS.textMuted,
+        }}>
+          {a.qualification}
+        </p>
+      )}
+
 
       {/* ── System Assessment Block ── */}
       {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
