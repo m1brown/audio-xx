@@ -101,14 +101,20 @@ describe('the live registry serves no wrong-generation asset', () => {
     expect(getProductImage('Leben', 'CS600')).toContain('leben-cs600');
   });
 
-  it('the JOB Integrated never receives the JOB 225 asset', async () => {
-    // The registry holds an exactly-keyed `job integrated` entry, so this is
-    // about the sibling trap rather than absence: whatever the Integrated
-    // shows, it must never be the 225's photograph.
+  it('the JOB Integrated carries no image, and never the 225 asset', async () => {
+    // Its only asset was hosted by a used-gear reseller. Identity was exact;
+    // the source class was not admissible, and coverage is not a reason to
+    // broaden the policy.
     const { getProductImage } = await import('@/lib/product-images');
-    const integrated = getProductImage('JOB', 'Integrated');
-    const two25 = getProductImage('JOB', '225');
-    expect(integrated).not.toBe(two25);
-    expect(integrated).not.toContain('12146-2');
+    expect(getProductImage('JOB', 'Integrated')).toBeUndefined();
+    expect(getProductImage('JOB', 'INTegrated')).toBeUndefined();
+  });
+
+  it('no user-visible image is served from a reseller host', async () => {
+    const { getProductImage } = await import('@/lib/product-images');
+    for (const p of [['JOB', 'Integrated'], ['Eversolo', 'DMP-A6'], ['Leben', 'CS600X']]) {
+      const url = getProductImage(p[0], p[1]) ?? '';
+      expect(url, p.join(' ')).not.toMatch(/tmraudio|ebay|reverb|audiogon/i);
+    }
   });
 });

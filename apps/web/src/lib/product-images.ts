@@ -191,8 +191,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // McIntosh — mcintoshlabs.com /-/media/ CDN
   { key: 'mcintosh ma252',      url: 'https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma252/ma252-front.jpg' },
 
-  // JOB (Goldmund sub-brand) — tmraudio.com Shopify CDN (dealer; no manufacturer page)
-  { key: 'job integrated',      url: 'https://tmraudio.com/cdn/shop/files/56114-3__07620.1703123373.1280.1280_700x700.jpg' },
+  // JOB Integrated — REMOVED 2026-08-23 (founder decision). The asset was
+  // hosted by The Music Room, a used-gear reseller. Identity was exact, but
+  // the source class is a retailer, which the image policy excludes: images
+  // are identity assets and their provenance has to be first-party or an
+  // authorized dealer. Coverage is not a reason to broaden the policy.
+  //
+  // The JOB Integrated therefore carries no image until a first-party or
+  // authorized-dealer asset naming the exact product is found.
 
   // NAD — nadelectronics.com Shopify CDN
   { key: 'nad c 3050',          url: 'https://nadelectronics.com/cdn/shop/files/NAD-C-3050-3-4--on-black-for-web_2000x.jpg' },
