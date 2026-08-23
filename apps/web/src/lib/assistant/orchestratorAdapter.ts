@@ -23,7 +23,7 @@
 
 import type { AdvisoryResponse, AdvisoryOption, SourceReference } from '../advisory-response';
 import type { ProductExample } from '../shopping-intent';
-import { getProductImage } from '../product-images';
+import { resolveProductImageStrict } from '../product-images';
 import type {
   OrchestratorOutput,
   ShoppingDecisionOutput,
@@ -155,7 +155,7 @@ function recommendationToOption(
 
     // Step 10: Enhanced catalog fields (from original product)
     // Catalog imageUrl wins; fall back to the seeded product-image mapping.
-    imageUrl: original?.imageUrl ?? getProductImage(original?.brand ?? rec.productName.split(' ')[0], original?.name ?? rec.productName),
+    imageUrl: resolveProductImageStrict(original?.brand ?? rec.productName.split(' ')[0], original?.name ?? rec.productName, original?.imageUrl),
     typicalMarket: original?.typicalMarket,
     buyingContext: original?.buyingContext,
   };

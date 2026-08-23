@@ -35,7 +35,7 @@ import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
 import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/catalog/lookups';
-import { getProductImage, getProductImageEntry, getGenericPlaceholder } from '../../lib/product-images';
+import { getProductImage, getProductImageEntry, getGenericPlaceholder, resolveProductImageStrict } from '../../lib/product-images';
 import AdvisoryLinks from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
@@ -599,7 +599,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
     const brand = product?.brand ?? componentName.split(/\s+/)[0];
     const name = product?.name ?? componentName;
     const imageUrl = product
-      ? product.imageUrl ?? getProductImage(product.brand, product.name)
+      ? resolveProductImageStrict(product.brand, product.name, product.imageUrl)
       : getProductImage(brand, name);
     if (!imageUrl) return null;
     if (!claimImage(brand, name)) return null;
@@ -1123,7 +1123,7 @@ function HearFollowUp({
   // Enrich with product images from the catalog when not already set.
   const anchors = DIRECTION_CONTENT.safe.options.slice(0, 3).map((o) => ({
     ...o,
-    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+    imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
   }));
 
   return (
@@ -1225,7 +1225,7 @@ function UpgradeOptionsFollowUp({
   // Enrich with product images from the catalog when not already set.
   const picked = options.slice(0, 4).map((o) => ({
     ...o,
-    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+    imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
   }));
 
   return (
@@ -1362,7 +1362,7 @@ function ComparePathsFollowUp({
           // Enrich with product images from the catalog when not already set.
           const picked = content.options.slice(0, 2).map((o) => ({
             ...o,
-            imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+            imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
           }));
           return (
             <div
@@ -1436,7 +1436,7 @@ function ComponentKeepFollowUp({
   const brandName = product?.brand ?? name.trim().split(/\s+/)[0] ?? '';
   const brandProfile = findBrandProfileByName(brandName);
   const rawImageUrl = product
-    ? product.imageUrl ?? getProductImage(product.brand, product.name)
+    ? resolveProductImageStrict(product.brand, product.name, product.imageUrl)
     : undefined;
   // Card context — always show image when available (no dedup).
   const imageUrl = rawImageUrl ?? undefined;
@@ -4123,7 +4123,7 @@ function AssessmentHeroImage({ brand, name }: { brand?: string; name?: string })
   // brand+name overlay lookup so brand-only assessments can still
   // render an image when one is curated for that brand/name pair.
   const imageUrl = product
-    ? (product.imageUrl ?? getProductImage(product.brand, product.name))
+    ? (resolveProductImageStrict(product.brand, product.name, product.imageUrl))
     : getProductImage(brand, name);
   if (!imageUrl) return null;
   const displayName = product
@@ -4210,17 +4210,17 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
   //   When the user asks about a product we don't have in the catalog,
   //   the lookups above return undefined. Render an image block keyed
   //   to the subject name. Resolution order:
-  //     1. getProductImage(undefined, subject) — substring match
-  //        against the curated PRODUCT_IMAGE_URLS overlay. This
-  //        catches manufacturer-hosted images for products that exist
-  //        as image entries but aren't full catalog Product records
-  //        (e.g. "Buchardt A700" — image entry added 2026-05-19, no
-  //        catalog entry).
+  //     1. getProductImageEntry(undefined, subject) — EXACT identity
+  //        against the curated registry, through the admission
+  //        boundary. This catches first-party images for products that
+  //        exist as image entries but aren't full catalog Product
+  //        records (e.g. "Buchardt A700").
   //     2. getGenericPlaceholder() — generic SVG silhouette fallback.
-  //   Both paths are F4-clean: getProductImage's gate skips entries
-  //   with tier === 'review_publication', so only manufacturer /
-  //   dealer / retailer-hosted images can surface here. No fabricated
-  //   product imagery, no review-derived material.
+  //   The F4 reviewer exclusion is now one clause of the admission
+  //   state rather than a check this path has to remember, so a wrong
+  //   variant, a prohibited host and an un-provenanced asset are all
+  //   withheld here too. Matching was SUBSTRING until 2026-08-23, which
+  //   is how `leben cs600` could answer for a CS600X.
   //
   //   Caption logic: the "Generic placeholder — actual product image
   //   not in catalog" disclaimer ONLY renders when actually falling
@@ -4235,8 +4235,8 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
     // Manufacturer attribution (policy 2026-05-19):
     //   When a real manufacturer/dealer/retailer image resolves, the
     //   UI must display "Image source: <site>" as visible attribution
-    //   beneath the image. F4-allowed tiers only — the lookup gate in
-    //   getProductImageEntry already drops review_publication entries.
+    //   beneath the image. Admissible sources only — the boundary in
+    //   getProductImageEntry withholds everything else.
     const attributionSite = resolved?.source?.site;
     return (
       <div style={{ marginBottom: '0.85rem' }}>
@@ -4289,7 +4289,7 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
     );
   }
 
-  const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
+  const imageUrl = resolveProductImageStrict(product.brand, product.name, product.imageUrl);
   if (!imageUrl) return null;
   // Stage 6.3 caption polish: strip internal variant-SKU suffixes like
   // " 12th-1" (Denafrips Pontus II 12th-1 catalog entry, where "12th-1"

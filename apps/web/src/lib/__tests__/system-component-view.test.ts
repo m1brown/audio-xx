@@ -71,12 +71,16 @@ describe('failure degrades per component, never per system', () => {
   it('one component without an image does not suppress another that has one', () => {
     const views = buildComponentViews(
       [
-        { displayName: 'Has Image', role: 'dac', product: { brand: 'X', name: 'Y', imageUrl: 'https://cdn/x.jpg' } },
+        // First-party host for its brand, so the asset is admissible and this
+        // test keeps testing what it means to: per-component independence.
+        // It previously used `https://cdn/x.jpg`, which is first-party to
+        // nothing and is now withheld — a catalog URL no longer wins outright.
+        { displayName: 'Has Image', role: 'dac', product: { brand: 'Acme', name: 'Y', imageUrl: 'https://acme.com/y.jpg' } },
         { displayName: 'Acora QRC-2', role: 'speaker' },
       ],
       [],
     );
-    expect(views[0].imageUrl).toBe('https://cdn/x.jpg');
+    expect(views[0].imageUrl).toBe('https://acme.com/y.jpg');
     expect(views[1].imageUrl).toBeUndefined();
     // Crucially, the first survives the second's absence.
     expect(views).toHaveLength(2);

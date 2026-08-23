@@ -1,0 +1,1406 @@
+{
+  "baseline": "b9cc3ac",
+  "head": "staged identity enforcement",
+  "productsProbed": 349,
+  "surfaces": [
+    "getProductImage",
+    "getProductImageEntry",
+    "resolveProductImageStrict",
+    "resolveProductImage",
+    "consumer: imageUrl ?? getProductImage",
+    "resolveProductImageWithConfidence"
+  ],
+  "changedResolutions": 186,
+  "byKind": {
+    "suppressed": 102,
+    "substituted": 84
+  },
+  "rows": [
+    {
+      "product": "agd productions vivace",
+      "surface": "getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "agd productions vivace",
+      "surface": "getProductImageEntry",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "agd productions vivace",
+      "surface": "resolveProductImageStrict",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "agd productions vivace",
+      "surface": "resolveProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "agd productions vivace",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "agd productions vivace",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "getProductImageEntry",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "resolveProductImageStrict",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "resolveProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'mk', which the key does not name"
+    },
+    {
+      "product": "AGD Productions Vivace",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "getProductImageEntry",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "resolveProductImageStrict",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "resolveProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "agd vivace",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://agdproduction.com/wp-content/uploads/2026/04/gran-vivace-mk-iv-reflection-monoblock-amp-1024x683.webp",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (agd productions vivace)"
+    },
+    {
+      "product": "Apple AirPods Pro 2",
+      "surface": "getProductImageEntry",
+      "before": "https://www.apple.com/v/airpods-pro/r/images/overview/welcome/hero__b0eal3mn03ua_large.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (apple airpods pro)"
+    },
+    {
+      "product": "Apple AirPods Pro 2",
+      "surface": "resolveProductImage",
+      "before": "https://www.apple.com/v/airpods-pro/r/images/overview/welcome/hero__b0eal3mn03ua_large.jpg",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (apple airpods pro)"
+    },
+    {
+      "product": "Ayre VX-5 Twenty",
+      "surface": "getProductImageEntry",
+      "before": "https://ayre.com/wp-content/uploads/2018/04/VX-5_FRONT_Web.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (ayre vx 5)"
+    },
+    {
+      "product": "Ayre VX-5 Twenty",
+      "surface": "resolveProductImage",
+      "before": "https://ayre.com/wp-content/uploads/2018/04/VX-5_FRONT_Web.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (ayre vx 5)"
+    },
+    {
+      "product": "Campfire Audio Andromeda",
+      "surface": "resolveProductImage",
+      "before": "https://bloomaudio.com/cdn/shop/files/campfire-solaris-vulcan-thumb-five.webp?v=1731519129&width=1080",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (campfire audio solaris)"
+    },
+    {
+      "product": "Campfire Audio Honeydew",
+      "surface": "resolveProductImage",
+      "before": "https://bloomaudio.com/cdn/shop/files/campfire-solaris-vulcan-thumb-five.webp?v=1731519129&width=1080",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (campfire audio solaris)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "getProductImage",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "getProductImageEntry",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "resolveProductImageStrict",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "resolveProductImage",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "cayin a 88t",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://usatubeaudio.s3.amazonaws.com/2018/07/Cayin-A-88T-MK2--600x400.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (cayin a 88t mk2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "getProductImage",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "getProductImageEntry",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "resolveProductImageStrict",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "resolveProductImage",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "chord mojo",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (chord mojo 2)"
+    },
+    {
+      "product": "Crayon Audio CIA-1T",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg/v1/fill/w_900,h_900,al_c,q_85/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (crayon audio cia 1)"
+    },
+    {
+      "product": "Crayon Audio CIA-1T",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg/v1/fill/w_900,h_900,al_c,q_85/5e5570_6aa5f99be34645d1b56d91ae9bce1479~mv2.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (crayon audio cia 1)"
+    },
+    {
+      "product": "Denafrips Enyo 15th",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips enyo)"
+    },
+    {
+      "product": "Denafrips Enyo 15th",
+      "surface": "resolveProductImageStrict",
+      "before": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips enyo)"
+    },
+    {
+      "product": "Denafrips Enyo 15th",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips enyo)"
+    },
+    {
+      "product": "Denafrips Enyo 15th",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips enyo)"
+    },
+    {
+      "product": "Denafrips Enyo 15th",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips enyo)"
+    },
+    {
+      "product": "Denafrips Pontus II 12th-1",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips pontus)"
+    },
+    {
+      "product": "Denafrips Pontus II 12th-1",
+      "surface": "resolveProductImageStrict",
+      "before": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips pontus)"
+    },
+    {
+      "product": "Denafrips Pontus II 12th-1",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips pontus)"
+    },
+    {
+      "product": "Denafrips Pontus II 12th-1",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips pontus)"
+    },
+    {
+      "product": "Denafrips Pontus II 12th-1",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (denafrips pontus)"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "getProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "getProductImageEntry",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "resolveProductImageStrict",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "resolveProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "denafrips venus ii",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "getProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "getProductImageEntry",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "resolveProductImageStrict",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "resolveProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Denafrips Venus II",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Eversolo DAC-Z8",
+      "surface": "resolveProductImage",
+      "before": "https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (eversolo dmp a6 gen 2)"
+    },
+    {
+      "product": "Focal Aria 906",
+      "surface": "resolveProductImage",
+      "before": "https://dam.focal-naim.com/m/52fdcf02309f4f88/original/KantaN2_walnut-mat_Ivory_mat_34-jpg.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (focal kanta no 2)"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "getProductImageEntry",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "resolveProductImageStrict",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "Goldmund / JOB 225",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "getProductImageEntry",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "resolveProductImageStrict",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "provenance suppression — identity_unverified"
+    },
+    {
+      "product": "goldmund job 225",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Goldmund SRDA DAC",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "Goldmund Telos 390",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "Goldmund Telos 590 NextGen II",
+      "surface": "getProductImageEntry",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund telos 590)"
+    },
+    {
+      "product": "Goldmund Telos 590 NextGen II",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "Goldmund Telos 690",
+      "surface": "resolveProductImageStrict",
+      "before": "/brand-heroes/goldmund-telos-690.jpg",
+      "after": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Goldmund Telos 690",
+      "surface": "resolveProductImage",
+      "before": "/brand-heroes/goldmund-telos-690.jpg",
+      "after": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Goldmund Telos 690",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "/brand-heroes/goldmund-telos-690.jpg",
+      "after": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Goldmund Telos 690",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/brand-heroes/goldmund-telos-690.jpg",
+      "after": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Gustard X16",
+      "surface": "resolveProductImage",
+      "before": "https://shenzhenaudio.com/cdn/shop/files/1-1_cec99a1e-1550-459b-b75a-565cbf322481.jpg?v=1730458884",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (gustard x26 pro)"
+    },
+    {
+      "product": "Holo Audio May (KTE)",
+      "surface": "getProductImageEntry",
+      "before": "https://kitsunehifi.com/cdn/shop/files/may1.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (holo audio may)"
+    },
+    {
+      "product": "Holo Audio May (KTE)",
+      "surface": "resolveProductImage",
+      "before": "https://kitsunehifi.com/cdn/shop/files/may1.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (holo audio may)"
+    },
+    {
+      "product": "JBL L100 Classic",
+      "surface": "getProductImageEntry",
+      "before": "https://www.jbl.com/dw/image/v2/BFND_PRD/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw32dc552f/JBLL100MK2ORG_QtrRightWithGrille_1605x1605.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (jbl l100)"
+    },
+    {
+      "product": "JBL L100 Classic",
+      "surface": "resolveProductImage",
+      "before": "https://www.jbl.com/dw/image/v2/BFND_PRD/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw32dc552f/JBLL100MK2ORG_QtrRightWithGrille_1605x1605.png",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (jbl l100)"
+    },
+    {
+      "product": "job 225",
+      "surface": "getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "job 225",
+      "surface": "getProductImageEntry",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "job 225",
+      "surface": "resolveProductImageStrict",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "job 225",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "job 225",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "job 225",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "JOB Integrated",
+      "surface": "resolveProductImage",
+      "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "getProductImage",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'ls60w', which the key does not name"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "getProductImageEntry",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'ls60w', which the key does not name"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "resolveProductImageStrict",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'ls60w', which the key does not name"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "resolveProductImage",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'ls60w', which the key does not name"
+    },
+    {
+      "product": "kef ls60",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "KEF LS60 Wireless",
+      "surface": "getProductImageEntry",
+      "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (kef ls60)"
+    },
+    {
+      "product": "Kinki Studio EX-M1+",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png/v1/fill/w_1200,h_800,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (kinki studio ex m1)"
+    },
+    {
+      "product": "Kinki Studio EX-M1+",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png/v1/fill/w_1200,h_800,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (kinki studio ex m1)"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "resolveProductImage",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (klipsch heresy)"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "getProductImage",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'iv', which the key does not name"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "getProductImageEntry",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'iv', which the key does not name"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "resolveProductImageStrict",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'iv', which the key does not name"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "resolveProductImage",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'iv', which the key does not name"
+    },
+    {
+      "product": "klipsch heresy",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Klipsch Heresy IV",
+      "surface": "getProductImageEntry",
+      "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (klipsch heresy)"
+    },
+    {
+      "product": "LAiV Harmony DAC",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/d91e0f_0d3dac580a4249f8ada7cf54ed152ba9~mv2.png/v1/crop/x_933,y_1775,w_6381,h_2571/fill/w_1844,h_742,fp_0.50_0.50,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_3388.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (laiv harmony)"
+    },
+    {
+      "product": "LAiV Harmony DAC",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/d91e0f_0d3dac580a4249f8ada7cf54ed152ba9~mv2.png/v1/crop/x_933,y_1775,w_6381,h_2571/fill/w_1844,h_742,fp_0.50_0.50,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_3388.png",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (laiv harmony)"
+    },
+    {
+      "product": "Lampizator Baltic 5",
+      "surface": "getProductImageEntry",
+      "before": "https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (lampizator baltic)"
+    },
+    {
+      "product": "Lampizator Baltic 5",
+      "surface": "resolveProductImage",
+      "before": "https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (lampizator baltic)"
+    },
+    {
+      "product": "Leben CS300",
+      "surface": "resolveProductImage",
+      "before": "/brand-heroes/leben-cs600.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (leben cs 600)"
+    },
+    {
+      "product": "Leben CS600X",
+      "surface": "getProductImageEntry",
+      "before": "/brand-heroes/leben-cs600.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (leben cs 600)"
+    },
+    {
+      "product": "Leben CS600X",
+      "surface": "resolveProductImage",
+      "before": "/brand-heroes/leben-cs600.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (leben cs 600)"
+    },
+    {
+      "product": "Linear Tube Audio Z10",
+      "surface": "resolveProductImage",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (linear tube audio z40)"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "getProductImage",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'z40i', which the key does not name"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "getProductImageEntry",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'z40i', which the key does not name"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "resolveProductImageStrict",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'z40i', which the key does not name"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "resolveProductImage",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — asset asserts 'z40i', which the key does not name"
+    },
+    {
+      "product": "linear tube audio z40",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Linear Tube Audio Z40+",
+      "surface": "getProductImageEntry",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (linear tube audio z40)"
+    },
+    {
+      "product": "Linear Tube Audio Z40+",
+      "surface": "resolveProductImage",
+      "before": "https://images.squarespace-cdn.com/content/v1/551c5a82e4b0c1e6d1556b74/1574870353049-GQ3TAH3FQEXHAKIVWZH9/Z40i_004+1120x1120+crop.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (linear tube audio z40)"
+    },
+    {
+      "product": "Magnepan LRS+",
+      "surface": "getProductImageEntry",
+      "before": "https://magnepan.com/cdn/shop/products/Speakers-3_1800x1800.jpg?v=1754334504",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (magnepan lrs)"
+    },
+    {
+      "product": "Magnepan LRS+",
+      "surface": "resolveProductImage",
+      "before": "https://magnepan.com/cdn/shop/products/Mg_1.7_White_Pair_1_1800x1800.jpg?v=1643770217",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (magnepan 1 7i)"
+    },
+    {
+      "product": "Meze Empyrean II",
+      "surface": "getProductImageEntry",
+      "before": "https://mezeaudio.com/cdn/shop/files/Meze-Audio-Empyrean-headphone-01_4226ba5f-d514-438b-a00c-cadf82e6bbfd.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (meze empyrean)"
+    },
+    {
+      "product": "Meze Empyrean II",
+      "surface": "resolveProductImage",
+      "before": "https://mezeaudio.com/cdn/shop/files/Meze-Audio-Empyrean-headphone-01_4226ba5f-d514-438b-a00c-cadf82e6bbfd.webp",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (meze empyrean)"
+    },
+    {
+      "product": "Mission MS 50 8VET",
+      "surface": "getProductImageEntry",
+      "before": "https://www.theturntablestore.com/cdn/shop/files/P1030263.jpg?v=1732189515&width=1946",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (mission ms 50)"
+    },
+    {
+      "product": "Mission MS 50 8VET",
+      "surface": "resolveProductImage",
+      "before": "https://www.mission.co.uk/wp-content/uploads/magictoolbox_cache/cf3e6ec01aac7cb79461bcfe9d0d075e/450x/660543342/770-Walnut-Standard-2.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (mission 770)"
+    },
+    {
+      "product": "Moondrop Chu II",
+      "surface": "resolveProductImage",
+      "before": "https://moondroplab.com/cdn-cgi/image/format=avif,quality=90/https://cdn.prod.website-files.com/627128d862c9a44234848dda/6540a32b1b300656259455e3_ARIA2.jpg",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (moondrop aria 2)"
+    },
+    {
+      "product": "Moondrop Quarks",
+      "surface": "resolveProductImage",
+      "before": "https://moondroplab.com/cdn-cgi/image/format=avif,quality=90/https://cdn.prod.website-files.com/627128d862c9a44234848dda/6540a32b1b300656259455e3_ARIA2.jpg",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (moondrop aria 2)"
+    },
+    {
+      "product": "NAD C 316BEE V2",
+      "surface": "getProductImageEntry",
+      "before": "https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (nad c 316bee)"
+    },
+    {
+      "product": "NAD C 316BEE V2",
+      "surface": "resolveProductImage",
+      "before": "https://nadelectronics.com/cdn/shop/files/NAD-C-3050-3-4--on-black-for-web_2000x.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (nad c 3050)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "getProductImage",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "getProductImageEntry",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "resolveProductImageStrict",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "resolveProductImage",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "naim supernait",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (naim supernait 3)"
+    },
+    {
+      "product": "PrimaLuna EVO 300 Integrated",
+      "surface": "getProductImageEntry",
+      "before": "https://www.primaluna.nl/media/ws1n5gzp/02_silver_quarter-updated.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (primaluna evo 300)"
+    },
+    {
+      "product": "PrimaLuna EVO 300 Integrated",
+      "surface": "resolveProductImage",
+      "before": "https://www.primaluna.nl/media/ws1n5gzp/02_silver_quarter-updated.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (primaluna evo 300)"
+    },
+    {
+      "product": "Quad VA-One+",
+      "surface": "getProductImageEntry",
+      "before": "https://quad-hifi.co.uk/cdn/shop/files/VA-ONE_StandardBlack_3.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (quad va one)"
+    },
+    {
+      "product": "Quad VA-One+",
+      "surface": "resolveProductImage",
+      "before": "https://quad-hifi.co.uk/cdn/shop/files/VA-ONE_StandardBlack_3.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (quad va one)"
+    },
+    {
+      "product": "Rogue Audio Cronus Magnum III",
+      "surface": "getProductImageEntry",
+      "before": "https://listenroom.com/cdn/shop/files/RogueAudioCronusMagnumIIIsilverfront.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (rogue audio cronus magnum)"
+    },
+    {
+      "product": "Rogue Audio Cronus Magnum III",
+      "surface": "resolveProductImage",
+      "before": "https://listenroom.com/cdn/shop/files/RogueAudioCronusMagnumIIIsilverfront.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (rogue audio cronus magnum)"
+    },
+    {
+      "product": "Rotel A11 Tribute",
+      "surface": "getProductImageEntry",
+      "before": "https://www.rotel.com/sites/default/files/product/A11%20Tribute_silver.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (rotel a11)"
+    },
+    {
+      "product": "Rotel A11 Tribute",
+      "surface": "resolveProductImage",
+      "before": "https://www.rotel.com/sites/default/files/product/A11%20Tribute_silver.png",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (rotel a11)"
+    },
+    {
+      "product": "Schiit Bifrost 2/64",
+      "surface": "getProductImageEntry",
+      "before": "https://www.schiit.com/public/upload/images/bifrost%202%20black%201920.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (schiit bifrost)"
+    },
+    {
+      "product": "Schiit Modi Multibit",
+      "surface": "getProductImageEntry",
+      "before": "https://www.schiit.com/img/img_3680.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (schiit modi)"
+    },
+    {
+      "product": "Schiit Modi Multibit",
+      "surface": "resolveProductImage",
+      "before": "https://www.schiit.com/public/upload/images/bifrost%202%20black%201920.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (schiit bifrost)"
+    },
+    {
+      "product": "Schiit Modius E",
+      "surface": "getProductImageEntry",
+      "before": "https://www.schiit.com/img/img_5100.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (schiit modius)"
+    },
+    {
+      "product": "Schiit Modius E",
+      "surface": "resolveProductImage",
+      "before": "https://www.schiit.com/public/upload/images/bifrost%202%20black%201920.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (schiit bifrost)"
+    },
+    {
+      "product": "Scott 222B / 222C",
+      "surface": "getProductImageEntry",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (scott 222)"
+    },
+    {
+      "product": "Scott 222B / 222C",
+      "surface": "resolveProductImage",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (scott 222)"
+    },
+    {
+      "product": "Sony IER-M7",
+      "surface": "resolveProductImage",
+      "before": "https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3",
+      "after": "/images/placeholders/headphone.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (sony wh 1000xm5)"
+    },
+    {
+      "product": "sound|kaos Vox 3a",
+      "surface": "getProductImageEntry",
+      "before": "https://enleum.com/wp-content/uploads/2022/09/VOX_3.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (sound kaos vox)"
+    },
+    {
+      "product": "sound|kaos Vox 3a",
+      "surface": "resolveProductImage",
+      "before": "https://enleum.com/wp-content/uploads/2022/09/VOX_3.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (sound kaos vox)"
+    },
+    {
+      "product": "Topping D70 Pro SABRE",
+      "surface": "getProductImageEntry",
+      "before": "http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (topping d70)"
+    },
+    {
+      "product": "Topping D70 Pro SABRE",
+      "surface": "resolveProductImage",
+      "before": "http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (topping d70)"
+    },
+    {
+      "product": "topping d90",
+      "surface": "getProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "topping d90",
+      "surface": "getProductImageEntry",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "topping d90",
+      "surface": "resolveProductImageStrict",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "topping d90",
+      "surface": "resolveProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "topping d90",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "topping d90",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "getProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "getProductImageEntry",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "resolveProductImageStrict",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "resolveProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "kind": "suppressed",
+      "reason": "provenance suppression — sourceClass retailer"
+    },
+    {
+      "product": "Topping D90",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "TotalDAC d1-twelve MK2",
+      "surface": "resolveProductImage",
+      "before": "https://www.totaldac.com/fichiers/D1-core-front.jpg",
+      "after": "/images/placeholders/dac.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (totaldac d1 unity)"
+    },
+    {
+      "product": "Wharfedale Linton Heritage",
+      "surface": "getProductImageEntry",
+      "before": "https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (wharfedale linton)"
+    },
+    {
+      "product": "Wharfedale Linton Heritage",
+      "surface": "resolveProductImage",
+      "before": "https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (wharfedale linton)"
+    },
+    {
+      "product": "WiiM AMP Ultra",
+      "surface": "getProductImageEntry",
+      "before": "https://cloudadmin-file.linkplay.com/product/image/b4bb2c26859e4f68b32df583307bf82e.png",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (wiim amp)"
+    },
+    {
+      "product": "WiiM AMP Ultra",
+      "surface": "resolveProductImage",
+      "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (wiim pro plus)"
+    },
+    {
+      "product": "Wilson Audio Sabrina X",
+      "surface": "getProductImageEntry",
+      "before": "https://www.wilsonaudio.com/media/941/sabrinax.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (wilson audio sabrina)"
+    },
+    {
+      "product": "Wilson Audio Sabrina X",
+      "surface": "resolveProductImage",
+      "before": "https://www.wilsonaudio.com/media/941/sabrinax.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (wilson audio sabrina)"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "getProductImageEntry",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (wlm diva)"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "resolveProductImage",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (wlm diva)"
+    },
+    {
+      "product": "Yamamoto A-08S",
+      "surface": "getProductImageEntry",
+      "before": "https://exclusive-audio.jp/cdn/shop/files/A-08SS-1-S.jpg?v=1721120085&width=1946",
+      "kind": "suppressed",
+      "reason": "correctness — the asset shown belonged to a different product (yamamoto a 08)"
+    },
+    {
+      "product": "Yamamoto A-08S",
+      "surface": "resolveProductImage",
+      "before": "https://exclusive-audio.jp/cdn/shop/files/A-08SS-1-S.jpg?v=1721120085&width=1946",
+      "after": "/images/placeholders/amplifier.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (yamamoto a 08)"
+    }
+  ]
+}

@@ -29,7 +29,7 @@
  * may not promote a component to make the display tidier.
  */
 
-import { getProductImage } from './product-images';
+import { resolveProductImageStrict } from './product-images';
 import { buildProductLinks } from './product-links';
 
 export type EvidenceBasis = 'catalog' | 'brand' | 'model' | 'user';
@@ -278,7 +278,7 @@ export function buildComponentViews(
     // F4 gate lives inside getProductImage. A catalogued product may carry its
     // own imageUrl; anything else must come through the curated overlay or not
     // at all. Corroboration is NOT image permission.
-    const imageUrl = c.product?.imageUrl ?? getProductImage(brand, modelName);
+    const imageUrl = resolveProductImageStrict(brand, modelName, c.product?.imageUrl);
 
     let hifiSharkUrl: string | undefined;
     let ebayUrl: string | undefined;
