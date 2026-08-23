@@ -1874,21 +1874,23 @@ describe('SystemAssessmentArtifact — §5 component images', () => {
     expect(devoreImg).toContain('devorefidelity.com');
   });
 
-  it('renders Leben CS600X with the locally hosted asset (never a reviewer host)', () => {
-    // Data-state update 2026-08-11 (founder-approved): the Leben overlay
-    // entries were re-pointed from the F4-excluded hifi.nl photo to the
-    // local /brand-heroes/ asset (Marantz 2220B pattern), so the CS600X
-    // card now legally carries an image. The invariant this test used to
-    // pin — reviewer-tier sources degrade to text-only — is preserved
-    // below against First Watt SIT-3, whose overlay entry still carries
-    // tier 'review_publication'.
+  it('renders NO image for the Leben CS600X — the held asset is a CS600', () => {
+    // Reversed 2026-08-23. This test previously asserted that a CS600X card
+    // carried `/brand-heroes/leben-cs600.jpg` — a photograph of the CS600,
+    // reaching the CS600X only through substring matching. That is the
+    // variant collision the exact-identity rule exists to prevent, and the
+    // test encoded it as expected behaviour.
+    //
+    // An image is an identity asset: a reader takes the photograph as
+    // confirmation that Audio XX knows which product they own. No image is
+    // preferable to the wrong generation. A CS600X image would need its own
+    // overlay entry, from a source that names the CS600X.
     const html = render(PHASE_K);
     const componentsSlice = sliceForSection(html, 'The Components');
     const imgs = imgTagsIn(componentsSlice);
     const lebenImg = imgs.find((t) => t.includes('alt="Leben CS600X"'));
-    expect(lebenImg).toBeDefined();
-    expect(lebenImg).toContain('/brand-heroes/leben-cs600.jpg');
-    expect(lebenImg).not.toContain('hifi.nl');
+    expect(lebenImg).toBeUndefined();
+    expect(componentsSlice).not.toContain('/brand-heroes/leben-cs600.jpg');
   });
 
   it('renders a reviewer-tier-only component as text-only (F4 render degrade)', () => {

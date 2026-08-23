@@ -21,6 +21,7 @@
  * substrings so "harbeth p3esr" covers "Harbeth P3ESR XD" too.
  */
 
+import { keyNamesProduct } from '@/lib/images/product-identity';
 function normalize(s: string | undefined): string {
   if (!s) return '';
   return s
@@ -740,6 +741,28 @@ export function getProductImageEntry(
   return undefined;
 }
 
+/**
+ * Does the catalog hold imagery anywhere in this product's FAMILY?
+ *
+ * Deliberately loose, and deliberately not a rendering function. Shortlist
+ * pool filtering asks "is this the kind of product we have photography for";
+ * rendering asks "do we have THIS product's photograph". Conflating them is
+ * what produced the CS600/CS600X defect.
+ *
+ * Kept because shortlist selection is coupled to image availability
+ * (shopping-intent.ts), and tightening this predicate silently shrinks
+ * shopping pools — a recommendation change wearing an image fix. Nothing
+ * this returns is ever displayed; `getProductImage` decides that, exactly.
+ */
+export function hasFamilyImagery(
+  brand: string | undefined,
+  name: string | undefined,
+): boolean {
+  const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
+  if (!haystack) return false;
+  return PRODUCT_IMAGE_URLS.some((entry) => haystack.includes(entry.key));
+}
+
 export function getProductImage(
   brand: string | undefined,
   name: string | undefined,
@@ -747,7 +770,11 @@ export function getProductImage(
   const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
   if (!haystack) return undefined;
   for (const entry of PRODUCT_IMAGE_URLS) {
-    if (haystack.includes(entry.key)) {
+    // EXACT identity, never substring. `haystack.includes(entry.key)` served
+    // the `leben cs600` photograph for a Leben CS600X, and the table's own
+    // comments relied on careful ordering to avoid it — a convention, not a
+    // guarantee. See lib/images/product-identity.ts.
+    if (keyNamesProduct(entry.key, { brand, name })) {
       // F4 gate (private beta, 2026-05-18):
       //   Skip entries hosted by reviewer publications. Hotlinked
       //   images and their credit fields are review-derived material

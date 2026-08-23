@@ -2977,7 +2977,7 @@ import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones
 import { getEbaySearchUrl } from './ebay-links';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
-import { getProductImage } from './product-images';
+import { hasFamilyImagery } from './product-images';
 import type { ListenerProfile } from './listener-profile';
 import { findCatalogProduct, resolveProductAlias } from './listener-profile';
 import { tagProductArchetype } from './archetype';
@@ -5627,7 +5627,10 @@ function selectProductExamples(
     {
       const hasImage = (p: Ranked): boolean =>
         !!(p.imageUrl && p.imageUrl.trim().length > 0)
-        || !!getProductImage(p.brand, p.name);
+        // Pool filtering, not rendering. Asks whether the catalog has
+        // photography for this product's family; what actually renders is
+        // decided exactly by `getProductImage`.
+        || hasFamilyImagery(p.brand, p.name);
       // Launch gate 2026-07-19: credibility outranks thumbnails.
       // Traditional-marketType candidates stay in the pool even without
       // a curated image — dropping them was handing the anchor to
@@ -5720,7 +5723,10 @@ function selectProductExamples(
       {
         const hasImage = (p: Ranked): boolean =>
           !!(p.imageUrl && p.imageUrl.trim().length > 0)
-          || !!getProductImage(p.brand, p.name);
+          // Pool filtering, not rendering. Asks whether the catalog has
+        // photography for this product's family; what actually renders is
+        // decided exactly by `getProductImage`.
+        || hasFamilyImagery(p.brand, p.name);
 
         // Launch gate 2026-07-19: traditional candidates survive the
         // image preference — see the eligible-filter note above.
