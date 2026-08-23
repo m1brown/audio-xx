@@ -88,6 +88,16 @@ describe('review coverage is exposed without becoming a conclusion', () => {
     expect(transfer?.value).toContain('heard through other electronics');
   });
 
+  it('never claims an observation was MEASURED', () => {
+    // Two of the three dCS observations are listening comparisons. Labelling
+    // them "measured by Stereophile" asserts an instrument that was never
+    // used — a provenance claim, not a formatting detail.
+    for (const l of v.secondary.filter((x) => x.publication === 'Stereophile')) {
+      expect(l.standing, l.value.slice(0, 40)).toBeUndefined();
+      expect(l.value).not.toMatch(/measured by/i);
+    }
+  });
+
   it('states coverage as coverage, never as a system claim', () => {
     const cov = v.primary.find((l) => l.label === 'Independent review')!;
     // A publication list. No verdict, no adjective, no system.

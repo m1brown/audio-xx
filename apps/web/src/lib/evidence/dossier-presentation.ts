@@ -109,7 +109,10 @@ export function presentDossier(d: ProductDossier): DossierView {
         value: r.claim
           + (r.condition ? ` — only ${r.condition.replace(/^[a-z_]+:\s*/i, '')}` : '')
           + (r.transferLimited ? ' (heard through other electronics)' : ''),
-        standing: 'measured',
+        // No standing marker. The line's LABEL is the publication, so the
+        // provenance is already stated; the first version hard-coded
+        // `standing: 'measured'` and labelled two dCS LISTENING comparisons
+        // as measurements, which is a false claim about how they were made.
         publication: r.publication,
         sourceUrl: r.sourceUrl,
       });
