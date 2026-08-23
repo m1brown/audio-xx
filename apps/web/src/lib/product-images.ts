@@ -147,7 +147,17 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'retailer', site: 'apos.audio', credit: 'Apos Audio', captured: '2026-05-08' } },
 
   // Eversolo — eversolo.com /Uploads/product/ CDN + bloomaudio.com (DMP-A6)
-  { key: 'eversolo dmp a6',     url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
+  // RE-KEYED 2026-08-23. This asset is named `eversolo-a6-gen2-thumb.webp`
+  // and depicts the DMP-A6 Gen 2, but was keyed as the plain `eversolo dmp a6`
+  // — so the original DMP-A6 in the FRANCE system was being shown a
+  // photograph of its own successor. Exact matching does not catch this: the
+  // matcher was right and the KEY was wrong.
+  //
+  // The original DMP-A6 now correctly carries no image. Eversolo replaced its
+  // product page in place, so the manufacturer URL for `model/DMP-A6` today
+  // presents the Gen 2 (og:title: "Eversolo DMP-A6 Gen 2") — there is no
+  // first-party source for the original that I could verify.
+  { key: 'eversolo dmp a6 gen 2', url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
     source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
 
   // TotalDAC — totaldac.com /fichiers/ CDN

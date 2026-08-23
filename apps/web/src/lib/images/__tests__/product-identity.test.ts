@@ -84,3 +84,31 @@ describe('ambiguity yields nothing', () => {
     expect(sameProductIdentity(a, a)).toBe(true);
   });
 });
+
+describe('the live registry serves no wrong-generation asset', () => {
+  it('the original DMP-A6 gets no image; the Gen 2 asset stays with the Gen 2', async () => {
+    // The asset is named `eversolo-a6-gen2-thumb.webp` and was keyed as the
+    // plain `eversolo dmp a6`, so FRANCE's original DMP-A6 was shown a
+    // photograph of its successor. Exact matching does not catch a wrong KEY.
+    const { getProductImage } = await import('@/lib/product-images');
+    expect(getProductImage('Eversolo', 'DMP-A6')).toBeUndefined();
+    expect(getProductImage('Eversolo', 'DMP-A6 Gen 2')).toContain('gen2');
+  });
+
+  it('the Leben CS600X gets no image while only a CS600 asset is held', async () => {
+    const { getProductImage } = await import('@/lib/product-images');
+    expect(getProductImage('Leben', 'CS600X')).toBeUndefined();
+    expect(getProductImage('Leben', 'CS600')).toContain('leben-cs600');
+  });
+
+  it('the JOB Integrated never receives the JOB 225 asset', async () => {
+    // The registry holds an exactly-keyed `job integrated` entry, so this is
+    // about the sibling trap rather than absence: whatever the Integrated
+    // shows, it must never be the 225's photograph.
+    const { getProductImage } = await import('@/lib/product-images');
+    const integrated = getProductImage('JOB', 'Integrated');
+    const two25 = getProductImage('JOB', '225');
+    expect(integrated).not.toBe(two25);
+    expect(integrated).not.toContain('12146-2');
+  });
+});
