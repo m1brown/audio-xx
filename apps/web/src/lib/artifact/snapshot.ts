@@ -40,6 +40,7 @@
  * rather than aspirational.
  */
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
+import type { DossierView } from '../evidence/dossier-presentation';
 
 export const ASSESSMENT_SCHEMA_V1 = 'axx.assessment.v1' as const;
 
@@ -92,6 +93,20 @@ export interface AssessmentSnapshotV1 {
   /** The diagnostic question the assessment closed on. */
   question?: string;
 
+  /**
+   * Component dossiers, exactly as the presentation layer resolved them.
+   *
+   * Carried rather than recomputed. The artifact previously rendered NEITHER
+   * dossiers nor the tonal signature, so `VIEW ASSESSMENT` showed strictly
+   * less than the conversation it froze — four component cards on Nathan and
+   * the Warm/Balanced/Elastic graph on FRANCE simply disappeared.
+   *
+   * `DossierView` already holds the primary/secondary/gap decisions. The
+   * renderer displays them and makes none of its own: a second editorial
+   * selection layer is how two surfaces start disagreeing about what is known.
+   */
+  componentDossiers?: DossierView[];
+
   relations?: SnapshotRelation[];
   /** What Audio XX did not hold, as stated to the listener. */
   coverageNote?: string;
@@ -126,7 +141,10 @@ const paragraphs = (v: string | undefined): string[] =>
  */
 export function snapshotFromCanonical(
   cam: CanonicalAssessment,
-  meta: { engineVersion: string; createdAt: string; actionVerdict?: string },
+  meta: {
+    engineVersion: string; createdAt: string; actionVerdict?: string;
+    componentDossiers?: DossierView[];
+  },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
   if (cam.reading.engineering.length) {
@@ -154,6 +172,7 @@ export function snapshotFromCanonical(
     cost: cam.guidance.oneCost,
     sections,
     operatingCondition: cam.reading.operatingCondition,
+    componentDossiers: meta.componentDossiers,
     evidenceStatement: cam.evidence.statement,
     primarySources: cam.evidence.primarySources,
   };
@@ -180,6 +199,7 @@ export function snapshotFromProvisional(
     components: Array<{ name: string; role?: string }>;
     /** The coverage statement, when the assessment carried one. */
     coverageNote?: string;
+    componentDossiers?: DossierView[];
   },
 ): AssessmentSnapshotV1 {
   const basisFor = new Map(
@@ -206,6 +226,7 @@ export function snapshotFromProvisional(
     relations: (response.systemRelations ?? []).map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.tier,
     })),
+    componentDossiers: meta.componentDossiers,
     coverageNote: meta.coverageNote,
     // The provisional path states its evidence position in prose — the
     // coverage note — rather than in a source line. Asserting source classes

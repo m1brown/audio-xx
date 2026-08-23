@@ -3300,6 +3300,7 @@ export default function Home() {
               components: orderedComponents.map((c) => ({
                 name: c.displayName, role: c.role,
               })),
+              componentDossiers: dossierViews,
             })).then((viewToken) => {
               if (viewToken) {
                 dispatch({ type: 'SET_ARTIFACT_TOKEN', id: provisionalMsgId, viewToken });
@@ -3359,6 +3360,7 @@ export default function Home() {
             engineVersion: 'prod',
             createdAt: new Date().toISOString(),
             actionVerdict: assessmentResult.response?.actionVerdict,
+            componentDossiers: assessmentResult.response?.componentDossiers,
           })).then((viewToken) => {
             if (viewToken) {
               dispatch({ type: 'SET_ARTIFACT_TOKEN', id: assessmentMsgId, viewToken });

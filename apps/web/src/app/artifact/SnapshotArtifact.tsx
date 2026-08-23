@@ -12,6 +12,89 @@
  */
 import React from 'react';
 import type { AssessmentSnapshotV1 } from '@/lib/artifact/snapshot';
+import type { AxisReading } from '@/lib/artifact/canonical';
+import type { DossierView } from '@/lib/evidence/dossier-presentation';
+
+/**
+ * The tonal signature, plotted from the reading the snapshot froze.
+ *
+ * `pole` and `position` were both decided upstream by the single numeric
+ * derivation in `axis-poles.ts`. Nothing is recomputed here — recomputing a
+ * pole in a renderer is how the same axis came to be stated three ways.
+ */
+function TonalSignature({ axes }: { axes: AxisReading[] }) {
+  return (
+    <section aria-label="Tonal signature">
+      <h2 className="axx-label">Tonal signature</h2>
+      {axes.map((a) => (
+        <div key={a.axis} className="axx-axis">
+          <span className="axx-axis-left">{a.left}</span>
+          <span className="axx-axis-track" aria-hidden>
+            <span className="axx-axis-mark" style={{ left: `${a.position}%` }} />
+          </span>
+          <span className="axx-axis-right">{a.right}</span>
+          <span className="axx-axis-pole">
+            {a.pole === 'neutral' ? 'Balanced' : a.pole === 'left' ? a.left : a.right}
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/**
+ * Component dossiers, displayed exactly as the presentation layer resolved
+ * them — primary lines, then the gaps it judged decision-relevant, then the
+ * detail it demoted. This component chooses nothing.
+ */
+function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
+  return (
+    <section aria-label="The components">
+      <h2 className="axx-label">The components</h2>
+      {dossiers.map((d) => (
+        <div key={d.displayName} className="axx-component">
+          <h3 className="axx-component-name">{d.displayName}</h3>
+
+          {d.primary.map((l, i) => (
+            <p key={i} className="axx-fact">
+              <span className="axx-fact-label">{l.label}</span>
+              <span className="axx-fact-value">
+                {l.value}
+                {l.standing && (
+                  <em> — {l.standing}{l.publication ? ` by ${l.publication}` : ''}, not maker-published</em>
+                )}
+              </span>
+            </p>
+          ))}
+
+          {d.detailSummary && <p className="axx-fact-muted">{d.detailSummary}</p>}
+
+          {d.gaps.map((g, i) => (
+            <p key={i} className="axx-fact-muted">Not established: {g}.</p>
+          ))}
+
+          {/* Open on the artifact: this is the finished document, not a
+              working surface, and a reader who opened it wants what is held. */}
+          {d.secondary.length > 0 && (
+            <div className="axx-component-detail">
+              {d.secondary.map((l, i) => (
+                <p key={i} className="axx-fact">
+                  <span className="axx-fact-label">{l.label}</span>
+                  <span className="axx-fact-value">
+                    {l.value}
+                    {l.standing && (
+                      <em> — {l.standing}{l.publication ? ` by ${l.publication}` : ''}, not maker-published</em>
+                    )}
+                  </span>
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+}
 
 export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSnapshotV1 }) {
   const s = snapshot;
@@ -30,6 +113,10 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
         <p className="axx-verdict">{s.verdict}</p>
         {s.standfirst && <p className="axx-standfirst">{s.standfirst}</p>}
       </section>
+
+      {s.tonalSignature && s.tonalSignature.length > 0 && (
+        <TonalSignature axes={s.tonalSignature} />
+      )}
 
       {s.recognition && (
         <section aria-label="Recognition">
@@ -58,6 +145,10 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
           <h2 className="axx-label">Operating condition</h2>
           <p>{s.operatingCondition}</p>
         </section>
+      )}
+
+      {s.componentDossiers && s.componentDossiers.length > 0 && (
+        <Dossiers dossiers={s.componentDossiers} />
       )}
 
       {s.question && (

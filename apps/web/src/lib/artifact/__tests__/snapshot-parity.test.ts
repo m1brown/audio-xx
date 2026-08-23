@@ -202,9 +202,82 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     const fs = await import('node:fs/promises');
     const src = await fs.readFile(new URL('../snapshot.ts', import.meta.url), 'utf8');
     const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-    // Type-only import of the CAM is the single dependency, and it carries no
-    // runtime code. Anything else here is a path back to reasoning.
-    expect(imports).toEqual(['./canonical']);
-    expect(src).toMatch(/import type \{[^}]+\} from '\.\/canonical'/);
+    // Two dependencies, both TYPE-ONLY, both carrying no runtime code: the
+    // CAM and the dossier view. Anything else here is a path back to
+    // reasoning, and every import is asserted to be `import type`.
+    expect(imports).toEqual(['./canonical', '../evidence/dossier-presentation']);
+    for (const i of imports) {
+      expect(src, i).toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./]/g, '\\$&')}'`));
+    }
+  });
+});
+
+describe('THE ARTIFACT IS NO LONGER A SUBSET OF THE CONVERSATION', () => {
+  // Before this change `SnapshotArtifact` rendered neither dossiers nor the
+  // tonal signature, so VIEW ASSESSMENT showed strictly LESS than the
+  // conversation it froze: four component cards vanished on Nathan and the
+  // Warm/Balanced/Elastic graph vanished on FRANCE.
+  const dossiers = [
+    { displayName: 'Butler Monads',
+      primary: [{ label: 'power output', value: '200 W into 4 ohms' }],
+      secondary: [{ label: 'tube complement', value: 'Butler Model 300B' }],
+      gaps: [], hasDetail: true },
+    { displayName: 'Acora QRC-2',
+      primary: [{ label: 'impedance', value: '4 ohm' }],
+      secondary: [], gaps: ['sensitivity from Acora'], hasDetail: false },
+  ];
+
+  it('carries dossiers through the provisional path', () => {
+    const snap = snapshotFromProvisional(NATHAN_CONVERSATION, {
+      ...meta, components: [{ name: 'Butler Monads' }], componentDossiers: dossiers as never,
+    });
+    expect(snap.componentDossiers).toHaveLength(2);
+    expect(snap.componentDossiers![0].primary[0].value).toBe('200 W into 4 ohms');
+    expect(snap.componentDossiers![1].gaps[0]).toContain('sensitivity');
+  });
+
+  it('carries dossiers through the catalog path', () => {
+    const r = runArtifactPipeline('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV')!;
+    const snap = snapshotFromCanonical(r.canonical, { ...meta, componentDossiers: dossiers as never });
+    expect(snap.componentDossiers).toHaveLength(2);
+  });
+
+  it('carries the tonal signature the graph reads', () => {
+    const r = runArtifactPipeline('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV')!;
+    const snap = snapshotFromCanonical(r.canonical, meta);
+    expect(snap.tonalSignature).toEqual(r.canonical.identity.tonalSignature);
+    expect(snap.tonalSignature!.length).toBe(3);
+  });
+
+  it('survives storage unchanged, dossiers included', () => {
+    const snap = snapshotFromProvisional(NATHAN_CONVERSATION, {
+      ...meta, components: [{ name: 'Butler Monads' }], componentDossiers: dossiers as never,
+    });
+    const reopened = parseSnapshot(freezeSnapshot(snap))!;
+    expect(reopened.componentDossiers).toEqual(snap.componentDossiers);
+    expect(reopened).toEqual(snap);
+  });
+
+  it('omits the field entirely when no dossier was produced', () => {
+    // Absent must stay absent — the renderer must not draw an empty region.
+    const snap = snapshotFromProvisional(NATHAN_CONVERSATION, {
+      ...meta, components: [{ name: 'Butler Monads' }],
+    });
+    expect(snap.componentDossiers).toBeUndefined();
+  });
+});
+
+describe('the renderer selects nothing', () => {
+  it('displays the buckets the presentation layer already decided', async () => {
+    const fs = await import('node:fs/promises');
+    const src = await fs.readFile(
+      new URL('../../../app/artifact/SnapshotArtifact.tsx', import.meta.url), 'utf8');
+    // It reads primary/secondary/gaps/detailSummary and never re-derives them.
+    expect(src).toMatch(/d\.primary\.map/);
+    expect(src).toMatch(/d\.secondary\.map/);
+    expect(src).toMatch(/d\.gaps\.map/);
+    expect(src).not.toMatch(/presentDossier|dossierFor|specRoleFor|worthRendering/);
+    // And it plots the frozen pole rather than recomputing one.
+    expect(src).not.toMatch(/poleFor|committedValue|BALANCED_BAND|0\.35/);
   });
 });

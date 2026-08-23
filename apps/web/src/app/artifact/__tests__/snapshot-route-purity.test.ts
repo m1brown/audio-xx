@@ -12,7 +12,22 @@ import { join } from 'node:path';
  */
 const ROOT = join(process.cwd(), 'apps/web/src');
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8');
+/**
+ * RUNTIME imports only.
+ *
+ * `import type` is erased by the compiler and emits nothing, so it cannot
+ * execute a reasoning function however the file is later edited. Counting it
+ * would force the renderer to duplicate type declarations to stay "pure",
+ * which trades a real guarantee for a cosmetic one.
+ */
 const importsOf = (src: string) =>
+  [...src.matchAll(/(?<!import type[^;]{0,200})\bfrom\s+'([^']+)'/g)]
+    .filter((m) => !/import\s+type\s*\{[^}]*\}\s*$/.test(
+      src.slice(Math.max(0, m.index! - 200), m.index)))
+    .map((m) => m[1]);
+
+/** Every import in the file, type-only included. */
+const allImportsOf = (src: string) =>
   [...src.matchAll(/from\s+'([^']+)'/g)].map((m) => m[1]);
 
 /** Anything that could recognise a product or produce an assessment. */
@@ -35,9 +50,15 @@ describe('render-only routes cannot reach reasoning', () => {
   for (const file of RENDER_ONLY) {
     it(`${file} imports no reasoning module`, () => {
       expect(existsSync(join(ROOT, file)), `${file} missing`).toBe(true);
-      const offenders = importsOf(read(file))
+      const src = read(file);
+      const offenders = importsOf(src)
         .filter((i) => REASONING.some((r) => i.startsWith(r)));
       expect(offenders).toEqual([]);
+      // Any reasoning-adjacent module that IS referenced must be type-only.
+      for (const i of allImportsOf(src).filter((x) => REASONING.some((r) => x.startsWith(r)))) {
+        expect(src, `${file} must import ${i} as a type`)
+          .toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./@]/g, '\\$&')}'`));
+      }
     });
   }
 
