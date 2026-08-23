@@ -1,5 +1,6 @@
 import React from 'react';
 import './artifact.css';
+import './assessment-doc.css';
 
 /**
  * Artifact route layout. The wrapper class lets the stylesheet strip the
