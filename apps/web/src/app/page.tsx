@@ -3,7 +3,6 @@
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { getProductImageEntry } from '@/lib/product-images';
 import { isMakerPublished } from '@/lib/evidence/manufacturer-facts';
-import { buildProductLinks } from '@/lib/product-links';
 import { buildComponentViews } from '@/lib/system-component-view';
 import { tierFor } from '@/lib/entity-corroboration';
 import Link from 'next/link';
@@ -159,24 +158,9 @@ function buildDossierViews(
     // recorded rights. Nothing admissible for this product yields `undefined`,
     // which every surface renders as nothing at all.
     const admitted = getProductImageEntry(undefined, c.displayName);
-    // Resources travel WITH the component, from its canonical identity — the
-    // same construction the conversation card used, now attached to the one
-    // dossier that represents this box on every surface.
-    let resources: Array<{ label: string; url: string }> | undefined;
-    try {
-      const built = buildProductLinks({ brand: '', name: c.displayName });
-      const picked = [
-        built.usedLinks.find((l) => /hifishark/i.test(l.url)),
-        built.usedLinks.find((l) => /ebay\./i.test(l.url)),
-      ].filter(Boolean) as Array<{ label: string; url: string }>;
-      if (picked.length) resources = picked.map((l) => ({ label: l.label, url: l.url }));
-    } catch {
-      // A convenience link that fails to build must never affect the assessment.
-    }
     return {
       ...view,
       role: c.role,
-      ...(resources ? { resources } : {}),
       ...(admitted ? { image: { url: admitted.url, credit: admitted.source?.credit } } : {}),
     };
   }).filter(worthRendering);
@@ -3336,6 +3320,20 @@ export default function Home() {
               })),
               provisionalAdvisory.componentProvenance,
             );
+
+            // Resources travel with the ONE dossier that represents each box.
+            // Taken from the component views rather than rebuilt, so the query
+            // is constructed once, from canonical identity, and the artifact
+            // cannot search for something different from the conversation.
+            for (const d of dossierViews) {
+              const view = provisionalAdvisory.systemComponentViews
+                ?.find((v) => v.displayName === d.displayName || v.listenerName === d.displayName);
+              const picked = [
+                view?.hifiSharkUrl ? { label: 'HiFiShark', url: view.hifiSharkUrl } : null,
+                view?.ebayUrl ? { label: 'eBay', url: view.ebayUrl } : null,
+              ].filter(Boolean) as Array<{ label: string; url: string }>;
+              if (picked.length) d.resources = picked;
+            }
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified
             // ResponseHeader renders the calm indicator + caption

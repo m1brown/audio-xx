@@ -5608,20 +5608,17 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     <>
       {/* SYSTEM REVIEW — the same composed analysis the artifact renders, from
         * the same call. Composing separately per surface is how two renderings
-        * of one payload drift apart. */}
+        * of one payload drift apart.
+        *
+        * NO heading of its own: the response already opens with the SYSTEM
+        * REVIEW mode label, and a second identical heading lower down read as
+        * two sections rather than one continuing. The paragraphs simply
+        * continue the assessment they belong to, and precede YOUR SYSTEM. */}
       {advisory.systemReview && advisory.systemReview.length > 0 && (
-        <section style={{ marginTop: '1.4rem' }} aria-label="System review">
-          <div style={{
-            fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-            fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em',
-            textTransform: 'uppercase', color: 'var(--xx-accent, #A6432C)',
-            marginBottom: '0.7rem',
-          }}>
-            System review
-          </div>
+        <section style={{ marginTop: '1rem' }} aria-label="System review">
           {advisory.systemReview.map((p, i) => (
             <p key={i} style={{
-              margin: '0 0 0.8rem 0', fontSize: FONTS.bodySize,
+              margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize,
               lineHeight: FONTS.lineHeight,
             }}>{p}</p>
           ))}
