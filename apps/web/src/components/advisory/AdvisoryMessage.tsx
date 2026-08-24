@@ -265,10 +265,27 @@ function ResponseHeader({ advisory: a }: { advisory: AdvisoryResponse }) {
   const modeLabel = a.advisoryMode && a.advisoryMode !== 'general'
     ? MODE_LABELS[a.advisoryMode]
     : null;
-  const showReasoning = a.reasoningMode === 'expanded';
-  const showCaption = showReasoning && !!a.fallbackReason;
 
-  if (!modeLabel && !showReasoning) return null;
+  // EXPANDED REASONING IS NOT SHOWN TO THE READER (2026-08-24).
+  //
+  // "Expanded reasoning" names an internal EXECUTION MODE, and its caption —
+  // "Using expanded reasoning because parts of this system sit outside Audio
+  // XX's curated catalog" — told the listener something the assessment already
+  // says, less precisely and one beat earlier:
+  //
+  //   "Audio XX does not hold enough product-specific listening evidence for
+  //    most of this chain — ARC ref 5, Butler Monads, Acora QRC-2 — to make a
+  //    defensible system-wide tonal judgment."
+  //
+  // That sentence names the components, says what IS held, and says what
+  // cannot be concluded from it. The badge said only that a different code
+  // path ran. Two statements of one fact, and the weaker one came first.
+  //
+  // The signal is retained on the payload for observability; what changes is
+  // that implementation state stops being editorial furniture.
+  if (!modeLabel) return null;
+  const showReasoning = false;
+  const showCaption = false;
 
   return (
     <>
@@ -2221,6 +2238,20 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
 // context, and archetype. When profile is incomplete, shows a
 // transparent note about what's missing.
 
+/**
+ * Does this turn actually solicit recommendations?
+ *
+ * Only a mode whose OUTPUT is a set of picks may ask the listener for the
+ * inputs that sharpen picks. A system review, a product assessment or a
+ * knowledge answer must not: the listener asked a question about equipment,
+ * not for a shortlist.
+ */
+function solicitsPicks(advisoryMode?: string): boolean {
+  return advisoryMode === 'gear_advice'
+    || advisoryMode === 'upgrade_suggestions'
+    || advisoryMode === 'gear_comparison';
+}
+
 function AudioPreferencesBlock({ profile, advisoryMode, namedProduct, coverageGap }: {
   profile: AudioProfile;
   advisoryMode?: string;
@@ -2454,8 +2485,23 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct, coverageGa
         </div>
       )}
 
-      {/* Missing dimensions note — one italic invitation line. */}
-      {!profile.profileComplete && profile.missingDimensions && profile.missingDimensions.length > 0 && (
+      {/* Missing dimensions note — one italic invitation line.
+        *
+        * ONLY where the listener asked for picks. "For sharper picks, tell me
+        * about your sonic preferences and budget" appeared under a SYSTEM
+        * ASSESSMENT, where nobody asked to be sold anything: the listener
+        * asked what Audio XX makes of the system they already own, and was
+        * answered with a request for their budget.
+        *
+        * It rendered because the invitation was gated on the PROFILE being
+        * incomplete rather than on the listener wanting recommendations.
+        * Sparse evidence about a listener is not shopping intent — it is
+        * simply sparse evidence, and an assessment is entitled to say so
+        * without asking what they are willing to spend.
+        */}
+      {solicitsPicks(advisoryMode)
+        && !profile.profileComplete
+        && profile.missingDimensions && profile.missingDimensions.length > 0 && (
         <p style={{
           margin: '0.75rem 0 0 0',
           fontSize: '0.86rem',
@@ -4788,7 +4834,11 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               const BASIS_LABEL: Record<string, string> = {
                 catalog: 'Audio XX catalog',
                 brand: 'Audio XX brand evidence',
-                model: 'Expanded reasoning',
+                // NOT "Expanded reasoning" — that named the code path, not the
+                // evidence. `model` basis means Audio XX independently
+                // corroborated that this exact product is real but holds no
+                // curated record of how it sounds. Say that.
+                model: 'Identity corroborated',
                 user: 'Your description only',
               };
               const BASIS_TONE: Record<string, string> = {
@@ -4838,21 +4888,47 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
                       }}>
                         {BASIS_LABEL[c.basis]}
                       </span>
-                      {/* Discovery links. Zero evidentiary authority, and no
-                        * claim that a listing currently exists. */}
-                      {c.hifiSharkUrl && (
-                        <a href={c.hifiSharkUrl} target="_blank" rel="noopener noreferrer nofollow"
-                          style={{ fontSize: '0.78rem', color: '#6B6862' }}>
-                          HiFiShark
-                        </a>
-                      )}
-                      {c.ebayUrl && (
-                        <a href={c.ebayUrl} target="_blank" rel="noopener noreferrer nofollow"
-                          style={{ fontSize: '0.78rem', color: '#6B6862' }}>
-                          eBay
-                        </a>
-                      )}
                     </div>
+                    {/* RESOURCES — subordinate to identity and evidence.
+                      *
+                      * These sat inline with the provenance badge, at the same
+                      * size and in the same row, so "Audio XX catalog" and
+                      * "eBay" read as two facts of one kind. They are not: one
+                      * states what Audio XX knows about the component, the
+                      * other is a place to go shopping. Ranking them equally
+                      * put a marketplace beside the evidence record.
+                      *
+                      * Moved to their own line, quieter, behind a label that
+                      * says what they are. Nothing about which links are
+                      * generated, their targets or their tags changes here —
+                      * this is placement and weight only.
+                      */}
+                    {(c.hifiSharkUrl || c.ebayUrl) && (
+                      <div style={{
+                        display: 'flex', flexWrap: 'wrap', alignItems: 'baseline',
+                        gap: '0.55rem', marginTop: '0.35rem',
+                      }}>
+                        <span style={{
+                          fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                          fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.09em',
+                          textTransform: 'uppercase', color: '#9A968E',
+                        }}>
+                          Find one
+                        </span>
+                        {c.hifiSharkUrl && (
+                          <a href={c.hifiSharkUrl} target="_blank" rel="noopener noreferrer nofollow"
+                            style={{ fontSize: '0.72rem', color: '#8A867E' }}>
+                            HiFiShark
+                          </a>
+                        )}
+                        {c.ebayUrl && (
+                          <a href={c.ebayUrl} target="_blank" rel="noopener noreferrer nofollow"
+                            style={{ fontSize: '0.72rem', color: '#8A867E' }}>
+                            eBay
+                          </a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

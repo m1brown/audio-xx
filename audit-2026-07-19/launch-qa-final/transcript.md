@@ -11,16 +11,20 @@
 **Response:**
 
 [introSummary]
-A reference-level system voiced toward warmth and body, ease and flow, and grip and composure. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward tight damping and control across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
+A reference-level system voiced toward warmth and body, ease and flow, and grip and composure. The components share a consistent voicing direction. The system leans toward tight damping and control across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
 
 [systemContext]
 **System read**
 
 The Hegel H190 leans toward resolution and precision, with the Harbeth Shl5+ supplying all of the warmth. In practice the two tendencies should balance each other — clarity from the electronics, body from the speakers. The Hegel H190 paired with warm or tonally dense speakers is a documented match: the slight warmth adds up agreeably — control and grip from the amp, tonal body from the speakers. This system reflects a listener drawn to rich tone, continuity, and timbral depth. This system is centered on tonal ease and long-session comfort.
 
+**Emergent behavior**
+
+The Bluesound NODE/Hegel H190/Shl5+ chain works because the speaker reaches loud levels well within the amp's clean output. Bluesound NODE's transparent feed and the Hegel H190's amplification feed the Shl5+'s final voicing, so dynamic peaks land without compression at typical listening levels.
+
 **System logic**
 Hegel H190 → Class AB solid-state with SoundEngine2, 150W into 8Ω → carries the Bluesound's character forward
-Harbeth Shl5+ → BBC-tradition thin-wall ported box → reinforces the direction the Bluesound sets
+Harbeth Shl5+ → BBC-tradition thin-wall ported box, 6Ω nominal → reinforces the direction the Bluesound sets
 Bluesound NODE → tone-rich, smooth → adds warmth from the source stage
 Hegel H190 pushes toward precision. The Harbeth Shl5+ alone restores weight.
 
@@ -53,7 +57,7 @@ CHANGE the streamer only when you're ready for an upgrade — nothing is wrong, 
 If this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the Harbeth Shl5+'s careful compensation for Hegel H190 precision.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Bluesound NODE, Hegel H190, Harbeth Shl5+ share this design philosophy. The system leans toward tight damping and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Bluesound NODE, Hegel H190, Harbeth Shl5+ share a design philosophy emphasising **harmonic richness and tonal weight**. The system leans toward tight damping and control, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 Hegel H190 adds composure under complex passages
@@ -64,7 +68,7 @@ Complex, dense recordings could sound congested
 Stacked control may sound overdamped — reducing dynamic expression and musical life
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -82,7 +86,7 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [introSummary]
-A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
+A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. The components share a consistent voicing direction. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
 
 [systemContext]
 **System read**
@@ -103,13 +107,13 @@ Each component contributes to the system's speed, elasticity, and tonal body.
 
 None — no obvious bottleneck.
 
-No single component is holding this system back; from here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.
+Nothing in what I could assess is holding this system back. I could not check whether the amplifier and loudspeakers suit each other — that needs a power rating and a sensitivity figure, and at least one is missing. From here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.
 
 **Decision**
 
 KEEP if you value speed, separation, spatial clarity.
 
-CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.
+CHANGE — I cannot say. Nothing I could assess needs correcting, but I could not verify that the amplifier and loudspeakers suit each other, so I cannot tell you the system as a whole is where you want it. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.
 
 **Trade-offs**
 
@@ -127,7 +131,7 @@ CHANGE only as a matter of taste — nothing needs correcting. The DAC is the fi
 If this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the system's deliberate balance of speed, elasticity, and tonal body.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Job integrated, WLM Diva monitor, Eversolo DMP-A6 share this design philosophy. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Job integrated, WLM Diva monitor, Eversolo DMP-A6 share a design philosophy emphasising **harmonic richness and tonal weight and dynamic elasticity**. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 WLM Diva monitor contributes musical flow and continuity
@@ -136,7 +140,7 @@ WLM Diva monitor contributes musical flow and continuity
 WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -163,19 +167,19 @@ The Nad C3050 and KEF LS50 Meta form a system that puts grip and composure first
 
 **System logic**
 KEF LS50 Meta → fast, controlled presentation → reinforces the system's overall lean
-Nad C3050 → neutral, controlled → contributes to overall character
+Nad C3050 → not identified — no sonic character claimed → occupies the other position
 
 **Primary leverage**
 
 None — no obvious bottleneck.
 
-No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
+Nothing in what I could assess is holding this system back. This reading excludes the Nad C3050, which I could not identify. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
 
 **Decision**
 
 KEEP if you value balance, coherence.
 
-No single component demands change — improvements from here are preference, not correction.
+No component I could assess demands change. This reading excludes the Nad C3050, which I could not identify.
 
 **Trade-offs**
 
@@ -189,7 +193,7 @@ No single component demands change — improvements from here are preference, no
 
 **Do nothing check**
 
-If the music sounds engaging, this system is doing its job. Nad C3050 define the character — changing either reshapes what you hear.
+If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
 
 [keyObservation]
 This system is architecturally balanced. No single design philosophy dominates. Upgrades from here are about refinement — choosing which quality to intensify. The risk is low; the system tolerates experimentation in any direction.
@@ -198,7 +202,7 @@ This system is architecturally balanced. No single design philosophy dominates. 
 System character depends on how components interact in practice — further listening context would refine this
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -216,29 +220,28 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [introSummary]
-A system with no strong lean in any single direction. The overall character emerges from how these components interact rather than any single piece dominating.
+A system voiced toward warmth and body, and grip and composure. The overall character emerges from how these components interact rather than any single piece dominating.
 
 [systemContext]
 **System read**
 
-The Luxman L-509Z leans toward tonal richness, reinforced by the Focal Sopra No.2. In practice, warmth and body set the tone throughout.
+The Luxman L-509Z leans toward tonal richness, reinforced by the . In practice, warmth and body set the tone throughout. This system reflects a listener drawn to composure, articulation, and dynamic control.
 
 **System logic**
-Luxman L-509Z → tone-rich, high control → preserves upstream character
-Focal Sopra No.2 → neutral, controlled → reinforces the system's overall lean
-Luxman L-509Z and Focal Sopra No.2 reinforce the same direction.
+Luxman L-509Z → tone-rich, high control → preserves speed and edge
+Focal Sopra No.2 → not identified — no sonic character claimed → occupies the speaker position
 
 **Primary leverage**
 
 None — no obvious bottleneck.
 
-No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
+Nothing in what I could assess is holding this system back. This reading excludes the Focal Sopra No.2, which I could not identify. I could not check whether the amplifier and loudspeakers suit each other — that needs a power rating and a sensitivity figure, and at least one is missing. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
 
 **Decision**
 
 KEEP if you value warmth, body, tonal richness.
 
-No single component demands change — improvements from here are preference, not correction.
+No component I could assess demands change. This reading excludes the Focal Sopra No.2, which I could not identify.
 
 **Trade-offs**
 
@@ -252,16 +255,16 @@ No single component demands change — improvements from here are preference, no
 
 **Do nothing check**
 
-If the music sounds engaging, this system is doing its job. Focal Sopra No.2 define the character — changing either reshapes what you hear.
+If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
 
 [keyObservation]
-This system is architecturally balanced. No single design philosophy dominates. Upgrades from here are about refinement — choosing which quality to intensify. The risk is low; the system tolerates experimentation in any direction.
+Focal Sopra No.2, Luxman L-509Z share a design philosophy emphasising **harmonic richness and tonal weight**. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 System character depends on how components interact in practice — further listening context would refine this
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -279,23 +282,23 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [introSummary]
-A system with no strong lean in any single direction. This is a coherent, deliberately assembled system. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation.
+A system voiced toward fine detail, and rhythmic life. The components share a consistent voicing direction. The system leans toward elasticity across multiple stages — this shapes both its strengths and its primary limitation. The axis profile points toward a listener who prioritises timing accuracy, low stored energy, and rhythmic articulation. This system rewards recordings with good transient information and tends to expose compression or overdamping elsewhere in the system.
 
 [systemContext]
 **System read**
 
-The Decware Se84ufo leans toward warmth and ease, reinforced by the Klipsch Cornwall IV. In practice, warmth and body set the tone throughout.
+The Decware Se84ufo leans toward warmth and ease, reinforced by the Klipsch Cornwall IV. The Decware Se84ufo and Klipsch Cornwall IV are well-matched on power and efficiency. the low wattage comes alive — full dynamic range and spatial scale from minimal power The Decware Se84ufo paired with high-efficiency speakers (94dB+) is a documented match: the low wattage comes alive — full dynamic range and spatial scale from minimal power. This system reflects a listener drawn to precise timing, agility, and dynamic immediacy.
 
 **System logic**
 Decware Se84ufo → Single-ended triode, SV83 output tubes → preserves upstream character
-Klipsch Cornwall IV → neutral, controlled → reinforces the system's overall lean
+Klipsch Cornwall IV → three-way horn-loaded with 15in direct-radiating woofer → reinforces the system's overall lean
 Decware Se84ufo and Klipsch Cornwall IV reinforce the same direction.
 
 **Primary leverage**
 
-System balance (tonal richness).
+None — no obvious bottleneck.
 
-The chain stacks tonal richness in one direction. Rebalance it and the system serves more material.
+No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
 
 **Decision**
 
@@ -318,16 +321,17 @@ No single component demands change — improvements from here are preference, no
 If the music sounds engaging, this system is doing its job. Klipsch Cornwall IV define the character — changing either reshapes what you hear.
 
 [keyObservation]
-Despite broadly balanced axis positions, the system stacks tonal richness across multiple components. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.
+Decware Se84ufo, Klipsch Cornwall IV share a design philosophy emphasising **timing accuracy and speed and dynamic elasticity**. The system leans toward elasticity, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
-Consistent warmth and body — midrange should feel present and immersive
-Musical flow and ease — the system prioritises listening pleasure over analytical scrutiny
-Dynamic engagement — the system should convey energy and rhythmic involvement
 Decware Se84ufo contributes musical flow and continuity
 
+[assessmentLimitations]
+Stacked elasticity may lose composure on complex orchestral or dense electronic material
+Klipsch Cornwall IV has high placement sensitivity: Large cabinet with rear Tractrix ports. Bass loading depends on distance to the wall behind; the design assumes reinforcement rather than free space. Needs room volume to work — this is not a small-room speaker.
+
 [upgradeDirection]
-Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -345,7 +349,7 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [introSummary]
-A system voiced toward fine detail. This is a coherent, deliberately assembled system. The system leans toward resolution and fine detail across multiple stages — this shapes both its strengths and its primary limitation.
+A system voiced toward fine detail. The components share a consistent voicing direction. The system leans toward resolution and fine detail across multiple stages — this shapes both its strengths and its primary limitation.
 
 [systemContext]
 **System read**
@@ -385,7 +389,7 @@ No single component demands change — improvements from here are preference, no
 If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **timing accuracy and speed**. Benchmark ahb2, Magnepan 1.7i share this design philosophy. The system leans toward resolution and fine detail, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Benchmark ahb2, Magnepan 1.7i share a design philosophy emphasising **timing accuracy and speed**. The system leans toward resolution and fine detail, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 Benchmark ahb2 provides strong spatial definition
@@ -397,7 +401,7 @@ Resolution repeats at several stages — lesser recordings may sound analytical 
 Magnepan 1.7i has high placement sensitivity: Dipole design — requires distance from rear wall. Needs medium-to-large room for proper bass development and soundstage.
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -447,7 +451,7 @@ You described the Chord Qutest as a speaker, but our data has it as a DAC. What 
 **Response:**
 
 [introSummary]
-A system voiced toward fine detail, and grip and composure. This is a coherent, deliberately assembled system. The system shares a consistent lean toward tonal richness — this defines the system's sonic identity rather than limiting it. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.
+A system voiced toward fine detail, and grip and composure. The components share a consistent voicing direction. The system shares a consistent lean toward tonal richness — this defines the system's sonic identity rather than limiting it. The system prioritises resolution, composure, and analytical transparency. This profile rewards well-recorded material and tends to expose source quality differences clearly.
 
 [systemContext]
 **System read**
@@ -464,7 +468,7 @@ Naim Nait 50 and Falcon Ls3/5a reinforce the same direction.
 
 None — no obvious bottleneck.
 
-No single component is holding this system back. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
+Nothing in what I could assess is holding this system back. I could not check whether the amplifier and loudspeakers suit each other — that needs a power rating and a sensitivity figure, and at least one is missing. Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.
 
 **Decision**
 
@@ -487,7 +491,7 @@ No single component demands change — improvements from here are preference, no
 If the music sounds engaging, this system is doing its job. Linn LP12 define the character — changing either reshapes what you hear.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **precision and control**. Falcon Ls3/5a, Naim Nait 50, Linn LP12 share this design philosophy. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Falcon Ls3/5a, Naim Nait 50, Linn LP12 share a design philosophy emphasising **precision and control**. The system shares a consistent lean toward tonal richness — this reinforces the system's identity. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 Falcon Ls3/5a contributes musical flow and continuity
@@ -500,7 +504,7 @@ Complex, dense recordings could sound congested
 Falcon Ls3/5a has high placement sensitivity: Sealed design is less placement-sensitive than reflex, but isolation and proper stands are essential for imaging.
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -518,7 +522,7 @@ What are you exploring — is there something you'd like to change about this ba
 **Response:**
 
 [introSummary]
-A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
+A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. The components share a consistent voicing direction. The system leans toward tonal richness across multiple stages — this shapes both its strengths and its primary limitation. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
 
 [systemContext]
 **System read**
@@ -532,7 +536,7 @@ The Pontus II/CS600X/O/96 chain works because speed is converted into elastic mo
 **System logic**
 Denafrips Pontus II → tone-rich, smooth conversion → anchors the tonal foundation with warmth
 Leben CS600X → Push-pull tube, KT77/KT88/EL34 output (user-swappable) → carries the Denafrips's character forward
-DeVore O/96 → high-efficiency wide-baffle two-way → reinforces the direction the Leben sets
+DeVore O/96 → high-efficiency wide-baffle two-way, 10Ω nominal, 96dB/W/M → reinforces the direction the Leben sets
 Leben CS600X and Denafrips Pontus II and DeVore O/96 reinforce the same direction.
 
 **Primary leverage**
@@ -564,7 +568,7 @@ CHANGE only as a matter of taste — nothing needs correcting. The DAC is the fi
 If the music sounds engaging, this system is doing its job. Leben CS600X and Denafrips Pontus II define the character — changing either reshapes what you hear.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Leben CS600X, Denafrips Pontus II, DeVore O/96 share this design philosophy. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Leben CS600X, Denafrips Pontus II, DeVore O/96 share a design philosophy emphasising **harmonic richness and tonal weight and dynamic elasticity**. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 Leben CS600X contributes musical flow and continuity
@@ -579,7 +583,7 @@ Stacked elasticity may lose composure on complex orchestral or dense electronic 
 DeVore O/96 has moderate placement sensitivity: Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up.
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -651,7 +655,7 @@ You described the Bluesound NODE as a DAC, but our data has it cataloged as a st
 **Response:**
 
 [introSummary]
-A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. This is a coherent, deliberately assembled system that likely punches above its price tier. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
+A reference-level system voiced toward warmth and body, ease and flow, and rhythmic life. The components share a consistent voicing direction. The system shares a consistent lean toward resolution and fine detail — this defines the system's sonic identity rather than limiting it. The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.
 
 [systemContext]
 **System read**
@@ -672,13 +676,13 @@ Each component contributes to the system's speed, elasticity, and tonal body.
 
 None — no obvious bottleneck.
 
-No single component is holding this system back; from here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.
+Nothing in what I could assess is holding this system back. I could not check whether the amplifier and loudspeakers suit each other — that needs a power rating and a sensitivity figure, and at least one is missing. From here, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the Eversolo DMP-A6 is where that adjustment starts.
 
 **Decision**
 
 KEEP if you value speed, separation, spatial clarity.
 
-CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.
+CHANGE — I cannot say. Nothing I could assess needs correcting, but I could not verify that the amplifier and loudspeakers suit each other, so I cannot tell you the system as a whole is where you want it. This system is intentionally speed-forward; change the DAC only if you want more tonal weight.
 
 **Trade-offs**
 
@@ -696,7 +700,7 @@ CHANGE only as a matter of taste — nothing needs correcting. The DAC is the fi
 If this balance of speed and clarity and just enough warmth is what you enjoy, leave the system alone. The risk of upgrading is losing the system's deliberate balance of speed, elasticity, and tonal body.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight and dynamic elasticity**. Job integrated, WLM Diva monitor, Eversolo DMP-A6 share this design philosophy. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Job integrated, WLM Diva monitor, Eversolo DMP-A6 share a design philosophy emphasising **harmonic richness and tonal weight and dynamic elasticity**. The system shares a consistent lean toward resolution and fine detail — this reinforces the system's identity. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 WLM Diva monitor contributes musical flow and continuity
@@ -705,7 +709,7 @@ WLM Diva monitor contributes musical flow and continuity
 WLM Diva monitor has moderate placement sensitivity: Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -782,7 +786,7 @@ CHANGE the dac if the system sounds constrained. Denafrips Ares II likely limits
 If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Denafrips Ares II, Wharfedale Linton, Rega share this design philosophy. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Denafrips Ares II, Wharfedale Linton, Rega share a design philosophy emphasising **harmonic richness and tonal weight**. The system leans toward tonal richness, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 System character depends on how components interact in practice — further listening context would refine this
@@ -792,7 +796,7 @@ Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -1369,7 +1373,7 @@ Are you considering this for a specific system, or exploring what it would bring
 **Response:**
 
 [introSummary]
-A system voiced toward warmth and body. This is a coherent, deliberately assembled system. The system leans toward grip and control across multiple stages — this shapes both its strengths and its primary limitation.
+A system voiced toward warmth and body. The components share a consistent voicing direction. The system leans toward grip and control across multiple stages — this shapes both its strengths and its primary limitation.
 
 [systemContext]
 **System read**
@@ -1408,7 +1412,7 @@ No single component demands change — improvements from here are preference, no
 If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.
 
 [keyObservation]
-Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal weight**. Hegel H190, Harbeth share this design philosophy. The system leans toward grip and control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.
+Hegel H190, Harbeth share a design philosophy emphasising **harmonic richness and tonal weight**. The system leans toward grip and control, which deepens this character but narrows the system's range. Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.
 
 [assessmentStrengths]
 Hegel H190 adds composure under complex passages
@@ -1418,7 +1422,7 @@ Stacked warmth may reduce transient precision and spatial clarity
 Complex, dense recordings could sound congested
 
 [upgradeDirection]
-This system leans clearly in one direction — that lean is its character by design, not a gap to fix. If you want to move it, name the quality you want more of.
+This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.
 
 [followUp]
 What are you exploring — is there something you'd like to change about this balance, or are you looking to understand what a specific upgrade path would shift?
@@ -1952,11 +1956,20 @@ Do you want this to lean more warm and punchy, or clean and controlled?
 
 **Expectation:** Tiered picks with an honest diminishing-returns story.
 
-**Routing:** audio_knowledge → llm-lane(audio_knowledge)
+**Routing:** shopping → shopping(amplifier)
 
 **Response:**
 
-(LLM lane — deterministic scaffold only; prod replaces with model prose. Fallback if LLM unavailable: "I don't have enough structured data to answer this question thoroughly. This topic falls outside my calibrated product database.")
+[expectedImpact]
+Without more system context, this is a sound direction — but the audible difference may be modest.
+
+[followUp]
+Do you want this to lean more warm and punchy, or clean and controlled?
+
+[options]
+• Leben CS300 ($2800) — Best for punchy and expressive and insistent rhythmic drive
+• Line Magnetic LM-211IA ($2800) — Best for relaxed, flowing musical phrasing and rich, warm, and harmonically saturated
+• Kinki Studio EX-M1+ ($2898) — Best for neutral and effortless composure
 
 ---
 

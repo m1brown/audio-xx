@@ -58,11 +58,13 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
             {d.displayName}
           </p>
           {d.primary.map((l, i) => <Line key={i} l={l} />)}
-          {d.detailSummary && (
-            <p style={{ margin: 0, fontSize: '0.84rem', color: COLOR.textMuted }}>
-              {d.detailSummary}
-            </p>
-          )}
+          {/* `detailSummary` is NOT rendered. It announced "4 published
+              details held" and then listed the four details immediately below
+              — a count of what the reader can already see. It made sense when
+              detail was collapsed behind a disclosure control; that control is
+              gone, so the sentence now only delays the facts. The field is
+              retained because `worthRendering` uses it to decide whether a
+              component holds enough to deserve a card at all. */}
 
           {d.gaps.map((g, i) => (
             <p key={i} style={{

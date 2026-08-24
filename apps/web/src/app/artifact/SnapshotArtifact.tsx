@@ -75,7 +75,7 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
 
           {d.primary.map((l, i) => <Fact key={i} l={l} />)}
 
-          {d.detailSummary && <p className="axx-fact-muted">{d.detailSummary}</p>}
+          {/* detailSummary deliberately not rendered — see ComponentDossiers. */}
 
           {d.gaps.map((g, i) => (
             <p key={i} className="axx-fact-muted">Not established: {g}.</p>
