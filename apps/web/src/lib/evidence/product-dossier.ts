@@ -194,6 +194,13 @@ export interface HeldSpec {
   value: string;
   sourceUrl?: string;
   quotedText?: string;
+  /**
+   * Who published it, decided by the caller that holds the URL.
+   *
+   * Absent means UNKNOWN, and unknown must not be read as the manufacturer —
+   * see the admission below.
+   */
+  sourceClass?: SourceClass;
 }
 
 /**
@@ -279,7 +286,14 @@ export function dossierFor(
       value: s.value,
       qualifier: s.field,
       specRole: specRoleFor(s.field, input.role),
-      sourceClass: 'maker_published',
+      // NOT unconditionally maker-published. Every held spec was labelled that
+      // way regardless of who served it, so the Audio Research DATABASE — a
+      // third-party enthusiast site — appeared in the evidence ledger as
+      // "published by the manufacturer". D-7: no claim stronger than its
+      // source. Where the publisher was not established, the honest class is
+      // the weaker one. The fact stays in the dossier either way; only the
+      // claim about its provenance changes.
+      sourceClass: s.sourceClass ?? 'third_party_reported',
       state: 'established',
       sourceUrl: s.sourceUrl,
       quotedText: s.quotedText,

@@ -122,6 +122,60 @@ export function isFirstPartySource(sourceUrl: string, productNameOrKey: string):
   return tokens.some((t) => hostKey.includes(t));
 }
 
+/**
+ * Is the maker itself the publisher of this document?
+ *
+ * STRICTER THAN `isFirstPartySource`, and deliberately a different question.
+ * Admission asks "is this close enough to the product's own web presence to
+ * be worth holding"; CLASSIFICATION asks "may Audio XX tell a reader the
+ * manufacturer published this". The second is a D-7 question and takes the
+ * stricter test.
+ *
+ * `isFirstPartySource` accepts a substring — `arcdbws`.includes(`arc`) — so
+ * the Audio Research DATABASE, a third-party enthusiast site, passed as Audio
+ * Research itself, and the evidence ledger duly reported "arcdb.ws — published
+ * by the manufacturer". That is the substring-identity hazard again, in
+ * provenance rather than in imagery.
+ *
+ * Here the host's registrable label must BE the product token, or the token
+ * followed by an ordinary company word. `acoraacoustics` is Acora; `dcsaudio`
+ * is dCS; `arcdb` is not ARC.
+ *
+ * Admission is left exactly as it was. Reclassifying a fact keeps it in the
+ * dossier and states its provenance honestly; tightening admission would
+ * delete evidence a listener can legitimately be shown.
+ */
+const COMPANY_WORDS = new Set([
+  'audio', 'acoustics', 'acoustic', 'labs', 'lab', 'electronics', 'hifi',
+  'sound', 'systems', 'company', 'corp', 'inc', 'ltd', 'gmbh', 'research',
+  'technologies', 'technology', 'group', 'usa', 'uk', 'eu', 'store', 'shop',
+]);
+
+export function isMakerPublished(sourceUrl: string, productNameOrKey: string): boolean {
+  if (!sourceUrl || /\s/.test(sourceUrl)) return false;
+  let label: string;
+  try {
+    const u = new URL(sourceUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+    // The registrable label: "shop.acoraacoustics.com" → "acoraacoustics".
+    const parts = u.host.toLowerCase().replace(/^www\./, '').split('.');
+    label = (parts.length >= 2 ? parts[parts.length - 2] : parts[0]).replace(/[^a-z0-9]/g, '');
+  } catch { return false; }
+
+  const tokens = productKeyFor(productNameOrKey)
+    .split(/[\s/-]+/)
+    .filter((t) => t.length >= 3 && !/^\d+$/.test(t));
+
+  return tokens.some((t) => {
+    if (label === t) return true;
+    if (!label.startsWith(t)) return false;
+    // Whatever follows the brand must be an ordinary company word, not the
+    // rest of somebody else's name.
+    const rest = label.slice(t.length);
+    return rest.length > 0 && COMPANY_WORDS.has(rest);
+  });
+}
+
 /** Normalise a product identity into the storage key. */
 export function productKeyFor(name: string): string {
   return name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();

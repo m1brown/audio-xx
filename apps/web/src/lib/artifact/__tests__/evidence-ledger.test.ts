@@ -127,3 +127,41 @@ describe('the ledger is a function of the assessment', () => {
     expect(maker[0].licensedFor).toEqual(['Butler Monads', 'Butler Something Else']);
   });
 });
+
+describe('D-7 — a source is never credited beyond what it is', () => {
+  it('the maker test is stricter than the admission test', async () => {
+    const { isMakerPublished, isFirstPartySource } = await import('@/lib/evidence/manufacturer-facts');
+
+    // The Audio Research DATABASE is a third-party enthusiast site. Admission
+    // accepts it by substring — `arcdbws`.includes(`arc`) — and that is left
+    // alone, because rejecting it would DELETE evidence a listener may see.
+    expect(isFirstPartySource('https://www.arcdb.ws/model/REF5', 'ARC ref 5')).toBe(true);
+    // Classification must not repeat the substring mistake.
+    expect(isMakerPublished('https://www.arcdb.ws/model/REF5', 'ARC ref 5')).toBe(false);
+  });
+
+  it('genuine maker hosts are still recognised', () => {
+    // Deliberately across several shapes: bare brand, brand+company word.
+    const cases: Array<[string, string]> = [
+      ['https://acoraacoustics.com/qrc-2-product-page/', 'Acora QRC-2'],
+      ['https://dcsaudio.com/spec', 'dCS Rossini Apex'],
+      ['https://butleraudio.com/esoteric.php', 'Butler Monads'],
+    ];
+    return import('@/lib/evidence/manufacturer-facts').then(({ isMakerPublished }) => {
+      for (const [url, product] of cases) {
+        expect(isMakerPublished(url, product), url).toBe(true);
+      }
+    });
+  });
+
+  it('an unclassified specification defaults to the WEAKER class', async () => {
+    const { dossierFor } = await import('@/lib/evidence/product-dossier');
+    const d = dossierFor('x y', 'X Y', {
+      heldSpecs: [{ field: 'power_output', value: '100 W' }],
+      role: 'amplifier',
+    });
+    const spec = d.facts.find((f) => f.predicate === 'specification')!;
+    expect(spec.sourceClass).toBe('third_party_reported');
+    expect(spec.sourceClass).not.toBe('maker_published');
+  });
+});

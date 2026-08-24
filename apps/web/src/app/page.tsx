@@ -2,6 +2,7 @@
 
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { getProductImageEntry } from '@/lib/product-images';
+import { isMakerPublished } from '@/lib/evidence/manufacturer-facts';
 import { buildComponentViews } from '@/lib/system-component-view';
 import { tierFor } from '@/lib/entity-corroboration';
 import Link from 'next/link';
@@ -131,10 +132,21 @@ function buildDossierViews(
       .replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
     const heldSpecs = manufacturerEvidence
       .filter((m) => m.productKey === key)
-      .map((m) => ({
-        field: String(m.field), value: String(m.value),
-        sourceUrl: (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl,
-      }));
+      .map((m) => {
+        const sourceUrl = (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl;
+        return {
+          field: String(m.field), value: String(m.value), sourceUrl,
+          // Decided HERE, where the URL is known. `isMakerPublished` is
+          // stricter than the admission test on purpose: admission asks
+          // whether a document is close enough to the product's own web
+          // presence to hold, classification asks whether Audio XX may tell a
+          // reader the manufacturer published it. The looser test accepts
+          // `arcdb.ws` for an ARC product by substring; the stricter one does
+          // not, so the fact is kept and reported as third-party.
+          sourceClass: (sourceUrl && isMakerPublished(sourceUrl, c.displayName)
+            ? 'maker_published' : 'third_party_reported') as 'maker_published' | 'third_party_reported',
+        };
+      });
     const view = presentDossier(dossierFor(key, c.displayName, {
       authoredFacts: FRANCE_FACTS, heldSpecs, role: c.role,
       unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
