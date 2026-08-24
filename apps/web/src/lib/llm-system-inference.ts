@@ -541,29 +541,19 @@ export function buildLicensedProvisionalResponse(
   };
 }
 
-/**
- * The verdict line, composed from the structured judgment alone.
+/*
+ * `verdictForVerdictLine` was removed here (2026-08-24).
  *
- * Used when the model's own verdict sentence was dropped for overclaiming. It
- * states only what Audio XX actually decided — the action verdict and the
- * shape of the surviving relations — and never why the listener chose
- * anything, which is the claim that got the original sentence removed.
+ * It composed a verdict from the DECLARED action alone, so `no_change` became
+ * "Nothing here obviously needs changing" without consulting a single
+ * established relation. That is Evaluate bypassing Explain: a verdict is an
+ * evaluative conclusion, and it needs an explanatory basis, not merely a
+ * label. It had no callers, which is the only reason the bypass never fired.
+ *
+ * `verdictFromEvidence` below is the sole verdict constructor, and it reads
+ * the surviving relations first — with no relations it says so plainly
+ * instead of reassuring the listener.
  */
-export function verdictForVerdictLine(
-  verdict: ActionVerdict | undefined,
-  relationShape: string | undefined,
-): string {
-  const tail = relationShape ? `, and on the evidence available ${relationShape}` : '';
-  switch (verdict) {
-    case 'constraint':
-      return `One licensed constraint stands out in this chain${tail}.`;
-    case 'indeterminate':
-      return `The evidence does not yet support a system-level judgment${tail}.`;
-    case 'no_change':
-    default:
-      return `Nothing here obviously needs changing${tail}.`;
-  }
-}
 
 /**
  * Rebuild the verdict from what Evaluate ACTUALLY established.
