@@ -17,6 +17,7 @@
 // "make it 3k", "two grand"), or the budget question loops. First module
 // import here by design — money recognition must not be duplicated.
 import { parseBudgetAmount } from './shopping-intent';
+import { TURN_SEPARATOR } from './labelled-components';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -1449,7 +1450,11 @@ export function transition(
         // Accumulate new component text
         const priorComponents = facts.systemComponents ?? [];
         facts.systemComponents = [...priorComponents, text];
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+        // not a turn boundary — one turn contains several — so the parser could not
+        // tell where a turn ended and ran a component name into the next turn's
+        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
         facts.hasSystem = true;
 
         // Check if user explicitly asked for evaluation now
@@ -1527,7 +1532,11 @@ export function transition(
         // Accumulate and re-assess.
         const priorComponents = facts.systemComponents ?? [];
         facts.systemComponents = [...priorComponents, text];
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+        // not a turn boundary — one turn contains several — so the parser could not
+        // tell where a turn ended and ran a component name into the next turn's
+        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
 
         // Check for explicit mode changes
         const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);

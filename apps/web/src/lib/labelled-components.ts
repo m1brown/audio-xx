@@ -138,6 +138,31 @@ function rolesFromLabel(labelText: string): string[] {
 }
 
 /**
+ * A conversation turn is a HARD PARSE BOUNDARY.
+ *
+ * Accumulated turns are joined into one string so an incrementally described
+ * system ("my DAC is X" … "and the amp is Y") reads as one system. They were
+ * joined with "\n", which is not a boundary the parser can trust: a single
+ * turn contains newlines too — a listener who types a numbered list types four
+ * of them. So the parser saw one span, and the last component of turn N ran
+ * into the prose opening turn N+1:
+ *
+ *   "… Speakers: Acora QRC-2" + "Assess my system: - Pre-amp: …"
+ *      → speaker: "Acora QRC-2 Assess my system"
+ *
+ * U+001E RECORD SEPARATOR is a control character. It cannot be typed into a
+ * product name, cannot survive a copy-paste from a product page, and is
+ * stripped by every identity normaliser in the codebase — which is the point:
+ * the boundary has to be one that no product name can ever contain.
+ */
+export const TURN_SEPARATOR = '\u001E';
+
+/** The accumulated text as the turns the listener actually typed. */
+export function splitTurns(message: string): string[] {
+  return message.split(TURN_SEPARATOR);
+}
+
+/**
  * A list marker introduces the NEXT item, so it can never be part of the
  * name before it.
  *
@@ -160,7 +185,7 @@ function rolesFromLabel(labelText: string): string[] {
  * Applied to the RAW segment, before punctuation is trimmed — once the period
  * is gone, a trailing "2" is indistinguishable from the "2" in "Ref 2".
  */
-const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)/;
+const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)|\u001E/;
 
 /** Cut a raw segment where the next list item begins. */
 export function truncateAtListBoundary(rawSegment: string): string {
@@ -178,6 +203,22 @@ export function truncateAtListBoundary(rawSegment: string): string {
  */
 export function parseLabelledComponents(message: string): LabelledComponent[] {
   if (!message) return [];
+
+  // PARSE EACH TURN INDEPENDENTLY, then let the caller reconcile the records.
+  // The alternative — concatenate raw turns and parse once — is what allowed a
+  // name to span from one turn into the next. Reconciliation is a question
+  // about COMPONENTS; it must not be answered by string adjacency.
+  if (message.includes(TURN_SEPARATOR)) {
+    const out: LabelledComponent[] = [];
+    let offset = 0;
+    for (const turn of splitTurns(message)) {
+      for (const c of parseLabelledComponents(turn)) {
+        out.push({ ...c, index: c.index + offset });
+      }
+      offset += turn.length + TURN_SEPARATOR.length;
+    }
+    return out;
+  }
 
   const matches: Array<{ start: number; end: number; labelText: string }> = [];
   LABEL_RE.lastIndex = 0;

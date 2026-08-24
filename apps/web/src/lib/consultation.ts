@@ -19,7 +19,7 @@
  */
 
 import { DAC_PRODUCTS, type Product } from './products/dacs';
-import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName } from './labelled-components';
+import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName, TURN_SEPARATOR, splitTurns } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
@@ -8611,6 +8611,19 @@ const GI_ROLE_LABEL_ONLY =
  * re-resolution.
  */
 function countMeaningfulInputComponents(rawMessage: string): number {
+  // Count per TURN and take the union. A listener who restates their whole
+  // system has not doubled it; a listener who adds a component has added one.
+  // Counting the joined text made "2 components you listed went unmatched" out
+  // of the same four components written twice.
+  if (rawMessage.includes(TURN_SEPARATOR)) {
+    const perTurn = splitTurns(rawMessage).map(countMeaningfulSegments);
+    return new Set(perTurn.flat()).size;
+  }
+  return new Set(countMeaningfulSegments(rawMessage)).size;
+}
+
+/** The distinct component-ish segments a single turn names. */
+function countMeaningfulSegments(rawMessage: string): string[] {
   // Drop the assessment lead-in ("evaluate my system:", "assess my system:",
   // or the bare colon-list verb form "review: …" / "rate: …").
   let msg = rawMessage.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '');
@@ -8636,12 +8649,22 @@ function countMeaningfulInputComponents(rawMessage: string): number {
       /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
       '',
     );
+    // Strip a leading list marker BEFORE normalising. "1. Pre-amp: ARC ref 5"
+    // and "- Pre-amp: ARC ref 5" name the same component; leaving the marker on
+    // made them two distinct strings, so a listener who restated their system
+    // in a different format was told components had gone unmatched.
+    // Formatting is structure, never identity — the same rule the parser follows.
+    seg = seg.replace(/^\s*(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])\s*/, '');
+    seg = seg.replace(
+      /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
+      '',
+    );
     const norm = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (!norm || norm.length < 2) continue;
     if (GI_ROLE_LABEL_ONLY.test(norm)) continue;
     seen.add(norm);
   }
-  return seen.size;
+  return [...seen];
 }
 
 /** Token set of a display name, minus trivial tokens. */
