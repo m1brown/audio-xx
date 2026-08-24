@@ -169,11 +169,18 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
   );
 }
 
-export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSnapshotV1 }) {
+export default function SnapshotArtifact(
+  { snapshot, embedded = false }:
+  { snapshot: AssessmentSnapshotV1; embedded?: boolean },
+) {
   const s = snapshot;
   return (
     <article className="axx-doc" aria-label="System assessment">
-      <a className="axx-home" href="/">Audio XX</a>
+      {/* Embedded in a conversation the reader is already on the site, so the
+          home link is navigation they do not need and a second "Audio XX"
+          above the one in the nav bar. The DOCUMENT is identical either way —
+          only this one piece of chrome differs. */}
+      {!embedded && <a className="axx-home" href="/">Audio XX</a>}
       <header>
         <p className="axx-kicker">Audio XX System Assessment</p>
         <p className="axx-date">{new Date(s.createdAt).toLocaleDateString('en-GB', {

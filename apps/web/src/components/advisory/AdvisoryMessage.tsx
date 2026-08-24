@@ -42,8 +42,8 @@ import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
 import ArtifactActionsInline from './ArtifactActionsInline';
 import ComponentDossiers from './ComponentDossiers';
-import AssessmentArtifactV2 from '../../app/artifact/AssessmentArtifact';
-import { synthesizeArtifact } from '../../lib/artifact/synthesizeArtifact';
+import SnapshotArtifact from '../../app/artifact/SnapshotArtifact';
+import { authoritativeAssessment } from '../../lib/assessment/from-result';
 import '../../app/artifact/artifact.css';
 import {
   ASSESSMENT_ARTIFACT_V2_ENABLED,
@@ -5561,17 +5561,34 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     // the raw carrier is missing (e.g. server-rendered fixture data, or
     // tests that build advisories without going through the engine).
     if (ASSESSMENT_ARTIFACT_V2_ENABLED && advisory.__rawAssessment) {
-      const { payload } = synthesizeArtifact(advisory.__rawAssessment);
+      /*
+       * THE CONVERSATION RENDERS THE AUTHORITATIVE ASSESSMENT.
+       *
+       * It rendered `synthesizeArtifact(...).payload` directly, which is the
+       * TRAIT/AXIS lane — so this surface, the one nearly every listener
+       * actually reaches, was the one place the licensing gate never ran.
+       * Production proved the cost: Leben CS600X with Klipsch Cornwall IV
+       * published "Nothing here needs changing" and a two-paragraph listening
+       * narrative while Audio XX held ZERO manufacturer facts for the Leben.
+       *
+       * `authoritativeAssessment` is now the only route from an engine result
+       * to a rendered document, and it is the same route the shared artifact,
+       * the saved snapshot and the signed-in system page take. One assessment,
+       * many surfaces — and no surface can opt out of the licence.
+       */
+      const assessment = authoritativeAssessment(advisory.__rawAssessment, {
+        dossiers: advisory.componentDossiers,
+      });
       // Funnel (certification Gate 3, G3-D1): the embedded assessment IS
       // a completed assessment — tracked at the embed site so every
       // branch of this dispatch counts. Deduped per page load.
-      content = (
+      content = assessment ? (
         <>
-          {/* raw carries the tonal axes (findings.systemAxes) — required for
-              the three-axis Tonal Signature graph (Stabilization Gate 1). */}
-          <AssessmentArtifactV2 p={payload} raw={advisory.__rawAssessment} embedded={true} />
+          <SnapshotArtifact snapshot={assessment} embedded />
           <TrackAssessmentEmbed />
         </>
+      ) : (
+        <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />
       );
     } else if (SYSTEM_ASSESSMENT_ARTIFACT_ENABLED) {
       content = (

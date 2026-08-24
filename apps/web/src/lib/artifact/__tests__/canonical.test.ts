@@ -34,7 +34,10 @@ describe('CAM adapter — France reference', () => {
     expect(cam.identity.tonalSignature?.map((a) => a.axis)).not.toContain('airy_closed');
     expect(cam.guidance.recommendation).toBeTruthy();
     expect(cam.reading.engineering.length).toBeGreaterThan(0);
-    expect(cam.reading.listeningSession.length).toBe(2);
+    // Listening Session removed 2026-08-24: it was generated from catalog
+    // axes, and a sensory claim needs listening evidence. Same reason
+    // dominantCharacter went, a fortnight earlier.
+    expect(cam.reading.listeningSession).toEqual([]);
     // dominantCharacter is intentionally absent (removed 2026-08-13; returns
     // post-beta naming the responsible component).
     expect(cam.reading.dominantCharacter).toBeUndefined();

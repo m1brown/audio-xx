@@ -19,6 +19,18 @@ export interface PipelineResult {
    *  shared Assessment Renderer consumes. Built from the same result, so the
    *  renderer never re-derives identity. */
   canonical: CanonicalAssessment;
+  /**
+   * The engine result, carried for LICENSING only.
+   *
+   * The snapshot layer reads `findings` to learn which relationships the
+   * engine actually established — a rated power mismatch, a diagnosed
+   * bottleneck. Without it every catalogued assessment looked, to the
+   * licensing gate, like a system where nothing had been established, and a
+   * genuine constraint finding would have been discarded as unlicensed.
+   *
+   * It is NOT a re-derivation key. Nothing downstream reassesses from it.
+   */
+  raw: unknown;
 }
 
 /** Run the full artifact pipeline. Null when the text does not resolve. */
@@ -29,7 +41,7 @@ export function runArtifactPipeline(systemText: string): PipelineResult | null {
   if (!result || result.kind !== 'assessment') return null;
   const { payload, contradictions } = synthesizeArtifact(result);
   const canonical = toCanonicalAssessment(payload, result);
-  return { payload, contradictions, canonical };
+  return { payload, contradictions, canonical, raw: result };
 }
 
 /**

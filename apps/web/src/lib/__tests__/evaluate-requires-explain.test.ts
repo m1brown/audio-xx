@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { verdictFromEvidence } from '../llm-system-inference';
+import { verdictFromEvidence } from '../relational-explain';
 
 /**
  * EVALUATE MAY NOT BYPASS EXPLAIN.
@@ -50,10 +50,16 @@ describe('a verdict is composed from established relations, never from a label',
 });
 
 describe('no second verdict constructor may reintroduce the bypass', () => {
-  const src = readFileSync('apps/web/src/lib/llm-system-inference.ts', 'utf8');
+  // The composer moved to `relational-explain` (2026-08-24) so the snapshot
+  // layer could reach it without importing a module that carries model prompts
+  // and network calls. Both files are checked: the deleted constructor must
+  // not reappear in either.
+  const src = readFileSync('apps/web/src/lib/relational-explain.ts', 'utf8');
+  const llm = readFileSync('apps/web/src/lib/llm-system-inference.ts', 'utf8');
 
   it('the label-only constructor stays deleted', () => {
     expect(src).not.toMatch(/export function verdictForVerdictLine/);
+    expect(llm).not.toMatch(/export function verdictForVerdictLine/);
   });
 
   it('the surviving constructor reads relations before it speaks', () => {

@@ -109,18 +109,10 @@ import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-p
  * undefined, which leaves a specification's role UNKNOWN rather than guessed —
  * the distinction that closes the power-output collision.
  */
-function dossierRole(label: string | undefined): string | undefined {
-  const l = (label ?? '').toLowerCase().replace(/s$/, '');
-  if (l.includes('integrated')) return 'integrated';
-  if (l.includes('amplifier') || l === 'amp') return 'amplifier';
-  if (l.includes('speaker') || l.includes('loudspeaker')) return 'speaker';
-  if (l.includes('headphone')) return 'headphone';
-  if (l.includes('preamp')) return 'preamplifier';
-  if (l.includes('streamer')) return 'streamer';
-  if (l.includes('dac') || l.includes('source')) return 'dac';
-  if (l.includes('turntable')) return 'turntable';
-  return undefined;
-}
+/* One normaliser for the whole product — see `normalizeRole`. This was a
+ * second copy, and a second copy of a mapping is a mapping that will disagree
+ * with the first one eventually. */
+const dossierRole = normalizeRole;
 
 function buildDossierViews(
   components: Array<{ displayName: string; role: string }>,
@@ -168,6 +160,7 @@ function buildDossierViews(
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
 import { composeSystemReview } from '@/lib/artifact/system-review';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { normalizeRole } from '@/lib/assessment/authoritative';
 import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';

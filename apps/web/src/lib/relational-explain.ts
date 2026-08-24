@@ -1135,3 +1135,69 @@ export function overclaimViolations(
   }
   return out;
 }
+
+/**
+ * Rebuild the verdict from what Evaluate ACTUALLY established.
+ *
+ * THE DEFECT THIS FIXES. Nathan's verdict read "One licensed constraint stands
+ * out in this chain, and on the evidence available the chain reinforces its own
+ * direction." The only surviving relation was a REINFORCEMENT, and the only
+ * thing established was that an amplifier's published output covers a
+ * loudspeaker's published load. The line announced a constraint that did not
+ * exist and then implied a system-wide coherence finding from one narrow
+ * compatibility fact.
+ *
+ * The cause was that `actionVerdict` and the relation set were two independent
+ * accounts of the same judgment: the model supplied the first and the licensing
+ * layer computed the second, and nothing reconciled them. The relations are the
+ * evidence, so they win — and where they disagree with the model's own verdict,
+ * the relations are what the line reports.
+ *
+ * SCOPE IS THE SECOND RULE. A relation on `power_load` establishes what a system
+ * can DO, not what it sounds like. It may never produce a sentence about the
+ * chain's voicing, however many such relations survive, because no number of
+ * compatibility findings adds up to a tonal one.
+ */
+export function verdictFromEvidence(
+  declared: ActionVerdict | undefined,
+  relations: Array<{ kind: RelationKind; axis: string }>,
+  /** A named gap Audio XX holds, e.g. an unpublished sensitivity figure. */
+  openGap?: string,
+): string {
+  if (relations.length === 0) {
+    return openGap
+      ? `No system-level interaction is established on the evidence held, and `
+        + `${openGap} remains unresolved.`
+      : 'No system-level interaction is established on the evidence held.';
+  }
+
+  const kinds = new Set(relations.map((r) => r.kind));
+  const physicalOnly = relations.every((r) => r.axis === 'power_load');
+
+  // A constraint is the only finding that reorders a listener's priorities, so
+  // it leads whenever one survives — regardless of what the model declared.
+  if (kinds.has('constraint')) {
+    return 'One constraint in this chain bounds what the rest of it can do.';
+  }
+
+  if (physicalOnly) {
+    // Deliberately narrow. This is the Nathan case, and the whole point is that
+    // the line claims exactly the compatibility finding and nothing beyond it.
+    const lead = relations.length === 1
+      ? 'The evidence establishes one compatibility finding in this chain'
+      : `The evidence establishes ${relations.length} compatibility findings in this chain`;
+    return openGap
+      ? `${lead}, and leaves ${openGap} unresolved.`
+      : `${lead}, and nothing in it points to a mismatch.`;
+  }
+
+  const shape = kinds.has('counterweight') && kinds.has('reinforcement')
+    ? 'the chain both reinforces and counterweights itself'
+    : kinds.has('counterweight') ? 'the chain counterweights itself'
+      : 'the chain reinforces its own direction';
+
+  if (declared === 'indeterminate') {
+    return `The evidence does not yet support a system-level judgment, though ${shape}.`;
+  }
+  return `Nothing here obviously needs changing, and on the evidence available ${shape}.`;
+}

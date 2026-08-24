@@ -19,6 +19,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { ArtifactPayload } from '@/lib/artifact/types';
 import { runArtifactPipeline, engineVersion } from './assessment-pipeline';
+import { snapshotFromCanonical, freezeSnapshot } from '@/lib/artifact/snapshot';
 
 /** Canonical identity: whitespace-collapsed, case preserved. */
 export function normalizeSystemText(text: string): string {
@@ -51,10 +52,39 @@ export function payloadsMateriallyEqual(aJson: string, bJson: string): boolean {
   try {
     const a = JSON.parse(aJson) as Record<string, unknown>;
     const b = JSON.parse(bJson) as Record<string, unknown>;
+    // `date` on the legacy payload, `createdAt` on the snapshot: the timestamp
+    // is the one field guaranteed to differ between two identical readings,
+    // and comparing it would make every re-save look like a changed one.
     delete a.date; delete b.date;
+    delete a.createdAt; delete b.createdAt;
     return JSON.stringify(a) === JSON.stringify(b);
   } catch {
     return false; // unreadable payloads are never "the same" — allow a fresh save
+  }
+}
+
+/**
+ * Read a stored assessment's summary fields, whichever shape it is in.
+ *
+ * Rows written before the licensing gate hold an `ArtifactPayload`; rows
+ * written since hold a licensed snapshot. Both are readable, and the history
+ * list must not stop working for either — a listener's saved assessments are
+ * theirs regardless of which format was current when they saved them.
+ */
+export function storedSummary(payloadJson: string):
+{ verdict: string | null; chain: string[] } | null {
+  try {
+    const raw = JSON.parse(payloadJson) as Record<string, unknown>;
+    const verdict = typeof raw.verdict === 'string' ? raw.verdict : null;
+    const legacyChain = Array.isArray(raw.componentCredit)
+      ? (raw.componentCredit as string[]) : undefined;
+    const snapshotChain = Array.isArray(raw.components)
+      ? (raw.components as Array<{ name?: string }>)
+        .map((c) => c?.name).filter((n): n is string => !!n)
+      : undefined;
+    return { verdict, chain: legacyChain ?? snapshotChain ?? [] };
+  } catch {
+    return null;
   }
 }
 
@@ -92,7 +122,25 @@ export async function saveAssessment(
     where: { userId, canonicalText: canonical },
   });
 
-  const payloadJson = JSON.stringify(rendered.payload);
+  /*
+   * Store the LICENSED assessment, not the trait/axis payload.
+   *
+   * `rendered.payload` is the trait-lane document. Storing it made the saved
+   * copy a second authoring lane: a signed-in reader opened a row that had
+   * never passed the licensing gate, so authentication decided whether D-7
+   * applied. The snapshot carries the licence with it, so every later read
+   * renders the same authoritative assessment without re-deriving anything.
+   *
+   * `findings` travels into the builder for licensing only — it is how the
+   * gate learns which relationships the engine established, so a real
+   * constraint survives instead of being discarded as unlicensed.
+   */
+  const licensed = snapshotFromCanonical(rendered.canonical, {
+    engineVersion: engineVersion(),
+    createdAt: new Date().toISOString(),
+    findings: (rendered.raw as { findings?: unknown } | null)?.findings,
+  });
+  const payloadJson = freezeSnapshot(licensed);
   const version = engineVersion();
 
   // Identical-reassessment rule: appending happens only when the reading
@@ -197,14 +245,10 @@ export async function getSavedSystem(
 
   let chain: string[] = [];
   const history: HistoryEntry[] = system.assessments.map((snap, i) => {
-    let verdict: string | null = null;
-    let readable = false;
-    try {
-      const p = JSON.parse(snap.payloadJson) as ArtifactPayload;
-      verdict = p.verdict ?? null;
-      readable = true;
-      if (chain.length === 0) chain = p.componentCredit ?? [];
-    } catch { /* unreadable — listed but not openable as an artifact */ }
+    const summary = storedSummary(snap.payloadJson);
+    const verdict = summary?.verdict ?? null;
+    const readable = !!summary;
+    if (chain.length === 0 && summary) chain = summary.chain;
     return {
       id: snap.id,
       savedAt: snap.createdAt.toISOString(),
@@ -261,11 +305,10 @@ export async function listMySystems(db: PrismaClient, userId: string): Promise<M
     let chain: string[] = [];
     let verdict: string | null = null;
     if (latest) {
-      try {
-        const p = JSON.parse(latest.payloadJson) as ArtifactPayload;
-        chain = p.componentCredit ?? [];
-        verdict = p.verdict ?? null;
-      } catch { /* corrupted payload — show the system without a summary */ }
+      // Corrupted rows show the system without a summary rather than failing.
+      const summary = storedSummary(latest.payloadJson);
+      chain = summary?.chain ?? [];
+      verdict = summary?.verdict ?? null;
     }
     if (chain.length === 0 && s.components.length > 0) {
       // Systems saved before M2 have component rows instead of snapshots.

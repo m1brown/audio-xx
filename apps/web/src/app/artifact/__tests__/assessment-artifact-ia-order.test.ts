@@ -47,13 +47,19 @@ describe('Assessment Renderer — France web artifact', () => {
     const iRecognition = html.indexOf(cam.identity.recognition.slice(0, 24));
     const iRecommend = html.indexOf(cam.guidance.recommendation);
     const iEng = html.indexOf(cam.reading.engineering[0].slice(0, 24));
-    const iListen = html.indexOf(cam.reading.listeningSession[0].slice(0, 24));
     const iCond = html.indexOf(cam.reading.operatingCondition!.slice(0, 24));
     const iEvidence = html.indexOf(EVIDENCE_STATEMENT);
 
-    for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iListen, iCond, iEvidence]) {
+    for (const idx of [iSystem, iVerdict, iRecognition, iRecommend, iEng, iCond, iEvidence]) {
       expect(idx).toBeGreaterThan(-1);
     }
+    // Listening Session is no longer a mandatory section — it is no longer a
+    // section at all. It was composed from catalog axes with nothing
+    // establishing what a listener would hear, so it is absent here and its
+    // canned openings must not appear anywhere in the rendered document.
+    expect(cam.reading.listeningSession).toEqual([]);
+    expect(html).not.toMatch(/Listening Session/);
+    expect(html).not.toMatch(/leading edges are clean and quick|air and inner detail/);
     // Verdict leads the reading (after the subject it concerns).
     expect(iSystem).toBeLessThan(iVerdict);
     // The system is NAMED before the verdict, but its heavy evidence — the
@@ -67,7 +73,7 @@ describe('Assessment Renderer — France web artifact', () => {
     expect(iVerdict).toBeLessThan(iRecognition);
     expect(iRecognition).toBeLessThan(iRecommend);
     expect(iRecommend).toBeLessThan(iEng);
-    expect(iEng).toBeLessThan(iListen);
+    expect(iEng).toBeLessThan(iCond);
     expect(iCond).toBeLessThan(iEvidence);
   });
 

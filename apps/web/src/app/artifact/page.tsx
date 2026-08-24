@@ -1,6 +1,8 @@
 import { cache } from 'react';
 import type { Metadata } from 'next';
 import AssessmentArtifact from './AssessmentArtifact';
+import SnapshotArtifact from './SnapshotArtifact';
+import { authoritativeAssessment } from '@/lib/assessment/from-result';
 import ArtifactActions from './ArtifactActions';
 import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
@@ -53,10 +55,20 @@ export async function generateMetadata(
   const text = resolveText(sp);
   const rendered = renderCached(text);
   if (!rendered) return { title: 'System Assessment' };
+  /*
+   * A SHARED LINK UNFURLS THE AUTHORITATIVE VERDICT.
+   *
+   * This read `payload.verdict` and `payload.standfirst` — the trait/axis
+   * lane — so a pasted link published "Nothing here needs changing" as its
+   * title and an axis-derived tonal summary as its description, to everyone
+   * who saw the preview. Sharing metadata is a user-visible authoring
+   * surface, and it was the last one still on the old lane.
+   */
   const p = rendered.payload;
-  const title = p.verdict.replace(/\.\s*$/, '');
-  const description = (p.standfirst || p.recognition || '').slice(0, 200)
-    + (p.componentCredit?.length ? ` — ${p.componentCredit.join(' · ')}` : '');
+  const licensed = authoritativeAssessment(rendered.raw);
+  const title = (licensed?.verdict ?? p.verdict).replace(/\.\s*$/, '');
+  const description = (licensed?.systemReview?.[0] ?? '').slice(0, 200)
+    || (p.componentCredit?.length ? p.componentCredit.join(' · ') : 'An Audio XX system assessment');
   return {
     title,
     description,
@@ -104,9 +116,24 @@ export default async function ArtifactPage(
     console.warn('[artifact] engine-output contradictions:', contradictions);
   }
 
+  /*
+   * Even the deprecated route renders the AUTHORITATIVE assessment.
+   *
+   * It rendered the canonical (trait/axis) model directly, so a link into this
+   * route published claims no evidence licensed — the same essay the
+   * conversation used to show. A deprecated surface is still a user-visible
+   * one, and leaving it on the old lane would leave two lanes authoring, which
+   * is the thing being removed.
+   */
+  const assessment = authoritativeAssessment(rendered.raw, {
+    createdAt: sp?.date ? new Date(sp.date).toISOString() : undefined,
+  });
+
   return (
     <>
-      <AssessmentArtifact canonical={rendered.canonical} contradictions={contradictions} print={print} />
+      {assessment
+        ? <SnapshotArtifact snapshot={assessment} />
+        : <AssessmentArtifact canonical={rendered.canonical} contradictions={contradictions} print={print} />}
       {!print && <ArtifactActions systemText={text} />}
     </>
   );

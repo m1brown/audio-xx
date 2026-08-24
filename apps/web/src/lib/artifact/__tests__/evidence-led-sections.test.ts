@@ -21,46 +21,61 @@ const payload = (over: Partial<ArtifactPayload> = {}): ArtifactPayload => ({
 
 const raw = (findings: Record<string, unknown>) => ({ findings, response: {} });
 
-describe('LISTENING SESSION earns its presence or is absent', () => {
-  it('is OMITTED when a bottleneck is diagnosed', () => {
-    // The live defect: the 5W SET into an 86 dB Magnepan, verdict "The
-    // amplifier can't drive these speakers", received the same passage —
-    // byte-identical — as the coherent reference system.
-    const cam = toCanonicalAssessment(payload({ verdict: "The amplifier can't drive these speakers." }),
-      raw({ bottleneck: { category: 'power_match', role: 'speakers' },
-        systemAxes: { smooth_detailed: 'detailed', elastic_controlled: 'controlled' } }));
-    expect(cam.reading.listeningSession).toEqual([]);
+describe('LISTENING SESSION is never authored from catalog axes', () => {
+  /**
+   * THE SECTION IS GONE, NOT GATED.
+   *
+   * This suite once asked whether the passage EARNED its presence, and the
+   * two gates it enforced were real improvements: no canned prediction beside
+   * a diagnosed bottleneck, and no prediction at all with every axis neutral.
+   * Both stopped the section CONTRADICTING the verdict.
+   *
+   * Neither made it licensed. A passage that agrees with the verdict is still
+   * unlicensed if nothing establishes what a listener will hear, and the
+   * passage was three hard-coded openings selected by reading `systemAxes`.
+   *
+   * Production settled it (founder, 2026-08-24): Leben CS600X with Klipsch
+   * Cornwall IV published both paragraphs — a coherent, committed system that
+   * passed both gates — while Audio XX held ZERO manufacturer facts for the
+   * Leben and no listening evidence for either component.
+   *
+   * A sensory claim needs listening evidence. Where Audio XX holds some, it
+   * appears in the dossier with the comparison it was made under.
+   */
+  const CASES: Array<[string, Record<string, unknown>]> = [
+    ['a diagnosed bottleneck', { bottleneck: { category: 'power_match' }, systemAxes: { smooth_detailed: 'detailed' } }],
+    ['no committed axis', { systemAxes: { warm_bright: 'neutral', smooth_detailed: 'balanced' } }],
+    ['a coherent, committed system', { systemAxes: { elastic_controlled: 'elastic', smooth_detailed: 'detailed' } }],
+    ['a warm-committed system', { systemAxes: { warm_bright: 'warm' } }],
+  ];
+
+  for (const [label, findings] of CASES) {
+    it(`is absent for ${label}`, () => {
+      const cam = toCanonicalAssessment(payload(), raw(findings));
+      expect(cam.reading.listeningSession).toEqual([]);
+    });
+  }
+
+  it('none of the canned openings survives anywhere in the model', async () => {
+    const { readFileSync } = await import('node:fs');
+    // Comments are stripped first: the removal note QUOTES the deleted prose,
+    // which is the point of the note. What must not survive is code that can
+    // emit it.
+    const src = readFileSync('apps/web/src/lib/artifact/canonical.ts', 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+    for (const canned of [
+      /Put on something with air and inner detail/,
+      /leading edges are clean and quick/,
+      /image extends wide without being pushed forward/,
+      /Put on something with body and tone/,
+      /Over a long evening the character holds/,
+    ]) expect(src, String(canned)).not.toMatch(canned);
   });
 
-  it('NEVER gives the mismatch control the canned prediction', () => {
-    const cam = toCanonicalAssessment(payload(),
-      raw({ bottleneck: { category: 'power_match' }, systemAxes: { smooth_detailed: 'detailed' } }));
-    const joined = cam.reading.listeningSession.join(' ');
-    expect(joined).not.toMatch(/air and inner detail/);
-    expect(joined).not.toMatch(/leading edges are clean and quick/);
-    expect(joined).not.toMatch(/image extends wide/);
-  });
-
-  it('is OMITTED when no axis is committed', () => {
-    const cam = toCanonicalAssessment(payload(),
-      raw({ systemAxes: { warm_bright: 'neutral', smooth_detailed: 'balanced' } }));
-    expect(cam.reading.listeningSession).toEqual([]);
-  });
-
-  it('is PRESENT for a coherent, committed system', () => {
-    const cam = toCanonicalAssessment(payload(),
-      raw({ systemAxes: { elastic_controlled: 'elastic', smooth_detailed: 'detailed' } }));
-    expect(cam.reading.listeningSession.length).toBe(2);
-  });
-
-  it('opens from the committed axis rather than always promising detail', () => {
-    const warm = toCanonicalAssessment(payload(), raw({ systemAxes: { warm_bright: 'warm' } }));
-    expect(warm.reading.listeningSession[0]).toMatch(/body and tone/);
-    expect(warm.reading.listeningSession[0]).not.toMatch(/air and inner detail/);
-  });
-
-  it('is not replaced by anything when omitted', () => {
-    const cam = toCanonicalAssessment(payload(), raw({ bottleneck: { category: 'power_match' } }));
+  it('is not replaced by anything', () => {
+    // Absence is the finished state. A section removed for lacking evidence
+    // must not return as a shorter section with the same lack.
+    const cam = toCanonicalAssessment(payload(), raw({ systemAxes: { smooth_detailed: 'detailed' } }));
     expect(cam.reading.listeningSession).toEqual([]);
     expect(cam.reading.dominantCharacter).toBeUndefined();
   });

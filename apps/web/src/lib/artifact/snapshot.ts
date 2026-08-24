@@ -42,6 +42,9 @@
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
 import { deriveEvidenceLedger, type EvidenceLedger } from './evidence-ledger';
 import { composeSystemReview } from './system-review';
+import {
+  licenseAssessment, engineRelationsFrom, normalizeRole,
+} from '../assessment/authoritative';
 import type { DossierView } from '../evidence/dossier-presentation';
 
 export const ASSESSMENT_SCHEMA_V1 = 'axx.assessment.v1' as const;
@@ -166,6 +169,8 @@ export function snapshotFromCanonical(
     engineVersion: string; createdAt: string; actionVerdict?: string;
     componentDossiers?: DossierView[];
     coverageNote?: string;
+    /** The engine's own findings, read ONLY for licensed relationships. */
+    findings?: unknown;
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -188,9 +193,26 @@ export function snapshotFromCanonical(
    * without a role there is no chain, and without a chain there are no
    * interfaces to reason across.
    */
-  const roleByName = new Map(
-    (meta.componentDossiers ?? []).map((d) => [d.displayName, d.role ?? '']),
-  );
+  /*
+   * Roles decide which interfaces exist, so losing them loses the reasoning.
+   *
+   * They were read only from the dossiers, which meant a snapshot built
+   * without dossiers examined NO interfaces and could not name a single
+   * missing figure — the licensing gate fell silent exactly when it had least
+   * to work with. The engine's own chain is the more reliable source and is
+   * consulted first; dossiers fill any gap.
+   */
+  const chain = (meta.findings as {
+    systemChain?: { names?: string[]; roles?: string[] };
+  } | undefined)?.systemChain;
+  const roleByName = new Map<string, string>();
+  (chain?.names ?? []).forEach((n, i) => {
+    const r = normalizeRole(chain?.roles?.[i]);
+    if (r) roleByName.set(n, r);
+  });
+  for (const d of meta.componentDossiers ?? []) {
+    if (d.role && !roleByName.get(d.displayName)) roleByName.set(d.displayName, d.role);
+  }
   const systemReview = composeSystemReview({
     components: cam.subject.components.map((c) => ({
       displayName: c.name, role: roleByName.get(c.name) ?? '',
@@ -210,7 +232,7 @@ export function snapshotFromCanonical(
     sections.push({ paragraphs: [cam.reading.dominantCharacter] });
   }
 
-  return {
+  const snap: AssessmentSnapshotV1 = {
     schema: ASSESSMENT_SCHEMA_V1,
     createdAt: meta.createdAt,
     engineVersion: meta.engineVersion,
@@ -238,6 +260,26 @@ export function snapshotFromCanonical(
     // drift from the assessment it describes.
     evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
   };
+
+  /*
+   * THE LICENSING GATE, applied where the snapshot is CONSTRUCTED.
+   *
+   * Placed here rather than at each renderer so an unlicensed snapshot cannot
+   * be built at all. A gate at the renderer is a gate one new surface forgets
+   * to call, and that is exactly how the trait lane reached production while
+   * the evidence lane sat behind a link nobody surfaced.
+   *
+   * `traitAuthored: true` — everything above came from the axis machinery,
+   * which licenses none of it.
+   */
+  return licenseAssessment(snap, {
+    components: cam.subject.components.map((c) => ({
+      name: c.name, role: roleByName.get(c.name),
+    })),
+    dossiers: meta.componentDossiers ?? [],
+    traitAuthored: true,
+    engineRelations: engineRelationsFrom(meta.findings),
+  });
 }
 
 /**
@@ -334,7 +376,7 @@ export function snapshotFromProvisional(
     coverageNote: meta.coverageNote,
   });
 
-  return {
+  const snap: AssessmentSnapshotV1 = {
     schema: ASSESSMENT_SCHEMA_V1,
     createdAt: meta.createdAt,
     engineVersion: meta.engineVersion,
@@ -362,6 +404,25 @@ export function snapshotFromProvisional(
     evidenceStatement: deriveEvidenceLedger(meta.componentDossiers).statement,
     evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
   };
+
+  /*
+   * The same gate, on the same terms — one assessment, not one per path.
+   *
+   * `traitAuthored: false`: this path's prose comes from the evidence-led
+   * inference lane, which is already D-7 gated and states its sources, so it
+   * survives. The verdict is still recomposed from established relations,
+   * because a verdict is never carried over from a declared label on ANY path.
+   */
+  return licenseAssessment(snap, {
+    components: meta.components,
+    dossiers: meta.componentDossiers ?? [],
+    traitAuthored: false,
+    // The inference lane records what it established; those are licensed
+    // relationships and are exactly what the verdict must be composed from.
+    engineRelations: (response.systemRelations ?? [])
+      .filter((r) => r.kind === 'reinforcement' || r.kind === 'constraint')
+      .map((r) => ({ kind: r.kind as 'reinforcement' | 'constraint', axis: r.axis })),
+  });
 }
 
 /**

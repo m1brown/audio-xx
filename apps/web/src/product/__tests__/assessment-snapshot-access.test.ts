@@ -26,6 +26,15 @@ const ASSESSMENT = snapshotFromProvisional({
   philosophy: 'Audio XX does not hold enough product-specific listening evidence.',
   followUp: 'Are you running into any limit on volume or dynamic range?',
   actionVerdict: 'no_change',
+  // The relation the finding above rests on. Without it the licensing gate
+  // correctly replaces the verdict — a signature asserting a power figure with
+  // no established relationship behind it is exactly what the gate exists to
+  // catch. This suite tests ACCESS, so the fixture carries what production
+  // carries rather than relying on an unlicensed stub.
+  systemRelations: [{
+    components: ['Butler Monads', 'Acora QRC-2'],
+    axis: 'power_load', kind: 'reinforcement', tier: 'manufacturer',
+  }],
 }, {
   engineVersion: 'test', createdAt: '2026-08-22T10:00:00.000Z',
   components: [{ name: 'Butler Monads' }, { name: 'Acora QRC-2' }],

@@ -76,9 +76,14 @@ describe('saving', () => {
     const snap = system.assessments[0];
     expect(snap.engineVersion).toBe('dev');
     expect(snap.systemText).toBe(CHAIN);
-    const payload = JSON.parse(snap.payloadJson);
-    expect(payload.verdict).toBeTruthy();
-    expect(payload.componentCredit.join(' ')).toMatch(/Pontus/);
+    // Saves store the LICENSED SNAPSHOT (2026-08-24), not the trait/axis
+    // ArtifactPayload. Storing the payload made the saved copy a second
+    // authoring lane: a signed-in reader opened a row that had never passed
+    // the licensing gate, so authentication decided whether D-7 applied.
+    const stored = JSON.parse(snap.payloadJson);
+    expect(stored.schema).toBeTruthy();
+    expect(stored.verdict).toBeTruthy();
+    expect(stored.components.map((c: { name: string }) => c.name).join(' ')).toMatch(/Pontus/);
   });
 
   it('identical re-save appends nothing — the explicit identical-reassessment rule (M3)', async () => {

@@ -97,8 +97,19 @@ describe('LEBEN / CORNWALL — coherent character keeps its full richness', () =
     expect(s.payload.recognition).toMatch(/^This system reads /);
   });
 
-  it('retains its Listening Session', () => {
-    expect(s.cam.reading.listeningSession.length).toBe(2);
+  it('publishes no Listening Session — the richness was never licensed', () => {
+    /*
+     * Superseded 2026-08-24. This asserted that a "coherent character keeps
+     * its full richness", and the richness was two paragraphs chosen from
+     * three hard-coded openings by reading a catalog axis label.
+     *
+     * Production settled it: this exact system published "leading edges are
+     * clean and quick, and the image extends wide without being pushed
+     * forward" while Audio XX held ZERO manufacturer facts for the Leben and
+     * no listening evidence for either component. Coherent axes are not
+     * evidence about what a listener will hear.
+     */
+    expect(s.cam.reading.listeningSession).toEqual([]);
   });
 });
 

@@ -203,85 +203,29 @@ function findVoicedComponent(raw: any): string | undefined {
   return voiced?.name;
 }
 
-/**
- * What the listener will hear — emitted ONLY where the evidence licenses a
- * prediction about listening.
+/* composeListeningSession() removed 2026-08-24, for the reason
+ * composeDominantCharacter() was removed a fortnight earlier.
  *
- * THE DEFECT THIS FIXES. The previous version opened with one hard-coded
- * sentence — "Put on something with air and inner detail… leading edges are
- * clean and quick, and the image extends wide without being pushed forward" —
- * and read neither the verdict nor the bottleneck. `strengths` and
- * `recognition` were received and explicitly discarded. So the 5W SET into an
- * 86 dB Magnepan, whose verdict is "The amplifier can't drive these speakers",
- * received the same passage, byte-identical, as the coherent Leben/Cornwall
- * reference — promising clean leading edges and a wide image to a listener
- * whose amplifier will be clipping first.
+ * It chose between three hard-coded openings by reading `systemAxes` — "Put on
+ * something with air and inner detail… leading edges are clean and quick, and
+ * the image extends wide without being pushed forward" — and appended a
+ * closing sentence chosen the same way. No source, no conditions, no evidence
+ * of any kind: a sensory prediction generated from a catalog axis label.
  *
- * The section could not contradict the verdict because it could not see it.
- * That is the same failure `composeDominantCharacter()` was removed for in
- * August 2026, and the fix here is the one that function did not get: a gate,
- * not an exception.
+ * The earlier repair gave it two gates (no diagnosed bottleneck, at least one
+ * committed axis) so it could not contradict the verdict. That fixed the
+ * contradiction and left the licensing untouched — a passage that agrees with
+ * the verdict is still unlicensed if nothing establishes what a listener will
+ * hear. Production proved it: Leben CS600X with Klipsch Cornwall IV published
+ * both paragraphs while Audio XX held ZERO manufacturer facts for the Leben
+ * and no listening evidence for either component.
  *
- * TWO CONDITIONS, both required.
- *
- *   No diagnosed bottleneck. A constraint IS the listening experience. What a
- *   listener hears from an under-driven system is the constraint, and a tonal
- *   prediction alongside it is not merely padding — it contradicts the
- *   assessment's own verdict.
- *
- *   At least one committed axis. With every axis neutral there is no character
- *   to predict FROM, and the passage would describe nothing this system does.
- *
- * Neither holds → the section is absent. It is not replaced.
+ * A sensory claim needs listening evidence. Where Audio XX holds some — the
+ * Stereophile observations on Nathan's dCS — it is reported in the dossier
+ * with the comparison it was made under, which is what licensing looks like.
+ * There is no wording of the removed passage that a catalog axis licenses, so
+ * it is deleted rather than softened.
  */
-function composeListeningSession(raw: any): string[] {
-  if (raw?.findings?.bottleneck) return [];
-
-  const axes: Record<string, string> = raw?.findings?.systemAxes ?? {};
-  const committed = Object.entries(axes)
-    .filter(([, v]) => v && v !== 'neutral' && v !== 'balanced');
-  if (committed.length === 0) return [];
-
-  // The opening now derives from the committed axis rather than asserting
-  // detail and imaging for every system. A warm-committed system was being
-  // told to listen for "air and inner detail" on the same evidence.
-  const value = (k: string) => axes[k];
-  let first: string;
-  if (value('warm_bright') === 'warm' || value('smooth_detailed') === 'smooth') {
-    first = 'Put on something with body and tone and the system\u2019s priorities are '
-      + 'audible immediately: notes have weight and decay, and nothing is pushed '
-      + 'forward to seem more resolved than it is.';
-  } else if (value('smooth_detailed') === 'detailed' || value('warm_bright') === 'bright') {
-    first = 'Put on something with air and inner detail and the system\u2019s priorities '
-      + 'are audible immediately: leading edges are clean and quick, and the image '
-      + 'extends wide without being pushed forward.';
-  } else {
-    first = 'Put on something you know well and the system\u2019s priorities are audible '
-      + 'immediately in how it handles dynamics rather than in its tonal colour.';
-  }
-
-  const voiced = findVoicedComponent(raw);
-  if (voiced && value('smooth_detailed') === 'detailed') {
-    first += ` The ${voiced}\u2019s warmth keeps that resolution from reading as clinical.`;
-  }
-
-  // Phase 3 (cohesive voice): the closing observation must belong to THIS
-  // system's character — the previous universal "detail offered rather than
-  // asserted" line appeared verbatim on every assessment, including tone-first
-  // systems where it was not the story.
-  let second: string;
-  if (value('warm_bright') === 'warm' || value('smooth_detailed') === 'smooth') {
-    second = 'Over a long evening the character holds. The warmth stays present without '
-      + 'turning soft, and the system remains easy to live with at volume and after hours.';
-  } else if (value('smooth_detailed') === 'detailed') {
-    second = 'Over a long evening the character holds. The detail is offered rather than '
-      + 'asserted, so the system stays easy to live with at volume and after hours.';
-  } else {
-    second = 'Over a long evening the character holds. Nothing pushes forward and nothing '
-      + 'falls away, so the system stays easy to live with at volume and after hours.';
-  }
-  return [first, second];
-}
 
 /* composeDominantCharacter() removed 2026-08-13.
  *
@@ -439,7 +383,7 @@ export function toCanonicalAssessment(payload: ArtifactPayload, raw?: any): Cano
     guidance: { recommendation: payload.recommendation, oneCost: payload.cost },
     reading: {
       engineering: engineeringOut,
-      listeningSession: raw ? composeListeningSession(raw) : [],
+      listeningSession: [],
       dominantCharacter,
       operatingCondition: operatingConditionOut,
     },

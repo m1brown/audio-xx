@@ -13,6 +13,9 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import AssessmentArtifact from '@/app/artifact/AssessmentArtifact';
+import SnapshotArtifact from '@/app/artifact/SnapshotArtifact';
+import { toCanonicalAssessment } from '@/lib/artifact/canonical';
+import { snapshotFromCanonical, parseSnapshot } from '@/lib/artifact/snapshot';
 import SnapshotActions from './SnapshotActions';
 import { prisma } from '@/lib/prisma';
 import { getUserId } from '@/lib/session';
@@ -69,6 +72,23 @@ export default async function SavedAssessmentPage(
     </div>
   );
 
+  /*
+   * A SIGNED-IN READER GETS THE SAME ASSESSMENT AS EVERYONE ELSE.
+   *
+   * This page rendered the stored ArtifactPayload — the TRAIT/AXIS lane —
+   * so authentication decided which epistemic path a listener was on. Rows
+   * written before the licensing gate carry claims nothing licensed, and
+   * rendering them unchanged republishes those claims today.
+   *
+   * Two stored shapes, one rendered result. A row written since the gate is
+   * already a licensed snapshot and renders as it is. A legacy payload row is
+   * put through the gate on read, which fails CLOSED: with no `findings` to
+   * show what the engine established, trait prose is withheld. That is the
+   * correct direction — it withholds claims rather than inventing them — and
+   * it is not reassessment: no new claim is produced, only unlicensed ones
+   * withdrawn.
+   */
+  const stored = parseSnapshot(snapshot.payloadJson);
   let payload: ArtifactPayload | null = null;
   try {
     payload = JSON.parse(snapshot.payloadJson) as ArtifactPayload;
@@ -117,7 +137,12 @@ export default async function SavedAssessmentPage(
           </Link>
         </p>
       )}
-      <AssessmentArtifact p={payload} />
+      {stored
+        ? <SnapshotArtifact snapshot={stored} />
+        : <SnapshotArtifact snapshot={snapshotFromCanonical(
+          toCanonicalAssessment(payload, undefined as never),
+          { engineVersion: snapshot.engineVersion ?? 'legacy', createdAt: new Date(snapshot.createdAt).toISOString() },
+        )} />}
       {system.notes && (
         <p
           style={{

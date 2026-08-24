@@ -113,33 +113,66 @@ describe('CONTROL 1 — Nathan renders at all', () => {
 const catalogSnapshot = (text: string) => {
   const r = runArtifactPipeline(text)!;
   expect(r).toBeTruthy();
-  return { cam: r.canonical, snap: snapshotFromCanonical(r.canonical, meta) };
+  // `findings` travels so the licensing gate can see which relationships the
+  // engine established. Without it a genuine constraint reads as "nothing
+  // established" — the gate fails CLOSED, which is the safe direction but
+  // discards licensed findings, so every real caller passes it too.
+  return {
+    cam: r.canonical,
+    snap: snapshotFromCanonical(r.canonical, { ...meta, findings: (r.raw as { findings?: unknown })?.findings }),
+  };
 };
 
-describe('CONTROL 2 — Leben/Cornwall keeps its identity', () => {
+describe('CONTROL 2 — Leben/Cornwall may no longer publish an unlicensed essay', () => {
+  /**
+   * THE CONTRACT THIS TEST USED TO ENCODE IS DISPROVEN.
+   *
+   * It required the snapshot to carry the CAM's verdict, standfirst,
+   * recognition, reading sections and tonal signature "unchanged" — parity
+   * between conversation and artifact, which was the right goal against the
+   * wrong reference. It made the trait/axis lane the authority.
+   *
+   * Production showed the cost. This exact system published "Nothing here
+   * needs changing", "Leben CS600X resolves cleanly" and a two-paragraph
+   * listening narrative, while Audio XX held ZERO manufacturer facts for the
+   * Leben and no listening evidence for either component. Parity was perfect;
+   * both surfaces were wrong together.
+   *
+   * Parity is still required — it is now parity with the AUTHORITATIVE
+   * assessment, and both surfaces show the licensed result.
+   */
   const { cam, snap } = catalogSnapshot('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
 
-  it('carries the verdict, standfirst and recognition unchanged', () => {
-    expect(snap.verdict).toBe(cam.identity.verdict);
-    expect(snap.standfirst).toBe(cam.identity.signature);
-    expect(snap.recognition).toBe(cam.identity.recognition || undefined);
+  it('replaces an unlicensed no-change verdict with what is actually established', () => {
+    expect(snap.verdict).toMatch(/No system-level interaction is established/i);
+    expect(snap.verdict).not.toMatch(/nothing here needs changing/i);
   });
 
-  it('carries every reading section unchanged', () => {
-    const eng = snap.sections.find((s) => s.label === 'Engineering');
-    expect(eng?.paragraphs).toEqual(cam.reading.engineering);
-    const ls = snap.sections.find((s) => s.label === 'Listening Session');
-    expect(ls?.paragraphs).toEqual(cam.reading.listeningSession);
-    expect(snap.operatingCondition).toBe(cam.reading.operatingCondition);
+  it('publishes no listening prediction', () => {
+    const all = snap.sections.flatMap((x) => x.paragraphs).join(' ');
+    expect(all).not.toMatch(/leading edges|image extends wide|put on something/i);
+    expect(snap.sections.find((x) => x.label === 'Listening Session')).toBeUndefined();
   });
 
-  it('carries the tonal signature and the evidence statement unchanged', () => {
-    expect(snap.tonalSignature).toEqual(cam.identity.tonalSignature);
+  it('publishes no axis-derived system character', () => {
+    expect(snap.tonalSignature).toBeUndefined();
+    expect(snap.standfirst).toBeUndefined();
+    expect(snap.recognition).toBeUndefined();
+    expect(snap.recommendation).toBeUndefined();
+    expect(snap.operatingCondition).toBeUndefined();
+  });
+
+  it('says which figure is missing rather than "insufficient evidence"', () => {
+    const review = (snap.systemReview ?? []).join(' ');
+    expect(review).toMatch(/could not establish/i);
+    expect(review).not.toMatch(/insufficient evidence/i);
+  });
+
+  it('keeps the evidence statement, which was never trait-authored', () => {
     expect(snap.evidenceStatement).toBe(cam.evidence.statement);
   });
 
   it('never renders richness the assessment did not have', () => {
-    // Sections exist only where the assessment produced them.
     for (const s of snap.sections) expect(s.paragraphs.length).toBeGreaterThan(0);
   });
 });
@@ -160,9 +193,26 @@ describe('CONTROL 3 — Magnepan preserves its constraint', () => {
     expect(snap.sections.find((s) => s.label === 'Listening Session')).toBeUndefined();
   });
 
-  it('keeps the recommendation and operating condition', () => {
+  it('keeps the recommendation the constraint licenses', () => {
+    // A constraint IS an Explain-level basis, so guidance bounded by it stays.
+    // This is the asymmetry that matters: the licensing gate removes trait
+    // prose where nothing is established and keeps it where something is.
     expect(snap.recommendation).toBe(cam.guidance.recommendation);
-    expect(snap.operatingCondition).toBe(cam.reading.operatingCondition);
+  });
+
+  it('drops the operating condition, which the constraint does NOT license', () => {
+    // "Stacked warmth may reduce transient precision and spatial clarity"
+    // comes from `detectStackedTraits`, which runs on component axis profiles.
+    // A POWER constraint licenses guidance about power; it licenses nothing
+    // tonal that happens to sit beside it. Scope is part of licensing —
+    // "established" is not a single permission covering every claim on the page.
+    expect(snap.operatingCondition).toBeUndefined();
+  });
+
+  it('still publishes no axis-derived tonal signature', () => {
+    // A power constraint licenses guidance about power. It licenses nothing
+    // about tonal character, so the graph goes regardless of the verdict.
+    expect(snap.tonalSignature).toBeUndefined();
   });
 });
 
@@ -227,13 +277,39 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // reassess", not "does any function run". Deriving the ledger from frozen
     // material is the opposite of reassessment: it is what stops the ledger
     // being maintained separately and drifting from the assessment.
+    // `../assessment/authoritative` joins the list on the same terms. It is
+    // the licensing gate, and it is placed at CONSTRUCTION so an unlicensed
+    // snapshot cannot be built — a gate at the renderer is a gate the next
+    // surface forgets to call, which is precisely how the trait lane reached
+    // production while the evidence lane sat behind a link nobody surfaced.
+    //
+    // Its own imports are checked below and are pure: it reaches
+    // `relational-explain` for the verdict composer rather than
+    // `llm-system-inference`, which is why that function was moved — the
+    // snapshot layer must not be able to import a module carrying model
+    // prompts and network calls, however pure the one function it wanted.
     expect(imports).toEqual([
       './canonical', './evidence-ledger', './system-review',
-      '../evidence/dossier-presentation',
+      '../assessment/authoritative', '../evidence/dossier-presentation',
     ]);
-    for (const i of imports.filter((x) => x !== './evidence-ledger' && x !== './system-review')) {
+    for (const i of imports.filter((x) => !['./evidence-ledger', './system-review', '../assessment/authoritative'].includes(x))) {
       expect(src, i).toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./]/g, '\\$&')}'`));
     }
+    // The gate reaches nothing that could reassess.
+    const gate = await fs.readFile(
+      new URL('../../assessment/authoritative.ts', import.meta.url), 'utf8');
+    const gateImports = [...gate.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+    expect(gateImports).toEqual([
+      '../artifact/snapshot', '../evidence/dossier-presentation',
+      '../artifact/causal-coverage', '../relational-explain',
+    ]);
+    expect(gate).not.toMatch(/llm-system-inference|consultation|assessment-pipeline/);
+    // `relational-explain` is where the verdict composer now lives, and it
+    // depends on nothing at all.
+    const rel = await fs.readFile(
+      new URL('../../relational-explain.ts', import.meta.url), 'utf8');
+    expect([...rel.matchAll(/from '([^']+)'/g)].map((m) => m[1])).toEqual([]);
+
     // And the derivation itself must stay pure.
     const ledger = await fs.readFile(new URL('../evidence-ledger.ts', import.meta.url), 'utf8');
     const ledgerImports = [...ledger.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
@@ -292,11 +368,16 @@ describe('THE ARTIFACT IS NO LONGER A SUBSET OF THE CONVERSATION', () => {
     expect(snap.componentDossiers).toHaveLength(2);
   });
 
-  it('carries the tonal signature the graph reads', () => {
+  it('no longer carries a tonal signature the evidence cannot license', () => {
+    // Superseded 2026-08-24. `AxisReading.pole` is documented as "which pole
+    // the SYSTEM commits to" — the aggregation of per-component catalog axes
+    // into system character, which no established rule licenses. The dossiers
+    // still carry per-component character with the basis beside it, so the
+    // artifact is not a subset of the conversation; it is the same
+    // authoritative assessment with the unlicensed aggregate removed.
     const r = runArtifactPipeline('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV')!;
     const snap = snapshotFromCanonical(r.canonical, meta);
-    expect(snap.tonalSignature).toEqual(r.canonical.identity.tonalSignature);
-    expect(snap.tonalSignature!.length).toBe(3);
+    expect(snap.tonalSignature).toBeUndefined();
   });
 
   it('survives storage unchanged, dossiers included', () => {
