@@ -248,8 +248,17 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // opposite of reassessment.
     const review = await fs.readFile(new URL('../system-review.ts', import.meta.url), 'utf8');
     const reviewImports = [...review.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-    expect(reviewImports).toEqual(['@/lib/evidence/dossier-presentation']);
+    // `quantity-compatibility` is a pure predicate over strings the snapshot
+    // already holds — it decides whether two published figures may be compared
+    // and reads nothing else. Guarding arithmetic is not reassessment.
+    expect(reviewImports).toEqual([
+      '@/lib/evidence/dossier-presentation',
+      '@/lib/evidence/quantity-compatibility',
+    ]);
     expect(review).toMatch(/import type \{/);
+    const compat = await fs.readFile(
+      new URL('../../evidence/quantity-compatibility.ts', import.meta.url), 'utf8');
+    expect([...compat.matchAll(/from '([^']+)'/g)].map((m) => m[1])).toEqual([]);
   });
 });
 

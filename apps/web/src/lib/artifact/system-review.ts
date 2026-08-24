@@ -30,6 +30,7 @@
  * part most assessments skip — what it specifically does not.
  */
 import type { DossierView, DossierLine } from '@/lib/evidence/dossier-presentation';
+import { readPowerFigures, pairAcrossLoads } from '@/lib/evidence/quantity-compatibility';
 
 export interface ReviewComponent {
   displayName: string;
@@ -101,7 +102,21 @@ function handlingRange(value: string): { min?: number; max?: number } {
  * legitimate result for a system Audio XX holds nothing about.
  */
 export function composeSystemReview(input: SystemReviewInput): string[] {
+  return composeSystemReviewDetailed(input).paragraphs;
+}
+
+/**
+ * The review, plus the record of what it could NOT say and why.
+ *
+ * A refusal with a stated cause is an observability signal: "incompatible
+ * evidence conditions" is actionable where "insufficient evidence" is not.
+ */
+export function composeSystemReviewDetailed(input: SystemReviewInput): {
+  paragraphs: string[];
+  unresolved: string[];
+} {
   const out: string[] = [];
+  const unresolved: string[] = [];
 
   const amp = byRole(input, 'amplifier', 'integrated', 'power-amp');
   const spk = byRole(input, 'speaker', 'loudspeaker');
@@ -164,80 +179,135 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
   const ohms = impedanceLine ? numeric(impedanceLine.value) : undefined;
 
   /**
-   * WHY THE 4-OHM FIGURE IS THE ONE THAT GOVERNS.
+   * WHICH PUBLISHED FIGURE APPLIES — a condition-matching statement, and
+   * nothing more.
    *
-   * A driver complement stated on its own is a fact restated, not analysis.
-   * Stated as the REASON the lower-impedance figure is the relevant one, it
-   * becomes the step between the loudspeaker's specification and the
-   * amplifier's: a low nominal impedance across a multi-driver bass array is a
-   * current demand, and it is what makes the maker's 8-ohm figure the wrong
-   * one to read.
+   * D-7 AUDIT (founder, 2026-08-24). This paragraph previously read: "a
+   * nominal load that low is a demand for current rather than for voltage".
+   * Three things were wrong with it.
+   *
+   *   1. A nominal impedance is a single summary number. It does not establish
+   *      minimum impedance, phase angle, or the current drawn across the real
+   *      impedance curve — so it cannot establish that a loudspeaker is
+   *      electrically demanding. COMPATIBILITY is licensed here; DIFFICULTY is
+   *      not, and the two must not be confused.
+   *   2. The driver complement was offered as the reason the load is low.
+   *      Driver count establishes nothing about impedance behaviour.
+   *   3. "The 8-ohm figure would flatter the pairing" was simply backwards:
+   *      Butler's 8-ohm figure is 128 W and its 4-ohm figure 200 W, so reading
+   *      the 8-ohm one UNDERSTATES the output into this loudspeaker.
+   *
+   * What survives is the part that was always licensed: the loudspeaker states
+   * a nominal load, the amplifier publishes a figure at that load, so that is
+   * the figure to read. A matching-conditions statement.
    */
-  if (spk && amp && ohms && ohms <= 6 && driversLine) {
-    const drivers = driversLine.value.replace(/\.$/, '').replace(/;\s*/g, ' and ').toLowerCase();
+  if (spk && amp && ohms && outputLine && findLine(amp.dossier, 'power output')) {
     electrical.push(
-      `Which of the amplifier's published figures matters is decided by the `
-      + `loudspeaker, not by the amplifier. ${spk.component.displayName} presents `
-      + `${impedanceLine!.value} across ${drivers}, and a nominal load that low is `
-      + `a demand for current rather than for voltage — so the maker's `
-      + `${ohms}-ohm figure is the one that governs here, and the 8-ohm figure `
-      + `would flatter the pairing.`,
+      `Which of the amplifier's published figures applies is settled by the `
+      + `loudspeaker: ${spk.component.displayName} states a nominal load of `
+      + `${impedanceLine!.value}, so the maker's ${ohms}-ohm figure is the one `
+      + `to read here rather than the ${ohms * 2}-ohm figure quoted first on most `
+      + `specification sheets. What a nominal figure does not establish is how `
+      + `demanding the loudspeaker actually is — that would need its impedance `
+      + `minimum and phase behaviour, which are not published.`,
     );
   }
+
+  /**
+   * WITHIN PUBLISHED OPERATING LIMITS — the exact strength of this claim.
+   *
+   * Two maker-published figures establish that the pairing lies inside the
+   * limits both makers state. They do NOT establish that the pairing is easy,
+   * well matched, or ideal; those are difficulty judgements and need evidence
+   * this assessment does not hold. The wording is deliberately the weaker one.
+   */
   if (spk && amp && handlingLine && outputLine && ohms) {
-    const atLoad = wattsAtLoad(outputLine.value, ohms);
+    const figures = readPowerFigures(outputLine.value);
+    const atLoad = figures.filter((f) => f.ohms === ohms);
+    const chosen = atLoad.find((f) => f.status === 'typical') ?? atLoad[0];
     const { min, max } = handlingRange(handlingLine.value);
-    const w = atLoad ? Number(atLoad) : undefined;
-    if (w != null && max != null && min != null) {
-      if (w <= max && w >= min) {
-        electrical.push(
-          `That output also sits inside the window ${spk.component.displayName} is `
-          + `specified to handle (${handlingLine.value}): ${w} watts at the `
-          + `relevant load is comfortably within it, with room to the upper limit `
-          + `rather than pressing against it. Both figures are maker-published, so `
-          + `this is a statement about the electrical match and nothing more.`,
-        );
-      } else if (w > max) {
-        electrical.push(
-          `That output sits ABOVE the window ${spk.component.displayName} is `
-          + `rated for (${handlingLine.value}). The amplifier can deliver more than `
-          + `the loudspeaker is specified to take, which is a matter of how loud it `
-          + `is driven rather than a fault in the pairing.`,
-        );
-      }
+    if (chosen && max != null && min != null && chosen.value <= max && chosen.value >= min) {
+      electrical.push(
+        `On the published numbers the pairing sits within the limits both makers `
+        + `state: ${chosen.value} watts at ${ohms} ohms against a loudspeaker `
+        + `specified for ${handlingLine.value}. That establishes compatibility `
+        + `with the published ratings — not that the match is an easy one, which `
+        + `is a different question and needs evidence neither maker publishes.`,
+      );
+    } else if (chosen && min != null && chosen.value < min) {
+      /*
+       * THE COUNTER-CASE MUST BE SAYABLE.
+       *
+       * The positive branch above existed alone, so a pairing INSIDE the
+       * published window was reported and a pairing outside it produced
+       * silence. That asymmetry is a licensing error, not caution: both
+       * conclusions rest on exactly the same two maker-published figures, and
+       * a system that can only confirm compatibility is not restrained, it is
+       * broken in one direction.
+       *
+       * The claim stays at the strength the figures license — the amplifier's
+       * published output falls below the range the loudspeaker's own maker
+       * specifies. It does NOT claim the amplifier will clip, strain, sound
+       * thin or damage anything; those need evidence about behaviour at the
+       * listener's actual levels, which nobody publishes.
+       */
+      electrical.push(
+        `The published figures do not meet: ${chosen.value} watts at ${ohms} ohms `
+        + `against a loudspeaker its maker specifies for ${handlingLine.value}. `
+        + `The amplifier's rated output falls below the bottom of that range, so `
+        + `this pairing sits outside the limits ${spk.component.displayName}'s maker `
+        + `states rather than inside them. What that does not establish is how it `
+        + `behaves at the levels you actually listen at — a published minimum is a `
+        + `maker's recommendation, not a measurement of the pairing.`,
+      );
+    } else if (chosen && max != null && chosen.value > max) {
+      electrical.push(
+        `The published figures do not meet: ${chosen.value} watts at ${ohms} ohms `
+        + `against a loudspeaker its maker specifies for ${handlingLine.value}. `
+        + `The amplifier's rated output exceeds the top of that range, which is a `
+        + `statement about the ratings and not a prediction of damage — a rated `
+        + `maximum describes power the loudspeaker is specified to absorb `
+        + `continuously, and how much of an amplifier's output reaches it depends `
+        + `on how loudly it is driven.`,
+      );
     }
   }
+
   /**
    * DOES THE OUTPUT DOUBLE INTO HALF THE LOAD?
    *
    * Two published figures at two loads answer a question neither answers
    * alone. An amplifier behaving as an ideal voltage source doubles its power
-   * as impedance halves; a real one falls short by an amount that says
-   * something about its current delivery. Both numbers are the maker's, and
-   * the arithmetic between them is Audio XX's — which is exactly the kind of
-   * conclusion a listener cannot reach from a specification sheet.
+   * as impedance halves; a real one falls short. Both numbers are the maker's,
+   * and the arithmetic between them is Audio XX's — the kind of conclusion a
+   * listener cannot reach from a specification sheet.
    *
-   * Deliberately stops at the electrical statement. What that shortfall does
-   * to the sound is not licensed by two power figures, and is not claimed.
+   * Stops at what the two numbers establish. Earlier wording said the
+   * amplifier "meets the extra current the lower load asks for, but not in
+   * full" — an inference about current delivery that two power figures do not
+   * license. What they license is that it does not behave as an ideal voltage
+   * source into this load. Nothing about the sound is claimed.
    */
   if (amp && spk && outputLine && ohms) {
-    const atLow = wattsAtLoad(outputLine.value, ohms);
-    const atHigh = wattsAtLoad(outputLine.value, ohms * 2);
-    const lo = atLow ? Number(atLow) : undefined;
-    const hi = atHigh ? Number(atHigh) : undefined;
-    if (lo != null && hi != null && hi > 0) {
-      const ratio = lo / hi;
-      if (ratio < 1.8) {
+    const figures = readPowerFigures(outputLine.value);
+    const pair = pairAcrossLoads(figures, ohms, ohms * 2);
+    if (pair.ok) {
+      const ratio = pair.low.value / pair.high.value;
+      if (pair.high.value > 0 && ratio < 1.8) {
         electrical.push(
           `The maker publishes both loads, which lets one more thing be said: `
-          + `${hi} watts into ${ohms * 2} ohms becomes ${lo} into ${ohms}, a rise `
-          + `of about ${ratio.toFixed(1)}× rather than the doubling an ideal `
-          + `voltage source would manage. The amplifier meets the extra current `
-          + `the lower load asks for, but not in full — which is precisely why `
-          + `the ${ohms}-ohm figure had to be read from the maker rather than `
-          + `inferred from the ${ohms * 2}-ohm one.`,
+          + `${pair.high.value} watts into ${ohms * 2} ohms becomes `
+          + `${pair.low.value} into ${ohms}, a rise of about ${ratio.toFixed(1)}× `
+          + `rather than the doubling an ideal voltage source would manage. `
+          + `Both figures are the maker's and stated on the same basis, so the `
+          + `arithmetic holds: the amplifier does not behave as an ideal voltage `
+          + `source into this load. That is the whole of what the two numbers `
+          + `establish, and it is why the ${ohms}-ohm figure had to be read from `
+          + `the maker rather than inferred by doubling the ${ohms * 2}-ohm one.`,
         );
       }
+    } else {
+      unresolved.push(`amplifier output across loads — ${pair.reason}`);
     }
   }
 
@@ -306,5 +376,5 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
     );
   }
 
-  return out;
+  return { paragraphs: out, unresolved };
 }

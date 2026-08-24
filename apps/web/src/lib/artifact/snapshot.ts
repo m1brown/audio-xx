@@ -165,9 +165,41 @@ export function snapshotFromCanonical(
   meta: {
     engineVersion: string; createdAt: string; actionVerdict?: string;
     componentDossiers?: DossierView[];
+    coverageNote?: string;
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
+
+  /*
+   * THE SYSTEM REVIEW BELONGS ON BOTH PATHS.
+   *
+   * It was composed only in `snapshotFromProvisional`, which serves systems
+   * whose components are UNCATALOGUED. Every catalogued system — the ones
+   * Audio XX holds the most evidence about — arrived here and received no
+   * system-level reasoning at all. The architecture reached the systems it
+   * understood least and skipped the systems it understood best.
+   *
+   * The composer is unchanged and still evidence-gated, so this grants no new
+   * licence: a system whose dossiers carry nothing relational still produces
+   * nothing. What it fixes is a path that never asked the question.
+   *
+   * Roles are read off the dossiers rather than off `cam`, because the
+   * canonical model carries a component's NAME but drops its role — and
+   * without a role there is no chain, and without a chain there are no
+   * interfaces to reason across.
+   */
+  const roleByName = new Map(
+    (meta.componentDossiers ?? []).map((d) => [d.displayName, d.role ?? '']),
+  );
+  const systemReview = composeSystemReview({
+    components: cam.subject.components.map((c) => ({
+      displayName: c.name, role: roleByName.get(c.name) ?? '',
+    })),
+    dossiers: meta.componentDossiers ?? [],
+    driveFinding: cam.identity.signature,
+    driveQualification: undefined,
+    coverageNote: meta.coverageNote,
+  });
   if (cam.reading.engineering.length) {
     sections.push({ label: 'Engineering', paragraphs: cam.reading.engineering });
   }
@@ -183,7 +215,13 @@ export function snapshotFromCanonical(
     createdAt: meta.createdAt,
     engineVersion: meta.engineVersion,
     origin: 'catalog',
-    components: cam.subject.components.map((c) => ({ name: c.name })),
+    components: cam.subject.components.map((c) => ({
+      name: c.name,
+      // The role travels with the component into the frozen snapshot, so a
+      // reopened artifact can still say what each box does in the chain.
+      ...(roleByName.get(c.name) ? { role: roleByName.get(c.name) } : {}),
+    })),
+    systemReview,
     verdict: cam.identity.verdict,
     standfirst: cam.identity.signature,
     actionVerdict: meta.actionVerdict,

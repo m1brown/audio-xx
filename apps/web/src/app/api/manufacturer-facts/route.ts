@@ -65,9 +65,24 @@ Rules:
 
 export async function POST(req: NextRequest) {
   let name = '';
+  /*
+   * READ WITHOUT ACQUIRING.
+   *
+   * A caller that only wants to USE evidence should not be forced to PAY to
+   * create it. The catalogued-assessment path needs held facts to reason
+   * across interfaces, but a web search per component on every assessment is
+   * an acquisition-policy decision with real cost, not a wiring detail — so
+   * that path reads what is held and stops there.
+   *
+   * The distinction matters beyond cost: absence-because-nobody-looked and
+   * absence-because-nothing-is-published are different states, and only the
+   * acquiring caller may turn the first into the second.
+   */
+  let heldOnly = false;
   try {
     const body = await req.json().catch(() => ({}));
     name = typeof body?.name === 'string' ? body.name.slice(0, 120) : '';
+    heldOnly = body?.heldOnly === true;
   } catch { /* fall through */ }
 
   const productKey = productKeyFor(name);
@@ -82,6 +97,12 @@ export async function POST(req: NextRequest) {
   const cached = await readFacts(productKey, Date.now());
   if (cached.length > 0) {
     return NextResponse.json({ productKey, status: 'facts', facts: cached, cached: true, store: store() });
+  }
+
+  // Nothing held, and this caller does not acquire. Reported as `none` —
+  // the lookup it asked for (a store read) genuinely completed.
+  if (heldOnly) {
+    return NextResponse.json({ productKey, status: 'none' as const, facts: [], store: store() });
   }
 
   const key = process.env.OPENAI_API_KEY;

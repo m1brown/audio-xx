@@ -3386,12 +3386,48 @@ export default function Home() {
         // component list. `assessmentResult.components` is empty on this path,
         // which is why the first wiring produced no dossiers at all.
         const chain = assessmentResult.findings?.systemChain;
-        assessmentResult.response.componentDossiers = buildDossierViews(
-          (chain?.names ?? []).map((name: string, i: number) => ({
-            displayName: name,
-            role: dossierRole(chain?.roles?.[i]) ?? '',
-          })),
-          []);
+        const chainComponents = (chain?.names ?? []).map((name: string, i: number) => ({
+          displayName: name,
+          role: dossierRole(chain?.roles?.[i]) ?? '',
+        }));
+        /*
+         * HELD EVIDENCE REACHES THIS PATH TOO.
+         *
+         * This call passed `[]`, so a catalogued system's dossiers were built
+         * from the catalog alone — which carries no specifications. Every
+         * interface question therefore resolved to "missing product evidence"
+         * for exactly the systems Audio XX knows best, and the system review
+         * had nothing to reason across.
+         *
+         * `heldOnly` reads the site-level store without acquiring: no web
+         * search, no model call, no per-assessment cost. Whether this path
+         * should also ACQUIRE facts is a separate policy question with real
+         * cost attached, and is not decided here.
+         */
+        const HELD_FACTS_BUDGET_MS = 2500;
+        let heldFacts: Array<Record<string, unknown>> = [];
+        if (chainComponents.length > 0) {
+          const deadline = new Promise<'deadline'>((r) =>
+            setTimeout(() => r('deadline'), HELD_FACTS_BUDGET_MS));
+          const reads = Promise.all(chainComponents.map(async (c) => {
+            try {
+              const r = await fetch('/api/manufacturer-facts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: c.displayName, heldOnly: true }),
+              });
+              if (!r.ok) return [];
+              const j = await r.json();
+              return Array.isArray(j?.facts) ? j.facts : [];
+            } catch { return []; }
+          }));
+          const settled = await Promise.race([reads, deadline]);
+          heldFacts = settled === 'deadline'
+            ? []
+            : (settled as Array<Array<Record<string, unknown>>>).flat();
+        }
+        assessmentResult.response.componentDossiers =
+          buildDossierViews(chainComponents, heldFacts);
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and

@@ -104,8 +104,11 @@ describe('the review reasons ACROSS facts rather than restating them', () => {
   it('relates the amplifier output to the loudspeaker rating — a new conclusion', () => {
     const out = joined(NATHAN);
     // Neither dossier says this; it exists only by putting two figures together.
-    expect(out).toMatch(/sits inside the window/);
-    expect(out).toMatch(/200 watts at the relevant load is comfortably within it/);
+    // Wording changed by the D-7 audit: "comfortably within it" implied an
+    // easy match, which two published numbers do not license. The claim is now
+    // explicitly about published LIMITS, not about difficulty.
+    expect(out).toMatch(/within the limits both makers state/);
+    expect(out).toMatch(/not that the match is an easy one/);
   });
 
   it('separates electrical suitability from loudness capability', () => {
@@ -182,7 +185,7 @@ describe('the review never repeats what the document already renders', () => {
   it('but still reasons FROM them', () => {
     // The power-window paragraph exists only because the drive finding did.
     const out = joined(NATHAN);
-    expect(out).toMatch(/That output also sits inside the window/);
+    expect(out).toMatch(/within the limits both makers state/);
   });
 });
 
@@ -209,11 +212,36 @@ describe('the review compares LIKE conditions', () => {
 
   it('states the ratio it actually computed', () => {
     expect(out).toMatch(/about 1\.6×/);
-    expect(out).not.toMatch(/doubling the|doubles its/);
+    // It must not CLAIM the amplifier doubles. Naming doubling as the thing
+    // that did not happen — "rather than the doubling an ideal voltage source
+    // would manage" — is the point of the sentence.
+    expect(out).not.toMatch(/the amplifier doubles|output doubles|doubles its (?:power|output)/i);
   });
 
   it('stops at the electrical statement — no sonic consequence is claimed', () => {
     expect(out).not.toMatch(/will sound|bass will|grip|slam|control of the woofer/i);
+  });
+
+  it('D-7: nominal impedance never establishes electrical DIFFICULTY', () => {
+    // A nominal impedance is one summary number. It does not establish minimum
+    // impedance, phase angle, or current drawn across the real curve — so it
+    // cannot license "demanding", "current hungry", "easy" or "hard".
+    for (const overclaim of [
+      /demand for current rather than for voltage/i,
+      /current[- ]hungry/i, /difficult load/i, /demanding load/i,
+      /easy to drive/i, /hard to drive/i, /punishing/i,
+    ]) expect(out, String(overclaim)).not.toMatch(overclaim);
+  });
+
+  it('D-7: says explicitly what a nominal figure cannot establish', () => {
+    expect(out).toMatch(/nominal figure does not establish is how demanding/i);
+    expect(out).toMatch(/impedance minimum and phase behaviour/i);
+  });
+
+  it('D-7: never claims the lower-impedance reading flatters the pairing', () => {
+    // It was backwards. Butler's 8-ohm figure is LOWER than its 4-ohm figure,
+    // so reading the 8-ohm one understates the output into this loudspeaker.
+    expect(out).not.toMatch(/would flatter the pairing/i);
   });
 
   it('makes no unlicensed generalisation about the amplifier class', () => {
