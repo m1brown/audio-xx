@@ -185,3 +185,38 @@ describe('the review never repeats what the document already renders', () => {
     expect(out).toMatch(/That output also sits inside the window/);
   });
 });
+
+describe('the review compares LIKE conditions', () => {
+  const multi: DossierView = {
+    displayName: 'Butler Monads',
+    primary: [{
+      label: 'power output',
+      // The maker publishes a MINIMUM and a TYPICAL at 8 ohms, and a typical
+      // at 4. Reading the first match picks minimum-vs-typical, which would
+      // report an amplifier doubling its power when like-for-like says 1.6x.
+      value: 'Minimum 100 Watts RMS @ 8 Ohms; 128 Watts, RMS typical @ 8 Ohms; 200 Watts, RMS typical @ 4 Ohms',
+      sourceClass: 'maker_published',
+    }],
+    secondary: [], gaps: [], hasDetail: false,
+  };
+
+  const out = composeSystemReview({ ...NATHAN, dossiers: [dcs, arc, multi, acora] }).join('\n\n');
+
+  it('compares typical to typical, not minimum to typical', () => {
+    expect(out).toMatch(/128 watts into 8 ohms becomes 200 into 4/);
+    expect(out).not.toMatch(/100 watts into 8 ohms/);
+  });
+
+  it('states the ratio it actually computed', () => {
+    expect(out).toMatch(/about 1\.6×/);
+    expect(out).not.toMatch(/doubling the|doubles its/);
+  });
+
+  it('stops at the electrical statement — no sonic consequence is claimed', () => {
+    expect(out).not.toMatch(/will sound|bass will|grip|slam|control of the woofer/i);
+  });
+
+  it('makes no unlicensed generalisation about the amplifier class', () => {
+    expect(out).not.toMatch(/ordinary for the type|typical of such designs|most amplifiers/i);
+  });
+});

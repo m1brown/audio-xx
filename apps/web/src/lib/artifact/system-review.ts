@@ -59,10 +59,28 @@ const byRole = (input: SystemReviewInput, ...roles: string[]) => {
   };
 };
 
-/** "100 W … 200 Watts, RMS typical @ 4 Ohms" → the figures a reader acts on. */
-function wattsAtLoad(value: string, ohms: number): string | undefined {
-  const re = new RegExp(`([\\d.,]+)\\s*(?:watts?|w)\\b[^;.]*?${ohms}\\s*ohm`, 'i');
-  const m = re.exec(value);
+/**
+ * The output at a stated load — matching LIKE CONDITIONS.
+ *
+ * A maker often publishes several figures at one load: "Minimum 100 Watts RMS
+ * @ 8 Ohms; 128 Watts, RMS typical @ 8 Ohms". Taking the first match picks the
+ * MINIMUM at 8 ohms and the TYPICAL at 4, and comparing those two is the
+ * unlike-conditions error typed quantities exist to prevent — it would have
+ * reported an amplifier doubling its power when the like-for-like figures say
+ * it does not.
+ *
+ * Segments are read separately and a `typical` figure is preferred, so both
+ * ends of a comparison are drawn from the same kind of measurement.
+ */
+function wattsAtLoad(value: string, ohms: number, prefer: 'typical' | 'any' = 'typical'): string | undefined {
+  const segments = value.split(/;/);
+  const re = new RegExp(`([\\d.,]+)\\s*(?:watts?|w)\\b`, 'i');
+  const atLoad = segments.filter((seg) => new RegExp(`${ohms}\\s*ohm`, 'i').test(seg));
+  if (atLoad.length === 0) return undefined;
+  const chosen = prefer === 'typical'
+    ? (atLoad.find((seg) => /typical/i.test(seg)) ?? atLoad[0])
+    : atLoad[0];
+  const m = re.exec(chosen);
   return m ? m[1].replace(/,/g, '') : undefined;
 }
 
@@ -125,12 +143,6 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
     );
   }
 
-  const drivers = findLine(spk?.dossier, 'drivers') ?? findLine(spk?.dossier, 'driver complement');
-  if (spk && drivers) {
-    architecture.push(
-      `${spk.component.displayName} carries ${drivers.value.replace(/\.$/, '').replace(/;\s*/g, ' and ').toLowerCase()}.`,
-    );
-  }
   if (architecture.length) out.push(architecture.join(' '));
 
   // ── EXPLAIN: the electrical relationship that the figures license ─────
@@ -147,7 +159,31 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
   const impedanceLine = findLine(spk?.dossier, 'impedance');
   const handlingLine = findLine(spk?.dossier, 'power handling');
   const outputLine = findLine(amp?.dossier, 'power output');
+  const driversLine = findLine(spk?.dossier, 'drivers')
+    ?? findLine(spk?.dossier, 'driver complement');
   const ohms = impedanceLine ? numeric(impedanceLine.value) : undefined;
+
+  /**
+   * WHY THE 4-OHM FIGURE IS THE ONE THAT GOVERNS.
+   *
+   * A driver complement stated on its own is a fact restated, not analysis.
+   * Stated as the REASON the lower-impedance figure is the relevant one, it
+   * becomes the step between the loudspeaker's specification and the
+   * amplifier's: a low nominal impedance across a multi-driver bass array is a
+   * current demand, and it is what makes the maker's 8-ohm figure the wrong
+   * one to read.
+   */
+  if (spk && amp && ohms && ohms <= 6 && driversLine) {
+    const drivers = driversLine.value.replace(/\.$/, '').replace(/;\s*/g, ' and ').toLowerCase();
+    electrical.push(
+      `Which of the amplifier's published figures matters is decided by the `
+      + `loudspeaker, not by the amplifier. ${spk.component.displayName} presents `
+      + `${impedanceLine!.value} across ${drivers}, and a nominal load that low is `
+      + `a demand for current rather than for voltage — so the maker's `
+      + `${ohms}-ohm figure is the one that governs here, and the 8-ohm figure `
+      + `would flatter the pairing.`,
+    );
+  }
   if (spk && amp && handlingLine && outputLine && ohms) {
     const atLoad = wattsAtLoad(outputLine.value, ohms);
     const { min, max } = handlingRange(handlingLine.value);
@@ -171,6 +207,40 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
       }
     }
   }
+  /**
+   * DOES THE OUTPUT DOUBLE INTO HALF THE LOAD?
+   *
+   * Two published figures at two loads answer a question neither answers
+   * alone. An amplifier behaving as an ideal voltage source doubles its power
+   * as impedance halves; a real one falls short by an amount that says
+   * something about its current delivery. Both numbers are the maker's, and
+   * the arithmetic between them is Audio XX's — which is exactly the kind of
+   * conclusion a listener cannot reach from a specification sheet.
+   *
+   * Deliberately stops at the electrical statement. What that shortfall does
+   * to the sound is not licensed by two power figures, and is not claimed.
+   */
+  if (amp && spk && outputLine && ohms) {
+    const atLow = wattsAtLoad(outputLine.value, ohms);
+    const atHigh = wattsAtLoad(outputLine.value, ohms * 2);
+    const lo = atLow ? Number(atLow) : undefined;
+    const hi = atHigh ? Number(atHigh) : undefined;
+    if (lo != null && hi != null && hi > 0) {
+      const ratio = lo / hi;
+      if (ratio < 1.8) {
+        electrical.push(
+          `The maker publishes both loads, which lets one more thing be said: `
+          + `${hi} watts into ${ohms * 2} ohms becomes ${lo} into ${ohms}, a rise `
+          + `of about ${ratio.toFixed(1)}× rather than the doubling an ideal `
+          + `voltage source would manage. The amplifier meets the extra current `
+          + `the lower load asks for, but not in full — which is precisely why `
+          + `the ${ohms}-ohm figure had to be read from the maker rather than `
+          + `inferred from the ${ohms * 2}-ohm one.`,
+        );
+      }
+    }
+  }
+
   if (electrical.length) out.push(electrical.join(' '));
 
   // ── EXPLAIN: what independent observations do and do not establish ────

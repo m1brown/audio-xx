@@ -156,6 +156,83 @@ substituted, so a yes here is worth less than the other three.
 Recommended order if the experiment runs: **Acora, then Butler, then dCS,
 then ARC** — strongest identity and simplest ask first.
 
+---
+
+## Draft 3 — dCS (Rossini Apex)
+
+**Subject:** Permission to show one Rossini Apex photograph in owner system assessments
+
+> Hello,
+>
+> I run Audio XX, a system-level listening advisor. When someone tells us what
+> they own, we write them an assessment of how their components work together.
+>
+> A listener with a Rossini Apex prompted this. Their assessment shows the
+> Apex's published output specifications and three Stereophile observations,
+> each reported with the comparison it was made under. It shows no photograph.
+>
+> Two requests, and the first is the one that matters most:
+>
+> 1. **Could you point us at the correct product image for the Rossini Apex?**
+>    Our automated checks can reach your asset URLs but not the product pages
+>    that identify them, so we cannot confirm which file depicts which model —
+>    and we will not guess from a filename. A link, or an attached file, settles it.
+> 2. May we then reproduce that single photograph — keeping a local copy for
+>    stability, showing it beside the Apex in a listener's assessment,
+>    including it in the printable PDF, and crediting dCS with a link to your
+>    product page?
+>
+> The photograph would identify the product only. It never supports a claim
+> about how the unit sounds or measures — every such claim in our assessments
+> is tied to a published source — and it would not be used in advertising or
+> imply endorsement.
+>
+> If the answer to either is no, we will continue showing the specifications
+> without a photograph, as we do today.
+>
+> Thank you,
+> [name] — Audio XX
+
+**Contact route:** `info@dcsaudio.com` · +44 (0)1954 233950 · Data Conversion
+Systems Ltd, Buckingway Business Park, Swavesey, Cambridgeshire CB24 4AE.
+**Confidence: medium** — a general enquiry address rather than a named press
+contact.
+
+---
+
+## Draft 4 — Audio Research (Reference 5)
+
+**Subject:** Archive photograph of the Reference 5 (non-SE)
+
+> Hello,
+>
+> I run Audio XX, a system-level listening advisor. A listener running a
+> Reference 5 prompted this note — the original, not the SE.
+>
+> Their assessment shows the Reference 5's published frequency response, input
+> complement and tube complement, drawn from your owner's manual. It shows no
+> photograph, because the only Reference 5 imagery we can find is of the SE,
+> and we do not substitute one variant for another.
+>
+> So the question is really: **do you still hold a product photograph of the
+> non-SE Reference 5?** If you do, may we reproduce one — keeping a local copy
+> for stability, showing it beside that product in a listener's assessment,
+> including it in the printable PDF, and crediting Audio Research with a link?
+>
+> The photograph would identify the product only, never supporting a claim
+> about how it sounds, and would not be used in advertising or imply
+> endorsement.
+>
+> "We only have the SE" is a perfectly useful answer — we would simply continue
+> showing the specifications without a photograph rather than show the wrong one.
+>
+> Thank you,
+> [name] — Audio XX
+
+**Contact route:** `info@audioresearch.com` · 763-577-9700 · 6655 Wedgwood Rd N
+Suite 115, Maple Grove, MN 55311. A contact form exists.
+**Confidence: high** — published on their own contact page.
+
 ## If a yes arrives
 
 It is a data operation, not a project. The renderer is already wired: an
