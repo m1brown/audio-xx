@@ -47,3 +47,29 @@ describe('evidence footer survives the chrome-hiding rules', () => {
     expect(body).toContain('axx-provenance');
   });
 });
+
+describe('the footer speaks the reader\'s language', () => {
+  it('basis codes are never printed raw', () => {
+    // "Acora QRC-2 (model)" says nothing to anyone who has not read the
+    // source. The snapshot stores the code because that is what the engine
+    // decided; the document must not repeat it.
+    expect(TSX).not.toMatch(/\(\$\{c\.basis\}\)/);
+    expect(TSX).toMatch(/basisLabel\(c\.basis\)/);
+  });
+
+  it('uses the same vocabulary as the conversation surface', () => {
+    const conv = readFileSync('apps/web/src/components/advisory/AdvisoryMessage.tsx', 'utf8');
+    const fn = TSX.slice(TSX.indexOf('function basisLabel'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    for (const [code, phrase] of [
+      ['catalog', 'Audio XX catalog'],
+      ['brand', 'Audio XX brand evidence'],
+      ['model', 'identity corroborated'],
+      ['user', 'your description only'],
+    ] as const) {
+      expect(body, `${code} label`).toContain(phrase);
+      // The conversation says the same thing (capitalisation differs by role).
+      expect(conv.toLowerCase(), `${code} parity`).toContain(phrase.toLowerCase());
+    }
+  });
+});

@@ -23,6 +23,25 @@ import { prettyLabel } from '@/lib/artifact/labels';
  * derivation in `axis-poles.ts`. Nothing is recomputed here — recomputing a
  * pole in a renderer is how the same axis came to be stated three ways.
  */
+/**
+ * The evidence basis, in the reader's language.
+ *
+ * The snapshot stores the code (`brand`, `model`, `catalog`, `user`) because
+ * that is what the engine decided. Printing the code put internal taxonomy in
+ * front of the listener — "Acora QRC-2 (model)" says nothing to anyone who has
+ * not read the source. These are the same words the conversation surface uses,
+ * so one reader sees one vocabulary across both.
+ */
+function basisLabel(basis: string): string {
+  switch (basis) {
+    case 'catalog': return 'Audio XX catalog';
+    case 'brand': return 'Audio XX brand evidence';
+    case 'model': return 'identity corroborated';
+    case 'user': return 'your description only';
+    default: return basis;
+  }
+}
+
 function TonalSignature({ axes }: { axes: AxisReading[] }) {
   return (
     <section aria-label="Tonal signature">
@@ -187,7 +206,7 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
           </ul>
         ) : null}
         <p className="axx-provenance">
-          {s.components.map((c) => `${c.name}${c.basis ? ` (${c.basis})` : ''}`).join(' · ')}
+          {s.components.map((c) => `${c.name}${c.basis ? ` — ${basisLabel(c.basis)}` : ''}`).join(' · ')}
         </p>
       </footer>
     </article>
