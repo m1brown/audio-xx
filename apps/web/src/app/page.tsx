@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { getProductImageEntry } from '@/lib/product-images';
 import { buildComponentViews } from '@/lib/system-component-view';
 import { tierFor } from '@/lib/entity-corroboration';
 import Link from 'next/link';
@@ -134,11 +135,20 @@ function buildDossierViews(
         field: String(m.field), value: String(m.value),
         sourceUrl: (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl,
       }));
-    return presentDossier(dossierFor(key, c.displayName, {
+    const view = presentDossier(dossierFor(key, c.displayName, {
       authoredFacts: FRANCE_FACTS, heldSpecs, role: c.role,
       unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
       reviews: (reviewObservations[c.displayName] ?? []) as never,
     }));
+    // The ONE place a dossier photograph is attached, so conversation,
+    // artifact and PDF all receive it from a single data decision. The
+    // resolver is the governed boundary: exact identity, approved provenance,
+    // recorded rights. Nothing admissible for this product yields `undefined`,
+    // which every surface renders as nothing at all.
+    const admitted = getProductImageEntry(undefined, c.displayName);
+    return admitted
+      ? { ...view, image: { url: admitted.url, credit: admitted.source?.credit } }
+      : view;
   }).filter(worthRendering);
 }
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';

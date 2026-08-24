@@ -2380,25 +2380,12 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct, coverageGa
 
   return (
     <div style={{ marginBottom: '1.6rem' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.6rem',
-        fontSize: FONTS.labelSize,
-        fontWeight: 600,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase' as const,
-        color: COLORS.textMuted,
-        marginBottom: '0.55rem',
-      }}>
-        <span style={{
-          display: 'inline-block',
-          width: '1.5rem',
-          height: '2px',
-          background: COLORS.accent,
-        }} />
-        What I'm working with
-      </div>
+      {/* "What I'm working with" removed 2026-08-24.
+        *
+        * It was a second heading for one line. The response already opens with
+        * its own mode label, and the line beneath begins "Your system:" — it
+        * says what it is. Two rules and two headings before a single sentence
+        * is furniture, and B4 asks that the chain be stated once. */}
 
       {systemLine && (
         <p style={{
@@ -4831,14 +4818,27 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
             {a.systemComponentViews.map((c) => {
+              /**
+               * A badge only where it tells the listener something.
+               *
+               * `model` — identity independently corroborated, no curated
+               * record — is epistemically true and editorially empty. The
+               * listener OWNS this equipment; being told Audio XX confirmed it
+               * exists is not news, and on Nathan it repeated across three of
+               * four cards as pure furniture. What is worth saying about those
+               * components the coverage paragraph already says, by name:
+               * Audio XX holds specifications and identity for them, not
+               * listening evidence.
+               *
+               * So the badge marks the two states that change how a reader
+               * should weigh a card: Audio XX holds curated evidence, or the
+               * listener's own word is the only source. No badge means
+               * identified, nothing curated — legible from its absence.
+               */
               const BASIS_LABEL: Record<string, string> = {
                 catalog: 'Audio XX catalog',
                 brand: 'Audio XX brand evidence',
-                // NOT "Expanded reasoning" — that named the code path, not the
-                // evidence. `model` basis means Audio XX independently
-                // corroborated that this exact product is real but holds no
-                // curated record of how it sounds. Say that.
-                model: 'Identity corroborated',
+                model: '',
                 user: 'Your description only',
               };
               const BASIS_TONE: Record<string, string> = {
@@ -4879,15 +4879,17 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
                       display: 'flex', flexWrap: 'wrap', alignItems: 'center',
                       gap: '0.5rem', marginTop: '0.4rem',
                     }}>
-                      <span style={{
-                        fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-                        fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em',
-                        textTransform: 'uppercase', color: BASIS_TONE[c.basis],
-                        border: `1px solid ${BASIS_TONE[c.basis]}`, borderRadius: 2,
-                        padding: '0.08rem 0.34rem', whiteSpace: 'nowrap',
-                      }}>
-                        {BASIS_LABEL[c.basis]}
-                      </span>
+                      {BASIS_LABEL[c.basis] && (
+                        <span style={{
+                          fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                          fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em',
+                          textTransform: 'uppercase', color: BASIS_TONE[c.basis],
+                          border: `1px solid ${BASIS_TONE[c.basis]}`, borderRadius: 2,
+                          padding: '0.08rem 0.34rem', whiteSpace: 'nowrap',
+                        }}>
+                          {BASIS_LABEL[c.basis]}
+                        </span>
+                      )}
                     </div>
                     {/* RESOURCES — subordinate to identity and evidence.
                       *

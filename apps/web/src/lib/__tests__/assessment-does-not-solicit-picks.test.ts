@@ -67,9 +67,22 @@ describe('internal execution taxonomy stays off the reader surface', () => {
     expect(body).toMatch(/const showCaption = false/);
   });
 
-  it('the component basis label reports EVIDENCE, not the code path', () => {
-    expect(SRC).toMatch(/model: 'Identity corroborated'/);
+  it('the component basis label never reports the code path', () => {
     expect(SRC).not.toMatch(/model: 'Expanded reasoning'/);
+  });
+
+  it('`model` carries NO badge on the recognition cards', () => {
+    // It was briefly "Identity corroborated" — epistemically true and
+    // editorially empty. The listener owns the equipment; being told Audio XX
+    // confirmed it exists is not news, and on Nathan it repeated across three
+    // of four cards as furniture. What is worth saying about those components
+    // the coverage paragraph already says, by name.
+    //
+    // A badge now marks only the two states that change how a card should be
+    // weighed: Audio XX holds curated evidence, or the listener's own word is
+    // the only source. No badge means identified, nothing curated.
+    expect(SRC).toMatch(/model: '',/);
+    expect(SRC).toMatch(/BASIS_LABEL\[c\.basis\] && \(/);
   });
 
   it('genuine provenance labels are retained', () => {

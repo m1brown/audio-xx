@@ -57,6 +57,28 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
           <p style={{ margin: '0 0 0.55rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
             {d.displayName}
           </p>
+          {/* Recognition, not evidence. Rendered only when the governed
+              boundary admitted an exact-product asset; absent renders NOTHING
+              — no frame, no placeholder, no reserved space — so a dossier
+              without a photograph is a finished card rather than a gap. */}
+          {d.image && (
+            <figure style={{ margin: '0 0 0.7rem 0' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={d.image.url}
+                alt={d.displayName}
+                style={{
+                  display: 'block', maxWidth: '190px', width: '100%',
+                  height: 'auto', objectFit: 'contain', borderRadius: 2,
+                }}
+              />
+              {d.image.credit && (
+                <figcaption style={{ ...label, marginTop: '0.25rem' }}>
+                  {d.image.credit}
+                </figcaption>
+              )}
+            </figure>
+          )}
           {d.primary.map((l, i) => <Line key={i} l={l} />)}
           {/* `detailSummary` is NOT rendered. It announced "4 published
               details held" and then listed the four details immediately below

@@ -91,6 +91,17 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
       {dossiers.map((d) => (
         <div key={d.displayName} className="axx-component">
           <h3 className="axx-cname">{d.displayName}</h3>
+          {/* Recognition, not evidence — see ComponentDossiers. Rendered only
+              when the governed boundary admitted an exact-product asset;
+              absent renders nothing at all, so a dossier without a photograph
+              is a finished card rather than a gap. */}
+          {d.image && (
+            <figure className="axx-cimage">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={d.image.url} alt={d.displayName} />
+              {d.image.credit && <figcaption>{d.image.credit}</figcaption>}
+            </figure>
+          )}
 
           {d.primary.map((l, i) => <Fact key={i} l={l} />)}
 

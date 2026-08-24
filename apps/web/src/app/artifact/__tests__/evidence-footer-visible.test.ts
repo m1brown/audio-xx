@@ -68,8 +68,15 @@ describe('the footer speaks the reader\'s language', () => {
       ['user', 'your description only'],
     ] as const) {
       expect(body, `${code} label`).toContain(phrase);
-      // The conversation says the same thing (capitalisation differs by role).
-      expect(conv.toLowerCase(), `${code} parity`).toContain(phrase.toLowerCase());
     }
+
+    // Where the CONVERSATION shows a badge, it uses the same words. It shows
+    // none for `model`: a per-card badge repeating "identity corroborated"
+    // three times is furniture, whereas the footer states each component's
+    // basis once, as a provenance ledger. Same vocabulary, different job.
+    for (const phrase of ['Audio XX catalog', 'Audio XX brand evidence', 'Your description only']) {
+      expect(conv, `${phrase} parity`).toContain(phrase);
+    }
+    expect(conv).toMatch(/model: '',/);
   });
 });

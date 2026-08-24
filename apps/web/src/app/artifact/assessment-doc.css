@@ -118,7 +118,16 @@
   font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase;
   color: var(--faint); padding-top: 0.12rem;
 }
-.axx-fact-value { font-size: 0.83rem; line-height: 1.5; }
+/* The value column ran flush to the container's right edge — zero padding —
+   so a long line like "Measured performance was beyond reproach, with wide
+   input sampling range, very low" touched the boundary and read as clipped in
+   the PDF. A measure this wide is also hard to read: the dCS review lines are
+   the longest values in the document and were the widest-set text on the page.
+   A right inset both fixes the collision and brings the measure back. */
+.axx-fact-value {
+  font-size: 0.83rem; line-height: 1.5;
+  padding-right: 1.25rem;
+}
 .axx-tag {
   display: inline-block; margin-left: 0.4rem;
   font-family: var(--face-grotesque, sans-serif);
@@ -169,4 +178,31 @@
   /* A heading must never sit alone at the foot of a page. */
   .axx-section, .axx-cname { break-after: avoid; page-break-after: avoid; }
   .axx-doc section { break-inside: auto; }
+}
+
+/* ── Component photograph ────────────────────────────────
+   Recognition, not evidence. Sized to be identifiable at a glance and to stay
+   subordinate to the assessment: the finding is the document, a photograph is
+   how a reader confirms which box it is about.
+
+   There is deliberately NO empty-state rule. A dossier without an admitted
+   image renders no <figure> at all, so nothing reserves space and a card with
+   no photograph is finished rather than pending. Mixed coverage across a
+   system is expected and must read as intentional. */
+.axx-cimage { margin: 0 0 0.75rem; }
+.axx-cimage img {
+  display: block; max-width: 190px; width: 100%; height: auto;
+  object-fit: contain; border-radius: 2px;
+}
+.axx-cimage figcaption {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--faint); margin-top: 0.25rem;
+}
+
+@media print {
+  /* Keep the photograph with the product it identifies. A picture that breaks
+     away from its name identifies nothing. */
+  .axx-cimage { break-inside: avoid; page-break-inside: avoid; }
+  .axx-cimage img { max-width: 150px; }
 }

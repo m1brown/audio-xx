@@ -47,6 +47,21 @@ export interface DossierView {
   hasDetail: boolean;
   /** Shown when nothing is primary, so the expansion does not look empty. */
   detailSummary?: string;
+  /**
+   * An admissible photograph of THIS EXACT PRODUCT, or nothing.
+   *
+   * Resolved through the governed image boundary by the caller, never chosen
+   * here: identity, provenance and rights are decided in
+   * `lib/images/admission.ts`, and a presentation layer must not second-guess
+   * them. What this field adds is that once an asset IS admitted, showing it
+   * is a data operation — no renderer work, on any surface.
+   *
+   * ZERO EVIDENTIARY AUTHORITY. It is recognition, not evidence: it licenses
+   * no fact, enters no calculation, and changes nothing about which facts were
+   * selected above. Absence is a normal finished state and must render nothing
+   * at all — no frame, no placeholder, no reserved space.
+   */
+  image?: { url: string; credit?: string };
 }
 
 const LABELS: Partial<Record<DossierPredicate, string>> = {
