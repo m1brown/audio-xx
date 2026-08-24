@@ -170,7 +170,10 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
         </section>
       )}
 
-      <footer aria-label="Evidence">
+      {/* `axx-doc-footer` marks this as the DOCUMENT's footer, not application
+          chrome. The artifact route hides `footer` to strip site furniture,
+          and this section — primary sources and provenance — was collateral. */}
+      <footer aria-label="Evidence" className="axx-doc-footer">
         <h2 className="axx-section">Evidence</h2>
         <p>{s.evidenceStatement}</p>
         {s.primarySources?.length ? (

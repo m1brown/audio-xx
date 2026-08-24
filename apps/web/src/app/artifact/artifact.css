@@ -4,8 +4,14 @@
  * Identity lives in composition, so fonts are intentionally generic here. */
 
 /* ── Strip inherited app chrome for the artifact route only ───────────── */
+/* Application chrome is hidden on the artifact route so the document stands
+   alone. `footer` unqualified was too broad: the assessment's OWN Evidence
+   footer — primary sources and per-component provenance, the last tier of the
+   document — is a <footer>, so it was hidden on every artifact and in every
+   PDF alongside the site chrome it was never meant to match. Exclude the
+   document's own footer explicitly rather than by element type. */
 body:has(.axx-route) nav,
-body:has(.axx-route) footer,
+body:has(.axx-route) footer:not(.axx-doc-footer),
 body:has(.axx-route) .audioxx-global-startover { display: none !important; }
 body:has(.axx-route) main.container { max-width: none; margin: 0; padding: 0; }
 body:has(.axx-route) { background: #FCF8EE; }
