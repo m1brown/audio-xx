@@ -120,6 +120,9 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
             </figure>
           )}
 
+          {/* What the engine wrote ABOUT this component, with the component. */}
+          {d.character && <p className="axx-ccharacter">{d.character}</p>}
+
           {d.primary.map((l, i) => <Fact key={i} l={l} />)}
 
           {/* detailSummary deliberately not rendered — see ComponentDossiers. */}

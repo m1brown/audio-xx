@@ -322,3 +322,55 @@ describe('the renderer selects nothing', () => {
     expect(src).not.toMatch(/poleFor|committedValue|BALANCED_BAND|0\.35/);
   });
 });
+
+describe('the DOCUMENT speaks in one voice', () => {
+  // The engine's prose is written for a chat turn. Rendered whole into the
+  // artifact it produced two voices on one page, a third statement of the
+  // chain, and per-component notes inside a system-level section.
+  const meta = {
+    engineVersion: 'test', createdAt: '2026-08-24T00:00:00.000Z',
+    components: [{ name: 'Butler Monads', role: 'amplifier' }, { name: 'Acora QRC-2', role: 'speaker' }],
+    componentDossiers: [
+      { displayName: 'Butler Monads', primary: [], secondary: [], gaps: [], hasDetail: false },
+      { displayName: 'Acora QRC-2', primary: [], secondary: [], gaps: [], hasDetail: false },
+    ],
+  };
+  const response = {
+    systemSignature: 'A finding.',
+    philosophy: [
+      'Your chain, as you described it: Butler Monads → Acora QRC-2.',
+      'Butler Monads — a valve output stage with unusual reach.',
+      'I can place 2 components in the chain but cannot assess them.',
+      'What this means in practice: I can reason about the shape of the system.',
+      'A genuine system-level observation that belongs in the review.',
+    ].join('\n\n'),
+    componentProvenance: [],
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const snap = snapshotFromProvisional(response as any, meta as any);
+  const prose = snap.sections.flatMap((s) => s.paragraphs).join('\n');
+
+  it('does not restate the chain the header already carries', () => {
+    expect(prose).not.toMatch(/Your chain, as you described it/);
+  });
+
+  it('drops chat register from the document', () => {
+    expect(prose).not.toMatch(/^I can |What this means in practice/m);
+  });
+
+  it('keeps genuine system-level prose', () => {
+    expect(prose).toMatch(/genuine system-level observation/);
+  });
+
+  it('routes component-scoped prose to that component, not out of existence', () => {
+    const butler = snap.componentDossiers?.find((d) => d.displayName === 'Butler Monads');
+    expect(butler?.character).toMatch(/valve output stage with unusual reach/);
+    // And it is not ALSO left in the review.
+    expect(prose).not.toMatch(/valve output stage with unusual reach/);
+  });
+
+  it('leaves a component with no prose untouched', () => {
+    const acora = snap.componentDossiers?.find((d) => d.displayName === 'Acora QRC-2');
+    expect(acora?.character).toBeUndefined();
+  });
+});

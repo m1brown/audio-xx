@@ -87,6 +87,14 @@ export interface DossierView {
    * listing exists — a place to look, kept below the evidence it follows.
    */
   resources?: Array<{ label: string; url: string }>;
+  /**
+   * Component-scoped prose the engine wrote about THIS component.
+   *
+   * It arrives inside the assessment body; rendered there it sat in a
+   * system-level section describing one box. Its subject is the component, so
+   * it belongs with the component.
+   */
+  character?: string;
 }
 
 const LABELS: Partial<Record<DossierPredicate, string>> = {

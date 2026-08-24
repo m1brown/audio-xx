@@ -233,7 +233,49 @@ export function snapshotFromProvisional(
   // The coverage statement is already inside `philosophy` when the engine
   // emitted one — it is appended there after filtering. Recording it a second
   // time as a section would print it twice.
-  const sections: SnapshotSection[] = body.length ? [{ paragraphs: body }] : [];
+  /**
+   * The engine's prose was written for a CHAT TURN, and the artifact is a
+   * document. Rendered whole after the composed review it produced two voices
+   * on one page — "I can place 3 components in the chain", "if you tell me
+   * more" — a third statement of the chain the header already carries, and
+   * per-component character notes sitting inside a system-level section.
+   *
+   * Each part is routed to where it belongs rather than dropped:
+   *
+   *   - a paragraph opening "<Component> — …" is about ONE component, so it
+   *     joins that component's dossier in YOUR SYSTEM;
+   *   - a paragraph that only restates the chain is omitted, because the
+   *     document states the chain once, at the top;
+   *   - first-person chat register is omitted from the DOCUMENT only. It
+   *     carries no proposition the coverage note does not carry in editorial
+   *     voice, and the conversation still renders it unchanged — this is a
+   *     routing decision about one surface, not a deletion of content.
+   */
+  const componentNames = meta.components.map((c) => c.name);
+  const restatesChain = (p: string) =>
+    componentNames.length >= 2 && componentNames.every((n) => p.includes(n)) && p.length < 220;
+  const chatRegister = (p: string) => /^(?:I can|I have|I'd|I would|What this means in practice)/.test(p.trim());
+  const componentPrefix = (p: string) =>
+    componentNames.find((n) => p.trim().startsWith(`${n} —`) || p.trim().startsWith(`${n} -`));
+
+  const systemProse: string[] = [];
+  const perComponent = new Map<string, string[]>();
+  for (const p of body) {
+    const owner = componentPrefix(p);
+    if (owner) {
+      perComponent.set(owner, [...(perComponent.get(owner) ?? []), p]);
+      continue;
+    }
+    if (restatesChain(p) || chatRegister(p)) continue;
+    systemProse.push(p);
+  }
+
+  const dossiers = meta.componentDossiers?.map((d) => {
+    const notes = perComponent.get(d.displayName);
+    return notes ? { ...d, character: notes.join(' ') } : d;
+  });
+
+  const sections: SnapshotSection[] = systemProse.length ? [{ paragraphs: systemProse }] : [];
 
   /**
    * The system-level analysis, reasoned across the dossiers this snapshot
@@ -270,7 +312,7 @@ export function snapshotFromProvisional(
     relations: (response.systemRelations ?? []).map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.tier,
     })),
-    componentDossiers: meta.componentDossiers,
+    componentDossiers: dossiers,
     coverageNote: meta.coverageNote,
     systemReview,
     // DERIVED, not fixed. The previous fixed string was chosen because
