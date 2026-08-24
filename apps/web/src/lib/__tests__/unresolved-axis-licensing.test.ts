@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { buildSystemAssessment, carriesAxisEvidence } from '../consultation';
 import { extractSubjectMatches } from '../intent';
 
+/*
+ * FIXTURE NOTE (2026-08-24): "Leben CS600" → "Leben CS600X".
+ *
+ * The catalog holds the CS300 and the CS600X; there is no plain CS600. A typed
+ * "CS600" used to resolve to the CS600X through a prefix match, so these
+ * fixtures read as fully catalogued while naming a product the catalog does not
+ * have. That substitution was the identity defect — the assessment reasoned from
+ * a different amplifier's specifications — and closing it made these chains
+ * correctly report an unidentified component.
+ *
+ * The fixtures name a genuinely catalogued product now, which is what each test
+ * was always trying to exercise.
+ */
+
+
 /**
  * Repair 2 — an unresolved identity must not become neutral evidence.
  *
@@ -88,7 +103,7 @@ describe('CONTROL — fictional component in an otherwise real chain', () => {
 });
 
 describe('CONTROL — a fully catalogued chain is unchanged', () => {
-  const text = 'Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 Dac: Audio Note DAC 2.1x';
+  const text = 'Assess my system: Amp: Leben CS600X Speakers: Harbeth Compact 7ES-3 Dac: Audio Note DAC 2.1x';
   const text_out = prose(assess(text));
 
   it('still reaches a system reading', () => {
@@ -132,7 +147,7 @@ describe('CONTROL — mixed chain: strong claims only from licensed components',
  * about the listener, plus a rank claim about the market.
  */
 describe('the core path does not infer why the listener bought anything', () => {
-  const CATALOGUED = 'Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 Dac: Audio Note DAC 2.1x';
+  const CATALOGUED = 'Assess my system: Amp: Leben CS600X Speakers: Harbeth Compact 7ES-3 Dac: Audio Note DAC 2.1x';
 
   it('never claims the system was deliberately or intentionally assembled', () => {
     const out = prose(assess(CATALOGUED));

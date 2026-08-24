@@ -40,6 +40,7 @@
  * rather than aspirational.
  */
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
+import { deriveEvidenceLedger, type EvidenceLedger } from './evidence-ledger';
 import type { DossierView } from '../evidence/dossier-presentation';
 
 export const ASSESSMENT_SCHEMA_V1 = 'axx.assessment.v1' as const;
@@ -114,6 +115,15 @@ export interface AssessmentSnapshotV1 {
   coverageNote?: string;
   evidenceStatement: string;
   primarySources?: PrimarySource[];
+  /**
+   * The evidence ledger, DERIVED from this snapshot's own dossiers.
+   *
+   * Supersedes `evidenceStatement` + `primarySources`, which were built from a
+   * hardcoded table of four products and were therefore empty — and silently
+   * generic — for every other system. Those fields remain so snapshots frozen
+   * before this contract still render; new snapshots carry the ledger.
+   */
+  evidenceLedger?: EvidenceLedger;
 }
 
 /** The shape the provisional path produces, narrowed to what a snapshot needs. */
@@ -178,6 +188,9 @@ export function snapshotFromCanonical(
     componentDossiers: meta.componentDossiers,
     evidenceStatement: cam.evidence.statement,
     primarySources: cam.evidence.primarySources,
+    // Derived from the dossiers this snapshot froze, so the ledger cannot
+    // drift from the assessment it describes.
+    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
   };
 }
 
@@ -232,10 +245,14 @@ export function snapshotFromProvisional(
     })),
     componentDossiers: meta.componentDossiers,
     coverageNote: meta.coverageNote,
-    // The provisional path states its evidence position in prose — the
-    // coverage note — rather than in a source line. Asserting source classes
-    // it does not hold would be the fixed-string defect returning.
-    evidenceStatement: 'Assessment based on Audio XX analysis of the components as described.',
+    // DERIVED, not fixed. The previous fixed string was chosen because
+    // asserting source classes the path does not hold would be a false claim —
+    // correct reasoning, wrong remedy. The path DOES hold evidence: its
+    // dossiers carry published specifications and attributed observations, each
+    // with its own source class. Deriving from them asserts exactly what is
+    // there and nothing more, which is what the fixed string was protecting.
+    evidenceStatement: deriveEvidenceLedger(meta.componentDossiers).statement,
+    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
   };
 }
 

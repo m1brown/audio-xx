@@ -42,6 +42,19 @@ function basisLabel(basis: string): string {
   }
 }
 
+/**
+ * Evidence classes in the reader's language.
+ *
+ * The stored values are the engine's vocabulary; a document must not print
+ * `maker_published` at a listener any more than it prints `(model)`.
+ */
+const LEDGER_CLASS_LABEL: Record<string, string> = {
+  maker_published: 'published by the manufacturer',
+  independent_review: 'independent listening observations',
+  third_party_reported: 'reported by a third party',
+  catalog: 'Audio XX catalog',
+};
+
 function TonalSignature({ axes }: { axes: AxisReading[] }) {
   return (
     <section aria-label="Tonal signature">
@@ -205,8 +218,30 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
           and this section — primary sources and provenance — was collateral. */}
       <footer aria-label="Evidence" className="axx-doc-footer">
         <h2 className="axx-section">Evidence</h2>
-        <p>{s.evidenceStatement}</p>
-        {s.primarySources?.length ? (
+        <p>{s.evidenceLedger?.statement ?? s.evidenceStatement}</p>
+        {/* SCOPE TRAVELS WITH THE SOURCE.
+          *
+          * Every entry names the components it licensed something about. A bare
+          * list would let a reader carry a publication's authority across the
+          * whole system — "Stereophile" beside a Butler/Acora power finding it
+          * said nothing about. Naming the component keeps a source's displayed
+          * role equal to the proposition it actually licensed.
+          *
+          * The ledger is derived from this snapshot's dossiers, so a source can
+          * appear here only because evidence from it survives above. */}
+        {s.evidenceLedger?.entries?.length ? (
+          <ul className="axx-ledger">
+            {s.evidenceLedger.entries.map((e) => (
+              <li key={`${e.evidenceClass}-${e.label}`}>
+                {e.url
+                  ? <a href={e.url} rel="noopener noreferrer">{e.label}</a>
+                  : <span>{e.label}</span>}
+                {' — '}{LEDGER_CLASS_LABEL[e.evidenceClass]}
+                {' · '}{e.licensedFor.join(', ')}
+              </li>
+            ))}
+          </ul>
+        ) : s.primarySources?.length ? (
           <ul>
             {s.primarySources.map((src) => (
               <li key={src.url}>

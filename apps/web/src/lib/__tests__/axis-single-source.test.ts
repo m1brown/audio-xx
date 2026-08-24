@@ -6,6 +6,21 @@ import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import { deriveIdentity } from '@/lib/a3-artifact-case';
 import { poleFor, committedValue, classifyAxis, BALANCED_BAND } from '@/lib/axis-poles';
 
+/*
+ * FIXTURE NOTE (2026-08-24): "Leben CS600" → "Leben CS600X".
+ *
+ * The catalog holds the CS300 and the CS600X; there is no plain CS600. A typed
+ * "CS600" used to resolve to the CS600X through a prefix match, so these
+ * fixtures read as fully catalogued while naming a product the catalog does not
+ * have. That substitution was the identity defect — the assessment reasoned from
+ * a different amplifier's specifications — and closing it made these chains
+ * correctly report an unidentified component.
+ *
+ * The fixtures name a genuinely catalogued product now, which is what each test
+ * was always trying to exercise.
+ */
+
+
 /**
  * ONE AXIS, ONE VALUE.
  *
@@ -82,7 +97,7 @@ describe('FRANCE regression — the authoritative values', () => {
 describe('NO SURFACE MAY CONTRADICT THE GRAPH', () => {
   const systems = [
     FRANCE,
-    'Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV',
+    'Assess my system: Amp: Leben CS600X Speakers: Klipsch Cornwall IV',
     'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor',
     'Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus',
   ];
@@ -112,7 +127,7 @@ describe('NO SURFACE MAY CONTRADICT THE GRAPH', () => {
   it('a genuinely agreeing system KEEPS its agreement prose', () => {
     // The positive control. Suppressing agreement everywhere would be the
     // over-correction; the claim must survive where the field supports it.
-    const raw = run('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
+    const raw = run('Assess my system: Amp: Leben CS600X Speakers: Klipsch Cornwall IV');
     const prose = synthesizeArtifact(raw).payload.caseParagraphs.join(' ');
     expect(prose).toMatch(/lean the same way|carries that direction forward|character forward/);
   });

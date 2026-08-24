@@ -206,3 +206,7 @@
   .axx-cimage { break-inside: avoid; page-break-inside: avoid; }
   .axx-cimage img { max-width: 150px; }
 }
+
+/* Evidence ledger — one line per source, scope stated. */
+.axx-ledger { list-style: none; margin: 0.35rem 0 0; padding: 0; }
+.axx-ledger li { margin-bottom: 0.2rem; }

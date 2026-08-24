@@ -64,6 +64,7 @@ import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import { getPilotCapsule, findProtectedMischaracterization } from './brand-philosophy-pilot';
 import { toDisplayName } from './canonical-names';
+import { prefixMatchIsSafe, suffixMatchIsSafe, remainderIsVariant } from './product-identity-match';
 import { BRAND_NAMES } from './intent';
 import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
@@ -8695,6 +8696,24 @@ function isBareBrandName(displayName: string | undefined): boolean {
 }
 
 /**
+ * Do the listener's words resolve, through the catalog's own alias map, to
+ * this product?
+ *
+ * Only the alias map counts. Guessing that two names might mean one product is
+ * how a variant gets merged into its sibling; the alias map is a curated
+ * statement that two spellings name one box.
+ */
+function resolvesToProduct(displayName: string, product: Product): boolean {
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9+/ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const name = norm(displayName);
+  const brand = norm(product.brand);
+  const model = norm(product.name);
+  // Strip the brand the listener wrote, leaving the model they used.
+  const typedModel = name.startsWith(`${brand} `) ? name.slice(brand.length + 1) : name;
+  return aliasCatalogLookup(typedModel) === model;
+}
+
+/**
  * Merge component records that describe the SAME physical unit.
  *
  * Two rules, both structural — neither compares products by name equality,
@@ -8744,14 +8763,50 @@ function collapsePhysicalRepresentations(
 
       const ta = tokensOf(a), tb = tokensOf(b);
       if (ta.size === 0 || tb.size === 0) continue;
+
+      /**
+       * SAME BOX UNDER AN ALIAS — checked BEFORE the token test, because no
+       * token test can see it. The catalog knows "SHL5+" is the "Super HL5
+       * Plus", so a listener typing the abbreviation produced both the
+       * canonical record and their own words, and was asked which of their two
+       * identical Harbeths was in the signal path. "shl5" appears nowhere in
+       * "super hl5 plus" — that is precisely why the alias map exists.
+       *
+       * Canonical RESOLUTION is the identity test here. Only the curated alias
+       * map counts: guessing that two names might mean one product is how a
+       * variant gets merged into its sibling.
+       */
+      const aliasesToSameProduct = !a.product && !!b.product
+        && a.role === b.role
+        && resolvesToProduct(a.displayName, b.product);
+
       const aInB = [...ta].every((t) => tb.has(t));
-      if (!aInB) continue;
+      if (!aInB && !aliasesToSameProduct) continue;
       if (rank(a) >= rank(b)) continue;
 
       const sa = spanOf(a), sb = spanOf(b);
       const sameSpan = sa !== null && sb !== null && sa[0] < sb[1] && sb[0] < sa[1];
       const bareBrandEcho = ta.size <= 1 && !a.product && !!b.product;
-      if (!sameSpan && !bareBrandEcho) continue;
+      /**
+       * UNDER-RESOLVED MENTION. `a` names no catalog product, every one of its
+       * tokens appears in `b`, `b` DOES resolve, and they occupy the same role.
+       *
+       * That is one component seen twice: the listener's words and the
+       * canonical record of the same box. A listener who typed "DeVore O/96"
+       * was asked whether their "DeVore Orangutan O/96" and their "DeVore O/96"
+       * were both in the signal path.
+       *
+       * Span overlap cannot catch this, because the canonical name is not text
+       * the listener wrote — it comes from the catalog, so it appears nowhere
+       * in the message to overlap with.
+       *
+       * Distinct products are NOT subsets of one another: "Leben CS600" and
+       * "Leben CS600X" differ on the model token itself, so this never merges
+       * a variant into its sibling.
+       */
+      const underResolvedMention = !a.product && !!b.product
+        && a.role === b.role && ta.size >= 1;
+      if (!sameSpan && !bareBrandEcho && !underResolvedMention && !aliasesToSameProduct) continue;
 
       // b is the surviving record; carry across anything a knew that it does not.
       b.roles = [...new Set([...(b.roles ?? []), ...(a.roles ?? [])])];
@@ -9151,14 +9206,27 @@ export function buildSystemAssessment(
             || pFull === lower
             || pName === aliasedLower
             || pFull === aliasedLower
-            || (lower.length >= 3 && pName.startsWith(lower))
+            // Partial matches must not CROSS A VARIANT BOUNDARY. Plain
+            // `startsWith` resolved a typed "Leben CS600" to the CS600X —
+            // reasoning from a different amplifier's specifications, not
+            // merely showing the wrong photograph. See product-identity-match.
+            || prefixMatchIsSafe(lower, pName)
             // Model suffix match: "o/96" matches "Orangutan O/96"
-            || (lower.length >= 3 && pName.endsWith(lower))
+            || suffixMatchIsSafe(lower, pName)
             // Brand+partial-name: input contains brand AND product name contains the remainder
             // e.g. "hornshoppe horn" → brand "hornshoppe" matches, name "horns" includes "horn"
+            // Brand + partial name. Subject to the SAME variant boundary:
+            // "leben cs600" contains the brand and leaves "cs600", which
+            // `"cs600x".includes("cs600")` accepted — resolving a typed CS600
+            // to the CS600X through a different branch than the prefix rule.
+            // Closing one branch of an identity defect closes one branch.
             || (lower.includes(pBrand) && pBrand.length >= 3 && (() => {
               const remainder = lower.replace(pBrand, '').trim();
-              return remainder.length >= 2 && pName.includes(remainder);
+              if (remainder.length < 2 || !pName.includes(remainder)) return false;
+              const idx = pName.indexOf(remainder);
+              const before = pName.slice(0, idx);
+              const after = pName.slice(idx + remainder.length);
+              return !remainderIsVariant(before) && !remainderIsVariant(after);
             })());
         },
       );
@@ -9332,8 +9400,20 @@ export function buildSystemAssessment(
           currentMessage.toLowerCase().includes(p.name.toLowerCase()),
         );
 
-        // Use proper brand casing from catalog products when available (e.g. "DeVore" not "Devore")
-        const catalogBrandCasing = brandProducts.length > 0 ? brandProducts[0].brand : undefined;
+        // Proper brand casing from the catalog (e.g. "DeVore" not "Devore") —
+        // but ONLY from the brand the listener actually named.
+        //
+        // `brandProducts` deliberately pools every brand sharing an editorial
+        // BrandProfile, so a Pass Labs mention also reaches First Watt
+        // products. Taking `brandProducts[0].brand` therefore adopted whichever
+        // sibling happened to sort first, and a listener who typed "Pass Labs
+        // XA25" was shown a component called FIRST WATT — a brand alias
+        // promoted to a physical component in their signal path.
+        //
+        // An alias is not a component. The casing must come from the brand that
+        // was named, and from nowhere else.
+        const catalogBrandCasing = brandProducts
+          .find((p) => p.brand.toLowerCase() === match.name.toLowerCase())?.brand;
         const displayName = specificProduct
           ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
           : catalogBrandCasing

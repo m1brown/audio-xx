@@ -17,7 +17,7 @@
  * renderer lays out; it never composes prose, which is what keeps the dossier
  * out of the relational publication boundary.
  */
-import type { DossierPredicate, ProductDossier, ProductFact } from './product-dossier';
+import type { DossierPredicate, ProductDossier, ProductFact, SourceClass } from './product-dossier';
 
 export interface DossierLine {
   label: string;
@@ -26,6 +26,21 @@ export interface DossierLine {
   standing?: 'reported' | 'measured';
   publication?: string;
   sourceUrl?: string;
+  /**
+   * WHAT KIND of evidence this line rests on.
+   *
+   * `ProductFact` carries `sourceClass`, and this function used to drop it —
+   * so by the time a dossier reached the artifact, the fact that a figure was
+   * maker-published and an observation was a reviewer's had been discarded.
+   * The evidence ledger then had nothing to derive from and fell back to a
+   * fixed sentence, which is how an assessment resting on published
+   * specifications and three attributed Stereophile observations came to
+   * describe itself as "Audio XX analysis of the components as described".
+   *
+   * Provenance must survive presentation. It travels with the line it
+   * licensed, so a ledger can be derived rather than maintained.
+   */
+  sourceClass?: SourceClass;
 }
 
 export interface DossierView {
@@ -103,6 +118,7 @@ function toLine(f: ProductFact): DossierLine {
       : f.state === 'measured' ? 'measured' : undefined,
     publication: f.publication,
     sourceUrl: f.sourceUrl,
+    sourceClass: f.sourceClass,
   };
 }
 
@@ -130,6 +146,9 @@ export function presentDossier(d: ProductDossier): DossierView {
         // as measurements, which is a false claim about how they were made.
         publication: r.publication,
         sourceUrl: r.sourceUrl,
+        // A reviewer heard something. Never a maker's specification, and never
+        // promoted to one by being displayed next to specifications.
+        sourceClass: 'listening_observation',
       });
     }
   }

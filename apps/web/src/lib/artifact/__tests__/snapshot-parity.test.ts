@@ -89,6 +89,21 @@ describe('CONTROL 1 — Nathan renders at all', () => {
     expect(snap.evidenceStatement).not.toMatch(/manufacturer documentation|designer statements/);
   });
 
+  it('states the evidence it DOES hold, rather than a fixed sentence', () => {
+    // The provisional path used to hardcode "Assessment based on Audio XX
+    // analysis of the components as described" — true but uninformative, and
+    // wrong about an assessment resting on published specifications. The
+    // ledger is derived from this snapshot's own dossiers.
+    expect(snap.evidenceLedger).toBeDefined();
+    for (const e of snap.evidenceLedger!.entries) {
+      expect(e.licensedFor.length, e.label).toBeGreaterThan(0);
+      // Every scoped component is one this snapshot actually carries.
+      for (const name of e.licensedFor) {
+        expect(snap.componentDossiers?.some((d) => d.displayName === name), name).toBe(true);
+      }
+    }
+  });
+
   it('survives a storage round trip unchanged', () => {
     expect(parseSnapshot(freezeSnapshot(snap))).toEqual(snap);
   });
@@ -202,13 +217,27 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     const fs = await import('node:fs/promises');
     const src = await fs.readFile(new URL('../snapshot.ts', import.meta.url), 'utf8');
     const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
-    // Two dependencies, both TYPE-ONLY, both carrying no runtime code: the
-    // CAM and the dossier view. Anything else here is a path back to
-    // reasoning, and every import is asserted to be `import type`.
-    expect(imports).toEqual(['./canonical', '../evidence/dossier-presentation']);
-    for (const i of imports) {
+    // Three dependencies. Two are TYPE-ONLY — the CAM and the dossier view.
+    // The third, `evidence-ledger`, carries runtime code but is not a path
+    // back to reasoning: it is a pure derivation over dossiers the snapshot
+    // has ALREADY frozen. It reads no catalog, resolves no product, consults
+    // no engine, and its own only import is a type.
+    //
+    // The distinction the purity rule protects is "can opening a snapshot
+    // reassess", not "does any function run". Deriving the ledger from frozen
+    // material is the opposite of reassessment: it is what stops the ledger
+    // being maintained separately and drifting from the assessment.
+    expect(imports).toEqual([
+      './canonical', './evidence-ledger', '../evidence/dossier-presentation',
+    ]);
+    for (const i of imports.filter((x) => x !== './evidence-ledger')) {
       expect(src, i).toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./]/g, '\\$&')}'`));
     }
+    // And the derivation itself must stay pure.
+    const ledger = await fs.readFile(new URL('../evidence-ledger.ts', import.meta.url), 'utf8');
+    const ledgerImports = [...ledger.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+    expect(ledgerImports).toEqual(['@/lib/evidence/dossier-presentation']);
+    expect(ledger).toMatch(/import type \{/);
   });
 });
 

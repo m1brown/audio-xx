@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest';
 import { buildSystemAssessment } from '../consultation';
 import { extractSubjectMatches } from '../intent';
 
+/*
+ * FIXTURE NOTE (2026-08-24): "Leben CS600" → "Leben CS600X".
+ *
+ * The catalog holds the CS300 and the CS600X; there is no plain CS600. A typed
+ * "CS600" used to resolve to the CS600X through a prefix match, so these
+ * fixtures read as fully catalogued while naming a product the catalog does not
+ * have. That substitution was the identity defect — the assessment reasoned from
+ * a different amplifier's specifications — and closing it made these chains
+ * correctly report an unidentified component.
+ *
+ * The fixtures name a genuinely catalogued product now, which is what each test
+ * was always trying to exercise.
+ */
+
+
 /**
  * Repair 3 — Evaluate may not contradict a licensed Explain constraint.
  *
@@ -68,7 +83,7 @@ describe('a licensed power constraint reaches the verdict', () => {
 
 describe('CONTROL — adequate power keeps its confident no-change', () => {
   // Leben CS600X ~32W into Klipsch Cornwall IV (high sensitivity).
-  const out = context('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV '
+  const out = context('Assess my system: Amp: Leben CS600X Speakers: Klipsch Cornwall IV '
     + 'Dac: Denafrips Pontus II');
 
   it('reports no bottleneck', () => {
@@ -89,7 +104,7 @@ describe('CONTROL — the constraint is not manufactured from missing data', () 
   it('says nothing about headroom when no power figure exists', () => {
     // Neither side supplies watts, so `classifyPowerMatch` returns 'unknown',
     // which must behave like silence rather than like a finding.
-    const out = context('Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 '
+    const out = context('Assess my system: Amp: Leben CS600X Speakers: Harbeth Compact 7ES-3 '
       + 'Dac: Audio Note DAC 2.1x');
     expect(out).not.toMatch(/headroom limit|significantly underpowered/i);
   });
@@ -120,7 +135,7 @@ describe('PHASE 4 — an unassessable amp/speaker pairing is not silent compatib
 
   it('CONTROL 2 — adequate power keeps a confident coherent verdict', () => {
     // Leben CS600X into Klipsch Cornwall IV: both figures held, genuinely fine.
-    const out = context('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV '
+    const out = context('Assess my system: Amp: Leben CS600X Speakers: Klipsch Cornwall IV '
       + 'Dac: Denafrips Pontus II');
     expect(out).toMatch(NO_CHANGE);
     expect(out).not.toMatch(UNCHECKED);
@@ -129,7 +144,7 @@ describe('PHASE 4 — an unassessable amp/speaker pairing is not silent compatib
   it('CONTROL 3 — an uncatalogued SOURCE does not block no-change', () => {
     // Power compatibility is immaterial to a streamer. The amp/speaker pairing
     // is held, so the verdict stands.
-    const out = context('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV '
+    const out = context('Assess my system: Amp: Leben CS600X Speakers: Klipsch Cornwall IV '
       + 'Streamer: Wattson Audio Emerson Digital');
     expect(out).not.toMatch(UNCHECKED);
   });
@@ -137,7 +152,7 @@ describe('PHASE 4 — an unassessable amp/speaker pairing is not silent compatib
   it('qualifies no-change when the pairing itself could not be checked', () => {
     // Neither side supplies a figure, so compatibility is unknown rather than
     // established — and the assessment must say which.
-    const out = context('Assess my system: Amp: Leben CS600 Speakers: Harbeth Compact 7ES-3 '
+    const out = context('Assess my system: Amp: Leben CS600X Speakers: Harbeth Compact 7ES-3 '
       + 'Dac: Audio Note DAC 2.1x');
     if (NO_CHANGE.test(out)) {
       expect(out).toMatch(/Nothing in what I could assess|could not/i);

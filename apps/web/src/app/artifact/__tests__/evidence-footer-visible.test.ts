@@ -41,10 +41,14 @@ describe('evidence footer survives the chrome-hiding rules', () => {
 
   it('the footer still carries sources and provenance', () => {
     const i = TSX.indexOf('axx-doc-footer');
-    const body = TSX.slice(i, i + 900);
+    const body = TSX.slice(i, i + 2600);
+    expect(body).toContain('evidenceLedger');
+    // Legacy fields still render for snapshots frozen before the ledger.
     expect(body).toContain('evidenceStatement');
     expect(body).toContain('primarySources');
     expect(body).toContain('axx-provenance');
+    // Scope is rendered with every source, never a bare list.
+    expect(body).toContain('licensedFor');
   });
 });
 
