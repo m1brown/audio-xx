@@ -160,18 +160,30 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
           detail: `no published output figure at ${ohms} ohms — the maker states `
             + `${figures.map((f) => `${f.value}W@${f.ohms ?? '?'}Ω`).join(', ')}`,
         });
-      } else if (!sensitivity) {
-        // Compatibility established; loudness is a different question and the
-        // figure that would answer it is named rather than merely missed.
-        out.push({
-          from: amplification.displayName, to: spk.displayName, question,
-          state: 'partially_explained',
-          cause: 'missing_product_evidence',
-          detail: `output at the stated load is established; ${spk.displayName} `
-            + `sensitivity is not published, so acoustic headroom cannot be estimated`,
-        });
       } else {
-        out.push({ from: amplification.displayName, to: spk.displayName, question, state: 'explained' });
+        /*
+         * The interface poses TWO questions and needs a different figure for
+         * each: power handling answers "is this within the published limits",
+         * sensitivity answers "how loud will it play". Reporting EXPLAINED on
+         * sensitivity alone overstated coverage for any loudspeaker whose
+         * power handling is unpublished — the limits question was simply not
+         * asked. Each missing figure is named with the question it blocks.
+         */
+        const handling = get(db, 'power handling');
+        const missing = [
+          !handling ? `${spk.displayName} power handling is not published, so the `
+            + `pairing cannot be placed inside or outside the maker's stated limits` : null,
+          !sensitivity ? `${spk.displayName} sensitivity is not published, so acoustic `
+            + `headroom cannot be estimated` : null,
+        ].filter(Boolean);
+        out.push(missing.length === 0
+          ? { from: amplification.displayName, to: spk.displayName, question, state: 'explained' }
+          : {
+            from: amplification.displayName, to: spk.displayName, question,
+            state: 'partially_explained',
+            cause: 'missing_product_evidence',
+            detail: `output at the stated load is established; ${missing.join('; ')}`,
+          });
       }
 
       // A separate, narrower question: does output scale across loads?
