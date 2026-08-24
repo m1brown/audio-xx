@@ -248,3 +248,45 @@ describe('the review compares LIKE conditions', () => {
     expect(out).not.toMatch(/ordinary for the type|typical of such designs|most amplifiers/i);
   });
 });
+
+describe('the review never asserts a specification in order to contrast with it', () => {
+  const spk8: DossierView = {
+    displayName: 'Klipsch Cornwall IV',
+    primary: [
+      { label: 'impedance', value: '8 ohm', sourceClass: 'maker_published' },
+      { label: 'power handling', value: '10 W - 150 W', sourceClass: 'maker_published' },
+    ],
+    secondary: [], gaps: [], hasDetail: false,
+  };
+  const amp8: DossierView = {
+    displayName: 'Leben CS600X',
+    primary: [{ label: 'power output', value: '32 Watts @ 8 Ohms', sourceClass: 'maker_published' }],
+    secondary: [], gaps: [], hasDetail: false,
+  };
+
+  const out = composeSystemReview({
+    components: [
+      { displayName: 'Leben CS600X', role: 'integrated' },
+      { displayName: 'Klipsch Cornwall IV', role: 'speaker' },
+    ],
+    dossiers: [amp8, spk8],
+  }).join('\n\n');
+
+  it('D-7: invents no figure at a load the maker never published', () => {
+    // The contrast clause was computed as `ohms * 2` from the LOUDSPEAKER's
+    // load alone, so an 8-ohm speaker produced "rather than the 16-ohm figure
+    // quoted first on most specification sheets" — a specification no maker
+    // publishes and this one certainly had not.
+    expect(out).not.toMatch(/16-ohm/);
+    expect(out).not.toMatch(/quoted first on most specification sheets/);
+  });
+
+  it('still states which figure applies', () => {
+    expect(out).toMatch(/the maker's 8-ohm figure is the one to read here\./);
+  });
+
+  it('names the other figure when the maker really does publish one', () => {
+    const out4 = joined(NATHAN);
+    expect(out4).toMatch(/rather than the 8-ohm figure the same specification also states/);
+  });
+});

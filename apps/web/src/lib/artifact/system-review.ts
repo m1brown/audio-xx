@@ -201,13 +201,31 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * a nominal load, the amplifier publishes a figure at that load, so that is
    * the figure to read. A matching-conditions statement.
    */
-  if (spk && amp && ohms && outputLine && findLine(amp.dossier, 'power output')) {
+  if (spk && amp && ohms && outputLine) {
+    /*
+     * The contrast clause names the OTHER figure only when the amplifier
+     * actually publishes one. It previously said "rather than the
+     * ${ohms * 2}-ohm figure quoted first on most specification sheets",
+     * computed from the loudspeaker's load alone — so an 8-ohm loudspeaker
+     * produced a sentence about a 16-ohm figure that no maker publishes and
+     * this one certainly had not. Asserting the existence of a specification
+     * in order to contrast with it is a D-7 failure regardless of how
+     * plausible the surrounding sentence reads.
+     */
+    const otherLoads = [...new Set(
+      readPowerFigures(outputLine.value)
+        .map((f) => f.ohms)
+        .filter((o): o is number => typeof o === 'number' && o !== ohms),
+    )].sort((a, b) => a - b);
+    const contrast = otherLoads.length
+      ? ` rather than the ${otherLoads.map((o) => `${o}-ohm`).join(' or ')} figure `
+        + `the same specification also states`
+      : '';
     electrical.push(
       `Which of the amplifier's published figures applies is settled by the `
       + `loudspeaker: ${spk.component.displayName} states a nominal load of `
       + `${impedanceLine!.value}, so the maker's ${ohms}-ohm figure is the one `
-      + `to read here rather than the ${ohms * 2}-ohm figure quoted first on most `
-      + `specification sheets. What a nominal figure does not establish is how `
+      + `to read here${contrast}. What a nominal figure does not establish is how `
       + `demanding the loudspeaker actually is — that would need its impedance `
       + `minimum and phase behaviour, which are not published.`,
     );
