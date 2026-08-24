@@ -10,10 +10,10 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 204,
+  "changedResolutions": 223,
   "byKind": {
-    "suppressed": 114,
-    "substituted": 90
+    "suppressed": 126,
+    "substituted": 97
   },
   "rows": [
     {
@@ -376,21 +376,21 @@
       "surface": "getProductImage",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "denafrips venus ii",
       "surface": "getProductImageEntry",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "denafrips venus ii",
       "surface": "resolveProductImageStrict",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "denafrips venus ii",
@@ -405,7 +405,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "denafrips venus ii",
@@ -420,21 +420,21 @@
       "surface": "getProductImage",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Denafrips Venus II",
       "surface": "getProductImageEntry",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Denafrips Venus II",
       "surface": "resolveProductImageStrict",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Denafrips Venus II",
@@ -449,7 +449,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Denafrips Venus II",
@@ -458,6 +458,14 @@
       "after": "/images/placeholders/dac.svg",
       "kind": "substituted",
       "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "DeVore Fidelity Orangutan O/92",
+      "surface": "resolveProductImage",
+      "before": "https://devorefidelity.com/wp-content/uploads/2021/05/O93new-682x1024.jpg",
+      "after": "/images/placeholders/speaker.svg",
+      "kind": "substituted",
+      "reason": "correctness — the asset shown belonged to a different product (devore fidelity orangutan o 93)"
     },
     {
       "product": "Eversolo DAC-Z8",
@@ -480,21 +488,21 @@
       "surface": "getProductImage",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "Goldmund / JOB 225",
       "surface": "getProductImageEntry",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "Goldmund / JOB 225",
       "surface": "resolveProductImageStrict",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "Goldmund / JOB 225",
@@ -509,7 +517,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "Goldmund / JOB 225",
@@ -524,21 +532,21 @@
       "surface": "getProductImage",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "goldmund job 225",
       "surface": "getProductImageEntry",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "goldmund job 225",
       "surface": "resolveProductImageStrict",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "goldmund job 225",
@@ -553,7 +561,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
       "kind": "suppressed",
-      "reason": "provenance suppression — identity_unverified"
+      "reason": "correctness — prohibited source (authorized_dealer)"
     },
     {
       "product": "goldmund job 225",
@@ -578,6 +586,50 @@
       "after": "/images/placeholders/amplifier.svg",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "getProductImage",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "suppressed",
+      "reason": "correctness — a key naming a different model claims this same asset"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "getProductImageEntry",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "suppressed",
+      "reason": "correctness — a key naming a different model claims this same asset"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "resolveProductImageStrict",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "suppressed",
+      "reason": "correctness — a key naming a different model claims this same asset"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "resolveProductImage",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "kind": "suppressed",
+      "reason": "correctness — a key naming a different model claims this same asset"
+    },
+    {
+      "product": "goldmund telos 590",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "Goldmund Telos 590 NextGen II",
@@ -1179,6 +1231,50 @@
       "reason": "correctness — the asset shown belonged to a different product (schiit bifrost)"
     },
     {
+      "product": "scott 222",
+      "surface": "getProductImage",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "scott 222",
+      "surface": "getProductImageEntry",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "scott 222",
+      "surface": "resolveProductImageStrict",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "scott 222",
+      "surface": "resolveProductImage",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "scott 222",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "scott 222",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
       "product": "Scott 222B / 222C",
       "surface": "getProductImageEntry",
       "before": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
@@ -1236,21 +1332,21 @@
       "surface": "getProductImage",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "topping d90",
       "surface": "getProductImageEntry",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "topping d90",
       "surface": "resolveProductImageStrict",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "topping d90",
@@ -1265,7 +1361,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "topping d90",
@@ -1280,21 +1376,21 @@
       "surface": "getProductImage",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Topping D90",
       "surface": "getProductImageEntry",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Topping D90",
       "surface": "resolveProductImageStrict",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Topping D90",
@@ -1309,7 +1405,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass retailer"
+      "reason": "correctness — prohibited source (retailer)"
     },
     {
       "product": "Topping D90",
@@ -1362,21 +1458,21 @@
       "surface": "getProductImage",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro",
       "surface": "getProductImageEntry",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro",
       "surface": "resolveProductImageStrict",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro",
@@ -1391,7 +1487,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro",
@@ -1406,21 +1502,21 @@
       "surface": "getProductImage",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "WiiM Pro",
       "surface": "getProductImageEntry",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "WiiM Pro",
       "surface": "resolveProductImageStrict",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "WiiM Pro",
@@ -1435,7 +1531,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "WiiM Pro",
@@ -1450,21 +1546,21 @@
       "surface": "getProductImage",
       "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro plus",
       "surface": "getProductImageEntry",
       "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro plus",
       "surface": "resolveProductImageStrict",
       "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro plus",
@@ -1479,7 +1575,7 @@
       "surface": "consumer: imageUrl ?? getProductImage",
       "before": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
       "kind": "suppressed",
-      "reason": "provenance suppression — sourceClass unclassified"
+      "reason": "correctness — prohibited source (unclassified)"
     },
     {
       "product": "wiim pro plus",
@@ -1503,6 +1599,50 @@
       "after": "/images/placeholders/speaker.svg",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (wilson audio sabrina)"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "getProductImage",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "getProductImageEntry",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "resolveProductImageStrict",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "resolveProductImage",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "kind": "suppressed",
+      "reason": "correctness — prohibited source (unclassified)"
+    },
+    {
+      "product": "wlm diva",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
+      "after": "/images/placeholders/product.svg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "WLM Diva Monitor",

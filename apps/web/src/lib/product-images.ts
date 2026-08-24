@@ -750,6 +750,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
  * suffix. `chord mojo` is a prefix of `chord mojo 2`; `qualio iq` is not a
  * prefix of `qualio audio iq`.
  */
+/** Conflicts where the rival key names a DIFFERENT MODEL, not a longer one. */
+const siblingConflict = new Set<string>();
+
 const CONFLICTED_KEYS: ReadonlySet<string> = (() => {
   const byUrl = new Map<string, string[]>();
   for (const e of PRODUCT_IMAGE_URLS) {
@@ -757,7 +760,7 @@ const CONFLICTED_KEYS: ReadonlySet<string> = (() => {
     byUrl.set(e.url, [...(byUrl.get(e.url) ?? []), e.key]);
   }
   const conflicted = new Set<string>();
-  for (const keys of byUrl.values()) {
+  for (const [url, keys] of byUrl.entries()) {
     if (keys.length < 2) continue;
     for (const a of keys) {
       const at = keyTokens(a);
@@ -766,10 +769,40 @@ const CONFLICTED_KEYS: ReadonlySet<string> = (() => {
         const bt = keyTokens(b);
         if (bt.length > at.length && at.every((t, i) => bt[i] === t)) conflicted.add(a);
       }
+      // SIBLINGS SHARING ONE ASSET. `goldmund telos 590` and `goldmund telos
+      // 690` both claimed the same file, and neither is a prefix of the other,
+      // so the extension rule above never saw it. When several non-alias keys
+      // share an asset and the filename corroborates EXACTLY ONE of them, the
+      // others are asserting something the evidence contradicts.
+      //
+      // Requiring exactly one keeps aliases safe: `qualio iq` and `qualio audio
+      // iq` share a file that corroborates NEITHER, so nothing is flagged, and
+      // an ambiguous case stays unverified rather than being called wrong.
+      //
+      // Corroboration alone is NOT enough to call the others wrong, because
+      // aliases fail it routinely: `soundkaos vox` matches `VOX_3.jpg` while
+      // `sound kaos vox` does not, and `merason frerot` matches while the
+      // alias spelled from its broken tokenisation does not. Both name one
+      // product. Flagging them would withdraw correct photography and call a
+      // spelling a wrong identity.
+      //
+      // What separates the Goldmund pair from an alias is a MODEL token: `590`
+      // appears in one key and nowhere in the other, so they cannot be the
+      // same product. An alias differs only in how the brand is written.
+      const corroborated = keys.filter((k) => assetCorroboratesKey(k, url));
+      if (corroborated.length === 1 && !corroborated.includes(a)) {
+        const winnerFlat = keyTokens(corroborated[0]).join('');
+        const namesDistinctModel = at.some(
+          (t) => /[0-9]/.test(t) && !winnerFlat.includes(t),
+        );
+        if (namesDistinctModel) { conflicted.add(a); siblingConflict.add(a); }
+      }
     }
   }
   return conflicted;
 })();
+
+
 
 function keyTokens(k: string): string[] {
   return k.toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, ' ')
@@ -788,7 +821,9 @@ function governed(entry: { key: string; url: string; source?: ImageSource }): Go
     identityNote: disagreement
       ? `asset asserts '${disagreement}', which the key does not name`
       : (CONFLICTED_KEYS.has(entry.key)
-        ? 'a more specific key claims this same asset'
+        ? (siblingConflict.has(entry.key)
+          ? 'a key naming a different model claims this same asset'
+          : 'a more specific key claims this same asset')
         : undefined),
     // A row with no source block records no provenance at all. That is an
     // unanswered question, not a lenient default.

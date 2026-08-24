@@ -4,26 +4,27 @@
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
     "registry": 156,
-    "registryDisplayed": 138,
-    "catalog": 29,
-    "catalogDisplayed": 25
+    "registryDisplayed": 135,
+    "catalog": 28,
+    "catalogDisplayed": 24
   },
   "registryByState": {
-    "provenance_ineligible": 96,
-    "identity_wrong": 8,
-    "identity_unverified": 40,
+    "provenance_unestablished": 85,
+    "identity_wrong": 9,
+    "provenance_prohibited": 12,
+    "identity_unverified": 38,
     "legacy_rights_pending": 12
   },
   "catalogByState": {
-    "provenance_ineligible": 4,
-    "identity_unverified": 14,
+    "provenance_prohibited": 4,
+    "identity_unverified": 13,
     "legacy_rights_pending": 11
   },
   "registry": [
     {
       "key": "chord hugo tt2",
       "url": "https://chordelectronics.co.uk/wp-content/uploads/2018/05/Chord_Hugo2TT_Top_web-900x675.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -33,7 +34,7 @@
     {
       "key": "chord hugo 2",
       "url": "https://chordelectronics.co.uk/wp-content/uploads/2017/01/Hugo.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -43,7 +44,7 @@
     {
       "key": "chord hugo",
       "url": "https://chordelectronics.co.uk/wp-content/uploads/2016/09/Hugo-Angle-900x675.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -53,7 +54,7 @@
     {
       "key": "chord qutest",
       "url": "/images/products/chord-qutest.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -63,7 +64,7 @@
     {
       "key": "chord mojo 2",
       "url": "https://chordelectronics.co.uk/wp-content/uploads/2023/04/Mojo-2-4.4-2-Edited-1024x1024.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -84,7 +85,7 @@
     {
       "key": "chord dave",
       "url": "https://chordelectronics.co.uk/wp-content/uploads/2016/09/Dave.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -94,7 +95,7 @@
     {
       "key": "schiit bifrost",
       "url": "https://www.schiit.com/public/upload/images/bifrost%202%20black%201920.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -104,7 +105,7 @@
     {
       "key": "schiit modius",
       "url": "https://www.schiit.com/img/img_5100.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -114,7 +115,7 @@
     {
       "key": "schiit modi",
       "url": "https://www.schiit.com/img/img_3680.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -124,7 +125,7 @@
     {
       "key": "denafrips pontus",
       "url": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -134,7 +135,7 @@
     {
       "key": "denafrips venus ii",
       "url": "https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "retailer",
@@ -146,7 +147,7 @@
     {
       "key": "denafrips enyo",
       "url": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -156,7 +157,7 @@
     {
       "key": "wiim pro plus",
       "url": "https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -166,7 +167,7 @@
     {
       "key": "wiim pro",
       "url": "https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -176,7 +177,7 @@
     {
       "key": "lampizator baltic",
       "url": "https://static.wixstatic.com/media/c6db56_c2f789243c0341758ce9d2ac7d360caf~mv2.jpg/v1/fill/w_1200,h_910,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/B3%20-%202.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -186,7 +187,7 @@
     {
       "key": "rockna wavelight",
       "url": "https://www.rockna-audio.com/themes/rockna/img/product/wavelight/wavelight-dac-silver.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -196,7 +197,7 @@
     {
       "key": "dcs bart k",
       "url": "https://dcsaudio.com/assets/bartok-highlights-bhd-2.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -206,7 +207,7 @@
     {
       "key": "gustard x26 pro",
       "url": "https://shenzhenaudio.com/cdn/shop/files/1-1_cec99a1e-1550-459b-b75a-565cbf322481.jpg?v=1730458884",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -216,7 +217,7 @@
     {
       "key": "gustard r26",
       "url": "https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -226,7 +227,7 @@
     {
       "key": "topping d70",
       "url": "http://upload.toppingaudio.com/contents/2025/86/e0/iFkOZUtDRIHy85TQH1D2yWBOQDBCbUqkz6x5iJFb.webp",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -236,7 +237,7 @@
     {
       "key": "topping d90se",
       "url": "https://upload.toppingaudio.com/contents/2025/2a/e9/l8tqlW4252nLGvNXR1LTJIwxymzkf4Q8JGOk1wHy.webp",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -246,7 +247,7 @@
     {
       "key": "topping d90",
       "url": "https://apos.audio/cdn/shop/products/apos-audio-topping-dac-digital-to-analog-converter-topping-d90-dac-digital-to-analog-converter-14451789955146.jpg?v=1589681598&width=1400",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "retailer",
@@ -270,7 +271,7 @@
     {
       "key": "totaldac d1 unity",
       "url": "https://www.totaldac.com/fichiers/D1-core-front.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -280,7 +281,7 @@
     {
       "key": "laiv harmony",
       "url": "https://static.wixstatic.com/media/d91e0f_0d3dac580a4249f8ada7cf54ed152ba9~mv2.png/v1/crop/x_933,y_1775,w_6381,h_2571/fill/w_1844,h_742,fp_0.50_0.50,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_3388.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -290,7 +291,7 @@
     {
       "key": "hegel h390",
       "url": "https://www.hegel.com/images/products/discontinued/H390.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -300,7 +301,7 @@
     {
       "key": "hegel h190",
       "url": "https://www.hegel.com/images/products/discontinued/H190.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -310,7 +311,7 @@
     {
       "key": "naim supernait 3",
       "url": "https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -331,7 +332,7 @@
     {
       "key": "boulder 866",
       "url": "https://boulderamp.com/wp-content/uploads/866-Front-on-surface-Roon-1200x800.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -341,7 +342,7 @@
     {
       "key": "decware se84ufo",
       "url": "https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -351,7 +352,7 @@
     {
       "key": "enleum amp 23r",
       "url": "https://enleum.com/wp-content/uploads/2022/08/AMP-23R_1-scaled.jpg.webp",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -361,7 +362,7 @@
     {
       "key": "benchmark ahb2",
       "url": "https://benchmarkmedia.com/cdn/shop/products/AHB2_SilverAngle.JPG",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -371,7 +372,7 @@
     {
       "key": "mcintosh ma252",
       "url": "https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma252/ma252-front.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -381,7 +382,7 @@
     {
       "key": "nad c 3050",
       "url": "https://nadelectronics.com/cdn/shop/files/NAD-C-3050-3-4--on-black-for-web_2000x.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -391,7 +392,7 @@
     {
       "key": "primare i35",
       "url": "https://primare.net/wp-content/uploads/2020/02/primare-i35-prisma-modular-integrated-amplifier-and-network-player-front-black.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -401,7 +402,7 @@
     {
       "key": "rotel a11",
       "url": "https://www.rotel.com/sites/default/files/product/A11%20Tribute_silver.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -411,7 +412,7 @@
     {
       "key": "kinki studio ex m1",
       "url": "https://static.wixstatic.com/media/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png/v1/fill/w_1200,h_800,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/4b933e_7c6071af923a4d89b2b2d648432e2998~mv2.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -421,7 +422,7 @@
     {
       "key": "accuphase e 4000",
       "url": "https://www.accuphase.com/model/photo/e-4000.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -431,7 +432,7 @@
     {
       "key": "accuphase e 280",
       "url": "https://www.accuphase.com/model/photo/e-280.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -441,7 +442,7 @@
     {
       "key": "schiit vidar",
       "url": "https://www.schiit.com/img/img_2480.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -451,7 +452,7 @@
     {
       "key": "schiit aegir",
       "url": "https://www.schiit.com/img/img_4195.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -461,7 +462,7 @@
     {
       "key": "schiit saga",
       "url": "https://www.schiit.com/img/img_5335.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -483,7 +484,7 @@
     {
       "key": "leben cs 600",
       "url": "/brand-heroes/leben-cs600.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -493,7 +494,7 @@
     {
       "key": "leben cs600",
       "url": "/brand-heroes/leben-cs600.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -503,7 +504,7 @@
     {
       "key": "marantz 2220b",
       "url": "/brand-heroes/marantz-2220b.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -513,7 +514,7 @@
     {
       "key": "first watt sit 3",
       "url": "https://positive-feedback.com/wp-content/uploads/2018/07/43-First-Watt-SIT-3.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "review_publication",
@@ -599,7 +600,7 @@
     {
       "key": "goldmund job 225",
       "url": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
-      "state": "identity_unverified",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "authorized_dealer",
@@ -611,7 +612,7 @@
     {
       "key": "job 225",
       "url": "https://tmraudio.com/cdn/shop/files/12146-2__49893.1519836863.1280.1280_1280x574.jpg?v=1769654961",
-      "state": "identity_unverified",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "authorized_dealer",
@@ -757,7 +758,7 @@
     {
       "key": "kef r3",
       "url": "https://us.kef.com/cdn/shop/files/r3-meta_sp4053b1_product__front-side.png?v=1773978064&width=1024",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -767,8 +768,8 @@
     {
       "key": "wlm diva",
       "url": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "state": "provenance_ineligible",
-      "displayed": true,
+      "state": "provenance_prohibited",
+      "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",
@@ -789,7 +790,7 @@
     {
       "key": "xsa labs vanguard",
       "url": "https://www.stereotimes.com/utils/tinymce/uploaded/xsalabs650.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "review_publication",
@@ -801,7 +802,7 @@
     {
       "key": "xsa vanguard",
       "url": "https://www.stereotimes.com/utils/tinymce/uploaded/xsalabs650.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "review_publication",
@@ -873,7 +874,7 @@
     {
       "key": "magico a3",
       "url": "https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -896,7 +897,7 @@
     {
       "key": "boenicke w5",
       "url": "https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -906,7 +907,7 @@
     {
       "key": "boenicke w8",
       "url": "https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -916,7 +917,7 @@
     {
       "key": "magnepan 1 7i",
       "url": "https://magnepan.com/cdn/shop/products/Mg_1.7_White_Pair_1_1800x1800.jpg?v=1643770217",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -926,7 +927,7 @@
     {
       "key": "magnepan lrs",
       "url": "https://magnepan.com/cdn/shop/products/Speakers-3_1800x1800.jpg?v=1754334504",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -936,7 +937,7 @@
     {
       "key": "focal kanta no 2",
       "url": "https://dam.focal-naim.com/m/52fdcf02309f4f88/original/KantaN2_walnut-mat_Ivory_mat_34-jpg.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -946,7 +947,7 @@
     {
       "key": "wharfedale linton",
       "url": "https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -956,7 +957,7 @@
     {
       "key": "spendor d7",
       "url": "https://spendoraudio.com/wp-content/uploads/d7.2-natural-oak-front.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -966,7 +967,7 @@
     {
       "key": "wilson audio sabrina",
       "url": "https://www.wilsonaudio.com/media/941/sabrinax.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -976,7 +977,7 @@
     {
       "key": "jbl l100",
       "url": "https://www.jbl.com/dw/image/v2/BFND_PRD/on/demandware.static/-/Sites-masterCatalog_Harman/default/dw32dc552f/JBLL100MK2ORG_QtrRightWithGrille_1605x1605.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -986,7 +987,7 @@
     {
       "key": "mission 770",
       "url": "https://www.mission.co.uk/wp-content/uploads/magictoolbox_cache/cf3e6ec01aac7cb79461bcfe9d0d075e/450x/660543342/770-Walnut-Standard-2.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -996,7 +997,7 @@
     {
       "key": "quad va one",
       "url": "https://quad-hifi.co.uk/cdn/shop/files/VA-ONE_StandardBlack_3.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1006,17 +1007,18 @@
     {
       "key": "goldmund telos 590",
       "url": "https://goldmund.com/wp-content/uploads/2024/02/Telos-690-low-res-9.png",
-      "state": "provenance_ineligible",
-      "displayed": true,
-      "identityStatus": "unverified",
+      "state": "identity_wrong",
+      "displayed": false,
+      "identityStatus": "known_wrong",
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",
-      "hosting": "remote"
+      "hosting": "remote",
+      "identityNote": "a key naming a different model claims this same asset"
     },
     {
       "key": "electrocompaniet eci 6",
       "url": "https://electrocompaniet.com/cdn/shop/products/ECI6-front-1000x666.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1026,7 +1028,7 @@
     {
       "key": "dartzeel cth 8550",
       "url": "https://dartzeel.com/wp-content/uploads/2018/03/cth-8550-front-top-left-800x5903.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1036,7 +1038,7 @@
     {
       "key": "linn lp12 majik",
       "url": "https://small.linncdn.com/web-media/isolated/Majik-LP12-MM_Front_Cherry.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1046,7 +1048,7 @@
     {
       "key": "technics sl 1500c",
       "url": "https://us.technics.com/cdn/shop/products/ShopifySL-1500C_-K__1_1800x.jpg?v=1655765762",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1056,7 +1058,7 @@
     {
       "key": "thorens td 1600",
       "url": "https://www.thorens.com/en/assets/media/products/td1600/20200623-thorens-td-1600-nb-12-72.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1066,7 +1068,7 @@
     {
       "key": "apple airpods pro",
       "url": "https://www.apple.com/v/airpods-pro/r/images/overview/welcome/hero__b0eal3mn03ua_large.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1076,7 +1078,7 @@
     {
       "key": "audio technica ath m50xbt2",
       "url": "https://www.audio-technica.com/media/catalog/product/cache/177161fc218aa2dd413f2b73f6832b88/a/t/ath-m50xbt2_01.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1086,7 +1088,7 @@
     {
       "key": "audeze lcd x",
       "url": "https://www.audeze.com/cdn/shop/products/LCD-X_Updated_2019_4471x4471_600x.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1096,7 +1098,7 @@
     {
       "key": "hifiman susvara",
       "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/s/u/susvara.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1106,7 +1108,7 @@
     {
       "key": "hifiman arya organic",
       "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/a/r/arya_organic-main.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1116,7 +1118,7 @@
     {
       "key": "hifiman ef400",
       "url": "https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/1/2/1200_1200_-3.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1126,7 +1128,7 @@
     {
       "key": "zmf verite closed",
       "url": "https://shop.zmfheadphones.com/cdn/shop/files/DSC0072_1200x1200.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1136,7 +1138,7 @@
     {
       "key": "grado rs2x",
       "url": "https://gradolabs.com/cdn/shop/products/GradoRSX2-028-Edit.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1146,7 +1148,7 @@
     {
       "key": "grado sr80x",
       "url": "https://gradolabs.com/cdn/shop/files/SR80x-side.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1156,7 +1158,7 @@
     {
       "key": "meze empyrean",
       "url": "https://mezeaudio.com/cdn/shop/files/Meze-Audio-Empyrean-headphone-01_4226ba5f-d514-438b-a00c-cadf82e6bbfd.webp",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1166,7 +1168,7 @@
     {
       "key": "dan clark audio stealth",
       "url": "https://danclarkaudio.com/pub/media/catalog/product/cache/6517c62f5899ad6aa0ba23ceb3eeff97/s/t/stealth_1.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1187,7 +1189,7 @@
     {
       "key": "hegel rost",
       "url": "https://www.hegel.com/images/products/discontinued/Rost.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1197,7 +1199,7 @@
     {
       "key": "wiim ultra",
       "url": "https://cdn.shopify.com/s/files/1/0833/6441/3757/files/listing_1_Main_picture_Gray_2056e197-e4f8-4e39-8f41-bd792622f0a8.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1207,7 +1209,7 @@
     {
       "key": "wiim amp",
       "url": "https://cloudadmin-file.linkplay.com/product/image/b4bb2c26859e4f68b32df583307bf82e.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1217,7 +1219,7 @@
     {
       "key": "cambridge audio cxa81",
       "url": "https://www.cambridgeaudio.com/sites/default/files/ecommece/product/image/Cambridge_Audio_CXA81_Front.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1227,7 +1229,7 @@
     {
       "key": "amphion argon3s",
       "url": "https://amphion.fi/wp-content/uploads/2022/04/Argon3s-black.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1237,7 +1239,7 @@
     {
       "key": "focal clear mg",
       "url": "https://dam.focal-naim.com/m/305c17715d989c72/original/Clear_MG_34-jpg.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1247,7 +1249,7 @@
     {
       "key": "sony wh 1000xm5",
       "url": "https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1257,7 +1259,7 @@
     {
       "key": "shure aonic 3",
       "url": "https://pubs.shure.com/guide/aonic3/images/aonic3-hero.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1267,7 +1269,7 @@
     {
       "key": "holo audio may",
       "url": "https://kitsunehifi.com/cdn/shop/files/may1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1277,7 +1279,7 @@
     {
       "key": "holo may",
       "url": "https://kitsunehifi.com/cdn/shop/files/may1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1311,7 +1313,7 @@
     {
       "key": "magnepan 7",
       "url": "https://magnepan.com/cdn/shop/products/Mg.7_White_Pair_1_1200x1200.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1321,7 +1323,7 @@
     {
       "key": "audiolab 6000a",
       "url": "https://www.audiolab.co.uk/cdn/shop/files/6000ABlack2048x2048jpg_1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
@@ -1331,7 +1333,7 @@
     {
       "key": "nad c 316bee",
       "url": "https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1389,7 +1391,7 @@
     {
       "key": "smsl do300",
       "url": "https://www.smsl-audio.com/upload/portal/20230118/DO300-1.png",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1399,7 +1401,7 @@
     {
       "key": "smsl su 9",
       "url": "https://www.smsl-audio.com/upload/portal/20210301/SU-9-1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1409,8 +1411,8 @@
     {
       "key": "scott 222",
       "url": "https://preview.redd.it/hh-scott-222b-tube-integrated-amp-estimated-value-v0-7bfwf2ps75ug1.jpeg?width=1080&crop=smart&auto=webp&s=f7b7ce228d6e0f3c42194f35c8eeaf78d8837067",
-      "state": "provenance_ineligible",
-      "displayed": true,
+      "state": "provenance_prohibited",
+      "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",
@@ -1431,7 +1433,7 @@
     {
       "key": "spendor a1",
       "url": "https://spendoraudio.com/wp-content/uploads/a1-natural-oak-front.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_unestablished",
       "displayed": true,
       "identityStatus": "corroborated",
       "sourceClass": "unclassified",
@@ -1645,7 +1647,7 @@
     {
       "key": "campfire audio honeydew",
       "url": "https://headfonics.com/wp-content/uploads/2021/08/campfire-honeydew-review.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "review_publication",
@@ -1719,7 +1721,7 @@
     {
       "key": "Denafrips Enyo 15th",
       "url": "https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "catalog",
@@ -1759,7 +1761,7 @@
     {
       "key": "Denafrips Pontus II 12th-1",
       "url": "https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "unverified",
       "sourceClass": "catalog",
@@ -1819,7 +1821,7 @@
     {
       "key": "Marantz 2220B",
       "url": "/brand-heroes/marantz-2220b.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "catalog",
@@ -1869,7 +1871,7 @@
     {
       "key": "Goldmund Telos 690",
       "url": "/brand-heroes/goldmund-telos-690.jpg",
-      "state": "provenance_ineligible",
+      "state": "provenance_prohibited",
       "displayed": false,
       "identityStatus": "corroborated",
       "sourceClass": "catalog",
@@ -1959,16 +1961,6 @@
     {
       "key": "DeVore Fidelity Orangutan O/Baby",
       "url": "https://devorefidelity.com/wp-content/uploads/2022/04/devore-o-baby3.jpg",
-      "state": "identity_unverified",
-      "displayed": true,
-      "identityStatus": "unverified",
-      "sourceClass": "manufacturer",
-      "hosting": "remote",
-      "pool": "speakers"
-    },
-    {
-      "key": "DeVore Fidelity Orangutan O/92",
-      "url": "https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg",
       "state": "identity_unverified",
       "displayed": true,
       "identityStatus": "unverified",

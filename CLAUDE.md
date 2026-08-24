@@ -478,7 +478,7 @@ A user-visible product image is admissible only when exact identity, approved pr
 
 Every user-visible path resolves through `apps/web/src/lib/images/admission.ts`. Do not add a resolver that reads `PRODUCT_IMAGE_URLS` or a catalog `imageUrl` directly — that is how three paths ended up enforcing three different rules.
 
-Enforcement is staged at `identity`; moving it to `full` is a founder decision costing 143 of 156 registry rows. Cross-brand leakage and prohibited hosts are **never** staged. Full doctrine: `docs/image-governance.md`. Audit: `docs/audits/image-admission.json`.
+Enforcement is staged at `identity`; moving it to `full` is a founder decision costing 144 of 156 registry rows. Cross-brand leakage and prohibited hosts are **never** staged. Full doctrine: `docs/image-governance.md`. Audit: `docs/audits/image-admission.json`.
 
 Lock tests: `apps/web/src/lib/images/__tests__/admission-boundary.test.ts` (47), `production-controls.test.ts` (14), `registry-audit.test.ts` (4), `product-identity.test.ts` (13).
 

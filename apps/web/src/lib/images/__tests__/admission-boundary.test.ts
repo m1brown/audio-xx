@@ -3,7 +3,7 @@ import {
   getProductImage, getProductImageEntry, resolveProductImageStrict,
   resolveProductImage, resolveProductImageWithConfidence, GOVERNED_REGISTRY,
 } from '@/lib/product-images';
-import { admissionState, isDisplayable, variantDisagreement } from '../admission';
+import { admissionState, isDisplayable, variantDisagreement, hostIsIneligible } from '../admission';
 
 /**
  * ONE boundary. Before this, three separate paths could serve an image, and
@@ -141,6 +141,8 @@ describe('the detector distinguishes disagreement from silence', () => {
   });
 });
 
+type GovernedImageLike = Partial<Parameters<typeof admissionState>[0]>;
+
 describe('admission state is derived from independent predicates', () => {
   const base = {
     key: 'x y', url: 'https://x.com/y.jpg', hosting: 'remote' as const,
@@ -164,7 +166,32 @@ describe('admission state is derived from independent predicates', () => {
     expect(admissionState({
       ...base, identityStatus: 'verified_exact', sourceClass: 'retailer',
       rightsBasis: 'media_kit',
-    })).toBe('provenance_ineligible');
+    })).toBe('provenance_prohibited');
+  });
+
+  it('unrecorded provenance is a different state from prohibited provenance', () => {
+    // Merging these made the audit unreadable: 88 of 96 rows classified
+    // "ineligible" were being displayed. One is a ruling, the other a gap.
+    expect(admissionState({
+      ...base, identityStatus: 'corroborated', sourceClass: 'unclassified',
+      rightsBasis: 'media_kit',
+    })).toBe('provenance_unestablished');
+  });
+
+  it('state alone determines display at each enforcement level', () => {
+    // No caller should have to re-derive the decision from sourceClass or host.
+    const cases: Array<[GovernedImageLike, boolean, boolean]> = [
+      [{ identityStatus: 'known_wrong', sourceClass: 'manufacturer' }, false, false],
+      [{ identityStatus: 'corroborated', sourceClass: 'retailer' }, false, false],
+      [{ identityStatus: 'corroborated', sourceClass: 'unclassified' }, true, false],
+      [{ identityStatus: 'unverified', sourceClass: 'manufacturer' }, true, false],
+      [{ identityStatus: 'corroborated', sourceClass: 'manufacturer' }, true, true],
+    ];
+    for (const [partial, atIdentity, atFull] of cases) {
+      const img = { ...base, rightsBasis: 'none_recorded' as const, ...partial };
+      expect(isDisplayable(img, 'identity'), JSON.stringify(partial)).toBe(atIdentity);
+      expect(isDisplayable(img, 'full'), JSON.stringify(partial)).toBe(atFull);
+    }
   });
 
   it('only all three together are admissible', () => {
@@ -179,5 +206,51 @@ describe('admission state is derived from independent predicates', () => {
       ...base, identityStatus: 'corroborated', sourceClass: 'manufacturer',
       rightsBasis: 'none_recorded',
     })).toBe('legacy_rights_pending');
+  });
+});
+
+describe('marketplace imagery can never surface through a metadata gap', () => {
+  /**
+   * Two WiiM assets were served from `m.media-amazon.com` — marketplace
+   * listing photographs, a retailer class the Tier I/II rule already excludes.
+   * They reached readers for a reason worth naming: their rows carry no
+   * `source` block, and under staged enforcement a MISSING tier is tolerated.
+   * So the exclusion was defeated not by a decision but by an absence.
+   *
+   * That is the general hazard with staging, and the reason prohibited hosts
+   * are checked against the URL itself rather than against a tier that a row
+   * may simply never have been given.
+   */
+  const MARKETPLACE = [
+    'https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg',
+    'https://www.ebay.com/img/x.jpg',
+    'https://reverb.com/img/x.jpg',
+    'https://tmraudio.com/cdn/shop/files/x.jpg',
+    'https://www.audiogon.com/img/x.jpg',
+  ];
+
+  it('is withheld even when the row records no provenance at all', () => {
+    for (const url of MARKETPLACE) {
+      expect(hostIsIneligible(url), url).toBe(true);
+      expect(isDisplayable({
+        key: 'wiim pro', url, hosting: 'remote',
+        identityStatus: 'corroborated',   // identity is fine…
+        sourceClass: 'manufacturer',      // …and the tier even claims first-party
+        rightsBasis: 'media_kit',         // …and rights are recorded
+      }), url).toBe(false);
+    }
+  });
+
+  it('the live registry serves no marketplace asset on any surface', () => {
+    for (const [name, resolve] of RESOLVERS) {
+      for (const p of [['WiiM', 'Pro'], ['WiiM', 'Pro Plus'], ['JOB', '225']]) {
+        const url = resolve(p[0], p[1]) ?? '';
+        expect(url, `${name}: ${p.join(' ')}`).not.toMatch(/media-amazon|ebay\.|reverb\.com|tmraudio|audiogon/i);
+      }
+    }
+  });
+
+  it('a marketplace URL arriving as a catalog imageUrl is withheld too', () => {
+    expect(resolveProductImageStrict('WiiM', 'Pro', MARKETPLACE[0])).toBeUndefined();
   });
 });

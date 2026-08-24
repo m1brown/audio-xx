@@ -67,6 +67,19 @@ describe('brand-hero audit', () => {
     for (const f of FILES) expect(statSync(`${DIR}/${f}`).size).toBeGreaterThan(0);
   });
 
+  it('no credit line asserts a rights basis the record does not hold', () => {
+    // Two credits read "(curated under fair-use product reference)". Fair use
+    // is a DEFENCE raised after the fact, not a permission granted in advance,
+    // so the string asserted a legal conclusion the evidence does not contain
+    // — and asserted it to the reader, in rendered attribution. The rights
+    // basis for every brand hero is none_recorded, and the credit line must
+    // say who made the thing, not why we believe we may show it.
+    for (const m of CONSULTATION.matchAll(/credit:\s*'([^']*)'/g)) {
+      expect(m[1], 'credit asserts a rights basis').not.toMatch(
+        /fair[- ]use|public domain|royalty[- ]free|permitted|licen[cs]ed/i);
+    }
+  });
+
   it('a brand hero never silently becomes a product photograph', () => {
     // Two of these files ARE product shots (marantz-2220b, goldmund-telos-690)
     // and were wired in as catalog `imageUrl`. That is the crossover worth

@@ -85,7 +85,20 @@ export type AdmissionState =
    */
   | 'legacy_rights_pending'
   | 'identity_unverified'
-  | 'provenance_ineligible'
+  /**
+   * The source may NEVER supply user-visible imagery: a review publication
+   * (F4), a reseller or marketplace, 6moons, or an un-provenanced catalog URL.
+   * A standing ruling, so it is never staged.
+   */
+  | 'provenance_prohibited'
+  /**
+   * Provenance was never RECORDED. Split from `provenance_prohibited`
+   * 2026-08-24, because merging them made the classification unreadable:
+   * 88 of 96 rows called "ineligible" were in fact being displayed. They are
+   * different dimensions — one is a decision taken, the other a question never
+   * asked — and they get opposite treatment under staged enforcement.
+   */
+  | 'provenance_unestablished'
   | 'identity_wrong';
 
 const APPROVED_PROVENANCE: ImageSourceClass[] = ['manufacturer', 'authorized_dealer'];
@@ -97,7 +110,12 @@ const APPROVED_PROVENANCE: ImageSourceClass[] = ['manufacturer', 'authorized_dea
  */
 export function admissionState(img: GovernedImage): AdmissionState {
   if (img.identityStatus === 'known_wrong') return 'identity_wrong';
-  if (!APPROVED_PROVENANCE.includes(img.sourceClass)) return 'provenance_ineligible';
+  // Host first: a prohibited host outranks whatever tier a row claims, because
+  // the two WiiM marketplace assets reached readers precisely through a row
+  // that recorded no tier at all.
+  if (hostIsIneligible(img.url)) return 'provenance_prohibited';
+  if (PROHIBITED.has(img.sourceClass)) return 'provenance_prohibited';
+  if (!APPROVED_PROVENANCE.includes(img.sourceClass)) return 'provenance_unestablished';
   if (img.identityStatus !== 'verified_exact' && img.identityStatus !== 'corroborated') {
     return 'identity_unverified';
   }
@@ -151,12 +169,16 @@ export function isDisplayable(
   level: EnforcementLevel = ENFORCEMENT,
 ): boolean {
   const s = admissionState(img);
-  if (hostIsIneligible(img.url)) return false;
   if (s === 'admissible' || s === 'legacy_rights_pending') return true;
   if (level === 'full') return false;
-  // Under 'identity', an unestablished predicate is not yet disqualifying —
-  // but a KNOWN-WRONG asset and a PROHIBITED source always are.
-  return s === 'identity_unverified' || (s === 'provenance_ineligible' && !PROHIBITED.has(img.sourceClass));
+  // Under 'identity', a predicate that was never ESTABLISHED is not yet
+  // disqualifying. A wrong asset and a prohibited source always are.
+  //
+  // State now fully determines display at each level, which is the point of
+  // splitting prohibited from unestablished: no caller has to re-derive the
+  // decision from sourceClass or host, and the audit's classification counts
+  // reconcile with its display counts by construction.
+  return s === 'identity_unverified' || s === 'provenance_unestablished';
 }
 
 /**
@@ -197,6 +219,10 @@ const INELIGIBLE_HOSTS = [
   'tmraudio.com',      // The Music Room — used-gear reseller, ruled ineligible
   'ebay.', 'reverb.com', 'audiogon.com', 'usaudiomart.com', 'hifishark.com',
   'media-amazon.com', // marketplace listing images — retailer assets, Tier I/II excludes them
+  // Found the same way as the Amazon assets, by a row that records no tier:
+  'hifi-guide.com',   // editorial publication — F4. Its file is WLM-Diva-Monitor.jpg
+                      // served under the key `wlm diva`, so it was ALSO the wrong variant.
+  'redd.it', 'reddit.com', // user-generated; provenance is unknowable by construction
   '6moons.com',        // standing exclusion — never used, displayed or linked
 ];
 
@@ -222,6 +248,11 @@ const VARIANT_TOKENS = [
   'ii', 'iii', 'iv', 'x', 'tt2', 'tt', 'signature', 'sig', 'master',
   'v2', 'v3', 'pro', 'max', 'mini', 'ltd', 'anniversary',
 ];
+
+const EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'svg']);
+
+/** `o96`, `a6`, `mk2`, `590i` — but not `766x1024`, `2351c0`, or a CDN hash. */
+const MODEL_SHAPED = /^(?:[a-z]{1,3}[0-9]{1,4}|[0-9]{1,4}[a-z]{1,3})$/;
 
 const tokenize = (v: string): string[] =>
   v.toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
@@ -285,6 +316,21 @@ export function variantDisagreement(key: string, assetUrl: string): string | und
       if (f !== k && f.startsWith(k) && f.length - k.length <= 3 && !namedInKey(f)) return f;
     }
   }
+
+  // A SIBLING MODEL NUMBER — `goldmund telos 590` pointing at a Telos 690
+  // photograph — is NOT detected here, and deliberately so.
+  //
+  // A filename-shape rule for this was written and REVERTED. It raised the
+  // wrong-row count from 8 to 35, and the additions were noise: `_2000x.jpg`
+  // and `_1024x.jpg` are Shopify dimension suffixes, `936e` and `459b` are
+  // UUID fragments, `dsc0072` is a camera filename. Requiring a single
+  // candidate token did not help, because those filenames contain exactly one.
+  //
+  // A detector that cries wolf gets overridden, which costs more than the
+  // cases it catches. Sibling substitution is caught structurally instead, by
+  // the duplicate-asset rule in product-images.ts: when several keys claim one
+  // asset and the filename corroborates exactly one, the others are wrong.
+  // That found the Goldmund pair with no false positives at all.
   return undefined;
 }
 

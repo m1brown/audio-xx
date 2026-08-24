@@ -3,12 +3,9 @@
   "total": 18,
   "renderedAsBrandHero": 16,
   "withCredit": 16,
-  "withSourceUrl": 16,
+  "withSourceUrl": 15,
   "withRightsBasis": 0,
-  "fairUseAsserted": [
-    "accuphase-e3000.jpg",
-    "goldmund-telos-670.jpg"
-  ],
+  "fairUseAsserted": [],
   "alsoUsedAsProductImage": [
     "goldmund-telos-690.jpg",
     "leben-cs600.jpg",
@@ -31,9 +28,8 @@
       "url": "/brand-heroes/accuphase-e3000.jpg",
       "bytes": 51450,
       "renderedAsBrandHero": true,
-      "credit": "Accuphase Laboratory (curated under fair-use product reference)",
-      "sourceUrl": "https://www.accuphase.com/model/photo/e-3000.jpg",
-      "rightsClaim": "fair_use_asserted",
+      "credit": "Accuphase Laboratory",
+      "rightsClaim": "none_recorded",
       "alsoUsedAsProductImage": false,
       "hosting": "local"
     },
@@ -97,9 +93,9 @@
       "url": "/brand-heroes/goldmund-telos-670.jpg",
       "bytes": 140254,
       "renderedAsBrandHero": true,
-      "credit": "Goldmund (curated under fair-use product reference)",
+      "credit": "Goldmund",
       "sourceUrl": "https://goldmund.com/power-amplifiers/telos-670-integrated-amplifier/",
-      "rightsClaim": "fair_use_asserted",
+      "rightsClaim": "none_recorded",
       "alsoUsedAsProductImage": false,
       "hosting": "local"
     },

@@ -50,13 +50,58 @@ Derived from the atomic fields, never stored. A verdict kept beside the
 metadata that justifies it drifts from it — the failure that once produced
 three different values for one tonal axis.
 
-| state | meaning | displayed |
-| --- | --- | --- |
-| `admissible` | all three predicates established | yes |
-| `legacy_rights_pending` | correctly identified first-party asset, rights never recorded | yes, **temporarily** |
-| `identity_unverified` | nothing establishes which product this depicts | staged |
-| `provenance_ineligible` | prohibited source, or none established | staged / never |
-| `identity_wrong` | the asset depicts a different product | **never** |
+### Three questions, not one
+
+The counts only read correctly if these are kept apart:
+
+- **classification** — what is *established* about a record;
+- **displayed under staged `identity`** — what a reader sees *today*;
+- **admissible under target `full` doctrine** — what would survive the
+  invariant applied completely.
+
+An earlier version of this document reported `provenance_ineligible: 96` beside
+`138 displayed` without reconciling them, because that state merged two
+different things: a source that is **prohibited** (a standing ruling) and a
+source that was **never recorded** (a question never asked). They receive
+opposite treatment, so 88 of 96 rows called "ineligible" were in fact being
+displayed, and the classification could not be read as a display count.
+
+They are now separate states, and **state alone determines display at each
+level** — no caller re-derives the decision from `sourceClass` or host, and a
+lock test asserts zero state→display mismatches.
+
+| state | meaning | staged `identity` | target `full` |
+| --- | --- | :---: | :---: |
+| `admissible` | all three predicates established | shown | shown |
+| `legacy_rights_pending` | correctly identified first-party asset, rights never recorded | shown, **temporarily** | shown |
+| `identity_unverified` | nothing establishes which product this depicts | shown | withheld |
+| `provenance_unestablished` | provenance was never recorded | shown | withheld |
+| `provenance_prohibited` | reviewer, reseller, marketplace, 6moons, un-provenanced catalog | **withheld** | withheld |
+| `identity_wrong` | the asset depicts a different product | **withheld** | withheld |
+
+### The counts
+
+**Registry — 156 rows.** Classification is mutually exclusive and sums to 156.
+
+| state | rows | shown @ `identity` |
+| --- | ---: | ---: |
+| `provenance_unestablished` | 85 | 85 |
+| `identity_unverified` | 38 | 38 |
+| `provenance_prohibited` | 12 | 0 |
+| `legacy_rights_pending` | 12 | 12 |
+| `identity_wrong` | 9 | 0 |
+
+- displayed under staged `identity`: **135** · suppressed: **21**
+- displayable under `full`: **12** · suppressed under `full`: **144**
+
+**Catalog — 28 `imageUrl` records** (13 `identity_unverified`, 11
+`legacy_rights_pending`, 4 `provenance_prohibited`): **24 shown**, 4 suppressed;
+**11** would survive `full`.
+
+**Zero state→display mismatches** in either set, asserted by a lock test.
+
+The morning report said 39 catalog records. The true count was 29, and is now
+28 after one wrong image was removed; the 39 came from a bad grep.
 
 Suppression always **retains the record**. The URL, and the fact a human once
 curated it, are the raw material for verifying or regularising it later.
@@ -67,7 +112,7 @@ Deleting a suppressed row destroys the only evidence of what was checked.
 The invariant is not staged. What is staged is the **withdrawal** of imagery
 that pre-dates it.
 
-Applying every predicate at once withholds **143 of 156** registry rows,
+Applying every predicate at once withholds **144 of 156** registry rows,
 because 93 were written before provenance was recorded at all and carry no
 source block. Those images are not known to be wrong — they are unaccounted
 for. Removing nearly all photography from the product surface is a product
@@ -115,7 +160,8 @@ Beyond the two wrong assets already known, it found six more:
 | `linear tube audio z40` | `Z40i_004+…jpg` | the **Z40i** |
 | `klipsch heresy` | `Heresy-IV_American-Walnut…` | the **Heresy IV** |
 | `agd productions vivace` / `agd vivace` | `gran-vivace-mk-iv-…` | the **Gran Vivace MK IV** |
-| `kef ls60` | `…ls60w…` | the **LS60 Wireless** — likely benign, see below |
+| `kef ls60` | `…ls60w…` | the **LS60 Wireless** — unresolved, held suppressed |
+| `goldmund telos 590` | `Telos-690-low-res-9.png` | the **Telos 690** |
 | `chord mojo` | `Mojo-2-4.4-2-Edited…` | the **Mojo 2** |
 
 The Mojo was found **structurally, not lexically**. Its filename names no token
@@ -142,7 +188,7 @@ detector that cries wolf gets overridden:
 
 None of these were resolved autonomously; each needs a call.
 
-1. **Move to `full` enforcement?** The cost is 143 of 156 registry rows. The
+1. **Move to `full` enforcement?** The cost is 144 of 156 registry rows (134 shown today, 12 would survive). The
    alternative is recording provenance for the rows worth keeping.
 2. **Re-key the six wrong rows?** Filename evidence says `klipsch heresy` should
    be `klipsch heresy iv`, and so on. But identity from a filename is a
@@ -208,11 +254,26 @@ Ranked by likely effort-to-yield:
 5. **The tail.** 60 single-asset holders. Recommend deciding per *product
    demand* rather than per asset, consistent with demand-driven coverage.
 
-**A finding, not a recommendation:** two WiiM assets were being served from
-`m.media-amazon.com` — marketplace listing images, a retailer class the Tier
-I/II rule already excludes. They escaped only because those rows carry no tier.
-The host is now on the prohibited list, consistent with the reseller ruling
-already made.
+**Three findings of the same shape.** Prohibited sources were reaching readers
+not through a decision but through an ABSENCE — rows that record no tier, which
+staged enforcement tolerates:
+
+- two WiiM assets from `m.media-amazon.com` — marketplace listing images;
+- `wlm diva` from `hifi-guide.com` — an editorial publication (F4), and its
+  file is `WLM-Diva-Monitor.jpg` served under the plain `wlm diva` key, so it
+  was **also** the wrong variant;
+- `scott 222` from `preview.redd.it` — user-generated, provenance unknowable
+  by construction.
+
+All three hosts are now prohibited, consistent with rulings already made. This
+is the standing hazard of staging, and the reason prohibited hosts are checked
+against the URL itself rather than a tier a row may never have been given.
+
+It also exposes a gap the detector does not close: `monitor` is not a
+variant-significant token, so `Diva` → `Diva Monitor` was invisible to it. Left
+as-is rather than widening the token list mid-closeout — the host rule already
+withholds this asset, and widening it invites the false-positive problem that
+got the sibling-model detector reverted.
 
 ## Local hosting — architecture, design only
 
@@ -318,3 +379,53 @@ assertions with honest `none_recorded`, and treat any hero that doubles as a
 product photograph as a **product** asset subject to the full identity rule.
 Nothing here is a correctness or prohibited-source violation, so nothing is
 deleted or replaced.
+
+
+## The sibling-model class, and one detector that was reverted
+
+Two live defects surfaced only when the doctrine was stated as a **universal**
+invariant over every product, rather than as named controls:
+
+- `goldmund telos 590` pointed at a **Telos 690** photograph;
+- the DeVore Orangutan **O/92** carried the **O/96** file as its catalog
+  `imageUrl`, so a reader comparing the two saw the same loudspeaker twice.
+
+Neither is a variant suffix and neither is a prefix extension, so no existing
+detector saw them. They are *sibling model numbers*.
+
+A filename-shape rule for this was written and **reverted**. It raised the
+wrong-row count from 8 to 35, and every addition was noise: `_2000x.jpg` and
+`_1024x.jpg` are Shopify dimension suffixes, `936e` and `459b` are UUID
+fragments, `dsc0072` is a camera filename. Requiring a single candidate token
+did not save it, because those filenames contain exactly one. **A detector that
+cries wolf gets overridden, which costs more than the cases it catches.**
+
+What worked instead is structural. When several keys claim one asset and the
+filename corroborates exactly one, the others are suspect — but corroboration
+alone is not enough, because **aliases fail it routinely**: `soundkaos vox`
+matches `VOX_3.jpg` and `sound kaos vox` does not, though both name one
+loudspeaker. Flagging those would withdraw correct photography and call a
+spelling a wrong identity.
+
+The discriminator is a **model token**: `590` appears in one key and nowhere in
+the other, so they cannot be the same product; an alias differs only in how the
+brand is written. That rule found the Goldmund pair with **no false positives**.
+
+The O/92 was not a rule problem at all — its record was simply wrong, and the
+image was removed with the reason recorded in place. First-party provenance was
+never the issue: devorefidelity.com is DeVore's own site, and hosting says
+nothing about *which* product a photograph depicts.
+
+## Known limitation — diacritics
+
+`Frérot` tokenises to `["fr","rot"]`, because the accented character is
+stripped as a separator rather than folded. Any product whose name carries a
+diacritic can therefore fail exact identity and receive **no image**, even when
+a correctly-keyed first-party asset exists. Two catalog products are affected:
+**Merason Frérot** and **dCS Bartók**.
+
+This is a false SUPPRESSION, not a foreign photograph — it withholds a correct
+image rather than showing a wrong one, so it is not a correctness risk to
+readers. It is left unfixed deliberately: NFD normalisation would make imagery
+newly visible, which is outside a closeout envelope restricted to conservative
+changes. Recorded here as a founder decision, not carried out.

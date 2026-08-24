@@ -1385,7 +1385,14 @@ export const BRAND_PROFILES: BrandProfile[] = [
         {
           url: '/brand-heroes/accuphase-e3000.jpg',
           caption: 'Accuphase E-3000 Integrated Amplifier.',
-          credit: 'Accuphase Laboratory (curated under fair-use product reference)',
+          // Rights basis: none_recorded. The credit previously read
+          // "(curated under fair-use product reference)". Fair use is a
+          // DEFENCE raised after the fact, not a permission granted in
+          // advance, so asserting it in a credit line stated a legal
+          // conclusion the evidence does not contain — and stated it to the
+          // reader. Cleaned to the plain manufacturer credit, matching the
+          // DeVore / Audio Note / Naim / Shindo precedent.
+          credit: 'Accuphase Laboratory',
           sourceUrl: 'https://www.accuphase.com/model/photo/e-3000.jpg',
         },
       ],
@@ -1692,7 +1699,9 @@ export const BRAND_PROFILES: BrandProfile[] = [
         {
           url: '/brand-heroes/goldmund-telos-670.jpg',
           caption: 'Goldmund Telos 670 Integrated Amplifier.',
-          credit: 'Goldmund (curated under fair-use product reference)',
+          // Rights basis: none_recorded — see the Accuphase note above.
+          // Fair use is not permission.
+          credit: 'Goldmund',
           sourceUrl: 'https://goldmund.com/power-amplifiers/telos-670-integrated-amplifier/',
         },
       ],

@@ -56,7 +56,8 @@ function reasonFor(p: P, before?: string, after?: string): string {
   }
   if (before && !after) {
     if (row?.state === 'identity_wrong') return `correctness — ${row.identityNote}`;
-    if (row?.state === 'provenance_ineligible') return `provenance suppression — sourceClass ${row.sourceClass}`;
+    if (row?.state === 'provenance_prohibited') return `correctness — prohibited source (${row.sourceClass})`;
+    if (row?.state === 'provenance_unestablished') return `provenance suppression — no provenance recorded`;
     if (row) return `provenance suppression — ${row.state}`;
     return 'provenance suppression — catalog URL not first-party and no recorded provenance';
   }
@@ -142,8 +143,16 @@ describe('pre/post resolution diff', () => {
   it('no wrong-variant asset survives on any surface', () => {
     for (const r of rows) {
       if (!r.after) continue;
-      const row = GOVERNED_REGISTRY.find((g) => g.url === r.after);
-      if (row) expect(row.state, `${r.product} → ${r.after}`).not.toBe('identity_wrong');
+      // Several rows may share one URL — `goldmund telos 590` and `goldmund
+      // telos 690` do, one rightly and one wrongly. `find` returns whichever
+      // comes first in the table, which is not a fact about this product. The
+      // asset is admissible if SOME row entitles it.
+      const claiming = GOVERNED_REGISTRY.filter((g) => g.url === r.after);
+      if (claiming.length === 0) continue;
+      expect(
+        claiming.some((g) => g.state !== 'identity_wrong'),
+        `${r.product} → ${r.after} is claimed only by wrong-variant rows`,
+      ).toBe(true);
     }
   });
 });

@@ -2743,7 +2743,13 @@ export const SPEAKER_PRODUCTS: Product[] = [
     brand: 'DeVore Fidelity',
     name: 'Orangutan O/92',
     price: 8400,
-    imageUrl: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    // Image removed 2026-08-24 — wrong product. This entry is the Orangutan
+    // O/92; the asset is `O96-new-crop-766x1024.jpg`, the O/96, which the
+    // O/96 entry above also uses. A reader comparing the two was shown the
+    // same loudspeaker twice. First-party provenance was never the problem:
+    // devorefidelity.com is DeVore's own site, and hosting says nothing about
+    // WHICH product a photograph depicts.
+    // No replacement — no image is preferable to a sibling's.
     category: 'speaker',
     architecture: '2-way floorstanding, bass-reflex, 92dB/10Ω, tube-friendly impedance, more bass and scale than O/Baby',
     subcategory: 'floorstanding',
