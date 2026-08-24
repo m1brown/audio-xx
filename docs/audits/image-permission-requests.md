@@ -125,10 +125,12 @@ is the route. **Confidence: verified** from the maker's own contact page.
 
 ---
 
-## dCS and Audio Research — routes, no drafts yet
+## dCS and Audio Research — why their drafts differ
 
-Both have practical contact routes. Drafts are deliberately not written for
-them, because each has a complication the Acora and Butler requests do not.
+Both have practical contact routes. Their drafts (3 and 4 below) are shaped
+differently from the Acora and Butler ones, because each carries a
+complication those two do not: the blocker is IDENTITY before it is rights, so
+the request has to ask a question rather than only seek permission.
 
 **dCS Audio** — `info@dcsaudio.com`, +44 (0)1954 233950, Data Conversion
 Systems Ltd, Buckingway Business Park, Swavesey, Cambridgeshire CB24 4AE.
@@ -153,8 +155,23 @@ holds any archive photograph of the NON-SE Reference 5 — and "no, only the
 SE" is a likely and legitimate answer. Reference 5 SE photography must not be
 substituted, so a yes here is worth less than the other three.
 
+### Blocker classification — all four
+
+| Product | Identity | Rights | Classification |
+|---|---|---|---|
+| Acora QRC-2 | established (maker's own product page) | reserved, no published terms | **RIGHTS BLOCKER** |
+| Butler MONAD A100 | established (known asset on maker's site) | reserved, trademark use "by permission only" | **RIGHTS BLOCKER** |
+| dCS Rossini Apex | **not established** — assets fetchable, identifying pages 403 | reserved | **BOTH** |
+| ARC Reference 5 | **not established** — no first-party non-SE photograph located | unknown | **BOTH**, and may be unobtainable |
+
 Recommended order if the experiment runs: **Acora, then Butler, then dCS,
 then ARC** — strongest identity and simplest ask first.
+
+The order is also the information-value order. Acora and Butler test one
+question cleanly: *is manufacturer permission operationally cheap?* Two short
+emails answer it. dCS and ARC each confound that test with an identity problem,
+so running them first would produce an ambiguous result — a silence that could
+mean either "no" or "we don't have that photograph".
 
 ---
 
