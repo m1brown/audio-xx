@@ -12,7 +12,7 @@
  */
 
 import type { SubjectMatch } from './intent';
-import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName } from './labelled-components';
+import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName, truncateAtListBoundary } from './labelled-components';
 import type { ProductCategory } from './catalog-taxonomy';
 import type { ProposedSystem, DraftSystemComponent, AudioSessionState } from './system-types';
 import { findKnownSystemMatch, suggestKnownSystemName } from './known-systems';
@@ -643,7 +643,14 @@ export function detectSystemDescription(
     // while accepting "LS50 Meta", "Q150", "D90SE", "O/96", etc.
     let extractedModel = '';
     if (typeof match.index === 'number') {
-      const tail = currentMessage.slice(match.index + match.name.length);
+      // Stop at the next list item. `(?:\s+[A-Z\d][\w\-./+]*)*` lets a DIGIT
+      // start a continuation token and `[\w\-./+]*` then swallows the period,
+      // so "dCS Rossini Apex 4. Speakers: Acora QRC-2" yielded the model
+      // "Rossini Apex 4. Speakers" — one component wearing the next two items'
+      // text. See truncateAtListBoundary for why this varies by turn.
+      const tail = truncateAtListBoundary(
+        currentMessage.slice(match.index + match.name.length),
+      );
       const m = tail.match(/^\s+([A-Z][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
       if (m) {
         const candidate = m[1].trim();

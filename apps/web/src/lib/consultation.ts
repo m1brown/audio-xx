@@ -64,6 +64,7 @@ import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import { getPilotCapsule, findProtectedMischaracterization } from './brand-philosophy-pilot';
 import { toDisplayName } from './canonical-names';
+import { BRAND_NAMES } from './intent';
 import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
 import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
@@ -8650,6 +8651,98 @@ function giTokens(name: string): Set<string> {
   );
 }
 
+/**
+ * Every name and alias by which a brand is known, so a component that resolved
+ * only to a brand can be recognised however the listener wrote it.
+ */
+const BARE_BRAND_NAMES: ReadonlySet<string> = new Set([
+  // The SAME vocabulary that produced the brand match in the first place.
+  // Deriving this from BRAND_PROFILES alone missed every brand without a
+  // curated profile — Wilson Audio has no profile, yet extraction knows the
+  // name, so a component that resolved to nothing but "Wilson audio" read as
+  // correctly identified.
+  ...BRAND_NAMES.map((n) => n.toLowerCase().trim()),
+  ...BRAND_PROFILES.flatMap((bp) => (bp.names ?? []).map((n) => n.toLowerCase().trim())),
+]);
+
+/** Is this display name a brand standing in for a model we never resolved? */
+function isBareBrandName(displayName: string | undefined): boolean {
+  if (!displayName) return false;
+  return BARE_BRAND_NAMES.has(displayName.toLowerCase().replace(/\s+/g, ' ').trim());
+}
+
+/**
+ * Merge component records that describe the SAME physical unit.
+ *
+ * Two rules, both structural — neither compares products by name equality,
+ * because the whole defect is that one unit carries several names.
+ *
+ *   1. SAME SOURCE SPAN. Two records built from overlapping stretches of the
+ *      listener's own sentence came from one mention. "Denafrips Ares II"
+ *      yields a brand match at 41 and a product match at 51; both sit inside
+ *      the words the listener typed once.
+ *
+ *   2. BARE-BRAND ECHO. A single-token record with no catalog product whose
+ *      token is contained in a record that HAS one ("Crayon" beside "Crayon
+ *      Audio CIA-1T"). No span needed — a bare brand cannot be a second unit
+ *      when the model is already placed.
+ *
+ * The RICHER record wins: a catalog product outranks a bare brand, and more
+ * identity tokens outrank fewer. Roles are unioned, so a role the weaker
+ * record carried is preserved rather than discarded.
+ *
+ * Deliberately conservative. A record whose span cannot be located, or which
+ * is not contained by another, is left alone: two genuinely distinct units are
+ * far more costly to merge than one duplicate is to keep, and the duplicate is
+ * still caught downstream.
+ */
+function collapsePhysicalRepresentations(
+  components: SystemComponent[],
+  rawMessage: string,
+): void {
+  if (components.length < 2) return;
+  const lower = rawMessage.toLowerCase();
+
+  const spanOf = (c: SystemComponent): [number, number] | null => {
+    const n = c.displayName?.toLowerCase();
+    if (!n) return null;
+    const i = lower.indexOf(n);
+    return i < 0 ? null : [i, i + n.length];
+  };
+  const tokensOf = (c: SystemComponent) => giTokens(c.displayName);
+  /** Identity richness: a catalog product first, then token count. */
+  const rank = (c: SystemComponent) => (c.product ? 1000 : 0) + tokensOf(c).size;
+
+  const drop = new Set<SystemComponent>();
+  for (const a of components) {
+    if (drop.has(a)) continue;
+    for (const b of components) {
+      if (a === b || drop.has(b)) continue;
+
+      const ta = tokensOf(a), tb = tokensOf(b);
+      if (ta.size === 0 || tb.size === 0) continue;
+      const aInB = [...ta].every((t) => tb.has(t));
+      if (!aInB) continue;
+      if (rank(a) >= rank(b)) continue;
+
+      const sa = spanOf(a), sb = spanOf(b);
+      const sameSpan = sa !== null && sb !== null && sa[0] < sb[1] && sb[0] < sa[1];
+      const bareBrandEcho = ta.size <= 1 && !a.product && !!b.product;
+      if (!sameSpan && !bareBrandEcho) continue;
+
+      // b is the surviving record; carry across anything a knew that it does not.
+      b.roles = [...new Set([...(b.roles ?? []), ...(a.roles ?? [])])];
+      drop.add(a);
+      break;
+    }
+  }
+
+  if (drop.size === 0) return;
+  const kept = components.filter((c) => !drop.has(c));
+  components.length = 0;
+  components.push(...kept);
+}
+
 function checkGraphIntegrity(
   rawMessage: string,
   allComponents: SystemComponent[],
@@ -8695,7 +8788,15 @@ function checkGraphIntegrity(
   // row and is NOT counted. A SINGLE bare-brand component in an otherwise
   // intact graph follows existing behaviour; the gate fires only on 2+, or on
   // a dropped or duplicated component.
-  const unresolved = components.filter((c) => !c.product && giTokens(c.displayName).size <= 1);
+  //
+  // A MULTI-WORD brand name is still a bare brand. The token-count test read
+  // "Wilson audio" as carrying a model because it has two words, so a
+  // component whose model was lost counted as correctly identified. The same
+  // held for "Audio Research", "Pass Labs", "Linear Tube Audio". Ask the
+  // brand registry instead of counting words.
+  const unresolved = components.filter(
+    (c) => !c.product && (giTokens(c.displayName).size <= 1 || isBareBrandName(c.displayName)),
+  );
 
   // (1) Dropped: fewer components resolved than the user meaningfully listed.
   const expected = countMeaningfulInputComponents(rawMessage);
@@ -9486,6 +9587,27 @@ export function buildSystemAssessment(
       });
     }
   }
+
+  // ── One physical unit, however many records describe it ────────────
+  //
+  // THE INVARIANT. Multiple representations or evidence records for one
+  // physical component are not multiple components in the signal path.
+  //
+  // The graph is assembled from several sources — the active system, brand
+  // matches, product matches, explicit labels — and each contributes its own
+  // NAME STRING for the same box. Identity was then compared as a string
+  // (`processedNames`), so any two sources that spelled it differently both
+  // survived. A listener with one Denafrips Ares II was asked which of
+  // "Denafrips Ares II" and "Denafrips" was active in their signal path.
+  //
+  // Collapsed HERE, before validation, so the duplicate-role check and the
+  // graph-integrity gate both reason about the true physical graph. Neither
+  // check is weakened; they are simply no longer handed a graph in which one
+  // amplifier appears twice. `checkGraphIntegrity` carried its own echo filter
+  // for part of this, which meant the two gates disagreed about how many
+  // components existed — the duplicate-role clarification fired on a graph the
+  // integrity gate had already cleaned.
+  collapsePhysicalRepresentations(components, currentMessage);
 
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;

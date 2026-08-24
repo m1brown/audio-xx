@@ -107,7 +107,7 @@ export interface IntentResult {
 // ── Known brands / product names ─────────────────────
 
 /** Brand / manufacturer names — not specific models. */
-const BRAND_NAMES = [
+export const BRAND_NAMES = [
   // DAC / digital / streamers
   'denafrips', 'chord', 'schiit', 'topping', 'smsl', 'gustard',
   'holo', 'holo audio', 'benchmark', 'rme', 'mytek', 'weiss',

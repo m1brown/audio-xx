@@ -138,6 +138,37 @@ function rolesFromLabel(labelText: string): string[] {
 }
 
 /**
+ * A list marker introduces the NEXT item, so it can never be part of the
+ * name before it.
+ *
+ * THE DEFECT THIS FIXES. A component's name runs from its colon to the start
+ * of the next LABEL — but the label match begins at the role word, so the list
+ * marker sitting between them is inside this segment:
+ *
+ *   "... Dac/Streamer: dCS Rossini Apex 4. Speakers: ..."  →  "dCS Rossini Apex 4"
+ *   "... Dac/Streamer: dCS Rossini Apex - Speakers: ..."   →  "dCS Rossini Apex -"
+ *
+ * The trailing trim removed the period but not the digit, and removed en/em
+ * dashes but not the ASCII hyphen. So the SAME physical component acquired a
+ * DIFFERENT name string depending on whether the listener numbered or bulleted
+ * their list — and identity downstream is compared as a string.
+ *
+ * That is how one dCS Rossini Apex became three: `dCS Rossini Apex 4` from a
+ * numbered turn, `dCS Rossini Apex -` from a bulleted one, and the clean
+ * canonical form, each surviving as a separate node in the signal path.
+ *
+ * Applied to the RAW segment, before punctuation is trimmed — once the period
+ * is gone, a trailing "2" is indistinguishable from the "2" in "Ref 2".
+ */
+const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)/;
+
+/** Cut a raw segment where the next list item begins. */
+export function truncateAtListBoundary(rawSegment: string): string {
+  const m = LIST_BOUNDARY.exec(rawSegment);
+  return m ? rawSegment.slice(0, m.index) : rawSegment;
+}
+
+/**
  * Parse explicit `<role label>: <name>` pairs from a message.
  *
  * A component's name runs from its colon to the start of the next label, or
@@ -160,7 +191,9 @@ export function parseLabelledComponents(message: string): LabelledComponent[] {
   for (let i = 0; i < matches.length; i++) {
     const here = matches[i];
     const next = matches[i + 1];
-    const rawSegment = message.slice(here.end, next ? next.start : message.length);
+    const rawSegment = truncateAtListBoundary(
+      message.slice(here.end, next ? next.start : message.length),
+    );
 
     // Trim separators and trailing connective words the next label left behind.
     const rawName = rawSegment
