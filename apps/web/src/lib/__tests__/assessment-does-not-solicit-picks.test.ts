@@ -91,3 +91,24 @@ describe('internal execution taxonomy stays off the reader surface', () => {
     }
   });
 });
+
+describe('a suppressed section does not announce itself', () => {
+  it('"Learn more" is gated on links that will actually render', () => {
+    // The heading was gated on `links.length > 0` while the F4 reviewer
+    // exclusion empties review-kind links INSIDE AdvisoryLinks. Nathan's links
+    // are all reviews, so the content was correctly suppressed and the heading
+    // stood over nothing — a section label with no section.
+    expect(SRC).not.toMatch(/a\.links && a\.links\.length > 0/);
+    expect(SRC).toMatch(/hasDisplayableLinks\(a\.links\)/);
+  });
+
+  it('the predicate excludes exactly what F4 excludes, and no more', () => {
+    const links = readFileSync('apps/web/src/components/advisory/AdvisoryLinks.tsx', 'utf8');
+    const fn = links.slice(links.indexOf('export function hasDisplayableLinks'));
+    const body = fn.slice(0, fn.indexOf('\n}'));
+    // Reference and dealer links still display; review links never do.
+    expect(body).toContain("'reference'");
+    expect(body).toContain("'dealer'");
+    expect(body).not.toContain("'review'");
+  });
+});

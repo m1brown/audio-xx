@@ -36,7 +36,7 @@ import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
 import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/catalog/lookups';
 import { getProductImage, getProductImageEntry, getGenericPlaceholder, resolveProductImageStrict } from '../../lib/product-images';
-import AdvisoryLinks from './AdvisoryLinks';
+import AdvisoryLinks, { hasDisplayableLinks } from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
@@ -2182,9 +2182,9 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
           have already rendered inside Component Contributions. Kept
           as a fallback for memo outputs that lack per-component
           assessments (legacy paths, edge cases). */}
-      {a.links && a.links.length > 0 && (!a.componentAssessments || a.componentAssessments.length === 0) && (
+      {hasDisplayableLinks(a.links) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
+          <AdvisoryLinks links={a.links ?? []} />
         </AdvisorySection>
       )}
 
@@ -3006,9 +3006,9 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Learn more (links) ────────────────────────── */}
       {/* All outbound links render here — never above the follow-up. */}
       <div style={{ marginTop: '1.25rem' }}>
-        {a.links && a.links.length > 0 && (
+        {hasDisplayableLinks(a.links) && (
           <AdvisorySection label="Learn more">
-            <AdvisoryLinks links={a.links} />
+            <AdvisoryLinks links={a.links ?? []} />
           </AdvisorySection>
         )}
         <ShoppingLinks
@@ -3812,9 +3812,9 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
 
       {/* ── 8. Learn more (links) ──────────────────────────── */}
       {/* Guard: any response-level links render here, after follow-up. */}
-      {a.links && a.links.length > 0 && (
+      {hasDisplayableLinks(a.links) && (
         <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
+          <AdvisoryLinks links={a.links ?? []} />
         </AdvisorySection>
       )}
 
@@ -5330,7 +5330,12 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        * leaving them as a free-floating text list. Silent collapse
        * when no image or no product match exists — falls back to the
        * existing flat link list. */}
-      {(a.links && a.links.length > 0) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
+      {/* Same rule as the other three sites: a section announces itself only
+        * when it will render something. F4 empties review-kind links inside
+        * AdvisoryLinks, so `links.length > 0` opened a "Learn more" heading
+        * over nothing whenever a system's links were all reviews — which is
+        * exactly Nathan's case. */}
+      {hasDisplayableLinks(a.links) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
         <AdvisorySection label="Learn more">
           {/* Stage 6.2 consultation-validation pass: pass the whole
            *  advisory object (serialized) as the prose hint. The
@@ -5349,8 +5354,8 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               prose={JSON.stringify(a)}
             />
           )}
-          {a.links && a.links.length > 0 && (
-            <AdvisoryLinks links={a.links} />
+          {hasDisplayableLinks(a.links) && (
+            <AdvisoryLinks links={a.links ?? []} />
           )}
           {/* A system already carries per-component marketplace links above.
             * Emitting these too searched for the joined subject —
