@@ -5335,7 +5335,27 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         * AdvisoryLinks, so `links.length > 0` opened a "Learn more" heading
         * over nothing whenever a system's links were all reviews — which is
         * exactly Nathan's case. */}
-      {hasDisplayableLinks(a.links) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
+      {/* A SECTION RENDERS ONLY IF IT HAS A CHILD.
+        *
+        * Each of the three children below is independently suppressed for a
+        * SYSTEM — the subject card would consume the joined subject as one
+        * product, the marketplace links would search for that same joined
+        * string, and F4 empties review-kind links. All correct. But the
+        * section's own condition did not check the same things, so on Nathan
+        * every child switched off and the "Learn more" heading rendered over
+        * nothing.
+        *
+        * The condition is now the disjunction of what actually renders, so the
+        * label cannot outlive its content. */}
+      {(() => {
+        const isSystem = !!(a.systemComponentViews && a.systemComponentViews.length > 0);
+        const hasConsultationBody = a.kind === 'consultation' && !a.componentReadings
+          && !!(a.tendencies || a.philosophy || a.productOrigin
+            || (a.improvements && a.improvements.length > 0));
+        const showsSubjectCard = !isSystem;
+        const showsShoppingLinks = hasConsultationBody && !isSystem;
+        return hasDisplayableLinks(a.links) || showsSubjectCard || showsShoppingLinks;
+      })() ? (
         <AdvisorySection label="Learn more">
           {/* Stage 6.2 consultation-validation pass: pass the whole
            *  advisory object (serialized) as the prose hint. The
