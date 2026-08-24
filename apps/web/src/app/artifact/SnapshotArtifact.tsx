@@ -203,15 +203,22 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
         </section>
       )}
 
-      {s.componentDossiers && s.componentDossiers.length > 0 && (
-        <Dossiers dossiers={s.componentDossiers} />
-      )}
-
+      {/* NEXT comes before the reference material.
+        *
+        * The diagnostic question is the one thing the reader can act on, and
+        * it sat behind four component dossiers — the reader met a page of
+        * specifications before being told what would actually resolve the
+        * open question. Conclusions and action first; reference after. */}
       {s.question && (
         <section aria-label="Next question" className="axx-question">
           <p>{s.question}</p>
         </section>
       )}
+
+      {s.componentDossiers && s.componentDossiers.length > 0 && (
+        <Dossiers dossiers={s.componentDossiers} />
+      )}
+
 
       {/* `axx-doc-footer` marks this as the DOCUMENT's footer, not application
           chrome. The artifact route hides `footer` to strip site furniture,
@@ -254,6 +261,8 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
         <p className="axx-provenance">
           {s.components.map((c) => `${c.name}${c.basis ? ` — ${basisLabel(c.basis)}` : ''}`).join(' · ')}
         </p>
+        {/* A quiet close, so the document ends rather than stopping. */}
+        <p className="axx-colophon">Audio XX · Notes on Your System</p>
       </footer>
     </article>
   );

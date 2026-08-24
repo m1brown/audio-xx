@@ -178,6 +178,25 @@ export function presentDossier(d: ProductDossier): DossierView {
   // coverage — is.
   const SHIPPING = new Set(['dimensions', 'weight']);
   const meaningfulSecondary = secondary.filter((l) => !SHIPPING.has(l.label));
+
+  /**
+   * Shipping data reads LAST.
+   *
+   * `secondary` followed the order facts happened to arrive in, so the Butler's
+   * carton dimensions sat above its 300B tube complement — the least
+   * interesting line in the dossier ahead of the one that explains what the
+   * amplifier IS. The same set already decides render-worthiness; it decides
+   * reading order too.
+   *
+   * A stable partition, not a sort: everything else keeps the order the
+   * selection layer chose. Nothing is added, removed or reclassified.
+   */
+  const ordered = [
+    ...secondary.filter((l) => !SHIPPING.has(l.label)),
+    ...secondary.filter((l) => SHIPPING.has(l.label)),
+  ];
+  secondary.length = 0;
+  secondary.push(...ordered);
   const hasDetail = secondary.length > 0;
 
   const detailSummary = primary.length === 0 && meaningfulSecondary.length > 0

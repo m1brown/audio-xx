@@ -123,6 +123,39 @@ is the route. **Confidence: verified** from the maker's own contact page.
 
 ---
 
+---
+
+## dCS and Audio Research — routes, no drafts yet
+
+Both have practical contact routes. Drafts are deliberately not written for
+them, because each has a complication the Acora and Butler requests do not.
+
+**dCS Audio** — `info@dcsaudio.com`, +44 (0)1954 233950, Data Conversion
+Systems Ltd, Buckingway Business Park, Swavesey, Cambridgeshire CB24 4AE.
+**Confidence: medium** — a general enquiry address, not a named press contact.
+
+dCS is the one product where the blocker is IDENTITY, not rights: every page
+on dcsaudio.com returns 403 to an automated client while `/assets/…` returns
+200, so a file can be fetched but the page that would establish which product
+it depicts cannot. That makes asking unusually valuable — a maker who replies
+with an asset states its identity in the same message, clearing both
+predicates at once. It also means a bare "may we use a photo?" is the wrong
+question; the request should ask them to nominate the Rossini Apex image.
+
+**Audio Research** — `info@audioresearch.com`, 763-577-9700, 6655 Wedgwood
+Rd N Suite 115, Maple Grove, MN 55311. A contact form exists.
+**Confidence: high** — published on their own contact page.
+
+The complication here is the product. The Reference 5 is discontinued and ARC
+publishes no legacy image; the only first-party artefact located is the
+non-SE owner's manual PDF. A permission request would have to ask whether ARC
+holds any archive photograph of the NON-SE Reference 5 — and "no, only the
+SE" is a likely and legitimate answer. Reference 5 SE photography must not be
+substituted, so a yes here is worth less than the other three.
+
+Recommended order if the experiment runs: **Acora, then Butler, then dCS,
+then ARC** — strongest identity and simplest ask first.
+
 ## If a yes arrives
 
 It is a data operation, not a project. The renderer is already wired: an

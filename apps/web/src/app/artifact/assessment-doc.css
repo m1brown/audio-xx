@@ -210,3 +210,12 @@
 /* Evidence ledger — one line per source, scope stated. */
 .axx-ledger { list-style: none; margin: 0.35rem 0 0; padding: 0; }
 .axx-ledger li { margin-bottom: 0.2rem; }
+
+/* Closing colophon — the document ends rather than stopping. */
+.axx-colophon {
+  margin-top: 1.1rem; padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--faint);
+}
