@@ -99,11 +99,15 @@ function Fact({ l }: { l: DossierView['primary'][number] }) {
 
 function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
   return (
-    <section aria-label="The components">
-      <h2 className="axx-section">The components</h2>
+    <section aria-label="Your system">
+      <h2 className="axx-section">Your system</h2>
       {dossiers.map((d) => (
         <div key={d.displayName} className="axx-component">
           <h3 className="axx-cname">{d.displayName}</h3>
+          {/* One representation per physical component. The lightweight card
+              and the dossier were two renderings of one box; the role belongs
+              with the evidence, not in a separate list above it. */}
+          {d.role && <p className="axx-crole">{d.role}</p>}
           {/* Recognition, not evidence — see ComponentDossiers. Rendered only
               when the governed boundary admitted an exact-product asset;
               absent renders nothing at all, so a dossier without a photograph
@@ -130,6 +134,19 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
             <div className="axx-component-detail">
               {d.secondary.map((l, i) => <Fact key={i} l={l} />)}
             </div>
+          )}
+
+          {/* RESOURCES — last, quiet, and clearly not evidence. They follow
+              everything Audio XX knows about the component rather than sitting
+              beside its provenance, because a place to look and a statement of
+              what is known are different kinds of thing. */}
+          {d.resources && d.resources.length > 0 && (
+            <p className="axx-cresources">
+              Find one
+              {d.resources.map((r) => (
+                <a key={r.url} href={r.url} rel="noopener noreferrer nofollow">{r.label}</a>
+              ))}
+            </p>
           )}
 
           {(() => {
@@ -189,12 +206,27 @@ export default function SnapshotArtifact({ snapshot }: { snapshot: AssessmentSna
         </section>
       )}
 
-      {s.sections.map((sec, i) => (
-        <section key={i} aria-label={sec.label ?? 'Assessment'}>
-          {sec.label && <h2 className="axx-section">{sec.label}</h2>}
-          {sec.paragraphs.map((p, j) => <p key={j}>{p}</p>)}
+      {/* SYSTEM REVIEW — the intellectual centre of the document.
+        *
+        * It replaces a three-sentence review followed by four specification
+        * sheets: a compatibility check handed back as a reading. Every
+        * paragraph is composed from evidence this snapshot already holds and
+        * states a relationship between facts rather than restating them.
+        *
+        * `sections` still renders where a snapshot predates the composed
+        * review, so older artifacts keep their prose. */}
+      {(s.systemReview?.length || s.sections.length) ? (
+        <section aria-label="System review" className="axx-review">
+          <h2 className="axx-section">System review</h2>
+          {/* The composed analysis first, then whatever prose the engine
+              already emitted — the coverage statement lives there. One
+              section, so a reader meets one review rather than a review and
+              an unlabelled remainder. */}
+          {(s.systemReview ?? []).map((p, i) => <p key={`r${i}`}>{p}</p>)}
+          {s.sections.flatMap((sec, i) =>
+            sec.paragraphs.map((p, j) => <p key={`s${i}-${j}`}>{p}</p>))}
         </section>
-      ))}
+      ) : null}
 
       {s.operatingCondition && (
         <section aria-label="Operating condition">

@@ -219,3 +219,20 @@
   font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--faint);
 }
+
+/* SYSTEM REVIEW — the document's centre of gravity. */
+.axx-review p { margin-bottom: 0.85rem; }
+.axx-review p:last-child { margin-bottom: 0; }
+
+/* Component role, under the name it belongs to. */
+.axx-crole {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--faint); margin: -0.3rem 0 0.5rem;
+}
+
+/* Resources — subordinate to the evidence above them. */
+.axx-cresources {
+  margin: 0.5rem 0 0; font-size: 0.72rem; color: var(--faint);
+}
+.axx-cresources a { color: var(--faint); margin-left: 0.5rem; }

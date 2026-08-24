@@ -762,6 +762,8 @@ export interface AdvisoryResponse {
    * business.
    */
   componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
+  /** The system-level analysis, composed once and read by every surface. */
+  systemReview?: string[];
 
   // ── 0. Audio Profile ──────────────────────────────────
   /** Structured listener profile — system, sonic priorities, context. */

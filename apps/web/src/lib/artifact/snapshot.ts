@@ -41,6 +41,7 @@
  */
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
 import { deriveEvidenceLedger, type EvidenceLedger } from './evidence-ledger';
+import { composeSystemReview } from './system-review';
 import type { DossierView } from '../evidence/dossier-presentation';
 
 export const ASSESSMENT_SCHEMA_V1 = 'axx.assessment.v1' as const;
@@ -124,6 +125,13 @@ export interface AssessmentSnapshotV1 {
    * before this contract still render; new snapshots carry the ledger.
    */
   evidenceLedger?: EvidenceLedger;
+  /**
+   * The system-level analysis, composed from the evidence this snapshot holds.
+   *
+   * Frozen with everything else, so the conversation, the artifact and the PDF
+   * read one review rather than three renderings of one payload.
+   */
+  systemReview?: string[];
 }
 
 /** The shape the provisional path produces, narrowed to what a snapshot needs. */
@@ -227,6 +235,25 @@ export function snapshotFromProvisional(
   // time as a section would print it twice.
   const sections: SnapshotSection[] = body.length ? [{ paragraphs: body }] : [];
 
+  /**
+   * The system-level analysis, reasoned across the dossiers this snapshot
+   * already holds. It replaces the three-sentence review: a finding, its
+   * qualification and a coverage note, followed by four specification sheets
+   * with nothing in between explaining the system.
+   *
+   * Deterministic and evidence-gated — every paragraph names the facts it
+   * rests on, and a paragraph whose facts are absent is not emitted.
+   */
+  const systemReview = composeSystemReview({
+    components: meta.components.map((c) => ({
+      displayName: c.name, role: c.role ?? '',
+    })),
+    dossiers: meta.componentDossiers ?? [],
+    driveFinding: response.systemSignature ?? undefined,
+    driveQualification: response.qualification,
+    coverageNote: meta.coverageNote,
+  });
+
   return {
     schema: ASSESSMENT_SCHEMA_V1,
     createdAt: meta.createdAt,
@@ -245,6 +272,7 @@ export function snapshotFromProvisional(
     })),
     componentDossiers: meta.componentDossiers,
     coverageNote: meta.coverageNote,
+    systemReview,
     // DERIVED, not fixed. The previous fixed string was chosen because
     // asserting source classes the path does not hold would be a false claim —
     // correct reasoning, wrong remedy. The path DOES hold evidence: its

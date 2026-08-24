@@ -77,6 +77,16 @@ export interface DossierView {
    * at all — no frame, no placeholder, no reserved space.
    */
   image?: { url: string; credit?: string };
+  /**
+   * The component's role in the chain, so one dossier can carry the identity
+   * the lightweight card used to hold separately.
+   */
+  role?: string;
+  /**
+   * Subordinate marketplace links. Never evidence, never a claim that a
+   * listing exists — a place to look, kept below the evidence it follows.
+   */
+  resources?: Array<{ label: string; url: string }>;
 }
 
 const LABELS: Partial<Record<DossierPredicate, string>> = {

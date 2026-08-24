@@ -5606,6 +5606,27 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
   // which renderer drew the assessment is not.
   const artifactActions = (
     <>
+      {/* SYSTEM REVIEW — the same composed analysis the artifact renders, from
+        * the same call. Composing separately per surface is how two renderings
+        * of one payload drift apart. */}
+      {advisory.systemReview && advisory.systemReview.length > 0 && (
+        <section style={{ marginTop: '1.4rem' }} aria-label="System review">
+          <div style={{
+            fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+            fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em',
+            textTransform: 'uppercase', color: 'var(--xx-accent, #A6432C)',
+            marginBottom: '0.7rem',
+          }}>
+            System review
+          </div>
+          {advisory.systemReview.map((p, i) => (
+            <p key={i} style={{
+              margin: '0 0 0.8rem 0', fontSize: FONTS.bodySize,
+              lineHeight: FONTS.lineHeight,
+            }}>{p}</p>
+          ))}
+        </section>
+      )}
       {/* Component-scoped: single-subject facts, outside the relational filter. */}
       <ComponentDossiers dossiers={advisory.componentDossiers} />
       <ArtifactActionsInline viewToken={advisory.artifactViewToken} />

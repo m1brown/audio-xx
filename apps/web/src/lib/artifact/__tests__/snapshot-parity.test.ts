@@ -228,9 +228,10 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // material is the opposite of reassessment: it is what stops the ledger
     // being maintained separately and drifting from the assessment.
     expect(imports).toEqual([
-      './canonical', './evidence-ledger', '../evidence/dossier-presentation',
+      './canonical', './evidence-ledger', './system-review',
+      '../evidence/dossier-presentation',
     ]);
-    for (const i of imports.filter((x) => x !== './evidence-ledger')) {
+    for (const i of imports.filter((x) => x !== './evidence-ledger' && x !== './system-review')) {
       expect(src, i).toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./]/g, '\\$&')}'`));
     }
     // And the derivation itself must stay pure.
@@ -238,6 +239,17 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     const ledgerImports = [...ledger.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
     expect(ledgerImports).toEqual(['@/lib/evidence/dossier-presentation']);
     expect(ledger).toMatch(/import type \{/);
+
+    // `system-review` is the same kind of dependency: it composes prose from
+    // dossiers the snapshot has ALREADY frozen. It reads no catalog, resolves
+    // no product and calls no engine, and its own only import is a type. The
+    // purity rule protects "can opening a snapshot reassess", not "does any
+    // function run" — and deriving a review from frozen material is the
+    // opposite of reassessment.
+    const review = await fs.readFile(new URL('../system-review.ts', import.meta.url), 'utf8');
+    const reviewImports = [...review.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+    expect(reviewImports).toEqual(['@/lib/evidence/dossier-presentation']);
+    expect(review).toMatch(/import type \{/);
   });
 });
 
