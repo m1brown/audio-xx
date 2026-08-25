@@ -333,6 +333,14 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * What survives is the part that was always licensed: the loudspeaker states
    * a nominal load, the amplifier publishes a figure at that load, so that is
    * the figure to read. A matching-conditions statement.
+   *
+   * The difficulty caveat that used to close this sentence — "what a nominal
+   * figure does not establish is how demanding the loudspeaker actually is" —
+   * moved to the THESIS, where a reader meets it first. Restating it here made
+   * the same limitation appear twice in one review. The D-7 guard at the point
+   * of risk is not lost: the paragraph still says, of the compatibility
+   * finding itself, that it is "not that the match is an easy one, which is a
+   * different question and needs evidence neither maker publishes".
    */
   /*
    * The paragraph is licensed by a figure AT THAT LOAD, not by the existence
@@ -373,9 +381,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       `Which of the amplifier's published figures applies is settled by the `
       + `loudspeaker: ${spk.component.displayName} states a nominal load of `
       + `${impedanceLine!.value}, so the maker's ${ohms}-ohm figure is the one `
-      + `to read here${contrast}. What a nominal figure does not establish is how `
-      + `demanding the loudspeaker actually is — that would need its impedance `
-      + `minimum and phase behaviour, which are not published.`,
+      + `to read here${contrast}.`,
     );
   }
 
@@ -522,7 +528,19 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       + `all. Audio XX will not estimate it from the components' reputations.`,
     );
   }
-  if (boundary.length) limits.push(boundary.join(' '));
+  /*
+   * Emitted only when the THESIS did not already carry this limitation.
+   *
+   * The opening now states that acoustic headroom is not established and why.
+   * Repeating it here as its own paragraph made the same unresolved question
+   * appear twice in one review — the body should develop the thesis, not say
+   * it again. Where there is no thesis (no quantitative interface to open
+   * with) this paragraph is still the only place the boundary is drawn.
+   */
+  // Held, not pushed: whether this paragraph is needed depends on the thesis,
+  // which is composed further down. Deciding here read `thesis.length === 0`
+  // before anything had been put in it, so the suppression never fired.
+  const boundaryPara = boundary.length ? boundary.join(' ') : undefined;
 
   if (input.coverageNote) limits.push(input.coverageNote);
 
@@ -568,15 +586,59 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * paragraphs below do not then support.
    */
   if (electricalPara && amp && spk) {
-    const openGap = input.dossiers.flatMap((d) => d.gaps)[0];
+    /*
+     * DERIVED FROM THE SAME LINES THE BODY READS — never authored separately.
+     *
+     * An opening composed from its own reading of the evidence is a second
+     * account of the assessment, and two accounts drift. Every clause below
+     * comes from a dossier line the paragraphs beneath it also use:
+     *
+     *   the load        `impedance` on the loudspeaker
+     *   the licence     `power output` on the amplifier at that load
+     *   the headroom    the ABSENCE of `sensitivity` on the loudspeaker
+     *   the difficulty  the absence of an impedance minimum / phase figure,
+     *                   which no maker in this catalog publishes
+     *
+     * The first gap is read from the dossier rather than from the
+     * qualification prose, so the thesis cannot claim a figure is missing
+     * that the dossier in fact holds.
+     */
+    const load = impedanceLine?.value;
+    const hasSensitivity = !!findLine(spk.dossier, 'sensitivity');
+    const hasImpedanceCurve = !!(findLine(spk.dossier, 'impedance minimum')
+      ?? findLine(spk.dossier, 'phase angle'));
+
+    const unestablished = [
+      !hasImpedanceCurve ? 'how difficult that load actually is to drive' : null,
+      !hasSensitivity ? 'how much acoustic headroom the system has' : null,
+    ].filter(Boolean) as string[];
+
+    const missing = [
+      !hasImpedanceCurve ? "the loudspeaker's impedance minimum and phase behaviour" : null,
+      !hasSensitivity ? 'its sensitivity figure' : null,
+    ].filter(Boolean) as string[];
+
+    // "neither X nor Y" rather than a comma list: the first item already
+    // contains an "and", so joining two with another one reads as three.
+    const because = missing.length > 1
+      ? `neither ${missing[0]} nor ${missing[1]} is published`
+      : `${missing[0]} is not published`;
+    const limitClause = unestablished.length
+      ? ` What they do not establish is ${unestablished.join(' or ')}, because ${because}.`
+      : '';
+
     thesis.push(
-      `The one relationship in this chain that published evidence settles is `
-      + `between ${amp.component.displayName} and ${spk.component.displayName}, `
-      + `and it settles it on the makers' own figures rather than on reputation`
-      + `${openGap ? `. What those figures cannot reach is ${openGap.replace(/\.$/, '')}, `
-        + `and that single absence is the limit on everything else said here` : ''}.`,
+      `${amp.component.displayName} into ${spk.component.displayName} is the one `
+      + `interface in this system that the published evidence lets Audio XX `
+      + `assess quantitatively. The makers' own figures establish compatibility `
+      + `at${load ? ` the ${spk.component.displayName}'s nominal ${load} load` : ' the stated load'}.`
+      + limitClause,
     );
   }
+
+  // The boundary paragraph is the only place the headroom limit is drawn when
+  // there is no thesis to carry it. With one, it would be the second telling.
+  if (boundaryPara && thesis.length === 0) limits.unshift(boundaryPara);
 
   out.push(...thesis, ...explanation, ...limits, ...next);
   // `nextIndex` marks where the closing question begins, so a caller adding a

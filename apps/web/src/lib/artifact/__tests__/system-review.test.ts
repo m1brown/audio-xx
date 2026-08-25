@@ -112,8 +112,13 @@ describe('the review reasons ACROSS facts rather than restating them', () => {
   });
 
   it('separates electrical suitability from loudness capability', () => {
+    // The separation moved into the THESIS (2026-08-25): compatibility is
+    // established, headroom is not, and the opening says both. The standalone
+    // "Suitability and loudness" paragraph was the second telling of the same
+    // limitation and is emitted only when there is no thesis to carry it.
     const out = joined(NATHAN);
-    expect(out).toMatch(/Suitability and loudness are two different questions/i);
+    expect(out).toMatch(/establish compatibility/i);
+    expect(out).toMatch(/how much acoustic headroom the system has/i);
     expect(out).toMatch(/sensitivity/i);
   });
 
@@ -234,8 +239,14 @@ describe('the review compares LIKE conditions', () => {
   });
 
   it('D-7: says explicitly what a nominal figure cannot establish', () => {
-    expect(out).toMatch(/nominal figure does not establish is how demanding/i);
+    // The statement moved into the THESIS (2026-08-25), where a reader meets
+    // it first instead of three sentences into the second paragraph. It is
+    // said once, not twice — but it is still said, and the wording is now
+    // derived from the dossier lines rather than written into this sentence.
+    expect(out).toMatch(/how difficult that load actually is to drive/i);
     expect(out).toMatch(/impedance minimum and phase behaviour/i);
+    // The guard at the point of risk survives in the compatibility paragraph.
+    expect(out).toMatch(/not that the match is an easy one/i);
   });
 
   it('D-7: never claims the lower-impedance reading flatters the pairing', () => {
