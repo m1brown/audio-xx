@@ -76,7 +76,11 @@ describe('failure degrades per component, never per system', () => {
         // It previously used `https://cdn/x.jpg`, which is first-party to
         // nothing and is now withheld — a catalog URL no longer wins outright.
         { displayName: 'Has Image', role: 'dac', product: { brand: 'Acme', name: 'Y', imageUrl: 'https://acme.com/y.jpg' } },
-        { displayName: 'Acora QRC-2', role: 'speaker' },
+        // Acora QRC-2 was the "no image" case here until 2026-08-25, when a
+        // first-party asset was established for it. The test is about
+        // per-component independence, not about that product, so it now uses
+        // one that genuinely resolves to nothing.
+        { displayName: 'dCS Rossini Apex', role: 'dac' },
       ],
       [],
     );
@@ -87,7 +91,7 @@ describe('failure degrades per component, never per system', () => {
   });
 
   it('a missing image is undefined — never a shared placeholder', () => {
-    const [v] = buildComponentViews([{ displayName: 'Acora QRC-2', role: 'speaker' }], []);
+    const [v] = buildComponentViews([{ displayName: 'dCS Rossini Apex', role: 'speaker' }], []);
     expect(v.imageUrl).toBeUndefined();
   });
 });

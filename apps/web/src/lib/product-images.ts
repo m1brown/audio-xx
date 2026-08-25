@@ -116,6 +116,50 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'schiit modius',       url: 'https://www.schiit.com/img/img_5100.jpg' },
   { key: 'schiit modi',         url: 'https://www.schiit.com/img/img_3680.jpg' },
 
+  // ── Nathan's system — first-party assets, identity established ──────
+  //
+  // Acquired 2026-08-25 against the standing image-acquisition backlog. Both
+  // sit on the MAKER'S OWN domain and are embedded on a page that names the
+  // exact model, so identity rests on the embedding page rather than on a
+  // filename — the filename only corroborates.
+  //
+  // Neither maker publishes media-use terms, so `rightsBasis` is deliberately
+  // ABSENT: rights were never established, which is an evidence state to be
+  // resolved and not a default to render around. Under the staged `identity`
+  // enforcement these are `legacy_rights_pending`, the same class as the
+  // twelve rows already carried. Permission requests are drafted and awaiting
+  // founder send — docs/audits/image-permission-requests.md.
+  //
+  // Acora QRC-2 — https://acoraacoustics.com/qrc-2-product-page/
+  // Identity corroborated THREE independent ways: the asset is embedded on
+  // the maker's own QRC-2 product page; the filename carries the exact model
+  // designation; and the photograph shows one dome tweeter above two cone
+  // woofers, matching Acora's published complement of "7\" Sandwich Paper
+  // Cone (2); 1\" Beryllium Dome Tweeter" that Audio XX already holds.
+  { key: 'acora qrc-2',
+    url: 'https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg',
+    source: { tier: 'manufacturer', site: 'acoraacoustics.com', credit: 'Acora Acoustics',
+      captured: '2026-08-25' } },
+  // The maker's own full company name, which is how the product is written on
+  // its product page. Same model designation, same asset — an exact alias, not
+  // a variant: 'acora acoustics qrc-2' does not substring-match 'acora qrc-2'.
+  { key: 'acora acoustics qrc-2',
+    url: 'https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg',
+    source: { tier: 'manufacturer', site: 'acoraacoustics.com', credit: 'Acora Acoustics',
+      captured: '2026-08-25' } },
+
+  // Butler MONAD A100 — https://butleraudio.com/monadbig.php
+  // The embedding page's heading names "MONAD A100" exactly, which settles a
+  // real variant risk: the site's navigation lists MONAD and A100 separately,
+  // and `esoteric.php` covers "MONAD" without the model suffix. The
+  // photograph also carries the Butler brand mark and shows a single
+  // directly-heated triode, consistent with the held "Butler Model 300B
+  // directly heated power triode" fact.
+  { key: 'butler monad a100',
+    url: 'https://butleraudio.com/img/monad001.jpg',
+    source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
+      captured: '2026-08-25' } },
+
   // Denafrips — product hero shots on denafrips.com
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
   { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',

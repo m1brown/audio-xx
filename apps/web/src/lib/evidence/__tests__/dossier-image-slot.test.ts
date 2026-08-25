@@ -85,13 +85,46 @@ describe('the image slot is wired, not hypothetical', () => {
 });
 
 describe('Nathan carries no borrowed photography', () => {
-  it('no Nathan component resolves to any image', () => {
-    for (const name of [
-      'dCS Rossini Apex', 'Audio Research Reference 5', 'ARC ref 5',
-      'Butler Audio MONAD A100', 'Butler Monads', 'Acora Acoustics QRC-2', 'Acora QRC-2',
-    ]) {
+  it('Nathan resolves images ONLY where first-party identity was established', () => {
+    /*
+     * This once asserted that NO Nathan component resolved to any image, which
+     * was true when written and was never the actual rule. The rule is that
+     * absence is preferable to a wrong, substituted or unprovenanced image —
+     * not that these four products may never have one.
+     *
+     * Two were acquired on 2026-08-25 from the makers' own domains, each
+     * embedded on a page naming the exact model. The other two remain absent
+     * for stated reasons, and those reasons are what this test now pins.
+     */
+    for (const name of ['Acora QRC-2', 'Acora Acoustics QRC-2', 'Butler MONAD A100']) {
+      const e = getProductImageEntry(undefined, name);
+      expect(e, name).toBeDefined();
+      // First-party only. A retailer or reviewer asset for these products
+      // would be a governance failure, not coverage.
+      expect(e!.source?.tier, name).toBe('manufacturer');
+      expect(e!.url, name).toMatch(/acoraacoustics\.com|butleraudio\.com/);
+    }
+  });
+
+  it('the two blocked products stay absent, and for the right reasons', () => {
+    // dCS: every identifying page returns 403 to an automated client, so which
+    // asset depicts the Rossini Apex cannot be established — an IDENTITY
+    // blocker that permission alone would not clear.
+    //
+    // ARC Reference 5: discontinued, and audioresearch.com carries no page for
+    // it. Only SE photography appears to exist, and a variant is never a
+    // substitute.
+    for (const name of ['dCS Rossini Apex', 'Audio Research Reference 5', 'ARC ref 5']) {
       expect(getProductImageEntry(undefined, name), name).toBeUndefined();
     }
+  });
+
+  it('an under-specified listener string resolves to nothing', () => {
+    // "Butler Monads" is what Nathan typed. Butler's own site lists MONAD and
+    // A100 as separate items, so that string does not identify the A100 and
+    // must not inherit its photograph by substring luck. Corroboration may
+    // supply the canonical name; the shorthand alone may not.
+    expect(getProductImageEntry(undefined, 'Butler Monads')).toBeUndefined();
   });
 
   it('the fixture is a test fixture only — it names no Nathan product', () => {

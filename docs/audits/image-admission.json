@@ -3,17 +3,17 @@
   "invariant": "exact identity AND approved provenance AND recorded rights, established independently",
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
-    "registry": 156,
-    "registryDisplayed": 135,
+    "registry": 159,
+    "registryDisplayed": 138,
     "catalog": 28,
     "catalogDisplayed": 24
   },
   "registryByState": {
     "provenance_unestablished": 85,
     "identity_wrong": 9,
-    "provenance_prohibited": 12,
-    "identity_unverified": 38,
-    "legacy_rights_pending": 12
+    "legacy_rights_pending": 13,
+    "identity_unverified": 40,
+    "provenance_prohibited": 12
   },
   "catalogByState": {
     "provenance_prohibited": 4,
@@ -121,6 +121,42 @@
       "sourceClass": "unclassified",
       "rightsBasis": "none_recorded",
       "hosting": "remote"
+    },
+    {
+      "key": "acora qrc-2",
+      "url": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "state": "legacy_rights_pending",
+      "displayed": true,
+      "identityStatus": "corroborated",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Acora Acoustics",
+      "captured": "2026-08-25"
+    },
+    {
+      "key": "acora acoustics qrc-2",
+      "url": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "state": "identity_unverified",
+      "displayed": true,
+      "identityStatus": "unverified",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Acora Acoustics",
+      "captured": "2026-08-25"
+    },
+    {
+      "key": "butler monad a100",
+      "url": "https://butleraudio.com/img/monad001.jpg",
+      "state": "identity_unverified",
+      "displayed": true,
+      "identityStatus": "unverified",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Butler Audio",
+      "captured": "2026-08-25"
     },
     {
       "key": "denafrips pontus",

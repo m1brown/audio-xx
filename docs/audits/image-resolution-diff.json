@@ -1,7 +1,7 @@
 {
   "baseline": "b9cc3ac",
   "head": "staged identity enforcement",
-  "productsProbed": 349,
+  "productsProbed": 352,
   "surfaces": [
     "getProductImage",
     "getProductImageEntry",
@@ -10,12 +10,101 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 223,
+  "changedResolutions": 241,
   "byKind": {
     "suppressed": 126,
-    "substituted": 97
+    "revealed": 12,
+    "substituted": 103
   },
   "rows": [
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "getProductImage",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "getProductImageEntry",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "resolveProductImageStrict",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora acoustics qrc-2",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "getProductImage",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "getProductImageEntry",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "resolveProductImageStrict",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "acora qrc-2",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
     {
       "product": "agd productions vivace",
       "surface": "getProductImage",
@@ -177,6 +266,50 @@
       "after": "/images/placeholders/amplifier.svg",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (ayre vx 5)"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "getProductImage",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "getProductImageEntry",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "resolveProductImageStrict",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monad a100",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "Campfire Audio Andromeda",

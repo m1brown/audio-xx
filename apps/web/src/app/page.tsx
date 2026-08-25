@@ -115,7 +115,7 @@ import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-p
 const dossierRole = normalizeRole;
 
 function buildDossierViews(
-  components: Array<{ displayName: string; role: string }>,
+  components: Array<{ displayName: string; role: string; canonicalName?: string }>,
   manufacturerEvidence: Array<Record<string, unknown>>,
   reviewObservations: Record<string, Array<Record<string, unknown>>> = {},
 ) {
@@ -149,7 +149,20 @@ function buildDossierViews(
     // resolver is the governed boundary: exact identity, approved provenance,
     // recorded rights. Nothing admissible for this product yields `undefined`,
     // which every surface renders as nothing at all.
-    const admitted = getProductImageEntry(undefined, c.displayName);
+    /*
+     * The image is resolved against the CORROBORATED identity where one
+     * exists, and the listener's words only otherwise.
+     *
+     * Nathan types "Butler Monads". Butler's own site lists MONAD and A100 as
+     * separate items, so that string does not by itself identify the MONAD
+     * A100 and correctly resolves to no photograph. Where entity corroboration
+     * has INDEPENDENTLY established the canonical designation, that is the
+     * identity to resolve against — using it is the opposite of guessing from
+     * a shorthand, and no image is admitted that the governed boundary would
+     * not admit for the canonical name.
+     */
+    const admitted = (c.canonicalName && getProductImageEntry(undefined, c.canonicalName))
+      || getProductImageEntry(undefined, c.displayName);
     return {
       ...view,
       role: c.role,
@@ -3226,7 +3239,10 @@ export default function Home() {
           // projection over authored product facts plus the manufacturer
           // specifications this turn already read.
           const dossierViews = buildDossierViews(
-            orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+            orderedComponents.map((c) => ({
+              displayName: c.displayName, role: c.role,
+              canonicalName: canonicalByName.get(c.displayName.toLowerCase().trim())?.canonicalName,
+            })),
             manufacturerEvidence as Array<Record<string, unknown>>,
             reviewObservations as Record<string, Array<Record<string, unknown>>>);
 
@@ -3399,28 +3415,96 @@ export default function Home() {
          */
         const HELD_FACTS_BUDGET_MS = 2500;
         let heldFacts: Array<Record<string, unknown>> = [];
+        /*
+         * INDEPENDENT REVIEW EVIDENCE REACHES CATALOGUED SYSTEMS TOO.
+         *
+         * The read-only review fetch existed only on the UNCATALOGUED branch,
+         * so a catalogued system — FRANCE, Magnepan, Leben/Cornwall, the
+         * balanced reference — never read a single listening observation. The
+         * trait/axis prose had been standing in for evidence that was never
+         * fetched, which is why removing it left those assessments looking
+         * specification-only.
+         *
+         * The remedy is the evidence, not the prose. `mode: 'read'` acquires
+         * nothing: it returns what the site already holds, so this adds a
+         * store read and no per-assessment cost.
+         */
+        const reviewObs: Record<string, Array<Record<string, unknown>>> = {};
         if (chainComponents.length > 0) {
           const deadline = new Promise<'deadline'>((r) =>
             setTimeout(() => r('deadline'), HELD_FACTS_BUDGET_MS));
           const reads = Promise.all(chainComponents.map(async (c) => {
-            try {
-              const r = await fetch('/api/manufacturer-facts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: c.displayName, heldOnly: true }),
-              });
-              if (!r.ok) return [];
-              const j = await r.json();
-              return Array.isArray(j?.facts) ? j.facts : [];
-            } catch { return []; }
+            const [facts, observations] = await Promise.all([
+              (async () => {
+                try {
+                  const r = await fetch('/api/manufacturer-facts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: c.displayName, heldOnly: true }),
+                  });
+                  if (!r.ok) return [];
+                  const j = await r.json();
+                  return Array.isArray(j?.facts) ? j.facts : [];
+                } catch { return []; }
+              })(),
+              (async () => {
+                try {
+                  const r = await fetch('/api/independent-reviews', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: c.displayName, mode: 'read' }),
+                  });
+                  if (!r.ok) return [];
+                  const j = await r.json();
+                  return Array.isArray(j?.observations) ? j.observations : [];
+                } catch { return []; }
+              })(),
+            ]);
+            return { name: c.displayName, facts, observations };
           }));
           const settled = await Promise.race([reads, deadline]);
-          heldFacts = settled === 'deadline'
-            ? []
-            : (settled as Array<Array<Record<string, unknown>>>).flat();
+          if (settled !== 'deadline') {
+            for (const row of settled as Array<{
+              name: string;
+              facts: Array<Record<string, unknown>>;
+              observations: Array<Record<string, unknown>>;
+            }>) {
+              heldFacts.push(...row.facts);
+              if (row.observations.length > 0) reviewObs[row.name] = row.observations;
+            }
+          }
         }
-        assessmentResult.response.componentDossiers =
-          buildDossierViews(chainComponents, heldFacts);
+        const catalogDossiers = buildDossierViews(chainComponents, heldFacts, reviewObs);
+
+        /*
+         * RESOURCES TRAVEL WITH THE DOSSIER ON THIS PATH TOO.
+         *
+         * HiFiShark and eBay links were attached only on the UNCATALOGUED
+         * branch, so a catalogued system's dossiers carried no "Find one" at
+         * all — the commercial surface was present for the products Audio XX
+         * knew least about and absent for the ones it knew best.
+         *
+         * Built from `buildComponentViews`, so the marketplace query is
+         * constructed once from CANONICAL product identity. Rebuilding the
+         * query here would let the artifact search for something different
+         * from the conversation.
+         */
+        const catalogViews = buildComponentViews(
+          chainComponents.map((c) => ({
+            displayName: c.displayName, role: c.role, roles: [c.role],
+          })),
+          undefined,
+        );
+        for (const dv of catalogDossiers) {
+          const view = catalogViews.find(
+            (v) => v.displayName === dv.displayName || v.listenerName === dv.displayName);
+          const picked = [
+            view?.hifiSharkUrl ? { label: 'HiFiShark', url: view.hifiSharkUrl } : null,
+            view?.ebayUrl ? { label: 'eBay', url: view.ebayUrl } : null,
+          ].filter(Boolean) as Array<{ label: string; url: string }>;
+          if (picked.length) dv.resources = picked;
+        }
+        assessmentResult.response.componentDossiers = catalogDossiers;
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and
