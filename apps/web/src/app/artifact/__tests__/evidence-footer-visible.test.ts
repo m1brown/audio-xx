@@ -62,7 +62,9 @@ describe('the footer speaks the reader\'s language', () => {
   });
 
   it('uses the same vocabulary as the conversation surface', () => {
-    const conv = readFileSync('apps/web/src/components/advisory/AdvisoryMessage.tsx', 'utf8');
+    // Provenance vocabulary now lives with the component it qualifies.
+    const conv = readFileSync('apps/web/src/components/advisory/AdvisoryMessage.tsx', 'utf8')
+      + readFileSync('apps/web/src/components/advisory/ComponentDossiers.tsx', 'utf8');
     const fn = TSX.slice(TSX.indexOf('function basisLabel'));
     const body = fn.slice(0, fn.indexOf('\n}'));
     for (const [code, phrase] of [

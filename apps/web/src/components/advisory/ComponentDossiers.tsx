@@ -43,20 +43,74 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
   // Render-worthiness is decided in the presentation layer; a component with
   // only detail-level knowledge still gets a card, because holding four
   // published specifications and showing nothing is worse than a short card.
+  /**
+   * Identity provenance, preserved from the card list this section replaced.
+   *
+   * `model` is deliberately empty — see the render site. `Audio XX catalog`
+   * and `Audio XX brand evidence` are real provenance and must stay.
+   */
+  const BASIS_LABEL: Record<string, string> = {
+    catalog: 'Audio XX catalog',
+    brand: 'Audio XX brand evidence',
+    model: '',
+    user: 'Your description only',
+  };
+  const BASIS_TONE: Record<string, string> = {
+    catalog: '#4F6B4A', brand: '#4F6B4A', model: '#8A6D3B', user: '#6B6862',
+  };
+
   const present = (dossiers ?? []);
   if (present.length === 0) return null;
 
   return (
-    <section style={{ marginTop: '1.8rem' }} aria-label="The components">
-      <h2 style={{ ...label, marginBottom: '0.9rem' }}>The components</h2>
+    /*
+     * THIS IS "YOUR SYSTEM", AND IT IS THE ONLY REPRESENTATION.
+     *
+     * The conversation rendered a lightweight "Your system" card list — name,
+     * role, and the FIND ONE links — and then THE COMPONENTS below it with the
+     * dossier for the same four boxes. Two renderings of one physical unit,
+     * with the commercial links attached to the thinner one.
+     *
+     * The artifact was converged to SYSTEM REVIEW → YOUR SYSTEM → EVIDENCE
+     * some time ago; this surface was not, so the duplication survived exactly
+     * where most listeners meet it. Each component now appears once, with its
+     * evidence and its resources together.
+     */
+    <section style={{ marginTop: '1.8rem' }} aria-label="Your system">
+      <h2 style={{ ...label, marginBottom: '0.9rem' }}>Your system</h2>
       {present.map((d) => (
         <div key={d.displayName} style={{
           marginBottom: '1.3rem', paddingBottom: '1.1rem',
           borderBottom: '1px solid rgba(27,26,24,0.08)',
         }}>
-          <p style={{ margin: '0 0 0.55rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
+          <p style={{ margin: '0 0 0.15rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
             {d.displayName}
           </p>
+          {/* IDENTITY PROVENANCE — a badge only where it tells the listener
+              something. `model` (identity corroborated, nothing curated) is
+              epistemically true and editorially empty: the listener owns the
+              equipment, so being told it exists is not news. Its absence is
+              the signal. */}
+          {BASIS_LABEL[d.basis ?? ''] && (
+            <p style={{
+              margin: '0 0 0.4rem 0', display: 'inline-block',
+              fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+              fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.11em',
+              textTransform: 'uppercase', color: BASIS_TONE[d.basis ?? ''],
+              border: `1px solid ${BASIS_TONE[d.basis ?? '']}`, borderRadius: 2,
+              padding: '0.1rem 0.35rem',
+            }}>{BASIS_LABEL[d.basis ?? '']}</p>
+          )}
+          {/* The role belongs with the evidence, not in a separate list above
+              it — that separation is what produced two cards per component. */}
+          {d.role && (
+            <p style={{
+              margin: '0 0 0.55rem 0',
+              fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+              fontSize: '0.66rem', fontWeight: 600, letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'rgba(27,26,24,0.45)',
+            }}>{d.role}</p>
+          )}
           {/* Recognition, not evidence. Rendered only when the governed
               boundary admitted an exact-product asset; absent renders NOTHING
               — no frame, no placeholder, no reserved space — so a dossier
@@ -105,6 +159,32 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               is simply shorter than one with ten. */}
           {d.secondary.map((l, i) => <Line key={`s${i}`} l={l} />)}
 
+          {/* RESOURCES — last, quiet, and clearly not evidence. They lived on
+              a separate lightweight card, which is what made each component
+              appear twice. Subordinate to the evidence above them, and built
+              from canonical product identity. */}
+          {d.resources && d.resources.length > 0 && (
+            <p style={{
+              margin: '0.7rem 0 0 0',
+              fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+              fontSize: '0.68rem', letterSpacing: '0.06em',
+              color: 'rgba(27,26,24,0.45)',
+            }}>
+              <span style={{
+                textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
+                marginRight: '0.6rem',
+              }}>Find one</span>
+              {d.resources.map((r) => (
+                <a
+                  key={r.url}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  style={{ color: 'rgba(27,26,24,0.55)', marginRight: '0.75rem' }}
+                >{r.label}</a>
+              ))}
+            </p>
+          )}
         </div>
       ))}
     </section>

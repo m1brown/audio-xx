@@ -4806,138 +4806,18 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         * belongs beside the component it qualifies, not in a separate block
         * the reader has to correlate by hand.
         */}
-      {a.systemComponentViews && a.systemComponentViews.length > 0 && (
-        <div style={{ margin: '0 0 1.4rem' }}>
-          <div style={{
-            fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-            fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.13em',
-            textTransform: 'uppercase', color: 'var(--xx-accent, #A6432C)',
-            marginBottom: '0.7rem',
-          }}>
-            Your system
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-            {a.systemComponentViews.map((c) => {
-              /**
-               * A badge only where it tells the listener something.
-               *
-               * `model` — identity independently corroborated, no curated
-               * record — is epistemically true and editorially empty. The
-               * listener OWNS this equipment; being told Audio XX confirmed it
-               * exists is not news, and on Nathan it repeated across three of
-               * four cards as pure furniture. What is worth saying about those
-               * components the coverage paragraph already says, by name:
-               * Audio XX holds specifications and identity for them, not
-               * listening evidence.
-               *
-               * So the badge marks the two states that change how a reader
-               * should weigh a card: Audio XX holds curated evidence, or the
-               * listener's own word is the only source. No badge means
-               * identified, nothing curated — legible from its absence.
-               */
-              const BASIS_LABEL: Record<string, string> = {
-                catalog: 'Audio XX catalog',
-                brand: 'Audio XX brand evidence',
-                model: '',
-                user: 'Your description only',
-              };
-              const BASIS_TONE: Record<string, string> = {
-                catalog: '#4F6B4A', brand: '#4F6B4A', model: '#8A6D3B', user: '#6B6862',
-              };
-              return (
-                <div
-                  key={c.listenerName}
-                  style={{
-                    display: 'flex', gap: '0.85rem', alignItems: 'flex-start',
-                    border: '1px solid #E3DDD1', borderRadius: 2, padding: '0.7rem 0.85rem',
-                  }}
-                >
-                  {/* Image slot — independent per component. F4-gated upstream;
-                    * absent is a legitimate outcome and never a placeholder. */}
-                  {c.imageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.imageUrl}
-                      alt={c.displayName}
-                      style={{
-                        width: 64, height: 64, objectFit: 'contain',
-                        flex: '0 0 auto', borderRadius: 2,
-                      }}
-                    />
-                  )}
-                  <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.98rem', color: '#2a2a2a' }}>
-                      {c.displayName}
-                    </div>
-                    <div style={{
-                      fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-                      fontSize: '0.75rem', color: '#6B6862', marginTop: '0.1rem',
-                    }}>
-                      {c.roleDisplay}
-                    </div>
-                    <div style={{
-                      display: 'flex', flexWrap: 'wrap', alignItems: 'center',
-                      gap: '0.5rem', marginTop: '0.4rem',
-                    }}>
-                      {BASIS_LABEL[c.basis] && (
-                        <span style={{
-                          fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-                          fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.08em',
-                          textTransform: 'uppercase', color: BASIS_TONE[c.basis],
-                          border: `1px solid ${BASIS_TONE[c.basis]}`, borderRadius: 2,
-                          padding: '0.08rem 0.34rem', whiteSpace: 'nowrap',
-                        }}>
-                          {BASIS_LABEL[c.basis]}
-                        </span>
-                      )}
-                    </div>
-                    {/* RESOURCES — subordinate to identity and evidence.
-                      *
-                      * These sat inline with the provenance badge, at the same
-                      * size and in the same row, so "Audio XX catalog" and
-                      * "eBay" read as two facts of one kind. They are not: one
-                      * states what Audio XX knows about the component, the
-                      * other is a place to go shopping. Ranking them equally
-                      * put a marketplace beside the evidence record.
-                      *
-                      * Moved to their own line, quieter, behind a label that
-                      * says what they are. Nothing about which links are
-                      * generated, their targets or their tags changes here —
-                      * this is placement and weight only.
-                      */}
-                    {(c.hifiSharkUrl || c.ebayUrl) && (
-                      <div style={{
-                        display: 'flex', flexWrap: 'wrap', alignItems: 'baseline',
-                        gap: '0.55rem', marginTop: '0.35rem',
-                      }}>
-                        <span style={{
-                          fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-                          fontSize: '0.6rem', fontWeight: 600, letterSpacing: '0.09em',
-                          textTransform: 'uppercase', color: '#9A968E',
-                        }}>
-                          Find one
-                        </span>
-                        {c.hifiSharkUrl && (
-                          <a href={c.hifiSharkUrl} target="_blank" rel="noopener noreferrer nofollow"
-                            style={{ fontSize: '0.72rem', color: '#8A867E' }}>
-                            HiFiShark
-                          </a>
-                        )}
-                        {c.ebayUrl && (
-                          <a href={c.ebayUrl} target="_blank" rel="noopener noreferrer nofollow"
-                            style={{ fontSize: '0.72rem', color: '#8A867E' }}>
-                            eBay
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* The lightweight "Your system" card list was removed here (2026-08-25).
+        *
+        * It rendered name, role and the FIND ONE links for each component, and
+        * `ComponentDossiers` rendered the SAME four boxes below it under "The
+        * components" — two representations of one physical unit, with the
+        * commercial links attached to the thinner one. The artifact had been
+        * converged to SYSTEM REVIEW → YOUR SYSTEM → EVIDENCE; this surface had
+        * not, so the duplication survived exactly where most listeners meet it.
+        *
+        * `ComponentDossiers` is now "Your system" and carries the role and the
+        * resources itself. */}
+
 
       {/* ── 5. Core advisory body ────────────────── */}
       {(a.improvements && a.improvements.length > 0) ? (

@@ -88,6 +88,17 @@ export interface DossierView {
    */
   resources?: Array<{ label: string; url: string }>;
   /**
+   * How this component's IDENTITY was established — catalog record, brand
+   * evidence, corroborated model, or the listener's word alone.
+   *
+   * Distinct from a fact's `sourceClass`, which says who published a given
+   * specification. This says how confident Audio XX is that it knows WHICH
+   * product is in the room, and it belongs beside the component rather than on
+   * a separate card — keeping it on its own card is what produced two
+   * renderings of every box.
+   */
+  basis?: string;
+  /**
    * Component-scoped prose the engine wrote about THIS component.
    *
    * It arrives inside the assessment body; rendered there it sat in a

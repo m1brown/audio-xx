@@ -3342,6 +3342,9 @@ export default function Home() {
                 view?.ebayUrl ? { label: 'eBay', url: view.ebayUrl } : null,
               ].filter(Boolean) as Array<{ label: string; url: string }>;
               if (picked.length) d.resources = picked;
+              // Identity provenance travels with the ONE dossier too, so the
+              // badge survives the removal of the separate card list.
+              if (view?.basis) d.basis = view.basis;
             }
             // Trust-layer pass: tag the provisional system assessment
             // with expanded-reasoning metadata so the unified

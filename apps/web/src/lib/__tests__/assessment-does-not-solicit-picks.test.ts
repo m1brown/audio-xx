@@ -18,7 +18,12 @@ import { readFileSync } from 'node:fs';
  * defect was a missing gate, and a gate is what must not go missing.
  */
 
-const RAW = readFileSync('apps/web/src/components/advisory/AdvisoryMessage.tsx', 'utf8');
+// The identity-provenance badges moved to ComponentDossiers (2026-08-25) when
+// the duplicate "Your system" card list was removed: each component now has one
+// representation, and its provenance belongs on it. Both files are read so the
+// contract is checked wherever the labels live.
+const RAW = readFileSync('apps/web/src/components/advisory/AdvisoryMessage.tsx', 'utf8')
+  + readFileSync('apps/web/src/components/advisory/ComponentDossiers.tsx', 'utf8');
 
 /**
  * Comments in that file quote the removed copy on purpose, to record what was
@@ -82,7 +87,10 @@ describe('internal execution taxonomy stays off the reader surface', () => {
     // weighed: Audio XX holds curated evidence, or the listener's own word is
     // the only source. No badge means identified, nothing curated.
     expect(SRC).toMatch(/model: '',/);
-    expect(SRC).toMatch(/BASIS_LABEL\[c\.basis\] && \(/);
+    // The badge is gated on the label being non-empty, so `model` renders
+    // nothing. The card list this lived on was removed (2026-08-25) and the
+    // badge moved onto the component's single dossier — hence `d`, not `c`.
+    expect(SRC).toMatch(/BASIS_LABEL\[d\.basis \?\? ''\] && \(/);
   });
 
   it('genuine provenance labels are retained', () => {
