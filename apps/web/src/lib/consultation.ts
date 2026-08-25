@@ -18,11 +18,11 @@
  * a diagnostic-style clarification question.
  */
 
-import { detectSystemDescription } from './system-extraction';
 import {
   alreadyNamedByMessage, messageSuppliesRole, samePhysicalComponent,
 } from './assessment/physical-identity';
 import { normalizeRole as normaliseComponentRole } from './assessment/authoritative';
+import { detectSystemDescription } from './system-extraction';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName, TURN_SEPARATOR, splitTurns } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
@@ -9113,38 +9113,71 @@ export function buildSystemAssessment(
   // include components not part of the chain being evaluated.
   const msgLowerForSeed = currentMessage.toLowerCase();
 
-  /*
-   * THE CURRENT MESSAGE IS AUTHORITATIVE FOR THE COMPONENTS IT NAMES.
-   *
-   * This loop runs BEFORE the message's own subjects are processed, so
-   * `processedNames` is still empty when it asks whether a saved component is
-   * already present — every saved component was therefore always seeded. The
-   * message side then compared its own display string against the keys the
-   * seeding had registered ("rossini apex", "dcs") and found no match for
-   * "dcs rossini apex", producing a SECOND node for one physical box.
-   *
-   * Production asked a listener: "dCS Rossini Apex and dCS Rossini Apex both
-   * appear as dacs. Are both active in the signal path?"
-   *
-   * Neither string equality nor role equality could have caught that — both
-   * nodes had the same role, which is why the duplicate-role validator was the
-   * thing that noticed. The reconciliation happens on canonical PHYSICAL
-   * IDENTITY, computed from the message up front so precedence is real.
-   *
-   * A saved component the message does NOT name is still seeded, subject to
-   * the mention guard below, so incremental and correction workflows keep
-   * working.
-   */
   const messageComponents = detectSystemDescription(
     currentMessage, subjectMatches, {} as never,
   )?.components ?? [];
 
+  /*
+   * PRECEDENCE APPLIES ONLY WHERE THE MESSAGE PARSE IS TRUSTWORTHY.
+   *
+   * The components that enter the graph come from `subjectMatches`;
+   * `detectSystemDescription` is a second, independent parse. Where they
+   * agree, precedence is safe. Where they disagree, suppressing a saved
+   * component on the strength of the second parse discards a box that the
+   * first one never produces — and the box simply vanishes.
+   *
+   * That is exactly what broke the signed-in journey. The "Assess this system"
+   * control sends the saved system as an unlabelled list, "Assess my system:
+   * dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2", which
+   * `detectSystemDescription` reads as four components while `subjectMatches`
+   * yields two BARE BRANDS. All four saved components were suppressed as
+   * "already named", two were never rebuilt, and every signed-in listener with
+   * a saved system selected got "2 components I couldn't match" instead of an
+   * assessment.
+   *
+   * Explicit role labels are the discriminator. A listener writing
+   * "Pre-amp: ARC ref 5" has stated structure the label parser reads directly,
+   * and that is the case precedence exists for — the duplicate node and the
+   * replaced component. An unlabelled list is a hint, not a graph, and the
+   * saved system remains the better source.
+   */
+  const messageIsLabelled = parseLabelledComponents(currentMessage).length >= 2;
+
   if (activeSystem && activeSystem.components.length > 0) {
     for (const ac of activeSystem.components) {
-      // Same physical box, named by the listener → the message's node stands.
-      if (alreadyNamedByMessage(ac, messageComponents)) continue;
-      // Different box, same slot → the message supersedes rather than adds.
-      if (messageSuppliesRole(messageComponents, ac.category, normaliseComponentRole)) continue;
+      /*
+       * Same physical box, named by the listener → the message's node stands.
+       * Different box, same slot → the message supersedes rather than adds.
+       * Both only where the message's structure is explicit; otherwise the
+       * saved component seeds and the graph collapse reconciles later.
+       */
+      if (messageIsLabelled && alreadyNamedByMessage(ac, messageComponents)) continue;
+      if (messageIsLabelled
+        && messageSuppliesRole(messageComponents, ac.category, normaliseComponentRole)) continue;
+
+      /*
+       * RECONCILIATION ALSO HAPPENS AT THE GRAPH.
+       *
+       * Two precedence guards used to sit at this point, suppressing a saved
+       * component that `detectSystemDescription` had already found in the
+       * message. They broke the signed-in journey outright.
+       *
+       * The components that actually enter the graph come from
+       * `subjectMatches`, a DIFFERENT resolution path. When the two disagree
+       * the guard discarded the saved component on the strength of a parse
+       * whose result never arrived: the saved-system text "Assess my system:
+       * dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2" resolves here
+       * to two BARE BRANDS, so Butler and Acora were suppressed as
+       * "already named" and then never produced. A signed-in listener with any
+       * saved system selected got "2 components I couldn't match" and no
+       * assessment at all.
+       *
+       * Precedence is real and still enforced — one layer later, in
+       * `collapsePhysicalRepresentations`, which runs over the components that
+       * genuinely exist and keeps the better-specified record of each physical
+       * box. Nothing can be discarded there on the strength of a node that was
+       * never built.
+       */
       const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
       const strippedNameLower = stripVersionTag(ac.name).toLowerCase();

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { extractSubjectMatches, detectIntent } from '@/lib/intent';
 import { buildSystemAssessment } from '@/lib/consultation';
-import { samePhysicalComponent, physicalIdentityKey } from '../physical-identity';
+import { samePhysicalComponent, physicalIdentityKey, normaliseIdentity } from '../physical-identity';
 
 /**
  * ONE PHYSICAL COMPONENT → ONE CANONICAL NODE.
@@ -247,5 +247,85 @@ describe('a saved system injected as TEXT reconciles too', () => {
     // The expected-vs-resolved gate ran on wording, so "ARC ref" and "ARC ref
     // 5" counted as two boxes and the expected total ran ahead of the graph.
     expect(dacs(r)).toBe(1);
+  });
+});
+
+describe('a selected saved system never disables assessment', () => {
+  /**
+   * SIGNED-IN PRODUCTION WAS BROKEN BY PRECEDENCE APPLIED TOO EARLY.
+   *
+   * Two guards sat in the active-system seeding loop, skipping any saved
+   * component that `detectSystemDescription` had found in the message. But the
+   * components that actually enter the graph come from `subjectMatches`, a
+   * DIFFERENT resolution path.
+   *
+   * When the two disagree the guard discarded a saved component on the
+   * strength of a parse whose result never arrived. The saved-system text
+   * "Assess my system: dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2"
+   * — which is what the "Assess this system" control sends — parses to two
+   * BARE BRANDS. Butler and Acora were suppressed as "already named" and then
+   * never produced, so a signed-in listener with ANY saved system selected got
+   * "2 components in what you wrote I couldn't match" and no assessment.
+   *
+   * Precedence still holds, one layer later, in the graph collapse — which
+   * runs over the components that genuinely exist and cannot discard anything
+   * on the strength of a node that was never built.
+   */
+  const injected = 'Assess my system: dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2';
+
+  it('A — saved system only: the whole chain is assessed', () => {
+    const r = run(injected, savedNathan);
+    expect(r.kind).not.toBe('clarification');
+    expect(r.components ?? []).toHaveLength(4);
+  });
+
+  it('A — and every box carries its model, not a bare brand', () => {
+    const r = run(injected, savedNathan);
+    for (const n of names(r)) {
+      expect(normaliseIdentity(n).split(' ').length, n).toBeGreaterThan(1);
+    }
+  });
+
+  /*
+   * THE INVARIANT THE PRODUCTION FAILURE VIOLATED.
+   *
+   * Selecting a saved system is additional evidence. It can only ever tell
+   * Audio XX more than the message alone. Whatever the parse of a given
+   * phrasing achieves signed out, signing in must match or beat — never
+   * reduce. The old guards broke exactly this: they let a saved system
+   * subtract components, so the listener who had given the most information
+   * got the worst answer.
+   */
+  it('E — selecting a saved system never yields fewer components than the same message alone', () => {
+    const cases: Array<[string, Array<Record<string, string>>]> = [
+      [injected, savedNathan],
+      [NATHAN_MSG, savedNathan],
+      ['Assess my system', savedNathan],
+      ['Assess my system: dCS Rossini Apex', savedNathan],
+    ];
+    for (const [msg, saved] of cases) {
+      const out = run(msg) as { components?: unknown[] } | null;
+      const inn = run(msg, saved) as { components?: unknown[] } | null;
+      expect((inn?.components ?? []).length, msg).toBeGreaterThanOrEqual((out?.components ?? []).length);
+    }
+  });
+
+  it('E — and never turns an answer back into a clarification', () => {
+    for (const msg of [injected, NATHAN_MSG, 'Assess my system: dCS Rossini Apex']) {
+      const out = run(msg) as { kind?: string } | null;
+      const inn = run(msg, savedNathan) as { kind?: string } | null;
+      if (out && out.kind !== 'clarification') expect(inn?.kind, msg).not.toBe('clarification');
+    }
+  });
+
+  it('C — a saved component the message omits still survives', () => {
+    const r = run('Assess my system: dCS Rossini Apex, ARC ref', savedNathan);
+    expect(r.kind).not.toBe('clarification');
+  });
+
+  it('F — signed out with an explicit chain is unchanged', () => {
+    const r = run(NATHAN_MSG);
+    expect(r.kind).not.toBe('clarification');
+    expect(r.components ?? []).toHaveLength(4);
   });
 });
