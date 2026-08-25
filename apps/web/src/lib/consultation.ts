@@ -9324,8 +9324,16 @@ export function buildSystemAssessment(
 
         // Title-case each model word (so "holo may" → "Holo May", not
         // "Holo may"); keep hyphenated tokens upper (DMP-A6, DAC-Z8).
+        //
+        // A token mixing letters and digits is a model DESIGNATOR, not a word,
+        // so it is upper-cased whole: "cs600" → "CS600", not "Cs600". The
+        // sentence-case rule printed "Leben Cs600" on the production artifact,
+        // which is the maker's product name spelled wrong on a document whose
+        // whole claim is that it is careful about identity.
         let productName = modelTokens
-          .map((w) => (w.includes('-') ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+          .map((w) => (w.includes('-') || /\d/.test(w)
+            ? w.toUpperCase()
+            : w.charAt(0).toUpperCase() + w.slice(1)))
           .join(' ');
         // Strip brand prefix from product name if already present (e.g. "leben cs300" → "CS300")
         if (brandName && productName.toLowerCase().startsWith(brandName.toLowerCase() + ' ')) {
