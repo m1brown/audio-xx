@@ -261,3 +261,38 @@ design stores a governed asset rather than a hot link.
 
 Nothing about staged enforcement changes. One product gaining a photograph is
 one product, not a policy shift.
+
+---
+
+## dCS — a candidate REJECTED on evidence (2026-08-25)
+
+dcsaudio.com is reachable from a normal browser session, which resolved the
+earlier "403 to every identifying page" blocker. The Rossini APEX product page
+(`/product/rossiniapex`, h1 "ROSSINI APEX") hosts first-party assets, and the
+strongest candidate carried the maker's OWN alt text: "About Rossini APEX".
+
+That asset was rejected after looking at it.
+
+`dcs-rossini-about-section.jpg` depicts **two units stacked**: a DAC whose
+front panel reads "ROSSINI DAC / Ring DAC", and beneath it a second unit whose
+controls are "Dither 1 / Dither 2 / Power" — the Rossini Master Clock. Two
+things are wrong with it as a photograph of Nathan's component:
+
+1. It shows two products, only one of which is his.
+2. The visible panel text says ROSSINI DAC, not ROSSINI APEX. The APEX is a
+   later revision, and that is precisely the variant boundary that matters
+   here — the Stereophile evidence Audio XX holds compares the Apex *against
+   the earlier Rossini DAC*.
+
+**The lesson is about method.** The maker's own alt text asserted "Rossini
+APEX" and would have licensed the wrong image on its own. Identity was
+established three ways for Acora and Butler — embedding page, filename, and a
+visible feature checkable against a held fact — and it is the third that
+caught this. A first-party page is not sufficient evidence of what a
+photograph depicts.
+
+dCS therefore stays at zero, with a better-evidenced reason than before:
+not "we cannot reach the page" but "the assets on that page do not show this
+product alone". The permission request in Draft 3 should now ask dCS to supply
+a photograph of the **Rossini APEX DAC on its own**, and remains send-ready.
+
