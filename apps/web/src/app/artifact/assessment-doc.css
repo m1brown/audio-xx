@@ -252,10 +252,14 @@
   letter-spacing: 0.13em;
   text-transform: uppercase;
   color: rgba(27, 26, 24, 0.42);
-  margin: 1.6rem 0 0.55rem;
+  margin: 2rem 0 0.6rem;
 }
 .axx-review-slot:first-child { margin-top: 0; }
 
 @media print {
-  .axx-review-slot { font-size: 7pt; margin: 12pt 0 4pt; break-after: avoid; page-break-after: avoid; }
+  .axx-review-slot { font-size: 7pt; margin: 16pt 0 5pt; break-after: avoid; page-break-after: avoid; }
 }
+
+
+/* The closing question, inside its slot. */
+.axx-question-line { font-style: italic; }

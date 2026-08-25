@@ -253,8 +253,32 @@ export default function SnapshotArtifact(
               </div>
             ))
             : (s.systemReview ?? []).map((p, i) => <p key={`r${i}`}>{p}</p>)}
-          {s.sections.flatMap((sec, i) =>
-            sec.paragraphs.map((p, j) => <p key={`s${i}-${j}`}>{p}</p>))}
+          {/* Engine prose that survived the licence — the coverage statement
+              lives here. With slots in play it belongs under the unknowns
+              rather than trailing the previous heading unlabelled. */}
+          {s.sections.length > 0 && (
+            s.reviewSections?.length
+              ? (
+                <div>
+                  {!s.reviewSections.some((x) => /remains unknown/i.test(x.label)) && (
+                    <h3 className="axx-review-slot">What remains unknown</h3>
+                  )}
+                  {s.sections.flatMap((sec, i) =>
+                    sec.paragraphs.map((p, j) => <p key={`s${i}-${j}`}>{p}</p>))}
+                </div>
+              )
+              : s.sections.flatMap((sec, i) =>
+                sec.paragraphs.map((p, j) => <p key={`s${i}-${j}`}>{p}</p>))
+          )}
+
+          {/* The diagnostic question is the closing slot, not a stray italic
+              line between sections. */}
+          {s.question && s.reviewSections?.length ? (
+            <div>
+              <h3 className="axx-review-slot">What would help next</h3>
+              <p className="axx-question-line">{s.question}</p>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -271,7 +295,7 @@ export default function SnapshotArtifact(
         * it sat behind four component dossiers — the reader met a page of
         * specifications before being told what would actually resolve the
         * open question. Conclusions and action first; reference after. */}
-      {s.question && (
+      {s.question && !s.reviewSections?.length && (
         <section aria-label="Next question" className="axx-question">
           <p>{s.question}</p>
         </section>
