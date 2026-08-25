@@ -118,6 +118,7 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
         maxWidth: 560,
       }}
       aria-label="Feedback"
+      data-print-hide
     >
       <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: COLOR.textMuted, margin: 0 }}>
         Help us improve

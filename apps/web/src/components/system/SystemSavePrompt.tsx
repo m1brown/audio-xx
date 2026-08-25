@@ -31,7 +31,7 @@ export default function SystemSavePrompt({ proposed, onReviewAndSave, onDismiss 
     .join(', ');
 
   return (
-    <div
+    <div data-print-hide
       style={{
         margin: '0.75rem 0 1rem',
         padding: '0.75rem 1rem',

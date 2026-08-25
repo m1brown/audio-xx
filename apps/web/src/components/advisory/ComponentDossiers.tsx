@@ -159,6 +159,19 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               is simply shorter than one with ten. */}
           {d.secondary.map((l, i) => <Line key={`s${i}`} l={l} />)}
 
+          {/* A component Audio XX holds nothing about still appears, and says
+              so. Silence here would read as an oversight; stating it is the
+              same discipline the assessment applies everywhere else. */}
+          {d.primary.length === 0 && d.secondary.length === 0
+            && d.gaps.length === 0 && (
+            <p style={{
+              margin: 0, fontSize: '0.85rem', fontStyle: 'italic',
+              color: 'rgba(27,26,24,0.5)',
+            }}>
+              Audio XX holds no published specifications for this unit yet.
+            </p>
+          )}
+
           {/* RESOURCES — last, quiet, and clearly not evidence. They lived on
               a separate lightweight card, which is what made each component
               appear twice. Subordinate to the evidence above them, and built

@@ -297,10 +297,22 @@ export function licenseAssessment(
     : snapshot.verdict || verdictFromEvidence(undefined, established, gap);
 
   const unresolved = composeUnresolved(rows, engineCovered);
-  const systemReview = [
-    ...(snapshot.systemReview ?? []),
-    ...(unresolved ? [unresolved] : []),
-  ];
+  /*
+   * The unresolved statement belongs with the LIMITS, not after the closing
+   * question. Appended at the end it landed beneath "here is what would help",
+   * reading as an afterthought to the very thing it is supposed to motivate.
+   *
+   * `nextIndex` is where the review's own closing material begins; without one
+   * the statement goes last, which is the old behaviour and still correct for
+   * a review that has no closing question.
+   */
+  const base = snapshot.systemReview ?? [];
+  const at = typeof snapshot.reviewNextIndex === 'number'
+    ? Math.min(Math.max(snapshot.reviewNextIndex, 0), base.length)
+    : base.length;
+  const systemReview = unresolved
+    ? [...base.slice(0, at), unresolved, ...base.slice(at)]
+    : [...base];
 
   if (!input.traitAuthored) {
     // The evidence lane authored this prose under D-7 gating and states its

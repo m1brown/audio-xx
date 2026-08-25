@@ -759,8 +759,28 @@ button:focus-visible,
 /* Print: the assessment is the only thing on paper — never site chrome.
    (Certification Gate 1, defect G1-D1.) */
 @media print {
+  /*
+   * A listener who presses Cmd-P on the conversation gets the assessment, not
+   * the workspace. Their five-page print carried Review & save, the composer,
+   * Start over, the feedback controls, View / Print / Share, and the site
+   * footer — every one of them a screen affordance with nothing to say on
+   * paper.
+   *
+   * The Print / Save PDF control opens the frozen canonical artifact and was
+   * always correct. This is the other route, and it must not produce a
+   * different document.
+   */
   nav,
-  .audioxx-global-startover {
+  aside,
+  footer,
+  form,
+  textarea,
+  .audioxx-global-startover,
+  [data-print-hide] {
     display: none !important;
   }
+
+  /* The workspace is a three-column layout on screen; on paper there is one
+     column and it holds the assessment. */
+  main, .container { max-width: none !important; margin: 0 !important; padding: 0 !important; }
 }

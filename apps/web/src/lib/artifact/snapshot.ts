@@ -41,7 +41,7 @@
  */
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
 import { deriveEvidenceLedger, type EvidenceLedger } from './evidence-ledger';
-import { composeSystemReview } from './system-review';
+import { composeSystemReview, composeSystemReviewDetailed } from './system-review';
 import {
   licenseAssessment, engineRelationsFrom, normalizeRole,
 } from '../assessment/authoritative';
@@ -135,6 +135,8 @@ export interface AssessmentSnapshotV1 {
    * read one review rather than three renderings of one payload.
    */
   systemReview?: string[];
+  /** Where the review's closing question begins — see `licenseAssessment`. */
+  reviewNextIndex?: number;
 }
 
 /** The shape the provisional path produces, narrowed to what a snapshot needs. */
@@ -213,7 +215,7 @@ export function snapshotFromCanonical(
   for (const d of meta.componentDossiers ?? []) {
     if (d.role && !roleByName.get(d.displayName)) roleByName.set(d.displayName, d.role);
   }
-  const systemReview = composeSystemReview({
+  const reviewDetail = composeSystemReviewDetailed({
     components: cam.subject.components.map((c) => ({
       displayName: c.name, role: roleByName.get(c.name) ?? '',
     })),
@@ -243,7 +245,8 @@ export function snapshotFromCanonical(
       // reopened artifact can still say what each box does in the chain.
       ...(roleByName.get(c.name) ? { role: roleByName.get(c.name) } : {}),
     })),
-    systemReview,
+    systemReview: reviewDetail.paragraphs,
+    reviewNextIndex: reviewDetail.nextIndex,
     verdict: cam.identity.verdict,
     standfirst: cam.identity.signature,
     actionVerdict: meta.actionVerdict,
@@ -366,7 +369,7 @@ export function snapshotFromProvisional(
    * Deterministic and evidence-gated — every paragraph names the facts it
    * rests on, and a paragraph whose facts are absent is not emitted.
    */
-  const systemReview = composeSystemReview({
+  const reviewDetail = composeSystemReviewDetailed({
     components: meta.components.map((c) => ({
       displayName: c.name, role: c.role ?? '',
     })),
@@ -394,7 +397,8 @@ export function snapshotFromProvisional(
     })),
     componentDossiers: dossiers,
     coverageNote: meta.coverageNote,
-    systemReview,
+    systemReview: reviewDetail.paragraphs,
+    reviewNextIndex: reviewDetail.nextIndex,
     // DERIVED, not fixed. The previous fixed string was chosen because
     // asserting source classes the path does not hold would be a false claim —
     // correct reasoning, wrong remedy. The path DOES hold evidence: its

@@ -139,6 +139,15 @@ function Dossiers({ dossiers }: { dossiers: DossierView[] }) {
             </div>
           )}
 
+          {/* Every component in the graph appears here, including one Audio XX
+              holds nothing about. Silence would read as an oversight. */}
+          {d.primary.length === 0 && d.secondary.length === 0
+            && d.gaps.length === 0 && (
+            <p className="axx-fact-muted">
+              Audio XX holds no published specifications for this unit yet.
+            </p>
+          )}
+
           {/* RESOURCES — last, quiet, and clearly not evidence. They follow
               everything Audio XX knows about the component rather than sitting
               beside its provenance, because a place to look and a statement of

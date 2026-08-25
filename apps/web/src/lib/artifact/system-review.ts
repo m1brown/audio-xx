@@ -116,8 +116,28 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
  */
 export function composeSystemReviewDetailed(input: SystemReviewInput): {
   paragraphs: string[];
+  /** Index at which the closing NEXT-QUESTION material begins. */
+  nextIndex?: number;
   unresolved: string[];
 } {
+  /*
+   * THESIS → EXPLANATION → LIMITS → NEXT QUESTION.
+   *
+   * The review read as accumulated reasoning: a fact, a caveat, another fact,
+   * another caveat, a question. Everything in it was licensed, and the order
+   * was the order evidence happened to be retrieved — so a reader met the
+   * strongest finding in the middle of the third paragraph and the same
+   * unresolved question in three different places.
+   *
+   * Four buckets, filled in whatever order the evidence allows and emitted in
+   * reading order. Structure changes no claim: nothing here creates a
+   * conclusion, it decides which licensed conclusion a reader meets first.
+   */
+  const thesis: string[] = [];
+  const observationParas: string[] = [];
+  const explanation: string[] = [];
+  const limits: string[] = [];
+  const next: string[] = [];
   const out: string[] = [];
   const unresolved: string[] = [];
 
@@ -133,10 +153,16 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // complement is published, the loudspeaker's own driver complement.
   const architecture: string[] = [];
   if (src && pre && amp) {
+    /*
+     * The chain is printed directly above this section, so naming all three
+     * boxes again was repetition dressed as analysis. What is worth saying is
+     * the ARCHITECTURAL fact — that gain and power live in separate boxes —
+     * which the chain line shows but does not state.
+     */
     architecture.push(
-      `The chain keeps every stage separate: ${src.component.displayName} as source, `
-      + `${pre.component.displayName} handling gain and switching, and `
-      + `${amp.component.displayName} driving the loudspeakers directly.`,
+      `Gain and power are handled in separate boxes here, with `
+      + `${pre.component.displayName} doing the first and `
+      + `${amp.component.displayName} the second.`,
     );
   }
 
@@ -161,7 +187,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     );
   }
 
-  if (architecture.length) out.push(architecture.join(' '));
+  // The chain itself is printed directly above this section, so the paragraph
+  // leads with the relational fact rather than listing the boxes again.
+  const architecturePara = architecture.length ? architecture.join(' ') : undefined;
 
   /**
    * THE LINE-LEVEL INTERFACE — what two impedance figures license.
@@ -263,7 +291,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       }
     }
   }
-  out.push(...lineLevel);
+  // (ordered below, by significance rather than by retrieval order)
 
   // ── EXPLAIN: the electrical relationship that the figures license ─────
   //
@@ -449,7 +477,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     }
   }
 
-  if (electrical.length) out.push(electrical.join(' '));
+  const electricalPara = electrical.length ? electrical.join(' ') : undefined;
 
   // ── EXPLAIN: what independent observations do and do not establish ────
   //
@@ -463,7 +491,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     const conditioned = obs.filter((l) => / — only /.test(l.value));
     if (conditioned.length === 0) continue;
     const pub = obs[0].publication ?? 'the reviewer';
-    out.push(
+    observationParas.push(
       `The listening evidence Audio XX holds for ${d.displayName} comes from `
       + `${pub}, and ${conditioned.length === obs.length ? 'every one of those observations' : 'most of it'} `
       + `is stated under a specific comparison — against the earlier model, or `
@@ -494,9 +522,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       + `all. Audio XX will not estimate it from the components' reputations.`,
     );
   }
-  if (boundary.length) out.push(boundary.join(' '));
+  if (boundary.length) limits.push(boundary.join(' '));
 
-  if (input.coverageNote) out.push(input.coverageNote);
+  if (input.coverageNote) limits.push(input.coverageNote);
 
   // ── NEXT: what would actually close the gap ──────────────────────────
   //
@@ -505,7 +533,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // a second thing to keep in step.
   const gap = input.dossiers.flatMap((d) => d.gaps)[0];
   if (gap) {
-    out.push(
+    next.push(
       `The gap is narrow and specific: ${gap.replace(/\.$/, '')}. If you hold that `
       + `figure — it is usually on the specification sheet or in the back of the `
       + `manual — it alone would let Audio XX finish the headroom question. `
@@ -514,5 +542,46 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     );
   }
 
-  return { paragraphs: out, unresolved };
+  /*
+   * ORDERED BY WHAT MATTERS, not by what was computed first.
+   *
+   * The quantitative amplifier-to-loudspeaker analysis is the strongest thing
+   * Audio XX can say about most systems, and it was arriving third. Chain
+   * architecture is real but weaker, and conditioned listening observations
+   * are about ONE component — useful, and not a system relationship — so they
+   * come last of the explanatory material.
+   */
+  explanation.push(
+    ...(electricalPara ? [electricalPara] : []),
+    ...lineLevel,
+    ...(architecturePara ? [architecturePara] : []),
+    ...observationParas,
+  );
+
+  /*
+   * THE PRINCIPAL ASSESSMENT.
+   *
+   * A reader who stops after the opening should still know what Audio XX
+   * concluded. This is composed from the relationship the evidence actually
+   * settled, in the review's own words — it does NOT restate the verdict
+   * printed above it, which would be padding, and it claims nothing the
+   * paragraphs below do not then support.
+   */
+  if (electricalPara && amp && spk) {
+    const openGap = input.dossiers.flatMap((d) => d.gaps)[0];
+    thesis.push(
+      `The one relationship in this chain that published evidence settles is `
+      + `between ${amp.component.displayName} and ${spk.component.displayName}, `
+      + `and it settles it on the makers' own figures rather than on reputation`
+      + `${openGap ? `. What those figures cannot reach is ${openGap.replace(/\.$/, '')}, `
+        + `and that single absence is the limit on everything else said here` : ''}.`,
+    );
+  }
+
+  out.push(...thesis, ...explanation, ...limits, ...next);
+  // `nextIndex` marks where the closing question begins, so a caller adding a
+  // LIMITS paragraph of its own can place it before that rather than after —
+  // an unresolved-evidence statement printed AFTER "here is what would help"
+  // reads as an afterthought to the thing it is supposed to motivate.
+  return { paragraphs: out, unresolved, nextIndex: out.length - next.length };
 }

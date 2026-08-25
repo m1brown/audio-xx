@@ -67,7 +67,11 @@ export default function ArtifactActionsInline(
   };
 
   return (
-    <div style={{
+    <div
+      // Screen affordances. A printed assessment has no controls, and these
+      // appeared on page 4 of a listener's browser print.
+      data-print-hide
+      style={{
       display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center',
       marginTop: '1.6rem', paddingTop: '0.9rem',
       borderTop: '1px solid rgba(27,26,24,0.10)',

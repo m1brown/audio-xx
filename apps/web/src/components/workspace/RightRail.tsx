@@ -85,7 +85,7 @@ export default function RightRail({
   const hasRecent = recentActivity.length > 0;
 
   return (
-    <aside
+    <aside data-print-hide
       style={{
         position: 'sticky',
         top: '3.25rem',

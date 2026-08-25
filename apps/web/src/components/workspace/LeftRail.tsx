@@ -123,7 +123,7 @@ function ConversationItem({ onReset }: { onReset: () => void }) {
 
 export default function LeftRail({ onReset }: LeftRailProps) {
   return (
-    <aside
+    <aside data-print-hide
       style={{
         position: 'sticky',
         top: '3.25rem',

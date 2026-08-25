@@ -168,7 +168,19 @@ function buildDossierViews(
       role: c.role,
       ...(admitted ? { image: { url: admitted.url, credit: admitted.source?.credit } } : {}),
     };
-  }).filter(worthRendering);
+  });
+  /*
+   * EVERY COMPONENT IN THE GRAPH APPEARS IN YOUR SYSTEM. ALL OF THEM.
+   *
+   * This ended `.filter(worthRendering)`, which dropped any component Audio XX
+   * held little about — so a listener's own equipment could vanish from the
+   * section named "Your system". ARC Reference 5 survived only because three
+   * facts happened to be held for it; a component with none would simply not
+   * be there, and the reader is left to wonder whether Audio XX even saw it.
+   *
+   * Absence of evidence about a component is INFORMATION, not grounds for
+   * hiding the component. The card says so plainly instead.
+   */
 }
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
 import { composeSystemReview } from '@/lib/artifact/system-review';
