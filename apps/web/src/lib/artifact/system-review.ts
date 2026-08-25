@@ -201,7 +201,22 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * a nominal load, the amplifier publishes a figure at that load, so that is
    * the figure to read. A matching-conditions statement.
    */
-  if (spk && amp && ohms && outputLine) {
+  /*
+   * The paragraph is licensed by a figure AT THAT LOAD, not by the existence
+   * of any figure at all.
+   *
+   * It fired whenever the amplifier published something, so a Leben CS600
+   * (whose maker states "32W x 2 (6L6GC) at 1KHz", with no load given) against
+   * an 8-ohm Klipsch produced "the maker's 8-ohm figure is the one to read
+   * here" three lines above "no published output figure at 8 ohms". The
+   * document contradicted itself, and the first sentence was the false one:
+   * there is no 8-ohm figure to read.
+   */
+  const publishedAtLoad = ohms && outputLine
+    ? readPowerFigures(outputLine.value).some((f) => f.ohms === ohms)
+    : false;
+
+  if (spk && amp && ohms && outputLine && publishedAtLoad) {
     /*
      * The contrast clause names the OTHER figure only when the amplifier
      * actually publishes one. It previously said "rather than the

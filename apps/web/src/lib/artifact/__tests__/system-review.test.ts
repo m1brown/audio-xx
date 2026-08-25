@@ -290,3 +290,54 @@ describe('the review never asserts a specification in order to contrast with it'
     expect(out4).toMatch(/rather than the 8-ohm figure the same specification also states/);
   });
 });
+
+describe('a figure at SOME load does not license a claim about THIS load', () => {
+  /**
+   * Production, 25 August 2026: a Leben CS600 against a Klipsch Cornwall IV
+   * printed "the maker's 8-ohm figure is the one to read here" three lines
+   * above "no published output figure at 8 ohms". Leben states "32W x 2
+   * (6L6GC) at 1KHz" — watts with no load at all — so the first sentence was
+   * the false one. The paragraph is licensed by a figure AT THAT LOAD.
+   */
+  const spk8: DossierView = {
+    displayName: 'Klipsch Cornwall IV',
+    primary: [{ label: 'impedance', value: '8 ohm', sourceClass: 'maker_published' }],
+    secondary: [], gaps: [], hasDetail: false,
+  };
+  const ampNoLoad: DossierView = {
+    displayName: 'Leben CS600',
+    primary: [{
+      label: 'power output',
+      value: '32W x 2 (6L6GC) at 1KHz; 28W x 2 (EL34) at 1KHz',
+      sourceClass: 'maker_published',
+    }],
+    secondary: [], gaps: [], hasDetail: false,
+  };
+
+  const out = composeSystemReview({
+    components: [
+      { displayName: 'Leben CS600', role: 'integrated' },
+      { displayName: 'Klipsch Cornwall IV', role: 'speaker' },
+    ],
+    dossiers: [ampNoLoad, spk8],
+  }).join('\n\n');
+
+  it('does not claim a figure at the loudspeaker load exists', () => {
+    expect(out).not.toMatch(/8-ohm figure is the one to read/);
+  });
+
+  it('makes no power claim at all from a load-less figure', () => {
+    expect(out).not.toMatch(/within the limits both makers state/);
+    expect(out).not.toMatch(/do not meet/);
+  });
+
+  it('produces nothing at all rather than something weaker', () => {
+    // These two dossiers hold a load-less power figure and a nominal
+    // impedance. Nothing relates them, so the correct output is no review —
+    // not a hedged sentence gesturing at a comparison that cannot be made.
+    // In production this same system DOES get a review, because Leben's
+    // dossier also holds a tube complement, and that licenses a different
+    // paragraph entirely.
+    expect(out).toBe('');
+  });
+});

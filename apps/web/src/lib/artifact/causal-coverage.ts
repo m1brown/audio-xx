@@ -188,8 +188,13 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
         out.push({
           from: amplification.displayName, to: spk.displayName, question, relationScope: 'power_load',
           state: 'unresolved', cause: 'incompatible_conditions',
+          // A figure whose load the maker never stated is reported as exactly
+          // that. Printing "28W@?Ω" showed the reader our parser's confusion
+          // rather than the maker's omission, which is the actual finding.
           detail: `no published output figure at ${ohms} ohms — the maker states `
-            + `${figures.map((f) => `${f.value}W@${f.ohms ?? '?'}Ω`).join(', ')}`,
+            + `${figures.map((f) => (f.ohms
+              ? `${f.value}W at ${f.ohms} ohms`
+              : `${f.value}W with no load stated`)).join(', ')}`,
         });
       } else {
         /*
