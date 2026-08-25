@@ -20,7 +20,7 @@
 
 import { detectSystemDescription } from './system-extraction';
 import {
-  alreadyNamedByMessage, messageSuppliesRole,
+  alreadyNamedByMessage, messageSuppliesRole, samePhysicalComponent,
 } from './assessment/physical-identity';
 import { normalizeRole as normaliseComponentRole } from './assessment/authoritative';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
@@ -8621,11 +8621,32 @@ function countMeaningfulInputComponents(rawMessage: string): number {
   // system has not doubled it; a listener who adds a component has added one.
   // Counting the joined text made "2 components you listed went unmatched" out
   // of the same four components written twice.
-  if (rawMessage.includes(TURN_SEPARATOR)) {
-    const perTurn = splitTurns(rawMessage).map(countMeaningfulSegments);
-    return new Set(perTurn.flat()).size;
+  /*
+   * The union is on canonical PHYSICAL IDENTITY, not on wording.
+   *
+   * De-duplicating identical strings was not enough. A saved system reaches
+   * the engine as synthetic text ("My system: dCS Rossini Apex, ARC ref, ...")
+   * prepended to the listener's own turn, and the two spellings of one box
+   * differ: "ARC ref" against "ARC ref 5". Counted as separate mentions, the
+   * expected total ran ahead of what resolved, and Audio XX told a signed-in
+   * listener it could not match three components while listing all four as
+   * recognised.
+   *
+   * Same invariant as the graph itself: one physical component counts once,
+   * whichever source named it and in whatever words.
+   */
+  const segments = rawMessage.includes(TURN_SEPARATOR)
+    ? splitTurns(rawMessage).map(countMeaningfulSegments).flat()
+    : countMeaningfulSegments(rawMessage);
+
+  const distinct: string[] = [];
+  for (const seg of segments) {
+    if (distinct.some((kept) => samePhysicalComponent(
+      { brand: '', name: kept }, { brand: '', name: seg },
+    ))) continue;
+    distinct.push(seg);
   }
-  return new Set(countMeaningfulSegments(rawMessage)).size;
+  return distinct.length;
 }
 
 /** The distinct component-ish segments a single turn names. */
@@ -8768,6 +8789,33 @@ function collapsePhysicalRepresentations(
 
       const ta = tokensOf(a), tb = tokensOf(b);
       if (ta.size === 0 || tb.size === 0) continue;
+
+      /*
+       * SAME PHYSICAL BOX, WHATEVER SOURCE NAMED IT — checked first.
+       *
+       * A saved system reaches the engine two ways: as `activeSystem`, which
+       * the seeding guard reconciles, and as synthetic TEXT injected into the
+       * accumulated message ("My system: dCS Rossini Apex, ARC ref, ..."). The
+       * second bypasses the seeding guard entirely: by the time the parser
+       * runs, the saved system is just more prose, and the listener's own turn
+       * names the same four boxes again.
+       *
+       * Production, signed in: the graph carried "ARC ref" from the injection
+       * and "ARC ref 5" from the message, and Audio XX asked which components
+       * it could not match while listing all four as recognised.
+       *
+       * The invariant is one physical component, one node, REGARDLESS of
+       * whether the mention came from the saved system, prior conversation
+       * state, or the current message. Only canonical identity can enforce
+       * that, because the two spellings share no source span and neither
+       * resolves to a catalog product.
+       */
+      if (samePhysicalComponent(
+        { brand: '', name: a.displayName }, { brand: '', name: b.displayName },
+      )) {
+        drop.add(rank(a) >= rank(b) ? b : a);
+        continue;
+      }
 
       /**
        * SAME BOX UNDER AN ALIAS — checked BEFORE the token test, because no

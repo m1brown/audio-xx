@@ -205,3 +205,47 @@ describe('a model number is not a list marker', () => {
     expect(pre).not.toMatch(/\b2\b\s*$/);
   });
 });
+
+describe('a saved system injected as TEXT reconciles too', () => {
+  /**
+   * The saved system reaches the engine two ways. As `activeSystem`, which the
+   * seeding guard reconciles — and as synthetic TEXT prepended to the
+   * accumulated message ("My system: dCS Rossini Apex, ARC ref, ..."), which
+   * bypasses that guard entirely: by the time the parser runs it is just more
+   * prose, and the listener's own turn names the same four boxes again.
+   *
+   * Signed-in production: the graph carried "ARC ref" from the injection and
+   * "ARC ref 5" from the message, and Audio XX asked which components it could
+   * not match while listing all four as recognised.
+   *
+   * One physical component, one node — regardless of source.
+   */
+  const SEP = String.fromCharCode(0x1e);
+  const injected = 'My system: dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2.';
+  const typed = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. '
+    + '- Amps: Butler Monads. - Speakers: Acora QRC-2.';
+
+  const r = run(`${injected}${SEP}${typed}`, savedNathan);
+
+  it('produces four nodes, not eight', () => {
+    expect(r.components ?? []).toHaveLength(4);
+  });
+
+  it('asks no clarification at all', () => {
+    // It previously asked how many components it could not match — while
+    // listing every one of them as recognised.
+    expect(r.kind).not.toBe('clarification');
+    expect(r.clarification?.question ?? '').toBe('');
+  });
+
+  it('keeps the better-specified spelling of the shared box', () => {
+    const pre = (r.components ?? []).find((c) => /preamp/.test(c.role))?.displayName ?? '';
+    expect(pre).toMatch(/ref 5/);
+  });
+
+  it('counts one mention per physical box across turns', () => {
+    // The expected-vs-resolved gate ran on wording, so "ARC ref" and "ARC ref
+    // 5" counted as two boxes and the expected total ran ahead of the graph.
+    expect(dacs(r)).toBe(1);
+  });
+});
