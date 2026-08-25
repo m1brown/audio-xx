@@ -17,7 +17,9 @@
  * connecting them is a system Audio XX does not understand.
  */
 import type { DossierView, DossierLine } from '@/lib/evidence/dossier-presentation';
-import { readPowerFigures, pairAcrossLoads } from '@/lib/evidence/quantity-compatibility';
+import {
+  readPowerFigures, pairAcrossLoads, readImpedanceFigures, pairImpedances,
+} from '@/lib/evidence/quantity-compatibility';
 
 export type CoverageState =
   /** A causal relationship is established and stated. */
@@ -183,7 +185,27 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
     const haveOut = has(da, 'output impedance');
     const haveIn = has(db, 'input impedance');
     if (haveOut && haveIn) {
-      out.push({ from: a.displayName, to: b.displayName, question, state: 'explained' });
+      /*
+       * Presence is not explanation.
+       *
+       * This reported EXPLAINED whenever both labels existed, so "explained"
+       * meant "detected" — and for a long time nothing composed a paragraph
+       * from the figures at all. Coverage over-claiming is worse than a gap
+       * because it HIDES one. The pair must actually be comparable: a balanced
+       * output impedance against a single-ended input impedance is not a
+       * like-for-like ratio, and Audio Research publishes both for the
+       * Reference 5.
+       */
+      const pair = pairImpedances(
+        readImpedanceFigures(get(da, 'output impedance')!.value),
+        readImpedanceFigures(get(db, 'input impedance')!.value),
+      );
+      out.push(pair.ok
+        ? { from: a.displayName, to: b.displayName, question, state: 'explained' }
+        : {
+          from: a.displayName, to: b.displayName, question,
+          state: 'unresolved', cause: 'incompatible_conditions', detail: pair.reason,
+        });
     } else {
       const missing = [
         !haveOut ? `${a.displayName} output impedance` : null,

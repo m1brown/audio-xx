@@ -84,10 +84,33 @@ line-level stages.
 **NOT licensed.** That a tube preamplifier "warms" a solid-state amplifier;
 that either stage constrains the other; that a gain mismatch exists.
 
-**Status.** `missing_product_evidence`. The rule is implemented — hold both
-impedances and the interface resolves. This is the highest-value evidence
-acquisition target in the ontology, because the rule already exists and only
-the figures are missing.
+**Licensed (added 2026-08-25).** The ratio of input to output impedance, on a
+MATCHED connection, establishes a loading **margin** — conventionally a load
+should present ten times the source impedance or more. Stated as a margin and
+nothing else.
+
+**NOT licensed.** Any audible consequence. A real deviation depends on how the
+source's output impedance behaves *across frequency*, and a single figure at
+one point says nothing about that curve. This is the same boundary as nominal
+impedance versus electrical difficulty, at the other end of the chain.
+
+Conditions are matched before the arithmetic: Audio Research publishes the
+Reference 5 at "600 ohms balanced, 300 ohms single-ended", and a balanced
+output against a single-ended input is not a like-for-like ratio.
+
+**Status.** `missing_product_evidence`.
+
+> **Correction (2026-08-25).** An earlier version of this document said "the
+> rule is implemented — hold both impedances and the interface resolves". That
+> was wrong. Coverage *detected* the two labels and reported EXPLAINED, while
+> nothing composed a sentence from the figures: "explained" meant "detected".
+> Coverage over-claiming is worse than a gap, because it hides one. The rule
+> is implemented now, and coverage requires a comparable pair before it will
+> claim to have explained anything.
+
+This remains the highest-value acquisition target in the ontology — every
+line-level interface in every reference system is unresolved for want of these
+two figures.
 
 *Nathan specifically:* dCS → ARC and ARC → Butler produce no relational
 analysis, because no held fact relates them. That is the correct output, not a

@@ -30,7 +30,9 @@
  * part most assessments skip — what it specifically does not.
  */
 import type { DossierView, DossierLine } from '@/lib/evidence/dossier-presentation';
-import { readPowerFigures, pairAcrossLoads } from '@/lib/evidence/quantity-compatibility';
+import {
+  readPowerFigures, pairAcrossLoads, readImpedanceFigures, pairImpedances,
+} from '@/lib/evidence/quantity-compatibility';
 
 export interface ReviewComponent {
   displayName: string;
@@ -159,6 +161,89 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   if (architecture.length) out.push(architecture.join(' '));
+
+  /**
+   * THE LINE-LEVEL INTERFACE — what two impedance figures license.
+   *
+   * Until now nothing reasoned across a line-level interface at all. Coverage
+   * reported EXPLAINED whenever both figures were present, but no paragraph
+   * was composed from them, so "explained" meant "detected". That is coverage
+   * over-claiming, which is worse than a gap: it hides one.
+   *
+   * What a ratio of input to output impedance establishes is a MARGIN, and
+   * nothing more. The convention is that a load should present roughly ten
+   * times the source's output impedance or more; below that the source is
+   * being worked harder than the convention assumes.
+   *
+   * What it does NOT establish, and the paragraph says so: any audible
+   * consequence. A real deviation depends on how the source's output impedance
+   * behaves ACROSS FREQUENCY, and a single figure at one point tells us
+   * nothing about the curve. This is the same boundary as nominal impedance
+   * versus electrical difficulty, at the other end of the chain.
+   *
+   * Conditions are matched before the arithmetic: a balanced output impedance
+   * against a single-ended input impedance is not a like-for-like ratio, and
+   * Audio Research publishes both for the Reference 5.
+   */
+  const lineLevel: string[] = [];
+  // `amp` already resolves integrated amplifiers, so the second pair is
+  // preamplifier-to-amplification whatever shape that stage takes.
+  const linePairs: Array<[typeof src, typeof pre]> = [[src, pre], [pre, amp]];
+  for (const [a, b] of linePairs) {
+    if (!a || !b) continue;
+    const outLine = findLine(a.dossier, 'output impedance');
+    const inLine = findLine(b.dossier, 'input impedance');
+    if (!outLine || !inLine) continue;
+
+    const pair = pairImpedances(
+      readImpedanceFigures(outLine.value), readImpedanceFigures(inLine.value),
+    );
+    if (!pair.ok) {
+      unresolved.push(`${a.component.displayName} to ${b.component.displayName}: ${pair.reason}`);
+      continue;
+    }
+
+    const ratio = pair.in.ohms / pair.out.ohms;
+    const connection = pair.out.connection === 'balanced' ? 'balanced'
+      : pair.out.connection === 'single_ended' ? 'single-ended' : null;
+    const via = connection ? ` on the ${connection} connection` : '';
+    const margin = ratio >= 10
+      ? `about ${Math.round(ratio)} times the source impedance, which is inside `
+        + `the conventional margin of ten times or more`
+      : `about ${ratio.toFixed(1)} times the source impedance, short of the `
+        + `conventional margin of ten times`;
+
+    lineLevel.push(
+      `Between ${a.component.displayName} and ${b.component.displayName} the two `
+      + `makers publish figures that can be set against each other${via}: an output `
+      + `impedance of ${pair.out.ohms} ohms into an input impedance of `
+      + `${pair.in.ohms} ohms. That is ${margin}. It is a statement about the `
+      + `loading margin and nothing else — what a listener would actually hear `
+      + `depends on how that output impedance behaves across frequency, which `
+      + `neither maker publishes.`,
+    );
+  }
+  // With no preamplifier the source feeds the amplification stage directly,
+  // and that interface is exactly as answerable.
+  if (!pre && src && amp) {
+    const outLine = findLine(src.dossier, 'output impedance');
+    const inLine = findLine(amp.dossier, 'input impedance');
+    if (outLine && inLine) {
+      const pair = pairImpedances(
+        readImpedanceFigures(outLine.value), readImpedanceFigures(inLine.value),
+      );
+      if (pair.ok) {
+        const ratio = pair.in.ohms / pair.out.ohms;
+        lineLevel.push(
+          `${src.component.displayName} drives ${amp.component.displayName} directly, `
+          + `and both figures are published: ${pair.out.ohms} ohms out into `
+          + `${pair.in.ohms} ohms in, about ${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)} `
+          + `times the source impedance. That describes the loading margin only.`,
+        );
+      }
+    }
+  }
+  out.push(...lineLevel);
 
   // ── EXPLAIN: the electrical relationship that the figures license ─────
   //

@@ -134,3 +134,64 @@ export function pairAcrossLoads(
     reason: why.ok ? 'no comparable pair' : why.reason,
   };
 }
+
+/**
+ * A published impedance, with the connection it was stated for.
+ *
+ * Makers publish both: Audio Research states the Reference 5 at "600 ohms
+ * balanced, 300 ohms single-ended". Those are two different operating
+ * conditions, and comparing a balanced output impedance against a
+ * single-ended input impedance is the same error as comparing a minimum
+ * against a typical — it looks like a like-for-like ratio and is not one.
+ */
+export interface ImpedanceFigure {
+  ohms: number;
+  connection: 'balanced' | 'single_ended' | 'unstated';
+  raw: string;
+}
+
+/** Read every impedance figure a maker's string states, with its connection. */
+export function readImpedanceFigures(value: string): ImpedanceFigure[] {
+  const out: ImpedanceFigure[] = [];
+  for (const seg of value.split(/[;,]/)) {
+    const m = /([\d.,]+)\s*(k)?\s*ohm/i.exec(seg);
+    if (!m) continue;
+    const n = Number(m[1].replace(/,/g, '')) * (m[2] ? 1000 : 1);
+    if (!Number.isFinite(n)) continue;
+    out.push({
+      ohms: n,
+      connection: /\bbalanced\b|\bxlr\b/i.test(seg) ? 'balanced'
+        : /\bsingle[- ]?ended\b|\bse\b|\brca\b/i.test(seg) ? 'single_ended' : 'unstated',
+      raw: seg.trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * The best like-for-like pair of a source's output impedance and a load's
+ * input impedance — same connection, or both unstated.
+ *
+ * Returns the reason when no comparable pair exists, so a caller can stay
+ * silent for a STATED cause rather than silently.
+ */
+export function pairImpedances(
+  outputs: ImpedanceFigure[],
+  inputs: ImpedanceFigure[],
+): { ok: true; out: ImpedanceFigure; in: ImpedanceFigure }
+  | { ok: false; reason: string } {
+  if (outputs.length === 0 || inputs.length === 0) {
+    return { ok: false, reason: 'an impedance figure is missing on one side' };
+  }
+  for (const o of outputs) {
+    for (const i of inputs) {
+      if (o.connection === i.connection) return { ok: true, out: o, in: i };
+    }
+  }
+  return {
+    ok: false,
+    reason: `the published figures are stated for different connections — `
+      + `${outputs.map((o) => o.raw).join(' / ')} against `
+      + `${inputs.map((i) => i.raw).join(' / ')}`,
+  };
+}
