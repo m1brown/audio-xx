@@ -111,8 +111,40 @@ describe('the review opens with the principal assessment', () => {
 
 describe('the explanation is ordered by significance, not retrieval', () => {
   it('leads with the quantitative amplifier-to-loudspeaker analysis', () => {
+    // The five propositions are now separate paragraphs rather than one wall
+    // of text, so the scaling inference is no longer inside the first of them.
     expect(r.paragraphs[1]).toMatch(/Which of the amplifier's published figures applies/);
-    expect(r.paragraphs[1]).toMatch(/about 1\.6×/);
+    expect(r.paragraphs.join('\n')).toMatch(/about 1\.6×/);
+  });
+
+  it('breaks the causal reasoning into readable units', () => {
+    const numbers = r.sections?.find((sec) => /numbers tell us/i.test(sec.label));
+    expect(numbers).toBeTruthy();
+    // Which figure applies · within the rated window · the 1.6x scaling —
+    // distinct propositions, distinctly paragraphed.
+    expect(numbers!.paragraphs.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('names its semantic slots, and omits the ones with nothing to say', () => {
+    const labels = (r.sections ?? []).map((sec) => sec.label);
+    expect(labels[0]).toBe('The main finding');
+    expect(labels).toContain('What the numbers tell us');
+    // A slot is only present when the material exists.
+    for (const sec of r.sections ?? []) expect(sec.paragraphs.length).toBeGreaterThan(0);
+  });
+
+  it('a sparsely evidenced system acquires no empty headings', () => {
+    const bare = composeSystemReviewDetailed({
+      components: [
+        { displayName: 'Blang 2', role: 'amplifier' },
+        { displayName: 'Frooble X', role: 'speaker' },
+      ],
+      dossiers: [
+        { displayName: 'Blang 2', role: 'amplifier', primary: [], secondary: [], gaps: [], hasDetail: false } as never,
+        { displayName: 'Frooble X', role: 'speaker', primary: [], secondary: [], gaps: [], hasDetail: false } as never,
+      ],
+    });
+    expect(bare.sections ?? []).toHaveLength(0);
   });
 
   it('places the single-component listening evidence after the relationships', () => {

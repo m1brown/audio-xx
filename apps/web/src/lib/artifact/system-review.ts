@@ -104,6 +104,12 @@ function handlingRange(value: string): { min?: number; max?: number } {
  * Compose the review. Returns paragraphs in reading order; an empty array is a
  * legitimate result for a system Audio XX holds nothing about.
  */
+/** One semantic slot of the review. A slot with nothing to say is omitted. */
+export interface ReviewSection {
+  label: string;
+  paragraphs: string[];
+}
+
 export function composeSystemReview(input: SystemReviewInput): string[] {
   return composeSystemReviewDetailed(input).paragraphs;
 }
@@ -116,6 +122,8 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
  */
 export function composeSystemReviewDetailed(input: SystemReviewInput): {
   paragraphs: string[];
+  /** The same material, in labelled semantic slots. Empty slots are omitted. */
+  sections?: ReviewSection[];
   /** Index at which the closing NEXT-QUESTION material begins. */
   nextIndex?: number;
   unresolved: string[];
@@ -483,7 +491,16 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     }
   }
 
-  const electricalPara = electrical.length ? electrical.join(' ') : undefined;
+  /*
+   * Each proposition is its own paragraph.
+   *
+   * They were joined into one block, so five distinct claims — which figure
+   * applies, compatibility against the rated window, the 1.6x scaling, what
+   * that licenses, what it does not — arrived as a wall of text. The reasoning
+   * is unchanged; only the paragraph breaks are new.
+   */
+  const electricalParas = electrical;
+  const electricalPara = electrical.length ? electrical[0] : undefined;
 
   // ── EXPLAIN: what independent observations do and do not establish ────
   //
@@ -570,39 +587,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * come last of the explanatory material.
    */
   explanation.push(
-    ...(electricalPara ? [electricalPara] : []),
+    ...electricalParas,
     ...lineLevel,
     ...(architecturePara ? [architecturePara] : []),
     ...observationParas,
   );
 
-  /*
-   * THE PRINCIPAL ASSESSMENT.
+  /**
+   * THE PRINCIPAL ASSESSMENT — derived from the same lines the body reads.
    *
-   * A reader who stops after the opening should still know what Audio XX
-   * concluded. This is composed from the relationship the evidence actually
-   * settled, in the review's own words — it does NOT restate the verdict
-   * printed above it, which would be padding, and it claims nothing the
-   * paragraphs below do not then support.
+   * An opening composed from its own reading of the evidence is a second
+   * account of the assessment, and two accounts drift. Every clause comes from
+   * a dossier line the paragraphs beneath it also use:
+   *
+   *   the load        `impedance` on the loudspeaker
+   *   the licence     `power output` on the amplifier at that load
+   *   the headroom    the ABSENCE of `sensitivity` on the loudspeaker
+   *   the difficulty  the absence of an impedance minimum / phase figure
    */
   if (electricalPara && amp && spk) {
-    /*
-     * DERIVED FROM THE SAME LINES THE BODY READS — never authored separately.
-     *
-     * An opening composed from its own reading of the evidence is a second
-     * account of the assessment, and two accounts drift. Every clause below
-     * comes from a dossier line the paragraphs beneath it also use:
-     *
-     *   the load        `impedance` on the loudspeaker
-     *   the licence     `power output` on the amplifier at that load
-     *   the headroom    the ABSENCE of `sensitivity` on the loudspeaker
-     *   the difficulty  the absence of an impedance minimum / phase figure,
-     *                   which no maker in this catalog publishes
-     *
-     * The first gap is read from the dossier rather than from the
-     * qualification prose, so the thesis cannot claim a figure is missing
-     * that the dossier in fact holds.
-     */
     const load = impedanceLine?.value;
     const hasSensitivity = !!findLine(spk.dossier, 'sensitivity');
     const hasImpedanceCurve = !!(findLine(spk.dossier, 'impedance minimum')
@@ -636,14 +639,34 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     );
   }
 
-  // The boundary paragraph is the only place the headroom limit is drawn when
-  // there is no thesis to carry it. With one, it would be the second telling.
-  if (boundaryPara && thesis.length === 0) limits.unshift(boundaryPara);
+  /*
+   * SEMANTIC SLOTS, suppressed when empty.
+   *
+   * The thesis existed but arrived after several weaker paragraphs, so a
+   * reader met the argument's conclusion last. These are the roles the
+   * material already plays; naming them lets the document lead with the
+   * finding and lets a sparsely evidenced system stay short — a heading with
+   * nothing under it is filler, and filler is what the licensing work spent
+   * this month removing.
+   */
+  const sections: ReviewSection[] = [
+    { label: 'The main finding', paragraphs: thesis },
+    { label: 'What the numbers tell us', paragraphs: electricalParas },
+    {
+      label: 'How the system fits together',
+      paragraphs: [...lineLevel, ...(architecturePara ? [architecturePara] : [])],
+    },
+    { label: 'What the listening evidence adds', paragraphs: observationParas },
+    { label: 'What remains unknown', paragraphs: limits },
+    { label: 'What would help next', paragraphs: next },
+  ].filter((sec) => sec.paragraphs.length > 0);
 
   out.push(...thesis, ...explanation, ...limits, ...next);
   // `nextIndex` marks where the closing question begins, so a caller adding a
   // LIMITS paragraph of its own can place it before that rather than after —
   // an unresolved-evidence statement printed AFTER "here is what would help"
   // reads as an afterthought to the thing it is supposed to motivate.
-  return { paragraphs: out, unresolved, nextIndex: out.length - next.length };
+  return {
+    paragraphs: out, sections, unresolved, nextIndex: out.length - next.length,
+  };
 }

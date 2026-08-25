@@ -314,6 +314,27 @@ export function licenseAssessment(
     ? [...base.slice(0, at), unresolved, ...base.slice(at)]
     : [...base];
 
+  /*
+   * The same statement, into the slot it belongs to.
+   *
+   * Appended to the flat list it would land under whatever heading happened to
+   * be last. It is unresolved-evidence material, so it goes under "What
+   * remains unknown" — creating that slot if the review had none.
+   */
+  const sections = unresolved && snapshot.reviewSections
+    ? (() => {
+      const copy = snapshot.reviewSections!.map((sec) => ({ ...sec }));
+      const unknown = copy.find((sec) => /remains unknown/i.test(sec.label));
+      if (unknown) unknown.paragraphs = [...unknown.paragraphs, unresolved];
+      else {
+        const nextIdx = copy.findIndex((sec) => /would help next/i.test(sec.label));
+        const slot = { label: 'What remains unknown', paragraphs: [unresolved] };
+        copy.splice(nextIdx < 0 ? copy.length : nextIdx, 0, slot);
+      }
+      return copy;
+    })()
+    : snapshot.reviewSections;
+
   if (!input.traitAuthored) {
     // The evidence lane authored this prose under D-7 gating and states its
     // sources, so it stands. Its verdict is kept when it established

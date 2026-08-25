@@ -239,3 +239,23 @@
 
 /* Component-scoped prose, with the component it describes. */
 .axx-ccharacter { margin: 0 0 0.7rem; font-size: 0.86rem; line-height: 1.55; }
+
+
+/* Semantic slots inside SYSTEM REVIEW.
+   Quieter than the section rule above them — they organise one section rather
+   than opening a new one, so they read as signposts, not as headings competing
+   with SYSTEM REVIEW / YOUR SYSTEM / EVIDENCE. */
+.axx-review-slot {
+  font-family: var(--face-grotesque, system-ui, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(27, 26, 24, 0.42);
+  margin: 1.6rem 0 0.55rem;
+}
+.axx-review-slot:first-child { margin-top: 0; }
+
+@media print {
+  .axx-review-slot { font-size: 7pt; margin: 12pt 0 4pt; break-after: avoid; page-break-after: avoid; }
+}

@@ -15,6 +15,7 @@
  */
 import React from 'react';
 import type { DossierView } from '@/lib/evidence/dossier-presentation';
+import { deriveEvidenceLedger } from '@/lib/artifact/evidence-ledger';
 import { COLOR } from '@/lib/editorial-tokens';
 
 const label: React.CSSProperties = {
@@ -58,6 +59,14 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
   const BASIS_TONE: Record<string, string> = {
     catalog: '#4F6B4A', brand: '#4F6B4A', model: '#8A6D3B', user: '#6B6862',
   };
+
+  /** Evidence classes in the reader's language, matching the artifact. */
+  const basisLabel = (c: string): string => ({
+    maker_published: 'published by the manufacturer',
+    independent_review: 'independent listening observations',
+    third_party_reported: 'reported by a third party',
+    catalog: 'Audio XX catalog',
+  }[c] ?? c);
 
   const present = (dossiers ?? []);
   if (present.length === 0) return null;
@@ -200,6 +209,40 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
           )}
         </div>
       ))}
+
+      {/* EVIDENCE — the third principal section, on this surface too.
+        *
+        * The conversation carried SYSTEM REVIEW and YOUR SYSTEM and stopped.
+        * A listener who pressed Cmd-P therefore received a two-section
+        * document while the artifact route produced three, so which route was
+        * canonical decided what they got. Derived from the SAME dossiers
+        * rendered above, so a source can appear here only because evidence
+        * from it survives into the assessment. */}
+      {(() => {
+        const ledger = deriveEvidenceLedger(present);
+        if (!ledger.entries?.length && !ledger.statement) return null;
+        return (
+          <section style={{ marginTop: '1.8rem' }} aria-label="Evidence">
+            <h2 style={{ ...label, marginBottom: '0.7rem' }}>Evidence</h2>
+            <p style={{ margin: '0 0 0.6rem 0', fontSize: '0.85rem', color: 'rgba(27,26,24,0.6)' }}>
+              {ledger.statement}
+            </p>
+            {ledger.entries?.map((e) => (
+              <p key={`${e.label}-${e.licensedFor.join(',')}`} style={{
+                margin: '0 0 0.3rem 0', fontSize: '0.8rem', color: 'rgba(27,26,24,0.55)',
+              }}>
+                {e.url
+                  ? <a href={e.url} target="_blank" rel="noopener noreferrer">{e.label}</a>
+                  : e.label}
+                {' — '}
+                {/* Scope travels with the source: a publication may never look
+                    as though it supported a component it said nothing about. */}
+                {basisLabel(e.evidenceClass)} · {e.licensedFor.join(', ')}
+              </p>
+            ))}
+          </section>
+        );
+      })()}
     </section>
   );
 }

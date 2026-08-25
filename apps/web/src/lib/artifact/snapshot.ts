@@ -137,6 +137,12 @@ export interface AssessmentSnapshotV1 {
   systemReview?: string[];
   /** Where the review's closing question begins — see `licenseAssessment`. */
   reviewNextIndex?: number;
+  /**
+   * The review in labelled semantic slots — the main finding, what the numbers
+   * tell us, and so on. Empty slots are omitted, so a sparsely evidenced
+   * system stays short instead of acquiring headings with filler under them.
+   */
+  reviewSections?: Array<{ label: string; paragraphs: string[] }>;
 }
 
 /** The shape the provisional path produces, narrowed to what a snapshot needs. */
@@ -247,6 +253,7 @@ export function snapshotFromCanonical(
     })),
     systemReview: reviewDetail.paragraphs,
     reviewNextIndex: reviewDetail.nextIndex,
+    reviewSections: reviewDetail.sections,
     verdict: cam.identity.verdict,
     standfirst: cam.identity.signature,
     actionVerdict: meta.actionVerdict,
@@ -399,6 +406,7 @@ export function snapshotFromProvisional(
     coverageNote: meta.coverageNote,
     systemReview: reviewDetail.paragraphs,
     reviewNextIndex: reviewDetail.nextIndex,
+    reviewSections: reviewDetail.sections,
     // DERIVED, not fixed. The previous fixed string was chosen because
     // asserting source classes the path does not hold would be a false claim —
     // correct reasoning, wrong remedy. The path DOES hold evidence: its

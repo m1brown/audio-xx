@@ -2120,9 +2120,30 @@ export default function Home() {
     const useSystemContext = isInlineSystem || (isSavedSystem && queryReferencesSystem);
     const hasActiveSystem = useSystemContext;
 
+    /*
+     * SHOPPING COPY, AND ONLY ON A SHOPPING TURN.
+     *
+     * "Assess my system" matches `queryReferencesSystem`, so a signed-in
+     * listener asking for an assessment was shown "picks below are judged on
+     * fit with that system" above an assessment that contains no picks.
+     *
+     * Worse, the tendency clause asserted system CHARACTER from the saved
+     * system's stored `tendencies` — the axis-derived aggregate the licensing
+     * gate removes everywhere else. On Nathan it read "which leans solid-state
+     * amplification" two paragraphs above the assessment's own "both
+     * amplification stages are valve designs". Butler's output stage is a 300B
+     * directly heated triode. The claim was unlicensed AND wrong AND
+     * contradicted the document it sat in.
+     *
+     * The chain reference is kept for shopping turns, where naming what the
+     * picks are judged against is the point. The character clause is gone: no
+     * surface may author system character from stored axes.
+     */
     const savedSystemNote: string | undefined =
-      isSavedSystem && queryReferencesSystem && activeComponentNames && activeComponentNames.length > 0
-        ? `Evaluated against your current chain (${activeComponentNames.slice(0, 3).join(', ')})${tendenciesStr ? `, which leans ${tendenciesStr}` : ''} — picks below are judged on fit with that system, not in isolation.`
+      isSavedSystem && queryReferencesSystem && intent !== 'system_assessment'
+        && activeComponentNames && activeComponentNames.length > 0
+        ? `Evaluated against your current chain (${activeComponentNames.slice(0, 3).join(', ')})`
+          + ' — picks below are judged on fit with that system, not in isolation.'
         : undefined;
     const advisoryCtx: ShoppingAdvisoryContext = {
       systemComponents: hasActiveSystem ? activeComponentNames : undefined,
@@ -6483,7 +6504,7 @@ export default function Home() {
        * Conversation state retains its existing visual weight (compact,
        * slate-bordered) — the editorial treatment applies to entry only.
        */}
-      {!hasPendingIntake && <div style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow, margin: '0 0 1rem' }}>
+      {!hasPendingIntake && <div data-print-hide style={{ marginBottom: '1rem', maxWidth: hasMessages ? LAYOUT.textMax : EDITORIAL.narrow, margin: '0 0 1rem' }}>
         <textarea
           ref={textareaRef}
           id="audio-input"
@@ -6687,7 +6708,7 @@ export default function Home() {
        *  quiet hairline-separated colophon — magazine staff-box
        *  treatment — sitting deep below the pull quote. During
        *  conversation it keeps its current row-of-utility-links style. */}
-      <div style={{
+      <div data-print-hide style={{
         marginTop: hasMessages ? 0 : '5rem',
         paddingTop: hasMessages ? 0 : '1.5rem',
         marginBottom: '1.5rem',

@@ -241,7 +241,18 @@ export default function SnapshotArtifact(
               already emitted — the coverage statement lives there. One
               section, so a reader meets one review rather than a review and
               an unlabelled remainder. */}
-          {(s.systemReview ?? []).map((p, i) => <p key={`r${i}`}>{p}</p>)}
+          {/* SEMANTIC SUBHEADS where the material exists, and nothing where it
+              does not. A heading with filler under it is what the licensing
+              work spent a month removing; a sparsely evidenced system keeps
+              its short review and simply shows fewer slots. */}
+          {s.reviewSections?.length
+            ? s.reviewSections.map((sec) => (
+              <div key={sec.label}>
+                <h3 className="axx-review-slot">{sec.label}</h3>
+                {sec.paragraphs.map((p, i) => <p key={`${sec.label}-${i}`}>{p}</p>)}
+              </div>
+            ))
+            : (s.systemReview ?? []).map((p, i) => <p key={`r${i}`}>{p}</p>)}
           {s.sections.flatMap((sec, i) =>
             sec.paragraphs.map((p, j) => <p key={`s${i}-${j}`}>{p}</p>))}
         </section>
