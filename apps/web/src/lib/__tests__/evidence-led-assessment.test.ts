@@ -143,16 +143,42 @@ describe('STEP 3 — the named gap is promoted, not buried', () => {
 describe('STEP 4 — coverage is derived, never narrated', () => {
   const { coverageNote, userPrompt } = nathanPrompt();
 
-  it('states the limitation for Nathan', () => {
-    expect(coverageNote).toContain('does not hold enough product-specific listening evidence');
-    expect(coverageNote).toContain('ARC ref 5');
-    expect(coverageNote).toContain('defensible system-wide tonal judgment');
+  /*
+   * SUPERSEDED BY EVIDENCE, 2026-08-25.
+   *
+   * This block used to assert that the note named "ARC ref 5" among the
+   * components Audio XX holds no listening evidence for. That is now false:
+   * The Absolute Sound's Reference 5 review is admitted, as is Stereophile's
+   * and SoundStage!'s coverage of the QRC-2. Keeping the assertion would pin
+   * a sentence contradicting the review printed directly beneath it.
+   *
+   * The limitation itself has not been dropped — it has moved to the layer
+   * that can state it accurately. The review names the Butler Monads
+   * specifically, says why the gap exists and says what would close it, where
+   * the note could only say "most of this chain" and name the wrong
+   * components.
+   */
+  it('no longer claims a blanket coverage gap for Nathan', () => {
+    // Two of the four components are now characterised from admitted reviews,
+    // so "most of this chain" is not true and the note correctly stands down.
+    expect(coverageNote).toBeUndefined();
+  });
+
+  it('still leashes the model, which review evidence does NOT license', () => {
+    // The note standing down must not be read as permission. Review evidence
+    // licenses the deterministic review; letting it unleash the model produced
+    // "the Rossini Apex, known for its... cooler presentation" — unsourced and
+    // the opposite of what Stereophile reported.
+    expect(userPrompt).toMatch(/EVIDENCE COVERAGE/);
+    expect(userPrompt).toMatch(/You may NOT characterise this system's tonal balance/);
   });
 
   it('NEVER claims a search was performed', () => {
     for (const forbidden of [/we searched/i, /no reviews (exist|were found)/i,
       /could not find/i, /nothing was found/i, /after searching/i]) {
-      expect(coverageNote).not.toMatch(forbidden);
+      // The note is absent for Nathan now; the invariant is about what it says
+      // WHEN it says anything, so it is checked wherever it exists.
+      if (coverageNote) expect(coverageNote).not.toMatch(forbidden);
       expect(userPrompt).not.toMatch(forbidden);
     }
   });
@@ -185,7 +211,9 @@ describe('STEP 4 — coverage is derived, never narrated', () => {
         { name: 'Butler Monads', role: 'amplifier' },
         { name: 'Acora QRC-2', role: 'speaker' }],
       ['Butler Monads', 'Acora QRC-2'], [], [] as never, {} as never);
-    expect(mixed.coverageNote).not.toContain('Zorblax');
+    // Butler and Acora are the evidenced pair here; Zorblax is unconfirmed.
+    // Whether the note fires or stands down, it must never name Zorblax.
+    expect(mixed.coverageNote ?? '').not.toContain('Zorblax');
   });
 });
 

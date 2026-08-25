@@ -4658,7 +4658,24 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        *  the renderer intact and being dropped on the floor. Verified in
        *  production: the advisory object carried the sentence, the page did
        *  not show it. */}
-      {a.systemSignature && (
+      {/* ONE REVIEW, ONE BEGINNING.
+        *
+        * Suppressed when a composed review exists, because `systemSignature`
+        * is passed INTO that composer as `driveFinding` — the same sentence
+        * then appeared twice: once as a bare leading verdict, and again inside
+        * the review that reasons from it. The reader met a preliminary
+        * mini-review, a repeated chain and a closing question BEFORE the
+        * actual analysis started.
+        *
+        * The composed review leads with its own principal conclusion, derived
+        * from the same licensed relations as its body, so nothing is lost by
+        * removing the duplicate — and the version that survives is the one
+        * that cannot drift from the paragraphs beneath it.
+        *
+        * Where there is no composed review this is still the engine's leading
+        * line and still renders: a system Audio XX holds little about has
+        * nothing else to lead with. */}
+      {a.systemSignature && !(a.systemReview && a.systemReview.length > 0) && (
         <p style={{
           margin: '0 0 1.5rem 0',
           fontSize: FONTS.bodySize,

@@ -18,6 +18,9 @@
  */
 
 import type { ConsultationResponse } from './consultation';
+import { deriveCharacter } from './evidence/component-character';
+import { seedObservations } from './evidence/independent-review-seed';
+import { resolveObservationKey } from './artifact/sonic-synthesis';
 import type { EvidenceItem } from './evidence/evidence-types';
 import type { ReviewObservation } from './evidence/independent-review';
 import {
@@ -933,6 +936,36 @@ export function buildProvisionalPrompt(
   const sonicPremiseHolders = new Set(selection.premises
     .filter((p) => p.axis !== 'power_load')
     .map((p) => p.component.toLowerCase().trim()));
+  /*
+   * A component is characterised if ANY licensed route says so.
+   *
+   * Review-derived character was invisible here, so the coverage note went on
+   * asserting that Audio XX held nothing about how these components sound
+   * while the review beneath it quoted three publications on two of them. Two
+   * accounts of one assessment, and the reader meets the wrong one first.
+   *
+   * Read from the same derivation the review uses, so the two cannot disagree.
+   */
+  const reviewCharacterised = new Set(
+    componentNames.filter((n) => {
+      const key = resolveObservationKey(n, seedObservations().admitted);
+      if (!key) return false;
+      return deriveCharacter(key, n, seedObservations().admitted).propositions.length > 0;
+    }).map((n) => n.toLowerCase().trim()),
+  );
+
+  /*
+   * NOTE the asymmetry: `reviewCharacterised` is deliberately NOT consulted
+   * here. Review evidence licenses the DETERMINISTIC review, which states
+   * each observation with its publication and its conditions attached. It
+   * does not license the model to write tonal prose.
+   *
+   * Letting it do so was tried and was strictly worse: the leash came off and
+   * the model produced "the Rossini Apex, known for its detailed and
+   * controlled output... may lean towards a cooler presentation" — unsourced,
+   * and the opposite of what Stereophile actually reported. The evidence is
+   * the reason the deterministic layer may speak, not a reason the model may.
+   */
   const characterised = componentNames.filter((n) => {
     const k = n.toLowerCase().trim();
     return sonicPremiseHolders.has(k)
@@ -984,7 +1017,21 @@ export function buildProvisionalPrompt(
    * limitation attached to one component in four is a footnote, and printing
    * it every time would train the reader to skip it.
    */
-  const coverageNote = thinlyEvidenced.length > componentNames.length / 2
+  /*
+   * The listener-facing sentence, unlike the model's leash, MUST account for
+   * review evidence — it was telling the reader Audio XX held nothing about
+   * how these components sound directly above a review quoting three
+   * publications on two of them.
+   *
+   * Suppressed entirely rather than reworded when the review has its own
+   * account, because that account is better: it names the one component with
+   * no coverage, says why, and says what would change it. Two statements of
+   * one limitation is how the document grew two beginnings.
+   */
+  const reviewSpeaksToSome = componentNames.some(
+    (n) => reviewCharacterised.has(n.toLowerCase().trim()),
+  );
+  const coverageNote = !reviewSpeaksToSome && thinlyEvidenced.length > componentNames.length / 2
     ? `Audio XX does not hold enough product-specific listening evidence for `
       + `${thinlyEvidenced.length === componentNames.length ? 'this chain'
         : 'most of this chain'} — `
