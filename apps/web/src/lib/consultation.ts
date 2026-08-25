@@ -18,6 +18,11 @@
  * a diagnostic-style clarification question.
  */
 
+import { detectSystemDescription } from './system-extraction';
+import {
+  alreadyNamedByMessage, messageSuppliesRole,
+} from './assessment/physical-identity';
+import { normalizeRole as normaliseComponentRole } from './assessment/authoritative';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
 import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName, TURN_SEPARATOR, splitTurns } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
@@ -9059,8 +9064,39 @@ export function buildSystemAssessment(
   // current message. This prevents cross-contamination from saved systems that
   // include components not part of the chain being evaluated.
   const msgLowerForSeed = currentMessage.toLowerCase();
+
+  /*
+   * THE CURRENT MESSAGE IS AUTHORITATIVE FOR THE COMPONENTS IT NAMES.
+   *
+   * This loop runs BEFORE the message's own subjects are processed, so
+   * `processedNames` is still empty when it asks whether a saved component is
+   * already present — every saved component was therefore always seeded. The
+   * message side then compared its own display string against the keys the
+   * seeding had registered ("rossini apex", "dcs") and found no match for
+   * "dcs rossini apex", producing a SECOND node for one physical box.
+   *
+   * Production asked a listener: "dCS Rossini Apex and dCS Rossini Apex both
+   * appear as dacs. Are both active in the signal path?"
+   *
+   * Neither string equality nor role equality could have caught that — both
+   * nodes had the same role, which is why the duplicate-role validator was the
+   * thing that noticed. The reconciliation happens on canonical PHYSICAL
+   * IDENTITY, computed from the message up front so precedence is real.
+   *
+   * A saved component the message does NOT name is still seeded, subject to
+   * the mention guard below, so incremental and correction workflows keep
+   * working.
+   */
+  const messageComponents = detectSystemDescription(
+    currentMessage, subjectMatches, {} as never,
+  )?.components ?? [];
+
   if (activeSystem && activeSystem.components.length > 0) {
     for (const ac of activeSystem.components) {
+      // Same physical box, named by the listener → the message's node stands.
+      if (alreadyNamedByMessage(ac, messageComponents)) continue;
+      // Different box, same slot → the message supersedes rather than adds.
+      if (messageSuppliesRole(messageComponents, ac.category, normaliseComponentRole)) continue;
       const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
       const strippedNameLower = stripVersionTag(ac.name).toLowerCase();
