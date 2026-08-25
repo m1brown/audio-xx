@@ -20,6 +20,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { ArtifactPayload } from '@/lib/artifact/types';
 import { runArtifactPipeline, engineVersion } from './assessment-pipeline';
 import { snapshotFromCanonical, freezeSnapshot } from '@/lib/artifact/snapshot';
+import { buildServerDossiers } from '@/lib/assessment/server-dossiers';
 
 /** Canonical identity: whitespace-collapsed, case preserved. */
 export function normalizeSystemText(text: string): string {
@@ -135,9 +136,20 @@ export async function saveAssessment(
    * gate learns which relationships the engine established, so a real
    * constraint survives instead of being discarded as unlicensed.
    */
+  // Dossiers are built here so the SAVED assessment carries YOUR SYSTEM. A
+  // snapshot without them renders SYSTEM REVIEW and EVIDENCE with nothing
+  // between, and a saved assessment is the one a listener returns to.
+  const savedChain = (rendered.raw as {
+    findings?: { systemChain?: { names?: string[]; roles?: string[] } };
+  } | null)?.findings?.systemChain;
+  const savedDossiers = await buildServerDossiers(
+    (savedChain?.names ?? []).map((name, i) => ({ name, role: savedChain?.roles?.[i] })),
+  );
+
   const licensed = snapshotFromCanonical(rendered.canonical, {
     engineVersion: engineVersion(),
     createdAt: new Date().toISOString(),
+    componentDossiers: savedDossiers,
     findings: (rendered.raw as { findings?: unknown } | null)?.findings,
   });
   const payloadJson = freezeSnapshot(licensed);

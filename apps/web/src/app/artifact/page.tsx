@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import AssessmentArtifact from './AssessmentArtifact';
 import SnapshotArtifact from './SnapshotArtifact';
 import { authoritativeAssessment } from '@/lib/assessment/from-result';
+import { buildServerDossiers } from '@/lib/assessment/server-dossiers';
 import ArtifactActions from './ArtifactActions';
 import TrackFailure from './TrackFailure';
 import { runArtifactPipeline } from '@/product/assessment-pipeline';
@@ -125,7 +126,23 @@ export default async function ArtifactPage(
    * one, and leaving it on the old lane would leave two lanes authoring, which
    * is the thing being removed.
    */
+  /*
+   * YOUR SYSTEM belongs on this surface too.
+   *
+   * The route rendered SYSTEM REVIEW and EVIDENCE with nothing between them,
+   * because dossiers were only ever built client-side. A shared or printed
+   * assessment therefore carried no component evidence at all — on the surface
+   * most likely to be read by someone other than the listener who generated it.
+   */
+  const chain = (rendered.raw as {
+    findings?: { systemChain?: { names?: string[]; roles?: string[] } };
+  } | null)?.findings?.systemChain;
+  const dossiers = await buildServerDossiers(
+    (chain?.names ?? []).map((name, i) => ({ name, role: chain?.roles?.[i] })),
+  );
+
   const assessment = authoritativeAssessment(rendered.raw, {
+    dossiers,
     createdAt: sp?.date ? new Date(sp.date).toISOString() : undefined,
   });
 
