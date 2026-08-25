@@ -80,11 +80,33 @@ export interface LicenceInput {
  */
 export function normalizeRole(label: string | undefined): string | undefined {
   const l = (label ?? '').toLowerCase().replace(/s$/, '');
+
+  /*
+   * PREAMPLIFIER IS TESTED FIRST, and it has to be.
+   *
+   * "pre-amplifier" CONTAINS "amplifier", so with the amplifier test first
+   * every preamplifier was typed as a power amplifier — silently, and with
+   * real consequences. In a chain like Nathan's (ARC Reference 5 preamp,
+   * Butler Monads power amps) both components then carry the same role, the
+   * interface layer takes the FIRST match as the amplification stage, and
+   * Audio XX reasons about the preamplifier driving the loudspeakers while
+   * ignoring the amplifier that actually does. The strongest finding it holds
+   * would never be examined.
+   *
+   * The hyphen matters too: "pre-amp" matched nothing at all, so the most
+   * natural short form produced NO role, and no role means no interface.
+   */
+  // Underscores count: the stored role values are `preamp` and `power_amp`,
+  // and missing the underscore dropped every power amplifier out of the chain
+  // — no role, no interface, and the amplifier-to-loudspeaker relationship
+  // simply absent from a system that plainly has one.
+  const bare = l.replace(/[\s_-]/g, '');
+  if (bare.includes('preamp') || bare.includes('preamplifier')) return 'preamplifier';
+  if (bare === 'poweramp' || bare.includes('poweramplifier')) return 'amplifier';
   if (l.includes('integrated')) return 'integrated';
   if (l.includes('amplifier') || l === 'amp') return 'amplifier';
   if (l.includes('speaker') || l.includes('loudspeaker')) return 'speaker';
   if (l.includes('headphone')) return 'headphone';
-  if (l.includes('preamp')) return 'preamplifier';
   if (l.includes('streamer')) return 'streamer';
   if (l.includes('dac') || l.includes('source')) return 'dac';
   if (l.includes('turntable')) return 'turntable';
