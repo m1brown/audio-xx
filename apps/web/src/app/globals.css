@@ -772,7 +772,11 @@ button:focus-visible,
    */
   nav,
   aside,
-  footer,
+  /* NOT the document's own footer. `.axx-doc-footer` is the EVIDENCE section —
+     the provenance ledger — and a blanket `footer` rule deleted it from every
+     printed assessment. Application chrome and document furniture are both
+     "footers"; only one of them is chrome. */
+  footer:not(.axx-doc-footer),
   form,
   textarea,
   .audioxx-global-startover,

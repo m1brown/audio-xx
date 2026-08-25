@@ -86,3 +86,19 @@ describe('the footer speaks the reader\'s language', () => {
     expect(conv).toMatch(/model: '',/);
   });
 });
+
+describe('the EVIDENCE section survives printing', () => {
+  it('the print rules never hide the document footer', () => {
+    /*
+     * A rule added to keep the conversation's application chrome off paper —
+     * `footer { display: none }` — deleted the EVIDENCE section from every
+     * printed assessment, because the provenance ledger IS a <footer>.
+     * Application chrome and document furniture are both "footers"; only one
+     * of them is chrome. Caught by looking at the PDF, not by a test.
+     */
+    const css = readFileSync('apps/web/src/app/globals.css', 'utf8');
+    const printBlock = css.slice(css.indexOf('@media print'));
+    expect(printBlock).toMatch(/footer:not\(\.axx-doc-footer\)/);
+    expect(printBlock).not.toMatch(/^\s*footer,\s*$/m);
+  });
+});
