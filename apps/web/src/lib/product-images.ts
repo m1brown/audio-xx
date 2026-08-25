@@ -159,7 +159,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     url: 'https://butleraudio.com/img/monad001.jpg',
     source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
       captured: '2026-08-25' } },
-
   // Denafrips — product hero shots on denafrips.com
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
   { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',

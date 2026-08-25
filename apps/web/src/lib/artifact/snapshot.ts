@@ -42,6 +42,7 @@
 import type { AxisReading, CanonicalAssessment, PrimarySource } from './canonical';
 import { deriveEvidenceLedger, type EvidenceLedger } from './evidence-ledger';
 import { composeSystemReview, composeSystemReviewDetailed } from './system-review';
+import { synthesiseChain } from './sonic-synthesis';
 import {
   licenseAssessment, engineRelationsFrom, normalizeRole,
 } from '../assessment/authoritative';
@@ -221,10 +222,12 @@ export function snapshotFromCanonical(
   for (const d of meta.componentDossiers ?? []) {
     if (d.role && !roleByName.get(d.displayName)) roleByName.set(d.displayName, d.role);
   }
+  const camComponents = cam.subject.components.map((c) => ({
+    displayName: c.name, role: roleByName.get(c.name) ?? '',
+  }));
   const reviewDetail = composeSystemReviewDetailed({
-    components: cam.subject.components.map((c) => ({
-      displayName: c.name, role: roleByName.get(c.name) ?? '',
-    })),
+    components: camComponents,
+    synthesis: synthesiseChain(camComponents),
     dossiers: meta.componentDossiers ?? [],
     driveFinding: cam.identity.signature,
     driveQualification: undefined,
@@ -376,10 +379,12 @@ export function snapshotFromProvisional(
    * Deterministic and evidence-gated — every paragraph names the facts it
    * rests on, and a paragraph whose facts are absent is not emitted.
    */
+  const metaComponents = meta.components.map((c) => ({
+    displayName: c.name, role: c.role ?? '',
+  }));
   const reviewDetail = composeSystemReviewDetailed({
-    components: meta.components.map((c) => ({
-      displayName: c.name, role: c.role ?? '',
-    })),
+    components: metaComponents,
+    synthesis: synthesiseChain(metaComponents),
     dossiers: meta.componentDossiers ?? [],
     driveFinding: response.systemSignature ?? undefined,
     driveQualification: response.qualification,

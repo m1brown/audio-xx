@@ -35,6 +35,12 @@ import {
   readPowerFigures, pairAcrossLoads, readImpedanceFigures, pairImpedances,
 } from '@/lib/evidence/quantity-compatibility';
 
+import type { SonicSynthesis } from './sonic-synthesis';
+import { DIMENSION_LABEL } from '../evidence/component-character';
+import { significantRelations } from './sonic-synthesis';
+import type { SonicRelation } from '../evidence/relational-synthesis';
+import { ELECTRICAL_SCOPE_NOTE, mergeByPair } from '../evidence/relational-synthesis';
+
 export interface ReviewComponent {
   displayName: string;
   role: string;
@@ -47,9 +53,21 @@ export interface SystemReviewInput {
   driveFinding?: string;
   driveQualification?: string;
   coverageNote?: string;
+  /**
+   * What the listening evidence licenses about this chain, already synthesised.
+   *
+   * Optional because a system Audio XX holds no review coverage for is a
+   * normal case, not a degraded one — the review simply has no listening
+   * section, and says so in its limits rather than reaching for prose.
+   */
+  synthesis?: SonicSynthesis;
 }
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
+
+/** Relations that assert something, in the order a reader should meet them. */
+const ESTABLISHED: ReadonlySet<SonicRelation['kind']> =
+  new Set(['tension', 'complementary', 'reinforcing']);
 
 const findLine = (d: DossierView | undefined, label: string): DossierLine | undefined =>
   d && lines(d).find((l) => l.label.toLowerCase() === label);
@@ -525,6 +543,84 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     );
   }
 
+  /*
+   * ── EXPLAIN: what the listening evidence establishes per component ──
+   *
+   * The character layer has already decided what each pile of observations
+   * licenses and phrased it at that strength. Nothing here may strengthen a
+   * statement; this loop chooses which to print and in what order, and the
+   * order is by what the reader can most act on — an established
+   * characteristic before a conditioned one.
+   */
+  const synergyParas: string[] = [];
+  if (input.synthesis) {
+    for (const c of input.components) {
+      const props = input.synthesis.character.get(c.displayName) ?? [];
+      if (props.length === 0) continue;
+      const rank = { convergent_observations: 0, direct_observation: 1, comparative_only: 2, conditional: 3 };
+      const ordered = [...props].sort((a, b) => rank[a.basis] - rank[b.basis]);
+      observationParas.push(ordered.map((p) => p.statement).join(' '));
+    }
+
+    /*
+     * ── EXPLAIN: what the components do to each other ──
+     *
+     * The heart of the review. Only relations that assert something are
+     * printed: nine "not established" lines per pair would bury the three
+     * that say something, and the components nobody characterised are
+     * accounted for once, in the limits, rather than nine times here.
+     */
+    const established = mergeByPair(
+      significantRelations(input.synthesis.relations).filter((r) => ESTABLISHED.has(r.kind)),
+    );
+    for (const r of established) synergyParas.push(r.statement);
+
+    /*
+     * The scope note earns its place only when both kinds of evidence are on
+     * the page. Printed next to electrical findings alone it answers a
+     * question nobody asked; printed here it stops a reader carrying the
+     * amplifier's comfortable drive of the load into the sonic paragraphs.
+     */
+    if (established.length > 0 && electricalParas.length > 0) {
+      synergyParas.push(ELECTRICAL_SCOPE_NOTE);
+    }
+
+    /*
+     * ── The boundary, stated once and named ──
+     *
+     * "Some relationships could not be assessed" is not usable. Naming the
+     * component, and saying what would change it, is: it tells the listener
+     * which box the silence is about and why the silence is not a verdict on
+     * the box's quality.
+     */
+    /*
+     * The components with NO admitted evidence — not the per-dimension
+     * blockers. `blockedBy` names whichever side lacks the dimension under
+     * discussion, so a well-covered component that simply has nothing to say
+     * about, say, transient attack was being listed as unevidenced. The
+     * paragraph then asserted Audio XX held no listening evidence for two
+     * components it had just quoted four publications on.
+     */
+    const blocked = input.synthesis.relations.filter((r) => r.kind === 'not_established');
+    const missing = input.synthesis.uncharacterised;
+    if (missing.length > 0) {
+      const names = missing.length === 1
+        ? `the ${missing[0]}`
+        : `the ${missing.slice(0, -1).join(', the ')} and the ${missing[missing.length - 1]}`;
+      limits.push(
+        `Audio XX holds no admitted independent listening evidence for ${names}. `
+        + `That is a gap in published coverage, not a judgement about `
+        + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
+        + `are either in publications Audio XX does not draw on or are of different models. `
+        + `Because of it, ${blocked.length === 1 ? 'one relationship in this chain' : `${blocked.length} of the relationships in this chain`} `
+        + `cannot be assessed from listening evidence at all, and any statement about how `
+        + `${names} colours what reaches the loudspeakers would be invention. A published `
+        + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
+        + `publication would change more of this assessment than any other single piece of evidence.`,
+      );
+    }
+  }
+
   // ── EVALUATE, and its boundary ───────────────────────────────────────
   //
   // The qualification already states the missing figure. What it does not say —
@@ -590,6 +686,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     ...electricalParas,
     ...lineLevel,
     ...(architecturePara ? [architecturePara] : []),
+    ...synergyParas,
     ...observationParas,
   );
 
@@ -640,6 +737,59 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
+   * ── THE PRINCIPAL CONCLUSION ──
+   *
+   * Unshifted so the reader meets the argument's conclusion first, and derived
+   * from the SAME licensed relations the body prints — not written alongside
+   * them. Two accounts of one assessment drift; a thesis assembled from the
+   * established dimensions cannot say more than the paragraphs beneath it,
+   * because it is reading them.
+   *
+   * Three obligations, in order: what the evidence supports, what licensed it,
+   * and the limitation that matters most. The third is not a hedge appended to
+   * soften the first — for this system it is the finding, because the
+   * uncharacterised component sits in the middle of the chain.
+   */
+  if (input.synthesis) {
+    const established = input.synthesis.relations.filter((r) => ESTABLISHED.has(r.kind));
+    const dims = [...new Set(established.map((r) => r.dimension))];
+    if (dims.length > 0) {
+      const labels = dims.map((d) => DIMENSION_LABEL[d]);
+      // Semicolons because several dimension labels contain their own "and";
+      // comma-joining them produced "bass weight and grip and imaging and staging".
+      const list = labels.length === 1 ? labels[0]
+        : labels.length === 2 ? `${labels[0]} and ${labels[1]}`
+          : `${labels.slice(0, -1).join('; ')}; and ${labels[labels.length - 1]}`;
+
+      // Only comparative inputs -> the conclusion inherits that shape.
+      const allComparative = established.every((r) =>
+        r.requires.every((p) => p.basis === 'comparative_only' || p.basis === 'conditional'));
+
+      const missing = input.synthesis.uncharacterised;
+
+      thesis.unshift(
+        `Where the published listening evidence converges, it converges on ${list} — `
+        + `several components in this chain are described in the same terms on `
+        + `${dims.length === 1 ? 'that dimension' : 'those dimensions'}, and characteristics `
+        + `pointing the same way compound rather than cancel. `
+        + (allComparative
+          ? `That conclusion is bounded: the observations behind it were made against other `
+            + `products rather than in absolute terms, so it describes a direction this system `
+            + `leans, not a level it reaches. `
+          : '')
+        + (missing.length > 0
+          ? `It is also incomplete in a way worth stating plainly at the outset: Audio XX holds `
+            + `no admitted listening evidence for `
+            + `${missing.length === 1 ? `the ${missing[0]}` : `the ${missing.slice(0, -1).join(', the ')} and the ${missing[missing.length - 1]}`}, `
+            + `so the largest single influence on what this system sounds like is the one part of `
+            + `the chain this assessment cannot speak to.`
+          : `No reviewer has heard these components together, so this remains a statement about `
+            + `what the parts share rather than a description of the assembled system.`),
+      );
+    }
+  }
+
+  /*
    * SEMANTIC SLOTS, suppressed when empty.
    *
    * The thesis existed but arrived after several weaker paragraphs, so a
@@ -654,7 +804,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     { label: 'What the numbers tell us', paragraphs: electricalParas },
     {
       label: 'How the system fits together',
-      paragraphs: [...lineLevel, ...(architecturePara ? [architecturePara] : [])],
+      paragraphs: [...lineLevel, ...(architecturePara ? [architecturePara] : []), ...synergyParas],
     },
     { label: 'What the listening evidence adds', paragraphs: observationParas },
     { label: 'What remains unknown', paragraphs: limits },

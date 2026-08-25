@@ -288,11 +288,20 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // `llm-system-inference`, which is why that function was moved — the
     // snapshot layer must not be able to import a module carrying model
     // prompts and network calls, however pure the one function it wanted.
+    // `./sonic-synthesis` joins on the SAME terms as `../assessment/authoritative`:
+    // it runs at CONSTRUCTION, never on open. Opening a snapshot reads frozen
+    // JSON and composes nothing, so no listener-visible state can change
+    // underneath a saved assessment. Placing it here rather than in the five
+    // call sites is deliberate — a derivation the caller must remember is a
+    // derivation some future surface will forget, which is the failure mode
+    // this very allowlist was written to describe.
+    //
+    // Its transitive purity is asserted below rather than assumed.
     expect(imports).toEqual([
-      './canonical', './evidence-ledger', './system-review',
+      './canonical', './evidence-ledger', './system-review', './sonic-synthesis',
       '../assessment/authoritative', '../evidence/dossier-presentation',
     ]);
-    for (const i of imports.filter((x) => !['./evidence-ledger', './system-review', '../assessment/authoritative'].includes(x))) {
+    for (const i of imports.filter((x) => !['./evidence-ledger', './system-review', './sonic-synthesis', '../assessment/authoritative'].includes(x))) {
       expect(src, i).toMatch(new RegExp(`import type \\{[^}]+\\} from '${i.replace(/[./]/g, '\\$&')}'`));
     }
     // The gate reaches nothing that could reassess.
@@ -332,10 +341,22 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // conventions, held as typed objects so a threshold can be attributed and
     // revised rather than sitting as a bare number inside a sentence. Reading a
     // constant is not reasoning, and a snapshot that opens one cannot reassess.
+    // The synthesis trio joins on the same terms, and for the same reason the
+    // review needed them: a review that can quote what reviewers heard, but
+    // cannot say what two components' characters imply together, is a
+    // bibliography rather than an assessment. All three are pure derivations
+    // over admitted evidence — no catalog, no engine, no network, no model —
+    // and the `synthesis layer stays reachable-but-pure` block below enforces
+    // that over the whole transitive set rather than trusting this list.
     expect(reviewImports).toEqual([
       '@/lib/evidence/dossier-presentation',
       '../evidence/engineering-rules',
       '@/lib/evidence/quantity-compatibility',
+      './sonic-synthesis',
+      '../evidence/component-character',
+      './sonic-synthesis',
+      '../evidence/relational-synthesis',
+      '../evidence/relational-synthesis',
     ]);
     expect(review).toMatch(/import type \{/);
     const compat = await fs.readFile(
@@ -471,5 +492,43 @@ describe('the DOCUMENT speaks in one voice', () => {
   it('leaves a component with no prose untouched', () => {
     const acora = snap.componentDossiers?.find((d) => d.displayName === 'Acora QRC-2');
     expect(acora?.character).toBeUndefined();
+  });
+});
+
+describe('the synthesis layer stays reachable-but-pure', () => {
+  /*
+   * `sonic-synthesis` is allowed into the snapshot layer because it cannot
+   * reach anything that would make opening a snapshot non-deterministic. That
+   * is a property of its whole transitive set, not of its top file, so the
+   * whole set is checked — the moment one of these reaches a network call, a
+   * model prompt, a database or an env var, a saved assessment could render
+   * differently tomorrow than it did today, and the freeze would be a fiction.
+   */
+  const REACHABLE = [
+    '../sonic-synthesis',
+    '../../evidence/component-character',
+    '../../evidence/relational-synthesis',
+    '../../evidence/independent-review-seed',
+    '../../evidence/independent-review',
+    '../../evidence/source-whitelist',
+  ];
+
+  it('reaches no network, model, database or environment', async () => {
+    const fs = await import('node:fs/promises');
+    for (const rel of REACHABLE) {
+      const src = await fs.readFile(new URL(`${rel}.ts`, import.meta.url), 'utf8');
+      expect(src, rel).not.toMatch(/\bfetch\s*\(|\bprisma\b|process\.env|openai|anthropic/i);
+    }
+  });
+
+  it('reaches no catalog or product data', async () => {
+    const fs = await import('node:fs/promises');
+    for (const rel of REACHABLE) {
+      const src = await fs.readFile(new URL(`${rel}.ts`, import.meta.url), 'utf8');
+      const imports = [...src.matchAll(/from '([^']+)'/g)].map((m) => m[1]);
+      for (const i of imports) {
+        expect(i, `${rel} -> ${i}`).not.toMatch(/products|catalog|consultation|llm-/);
+      }
+    }
   });
 });

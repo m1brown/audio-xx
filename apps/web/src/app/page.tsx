@@ -184,6 +184,7 @@ function buildDossierViews(
 }
 import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/snapshot';
 import { composeSystemReview } from '@/lib/artifact/system-review';
+import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
 import { normalizeRole } from '@/lib/assessment/authoritative';
 import { toCanonicalAssessment } from '@/lib/artifact/canonical';
@@ -3311,10 +3312,12 @@ export default function Home() {
             // ONE review, composed once, read by both surfaces. The
             // conversation and the frozen artifact must not compose separately
             // — that is how two renderings of one payload drift apart.
+            const reviewComponents = orderedComponents.map((c) => ({
+              displayName: c.displayName, role: c.role,
+            }));
             provisionalAdvisory.systemReview = composeSystemReview({
-              components: orderedComponents.map((c) => ({
-                displayName: c.displayName, role: c.role,
-              })),
+              components: reviewComponents,
+              synthesis: synthesiseChain(reviewComponents),
               dossiers: dossierViews,
               driveFinding: provisional.systemSignature ?? undefined,
               driveQualification: provisional.qualification,
