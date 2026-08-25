@@ -653,7 +653,10 @@ export function detectSystemDescription(
       );
       const m = tail.match(/^\s+([A-Z][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
       if (m) {
-        const candidate = m[1].trim();
+        // A sentence-terminating full stop is punctuation, not part of the
+        // model: "ARC Reference 5." is the Reference 5. A trailing dot inside
+        // a token ("D90.2") is untouched — only a terminal one is stripped.
+        const candidate = m[1].trim().replace(/[.,;:]+$/, '');
         const hasDigit = /\d/.test(candidate);
         const hasAllCapsToken = /\b[A-Z]{2,}\b/.test(candidate);
         if (hasDigit || hasAllCapsToken) extractedModel = candidate;

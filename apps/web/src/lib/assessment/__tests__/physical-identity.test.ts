@@ -156,3 +156,52 @@ describe('saved context still works where the message does not override it', () 
     expect(names(r).join(' ').toLowerCase()).not.toMatch(/rossini/);
   });
 });
+
+describe('a model number is not a list marker', () => {
+  /**
+   * "- Pre-amp: ARC Reference 5. - Speakers: Acora QRC-2" ends its first item
+   * with a model number and a full stop — character-for-character what a
+   * numbered marker looks like. The boundary matched at "5." and production
+   * rendered the preamplifier as "ARC Reference", which also cost it the three
+   * specifications the store holds under "arc reference 5". A truncated
+   * identity finds no evidence.
+   *
+   * The discriminator is what FOLLOWS: a marker introduces an item, so content
+   * comes after it; a model number ends one, so a bullet does.
+   */
+  const preampName = (msg: string) => {
+    const r = run(msg);
+    return (r.components ?? []).find((c) => /preamp/.test(c.role))?.displayName ?? '';
+  };
+
+  it('keeps the number when a bullet opens the next item', () => {
+    expect(preampName(
+      'Assess my system: - Dac: dCS Rossini Apex. - Pre-amp: ARC Reference 5. '
+      + '- Amps: Butler MONAD A100. - Speakers: Acora QRC-2.',
+    )).toMatch(/Reference 5$/);
+  });
+
+  it('keeps it without the full stop too', () => {
+    expect(preampName(
+      'Assess my system: Dac: dCS Rossini Apex, Pre-amp: ARC Reference 5, '
+      + 'Amps: Butler MONAD A100, Speakers: Acora QRC-2',
+    )).toMatch(/Reference 5$/);
+  });
+
+  it('strips the terminal full stop from the model', () => {
+    expect(preampName(
+      'Assess my system: - Pre-amp: ARC Reference 5. - Speakers: Acora QRC-2.',
+    )).not.toMatch(/\.$/);
+  });
+
+  it('still truncates a genuine numbered marker', () => {
+    // "1. Pre-amp: ARC ref 5 2. Amps: ..." — "2." introduces an item, so it is
+    // a marker and the preamp name must not swallow it.
+    const r = run(
+      'Assess my system: 1. Pre-amp: ARC ref 5 2. Amps: Butler MONAD A100 '
+      + '3. Speakers: Acora QRC-2',
+    );
+    const pre = (r.components ?? []).find((c) => /preamp/.test(c.role))?.displayName ?? '';
+    expect(pre).not.toMatch(/\b2\b\s*$/);
+  });
+});

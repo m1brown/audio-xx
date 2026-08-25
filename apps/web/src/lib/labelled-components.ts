@@ -187,10 +187,48 @@ export function splitTurns(message: string): string[] {
  */
 const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)|\u001E/;
 
-/** Cut a raw segment where the next list item begins. */
+/**
+ * A MODEL NUMBER IS NOT A LIST MARKER, even when a period follows it.
+ *
+ * "ARC Reference 5. - Speakers: Acora QRC-2" ends its first item with a model
+ * number and a full stop. That is character-for-character what a numbered
+ * marker looks like, so the boundary matched at "5." and the component came
+ * back as "ARC Reference" — the 5 silently gone. Production showed the
+ * preamplifier as "ARC Reference", which also cost it the three specifications
+ * the evidence store holds under "arc reference 5": a truncated identity finds
+ * no evidence.
+ *
+ * The discriminator is what FOLLOWS. A real list marker introduces an item, so
+ * content comes after it. A model number ends one, so what comes after is the
+ * next bullet or nothing at all.
+ *
+ *   "Rossini Apex 4. Speakers: Acora"   → "Speakers:" follows, a real marker
+ *   "ARC Reference 5. - Speakers: ..."  → a bullet follows, so the 5 is a model
+ *
+ * Bullet characters are unambiguous and keep their original behaviour.
+ */
 export function truncateAtListBoundary(rawSegment: string): string {
-  const m = LIST_BOUNDARY.exec(rawSegment);
-  return m ? rawSegment.slice(0, m.index) : rawSegment;
+  // A fresh regex per call: the module-level pattern is shared, and a `g` flag
+  // on a shared regex carries `lastIndex` between callers.
+  const scan = new RegExp(LIST_BOUNDARY.source, 'g');
+  let m = scan.exec(rawSegment);
+  while (m) {
+    const isNumbered = /\d/.test(m[0]);
+    const rest = rawSegment.slice(m.index + m[0].length);
+    /*
+     * Only a BULLET after the number rules out a marker.
+     *
+     * "ARC Reference 5. - Speakers:" — a bullet opens the next item, so the 5
+     * belongs to the model. Anything else, including end of segment, keeps the
+     * original behaviour: a trailing "4." still truncates, because a numbered
+     * item with nothing after it is how the two-turn fixtures end.
+     */
+    if (!isNumbered || !/^\s*[-\u2013\u2014\u2022*\u00b7]\s/.test(rest)) {
+      return rawSegment.slice(0, m.index);
+    }
+    m = scan.exec(rawSegment);
+  }
+  return rawSegment;
 }
 
 /**
