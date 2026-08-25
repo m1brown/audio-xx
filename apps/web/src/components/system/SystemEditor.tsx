@@ -49,6 +49,10 @@ const CATEGORY_OPTIONS: {
   { value: 'integrated', label: 'Integrated amp', category: 'integrated', role: null },
   { value: 'dac', label: 'DAC', category: 'dac', role: null },
   { value: 'streamer', label: 'Streamer', category: 'streamer', role: null },
+  // Most network players convert as well as stream. Forcing that box to be
+  // "Streamer" OR "DAC" made the listener guess, and made Audio XX look for an
+  // interface between two halves of one chassis.
+  { value: 'streamer_dac', label: 'Streamer / DAC', category: 'streamer_dac', role: null },
   { value: 'turntable', label: 'Turntable', category: 'turntable', role: null },
   { value: 'cartridge', label: 'Cartridge', category: 'cartridge', role: null },
   { value: 'phono', label: 'Phono stage', category: 'phono', role: null },

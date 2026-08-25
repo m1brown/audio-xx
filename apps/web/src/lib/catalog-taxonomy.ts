@@ -31,6 +31,7 @@ export type ProductCategory =
   | 'iem'
   | 'cable'
   | 'integrated'     // amplifier + DAC or amplifier + streamer
+  | 'streamer_dac'   // one chassis doing network transport AND conversion
   | 'other';
 
 /**

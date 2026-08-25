@@ -38,6 +38,7 @@ export function slotForComponent(c: {
     case 'integrated': return 'Amplifier';
     case 'dac': return 'DAC / Streamer';
     case 'streamer': return 'DAC / Streamer';
+    case 'streamer_dac': return 'DAC / Streamer';
     case 'turntable': return 'Source';
     case 'phono': return 'Source';
     default: return null;

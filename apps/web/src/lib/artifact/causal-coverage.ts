@@ -108,13 +108,52 @@ const dossierOf = (input: CoverageInput, name?: string) =>
 export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
   const out: InterfaceCoverage[] = [];
 
-  const src = roleOf(input, 'dac', 'streamer', 'source');
+  /*
+   * THE SOURCE SIDE CAN BE MORE THAN ONE BOX.
+   *
+   * This read `roleOf(input, 'dac', 'streamer', 'source')` — the FIRST match
+   * — so a system with a separate streamer AND DAC silently lost one of them.
+   * An Eversolo DMP-A6 feeding a Chord Qutest produced a chain in which the
+   * Qutest did not appear at all, and Audio XX reported the streamer driving
+   * the integrated amplifier directly. Two interfaces vanished and a third was
+   * asserted that does not exist.
+   *
+   * Every source-family component is kept, in chain order: transport or
+   * streamer first, then the DAC it feeds. A combined unit is a single entry
+   * that occupies both positions at once.
+   */
+  const SOURCE_ORDER = ['streamer', 'source', 'streamer_dac', 'dac'];
+  const sources = input.components
+    .filter((c) => SOURCE_ORDER.includes((c.role ?? '').toLowerCase()))
+    .sort((a, b) => SOURCE_ORDER.indexOf((a.role ?? '').toLowerCase())
+      - SOURCE_ORDER.indexOf((b.role ?? '').toLowerCase()));
+
   const pre = roleOf(input, 'preamplifier', 'preamp');
   const amp = roleOf(input, 'amplifier', 'power-amp');
   const integrated = roleOf(input, 'integrated');
   const spk = roleOf(input, 'speaker', 'loudspeaker');
 
   const amplification = amp ?? integrated;
+
+  /*
+   * A COMBINED STREAMER/DAC POSES NO STREAMER-TO-DAC QUESTION.
+   *
+   * The conversion happens inside one chassis, so there is no interface to
+   * examine — not an unresolved one. Reporting it as unresolved would invite a
+   * listener to go looking for figures that could not tell them anything, and
+   * it is exactly the case the NO MEANINGFUL INTERFACE QUESTION state exists
+   * for. Stating that plainly is more useful than silence: it tells the reader
+   * Audio XX understood the box.
+   */
+  for (const c of input.components) {
+    if ((c.role ?? '').toLowerCase() !== 'streamer_dac') continue;
+    out.push({
+      from: c.displayName, to: c.displayName,
+      question: 'Does the transport limit what the conversion stage can resolve?',
+      state: 'no_question',
+      detail: 'one unit performs both functions, so there is no interface between them',
+    });
+  }
 
   // ── source → preamplifier, and preamplifier → amplifier ────────────
   //
@@ -130,8 +169,8 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
    * even though source→integrated is exactly the interface such a system
    * turns on. Consecutive stages are paired, whatever the chain contains.
    */
-  const stages = [src, pre, amplification].filter(Boolean);
-  const lineLevel: Array<[typeof src, typeof pre, string]> = [];
+  const stages = [...sources, pre, amplification].filter(Boolean);
+  const lineLevel: Array<[typeof pre, typeof pre, string]> = [];
   for (let i = 0; i + 1 < stages.length; i++) {
     const a = stages[i]!;
     const b = stages[i + 1]!;
@@ -269,7 +308,13 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
 /** A compact line per interface, for the observability artifact. */
 export function formatCoverage(rows: InterfaceCoverage[]): string[] {
   return rows.map((r) => {
-    const head = `${r.from} → ${r.to}: ${r.state.toUpperCase().replace(/_/g, ' ')}`;
+    // A combined unit's internal interface has the same component on both
+    // sides. "dCS Rossini Apex → dCS Rossini Apex" reads like a mistake; the
+    // point is that the two stages are inside one box.
+    const subject = r.from === r.to
+      ? `${r.from} (transport → conversion)`
+      : `${r.from} → ${r.to}`;
+    const head = `${subject}: ${r.state.toUpperCase().replace(/_/g, ' ')}`;
     return r.detail ? `${head} — ${r.detail}` : head;
   });
 }

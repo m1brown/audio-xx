@@ -107,6 +107,17 @@ export function normalizeRole(label: string | undefined): string | undefined {
   if (l.includes('amplifier') || l === 'amp') return 'amplifier';
   if (l.includes('speaker') || l.includes('loudspeaker')) return 'speaker';
   if (l.includes('headphone')) return 'headphone';
+  /*
+   * A combined unit is ONE box performing two functions, and is typed as such
+   * rather than as whichever word happens to appear first. Falling through to
+   * 'streamer' would hide the conversion stage; falling through to 'dac' would
+   * hide the transport. Neither is true, and the combined role is what lets
+   * the coverage pass say the internal interface poses no question at all.
+   */
+  // Matched on 'stream' rather than 'streamer': "streaming DAC" is ordinary
+  // usage for exactly this product and would otherwise be typed as a bare DAC,
+  // hiding the transport half of the box.
+  if (l.includes('stream') && l.includes('dac')) return 'streamer_dac';
   if (l.includes('streamer')) return 'streamer';
   if (l.includes('dac') || l.includes('source')) return 'dac';
   if (l.includes('turntable')) return 'turntable';
