@@ -30,6 +30,7 @@
  * part most assessments skip — what it specifically does not.
  */
 import type { DossierView, DossierLine } from '@/lib/evidence/dossier-presentation';
+import { LOADING_MARGIN } from '../evidence/engineering-rules';
 import {
   readPowerFigures, pairAcrossLoads, readImpedanceFigures, pairImpedances,
 } from '@/lib/evidence/quantity-compatibility';
@@ -207,11 +208,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     const connection = pair.out.connection === 'balanced' ? 'balanced'
       : pair.out.connection === 'single_ended' ? 'single-ended' : null;
     const via = connection ? ` on the ${connection} connection` : '';
-    const margin = ratio >= 10
-      ? `about ${Math.round(ratio)} times the source impedance, which is inside `
-        + `the conventional margin of ten times or more`
+
+    /*
+     * THREE PROVENANCES, AND THE READER IS TOLD WHICH IS WHICH.
+     *
+     * The two impedances are the makers'. The ten-times figure is NOT: it is
+     * Audio XX's engineering convention, held in `LOADING_MARGIN` so it can be
+     * cited and revised rather than living as a bare number in a sentence.
+     * Leaving it unattributed would let a reader take a convention we adopted
+     * for a specification Audio Research or Butler published — a D-7 failure
+     * that reads perfectly well, which is exactly what makes it easy to miss.
+     */
+    const meets = ratio >= LOADING_MARGIN.threshold;
+    const margin = meets
+      ? `about ${Math.round(ratio)} times the source impedance. Audio XX treats `
+        + `${LOADING_MARGIN.threshold} times or more as the conventional design `
+        + `margin — that convention is ours, not either maker's — so this pairing `
+        + `is inside it`
       : `about ${ratio.toFixed(1)} times the source impedance, short of the `
-        + `conventional margin of ten times`;
+        + `${LOADING_MARGIN.threshold} times Audio XX treats as the conventional `
+        + `design margin. That convention is ours, not either maker's, and a `
+        + `pairing below it is not thereby faulty`;
 
     lineLevel.push(
       `Between ${a.component.displayName} and ${b.component.displayName} the two `
@@ -237,8 +254,11 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         lineLevel.push(
           `${src.component.displayName} drives ${amp.component.displayName} directly, `
           + `and both figures are published: ${pair.out.ohms} ohms out into `
-          + `${pair.in.ohms} ohms in, about ${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)} `
-          + `times the source impedance. That describes the loading margin only.`,
+          + `${pair.in.ohms} ohms in, about `
+          + `${ratio >= LOADING_MARGIN.threshold ? Math.round(ratio) : ratio.toFixed(1)} `
+          + `times the source impedance, against the ${LOADING_MARGIN.threshold} times `
+          + `Audio XX treats as the conventional design margin. That describes the `
+          + `loading margin only.`,
         );
       }
     }

@@ -327,14 +327,23 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     // `quantity-compatibility` is a pure predicate over strings the snapshot
     // already holds — it decides whether two published figures may be compared
     // and reads nothing else. Guarding arithmetic is not reassessment.
+    // `engineering-rules` joins on the strictest terms of all: it is a table of
+    // CONSTANTS with zero imports of its own — Audio XX's own engineering
+    // conventions, held as typed objects so a threshold can be attributed and
+    // revised rather than sitting as a bare number inside a sentence. Reading a
+    // constant is not reasoning, and a snapshot that opens one cannot reassess.
     expect(reviewImports).toEqual([
       '@/lib/evidence/dossier-presentation',
+      '../evidence/engineering-rules',
       '@/lib/evidence/quantity-compatibility',
     ]);
     expect(review).toMatch(/import type \{/);
     const compat = await fs.readFile(
       new URL('../../evidence/quantity-compatibility.ts', import.meta.url), 'utf8');
     expect([...compat.matchAll(/from '([^']+)'/g)].map((m) => m[1])).toEqual([]);
+    const rules = await fs.readFile(
+      new URL('../../evidence/engineering-rules.ts', import.meta.url), 'utf8');
+    expect([...rules.matchAll(/from '([^']+)'/g)].map((m) => m[1])).toEqual([]);
   });
 });
 

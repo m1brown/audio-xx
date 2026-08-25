@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { composeSystemReview } from '@/lib/artifact/system-review';
 import { causalCoverage } from '@/lib/artifact/causal-coverage';
 import { readImpedanceFigures, pairImpedances } from '@/lib/evidence/quantity-compatibility';
+import { LOADING_MARGIN } from '@/lib/evidence/engineering-rules';
+import { readFileSync } from 'node:fs';
 import type { DossierView } from '@/lib/evidence/dossier-presentation';
 
 /**
@@ -78,7 +80,7 @@ describe('the rule states a MARGIN and refuses a sonic consequence', () => {
   it('computes the like-for-like ratio', () => {
     expect(out).toMatch(/600 ohms into an input impedance of 47000 ohms/);
     expect(out).toMatch(/about 78 times the source impedance/);
-    expect(out).toMatch(/inside the conventional margin/);
+    expect(out).toMatch(/inside it/);
   });
 
   it('names the connection the comparison holds for', () => {
@@ -104,8 +106,58 @@ describe('the rule states a MARGIN and refuses a sonic consequence', () => {
         { label: 'input impedance', value: '3000 ohms balanced' },
       ])],
     }).join('\n\n');
-    expect(tight).toMatch(/short of the conventional margin/);
+    expect(tight).toMatch(/short of the 10 times/);
     expect(tight).not.toMatch(/incompatible|will not work|cannot drive/i);
+  });
+});
+
+describe('the engineering rule is attributed to Audio XX, not to a maker', () => {
+  /**
+   * A relational inference has THREE provenances. The two impedances are the
+   * makers'; the ten-times figure is Audio XX's own convention. Leaving it
+   * unattributed lets a reader take a convention we adopted for a
+   * specification Audio Research or Butler published — a D-7 failure that
+   * reads perfectly well, which is what makes it easy to miss.
+   */
+  const out = composeSystemReview({
+    components: [
+      { displayName: 'ARC Reference 5', role: 'preamplifier' },
+      { displayName: 'Test Amp', role: 'amplifier' },
+    ],
+    dossiers: [ARC, d('Test Amp', 'amplifier', [
+      { label: 'input impedance', value: '47k ohms balanced' },
+    ])],
+  }).join('\n\n');
+
+  it('names Audio XX as the source of the threshold', () => {
+    expect(out).toMatch(/Audio XX treats/);
+    expect(out).toMatch(/that convention is ours, not either maker's/i);
+  });
+
+  it('the threshold lives in the rule, not as a literal in prose', () => {
+    const src = readFileSync('apps/web/src/lib/artifact/system-review.ts', 'utf8');
+    // A bare `>= 10` inside the composer is the shape that made it look like a
+    // published fact. The number belongs to LOADING_MARGIN.
+    expect(src).toMatch(/LOADING_MARGIN\.threshold/);
+    expect(src).not.toMatch(/ratio >= 10\b/);
+  });
+
+  it('the rule records what it does NOT license', () => {
+    expect(LOADING_MARGIN.doesNotLicense).toMatch(/audible consequence/);
+    expect(LOADING_MARGIN.threshold).toBe(10);
+  });
+
+  it('a short margin is not reported as a fault', () => {
+    const tight = composeSystemReview({
+      components: [
+        { displayName: 'ARC Reference 5', role: 'preamplifier' },
+        { displayName: 'Low-Z Amp', role: 'amplifier' },
+      ],
+      dossiers: [ARC, d('Low-Z Amp', 'amplifier', [
+        { label: 'input impedance', value: '3000 ohms balanced' },
+      ])],
+    }).join('\n\n');
+    expect(tight).toMatch(/not thereby faulty/);
   });
 });
 
