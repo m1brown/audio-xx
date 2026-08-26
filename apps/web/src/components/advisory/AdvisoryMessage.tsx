@@ -5165,7 +5165,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 13. Follow-up ─────────────────────────── */}
-      {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal && (
+      {/* THE QUESTION COMES AFTER THE ARGUMENT.
+        *
+        * Rendered here, the closing question arrived BEFORE the composed
+        * review had said anything — the reader was invited to respond to an
+        * analysis they had not yet read. Where a composed review exists the
+        * question moves below it; where there is none this is still the right
+        * place, because there is nothing for it to precede. */}
+      {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal
+        && !(a.systemReview && a.systemReview.length > 0) && (
         onFollowUpClick ? (
           <button
             type="button"
@@ -5538,6 +5546,14 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
           ))}
         </section>
       )}
+      {/* The closing question, now genuinely closing the review above it. */}
+      {advisory.followUp && advisory.systemReview && advisory.systemReview.length > 0 && (
+        <p style={{
+          margin: '0 0 1rem 0', fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight, color: COLORS.textSecondary, fontStyle: 'italic',
+        }}>{advisory.followUp}</p>
+      )}
+
       {/* Component-scoped: single-subject facts, outside the relational filter. */}
       <ComponentDossiers dossiers={advisory.componentDossiers} />
       <ArtifactActionsInline viewToken={advisory.artifactViewToken} />

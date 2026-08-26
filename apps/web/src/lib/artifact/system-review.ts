@@ -554,12 +554,45 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    */
   const synergyParas: string[] = [];
   if (input.synthesis) {
-    for (const c of input.components) {
-      const props = input.synthesis.character.get(c.displayName) ?? [];
-      if (props.length === 0) continue;
-      const rank = { convergent_observations: 0, direct_observation: 1, comparative_only: 2, conditional: 3 };
-      const ordered = [...props].sort((a, b) => rank[a.basis] - rank[b.basis]);
-      observationParas.push(ordered.map((p) => p.statement).join(' '));
+    /*
+     * ── WHAT THE LISTENING EVIDENCE ADDS, as an argument ──
+     *
+     * This slot used to print every proposition, source by source, which put
+     * the same attributed sentences in two places: here and in the dossier
+     * beneath. The review's job is to say what the body of evidence AMOUNTS
+     * to — how much there is, what kind, and how much of it is conditioned —
+     * and to leave the observation-by-observation inventory to YOUR SYSTEM,
+     * where a reader checking a specific component will look for it.
+     */
+    const all = [...input.synthesis.character.values()].flat();
+    if (all.length > 0) {
+      const publications = [...new Set(all.flatMap((p) => p.publications))];
+      const covered = [...input.synthesis.character.entries()]
+        .filter(([, props]) => props.length > 0).map(([name]) => name);
+      const conditioned = all.filter((p) => p.basis === 'conditional');
+      const comparative = all.filter((p) => p.basis === 'comparative_only');
+
+      const pubList = publications.length === 1 ? publications[0]
+        : `${publications.slice(0, -1).join(', ')} and ${publications[publications.length - 1]}`;
+      const compList = covered.length === 1 ? `the ${covered[0]}`
+        : `the ${covered.slice(0, -1).join(', the ')} and the ${covered[covered.length - 1]}`;
+
+      observationParas.push(
+        `The listening evidence behind this assessment comes from ${pubList}, and covers `
+        + `${compList}. `
+        + (comparative.length > 0
+          ? `Most of it was established against other products rather than in absolute terms — `
+            + `the reviewers were describing what changed, not where these components sit on `
+            + `any scale. `
+          : '')
+        + (conditioned.length > 0
+          ? `${conditioned.length === all.length ? 'All of it' : 'Part of it'} was heard under `
+            + `stated conditions that travel with the claim: a show room, one input against `
+            + `another, a comparison made in passing during a review of a different model. `
+          : '')
+        + `Each observation is set out with its publication and its conditions in the `
+        + `component notes below.`,
+      );
     }
 
     /*
@@ -770,8 +803,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       thesis.unshift(
         `Where the published listening evidence converges, it converges on ${list} — `
         + `several components in this chain are described in the same terms on `
-        + `${dims.length === 1 ? 'that dimension' : 'those dimensions'}, and characteristics `
-        + `pointing the same way compound rather than cancel. `
+        + `${dims.length === 1 ? 'that dimension' : 'those dimensions'}. No reviewer heard `
+        + `them together, so what follows is a bounded hypothesis about how those `
+        + `descriptions might combine, not an established property of the system. `
         + (allComparative
           ? `That conclusion is bounded: the observations behind it were made against other `
             + `products rather than in absolute terms, so it describes a direction this system `
@@ -781,8 +815,11 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           ? `It is also incomplete in a way worth stating plainly at the outset: Audio XX holds `
             + `no admitted listening evidence for `
             + `${missing.length === 1 ? `the ${missing[0]}` : `the ${missing.slice(0, -1).join(', the ')} and the ${missing[missing.length - 1]}`}, `
-            + `so the largest single influence on what this system sounds like is the one part of `
-            + `the chain this assessment cannot speak to.`
+            + `which leaves ${missing.length === 1 ? 'a major link in the chain' : 'major links in the chain'} `
+            + `unresolved. That is a gap in what can be assessed, not a finding that `
+            + `${missing.length === 1 ? 'it dominates' : 'they dominate'} the result — nothing here `
+            + `establishes how much of what this system does is attributable to `
+            + `${missing.length === 1 ? 'that component' : 'those components'}.`
           : `No reviewer has heard these components together, so this remains a statement about `
             + `what the parts share rather than a description of the assembled system.`),
       );

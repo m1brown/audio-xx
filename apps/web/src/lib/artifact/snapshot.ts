@@ -271,7 +271,9 @@ export function snapshotFromCanonical(
     primarySources: cam.evidence.primarySources,
     // Derived from the dossiers this snapshot froze, so the ledger cannot
     // drift from the assessment it describes.
-    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
+    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers, synthesiseChain(
+      (meta.componentDossiers ?? []).map((d) => ({ displayName: d.displayName, role: d.role ?? '' })),
+    )),
   };
 
   /*
@@ -382,9 +384,26 @@ export function snapshotFromProvisional(
   const metaComponents = meta.components.map((c) => ({
     displayName: c.name, role: c.role ?? '',
   }));
+  // One synthesis, read by both the review and the ledger, so the EVIDENCE
+  // section can only ever name sources the review actually used.
+  const metaSynthesis = synthesiseChain(metaComponents);
+  /*
+   * The LEDGER is scoped by the dossiers, not the component list.
+   *
+   * `licensedFor` names a component the reader can look up, and the two lists
+   * are not always the same set — a component can be assessed without a
+   * dossier surviving into the document. Scoping by the component list put a
+   * name in EVIDENCE with nothing under it in YOUR SYSTEM to check against,
+   * which is the same class of defect as an unscoped source.
+   */
+  const ledgerSynthesis = synthesiseChain(
+    (meta.componentDossiers ?? []).map((d) => ({
+      displayName: d.displayName, role: d.role ?? '',
+    })),
+  );
   const reviewDetail = composeSystemReviewDetailed({
     components: metaComponents,
-    synthesis: synthesiseChain(metaComponents),
+    synthesis: metaSynthesis,
     dossiers: meta.componentDossiers ?? [],
     driveFinding: response.systemSignature ?? undefined,
     driveQualification: response.qualification,
@@ -418,8 +437,8 @@ export function snapshotFromProvisional(
     // dossiers carry published specifications and attributed observations, each
     // with its own source class. Deriving from them asserts exactly what is
     // there and nothing more, which is what the fixed string was protecting.
-    evidenceStatement: deriveEvidenceLedger(meta.componentDossiers).statement,
-    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers),
+    evidenceStatement: deriveEvidenceLedger(meta.componentDossiers, ledgerSynthesis).statement,
+    evidenceLedger: deriveEvidenceLedger(meta.componentDossiers, ledgerSynthesis),
   };
 
   /*

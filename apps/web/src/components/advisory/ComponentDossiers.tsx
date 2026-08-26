@@ -16,6 +16,7 @@
 import React from 'react';
 import type { DossierView } from '@/lib/evidence/dossier-presentation';
 import { deriveEvidenceLedger } from '@/lib/artifact/evidence-ledger';
+import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 import { COLOR } from '@/lib/editorial-tokens';
 
 const label: React.CSSProperties = {
@@ -64,12 +65,30 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
   const basisLabel = (c: string): string => ({
     maker_published: 'published by the manufacturer',
     independent_review: 'independent listening observations',
+    independent_measurement: 'independent measurement',
+    owner_report: 'owner report',
     third_party_reported: 'reported by a third party',
     catalog: 'Audio XX catalog',
+    audio_xx_derived: 'derived by Audio XX',
   }[c] ?? c);
 
   const present = (dossiers ?? []);
   if (present.length === 0) return null;
+
+  /*
+   * The observation inventory belongs HERE, not in the review.
+   *
+   * SYSTEM REVIEW argues from this evidence; YOUR SYSTEM is where a reader
+   * checking one component looks for what was actually said about it, by
+   * whom, under what conditions. Printing the attributed statements in both
+   * places put the same sentences twice in one document.
+   *
+   * Derived from the same pure function over the same admitted rows the
+   * review used, so the two surfaces cannot drift.
+   */
+  const dossierSynthesis = synthesiseChain(
+    present.map((d) => ({ displayName: d.displayName, role: d.role ?? '' })),
+  );
 
   return (
     /*
@@ -210,6 +229,35 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
         </div>
       ))}
 
+      {/* WHAT REVIEWERS OBSERVED — per component, attributed and conditioned.
+        *
+        * One block per component that has any, immediately under that
+        * component's specifications, so the reader meets the maker's figures
+        * and then what independent listeners said about the same box. */}
+      {present.some((d) => (dossierSynthesis.character.get(d.displayName) ?? []).length > 0) && (
+        <section style={{ marginTop: '1.4rem' }} aria-label="Independent observations">
+          <h3 style={{ ...label, marginBottom: '0.7rem' }}>What reviewers observed</h3>
+          {present.map((d) => {
+            const props = dossierSynthesis.character.get(d.displayName) ?? [];
+            if (props.length === 0) return null;
+            return (
+              <div key={`obs-${d.displayName}`} style={{ marginBottom: '0.9rem' }}>
+                <p style={{
+                  margin: '0 0 0.25rem 0', fontSize: '0.82rem', fontWeight: 600,
+                  color: 'rgba(27,26,24,0.75)',
+                }}>{d.displayName}</p>
+                {props.map((p, i) => (
+                  <p key={i} style={{
+                    margin: '0 0 0.3rem 0', fontSize: '0.83rem', lineHeight: 1.5,
+                    color: 'rgba(27,26,24,0.7)',
+                  }}>{p.statement}</p>
+                ))}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {/* EVIDENCE — the third principal section, on this surface too.
         *
         * The conversation carried SYSTEM REVIEW and YOUR SYSTEM and stopped.
@@ -219,7 +267,17 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
         * rendered above, so a source can appear here only because evidence
         * from it survives into the assessment. */}
       {(() => {
-        const ledger = deriveEvidenceLedger(present);
+        /*
+         * The ledger now sees the review evidence too.
+         *
+         * Without the second argument this section listed manufacturer
+         * specifications only, while the review above it quoted The Absolute
+         * Sound and SoundStage! — an EVIDENCE section that omitted the sources
+         * of the assessment's strongest claims. Derived from the same pure
+         * function over the same admitted rows the review used, so this is one
+         * bibliography rather than a parallel one.
+         */
+        const ledger = deriveEvidenceLedger(present, dossierSynthesis);
         if (!ledger.entries?.length && !ledger.statement) return null;
         return (
           <section style={{ marginTop: '1.8rem' }} aria-label="Evidence">

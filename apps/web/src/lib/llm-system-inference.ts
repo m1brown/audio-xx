@@ -497,23 +497,55 @@ export function buildLicensedProvisionalResponse(
   };
 
   const structure = componentNames.join(' → ');
-  const unresolvedList = unresolved.map((u) => u.name);
-  const knownList = knownDescriptions.map((k) => k.name);
 
-  const paragraphs: string[] = [
-    `Your chain, as you described it: ${structure}.`,
-  ];
+  /*
+   * THE EVIDENCE LANE IS AUTHORITATIVE, INCLUDING HERE.
+   *
+   * This fallback speaks for components Audio XX cannot assess, and it said so
+   * in absolute terms: "not in our catalog, so I have no verified data on how
+   * they behave". For the ARC and the Acora that became false the moment
+   * review evidence was admitted — the same document went on to quote The
+   * Absolute Sound and SoundStage! on exactly those components.
+   *
+   * A component the review lane characterises is therefore not unresolved, and
+   * its catalog brand-character line is dropped: that line is a generalisation
+   * about a maker, and it was contradicting the specific evidence beneath it —
+   * "tonal character is neutral-to-cool" for a DAC Stereophile described as
+   * rendering tone fuller and richer. Where two lanes disagree about one
+   * component, the one that names its publication wins.
+   */
+  const admitted = seedObservations().admitted;
+  const hasReviewCharacter = (name: string): boolean => {
+    const key = resolveObservationKey(name, admitted);
+    return !!key && deriveCharacter(key, name, admitted).propositions.length > 0;
+  };
+
+  const stillUnresolved = unresolved.filter((u) => !hasReviewCharacter(u.name));
+  const stillDescribed = knownDescriptions.filter((k) => !hasReviewCharacter(k.name));
+
+  const unresolvedList = stillUnresolved.map((u) => u.name);
+  const knownList = stillDescribed.map((k) => k.name);
+
+  /*
+   * NO SECOND CHAIN LINE.
+   *
+   * The renderer already prints "Your system: A → B → C" above this, so this
+   * paragraph restated the same chain in different words immediately
+   * underneath — one of the repetitions that made the document read as two
+   * assessments stacked on each other. `structure` is still used below.
+   */
+  const paragraphs: string[] = [];
 
   if (knownList.length > 0) {
     paragraphs.push(
-      knownDescriptions
+      stillDescribed
         .map((k) => `${k.name} — ${k.character}`)
         .join('\n\n'),
     );
   }
 
   if (unresolvedList.length > 0) {
-    const roleClauses = unresolved
+    const roleClauses = stillUnresolved
       .map((u) => `${u.name} handles ${ROLE_WORD[u.role] ?? u.role}`)
       .join('; ');
     paragraphs.push(

@@ -167,16 +167,44 @@ describe('disagreement is a finding, not noise to average', () => {
   });
 });
 
-describe('the Butler is the case the architecture must not paper over', () => {
-  it('has no admitted observations', () => {
-    expect(seedObservationsFor('butler monad a100')).toEqual([]);
+describe('the Butler, after a second acquisition pass', () => {
+  /*
+   * This block used to assert the A100 had no evidence at all. That was true
+   * of Audio XX's publication list, not of the world: The Audio Beatnik's
+   * review was excluded because the list had never been revisited. Evaluated
+   * and added, it now supplies the only independent listening evidence this
+   * amplifier has — and every row of it is conditioned on the fitted tube.
+   */
+  it('now has admitted observations', () => {
+    expect(seedObservationsFor('butler monad a100').length).toBeGreaterThan(0);
   });
 
-  it('yields a named gap rather than silence', () => {
-    const r = character('butler monad a100', 'Butler Monad A100');
+  it('but every one of them carries its condition', () => {
+    for (const o of seedObservationsFor('butler monad a100')) {
+      expect(o.condition, o.claim).toBeDefined();
+    }
+  });
+
+  it('so no unconditioned character claim is derived', () => {
+    const r = character('butler monad a100', 'Butler MONAD A100');
+    for (const p of r.propositions) {
+      expect(p.basis, p.dimension).toBe('conditional');
+      expect(p.confidence).toBe('low');
+      expect(p.statement).toMatch(/though only/);
+    }
+  });
+
+  it('never repeats the maker’s 300B power claim as independent evidence', () => {
+    for (const o of seedObservationsFor('butler monad a100')) {
+      expect(o.claim).not.toMatch(/many times|10 times|300B tube amplifiers|unheard of/i);
+    }
+  });
+
+  it('a genuinely uncovered component still yields a named gap', () => {
+    const r = deriveCharacter('nothing at all', 'Some Uncovered Amp', seedObservations().admitted);
     expect(r.propositions).toEqual([]);
     expect(r.gap?.reason).toBe('no_admitted_observations');
-    expect(r.gap?.detail).toMatch(/Butler Monad A100/);
+    expect(r.gap?.detail).toMatch(/Some Uncovered Amp/);
   });
 
   it('blocks every relation that would need its character', () => {
@@ -210,10 +238,14 @@ describe('relational rules', () => {
   it('two warm components reinforce — they do not balance', () => {
     const r = synthesise(withDim('A', 'warmth', 'warm'), withDim('B', 'warmth', 'warm'), 'warmth');
     expect(r.kind).toBe('tension');
-    expect(r.statement).toMatch(/compound rather than offset/);
-    // "tonal balance" is the dimension's own name; what must never appear is
-    // the claim that the two components balance EACH OTHER.
-    expect(r.statement).not.toMatch(/balance each other|counterweight|cancel|counteract/i);
+    // A bounded hypothesis about the pair — never an established interaction.
+    expect(r.statement).toMatch(/hypothesis about the pair rather than an observed interaction/);
+    expect(r.statement).toMatch(/more likely to add than to cancel/);
+    // "tonal balance" is the dimension's own name, and "cancel" now appears in
+    // the bounded phrasing itself. What must never appear is the claim that the
+    // two components balance EACH OTHER, or that the result is established.
+    expect(r.statement).not.toMatch(/balance each other|counterweight|counteract/i);
+    expect(r.statement).not.toMatch(/expect (these|this) to be (a )?propert/i);
   });
 
   it('opposed and established may complement', () => {
@@ -257,7 +289,9 @@ describe('the seed is candidates, not facts', () => {
 
   it('carries no excluded or unapproved publication', () => {
     for (const o of seedObservations().admitted) {
-      expect(o.sourceUrl).not.toMatch(/6moons|audiobeatnik|audiogon|enjoythemusic|diyaudio/i);
+      // 6moons is permanently excluded. Dealer listings and forums are not
+      // review sources — owner reports are a separate class with its own gate.
+      expect(o.sourceUrl).not.toMatch(/6moons|audiogon|usaudiomart|diyaudio|whatsbestforum|reddit/i);
     }
   });
 

@@ -31,10 +31,27 @@ export type LedgerClass =
   | 'maker_published'
   /** A named publication heard or measured something. */
   | 'independent_review'
+  /** A third party published a measurement it made itself. */
+  | 'independent_measurement'
+  /** An owner or community member reporting on gear they use. */
+  | 'owner_report'
   /** Audio XX's own curated catalog record. */
   | 'catalog'
   /** A third party restates a specification it did not originate. */
-  | 'third_party_reported';
+  | 'third_party_reported'
+  /** A relationship Audio XX derived itself from the evidence above. */
+  | 'audio_xx_derived';
+
+/** Reader-facing name for each class. They are kinds, not strengths. */
+export const LEDGER_CLASS_LABEL: Record<LedgerClass, string> = {
+  maker_published: 'Manufacturer published',
+  independent_review: 'Independent review',
+  independent_measurement: 'Independent measurement',
+  owner_report: 'Owner report',
+  catalog: 'Audio XX catalog',
+  third_party_reported: 'Third-party reported specification',
+  audio_xx_derived: 'Audio XX derived',
+};
 
 export interface LedgerEntry {
   /** What the reader sees: a publication, or a maker's name. */
@@ -94,7 +111,40 @@ function publisherLabel(sourceUrl: string | undefined, displayName: string): str
  * assessment holding no attributable evidence returns no entries rather than a
  * reassuring sentence.
  */
-export function deriveEvidenceLedger(dossiers: DossierView[] | undefined): EvidenceLedger {
+/**
+ * The shape the ledger needs from the synthesis, stated structurally.
+ *
+ * Deliberately not an import. This module's dependency list is asserted by the
+ * snapshot purity gate, and the ledger needs three fields rather than a
+ * module: what survived, who published it, and where. Naming them here keeps
+ * the ledger a pure function of frozen material.
+ */
+export interface LedgerSynthesis {
+  character: Map<string, Array<{
+    publications: string[];
+    support: Array<{ publication: string; sourceUrl: string; observationType?: string }>;
+  }>>;
+}
+
+export function deriveEvidenceLedger(
+  dossiers: DossierView[] | undefined,
+  /**
+   * Review evidence that survived into the rendered assessment.
+   *
+   * THE DEFECT THIS CLOSES. The review quoted The Absolute Sound on the ARC
+   * and Stereophile and SoundStage! on the Acora, and the EVIDENCE section
+   * named none of them — because the ledger read dossier lines only, and
+   * review-derived character does not travel as a dossier line. A reader
+   * checking what the assessment rested on was shown a bibliography missing
+   * the sources of its own strongest claims.
+   *
+   * Passing the synthesis rather than re-deriving it is the point: an entry
+   * appears here only because a proposition built from it survived into the
+   * document, so the ledger cannot list a source the review did not use, nor
+   * omit one it did.
+   */
+  synthesis?: LedgerSynthesis,
+): EvidenceLedger {
   const byKey = new Map<string, LedgerEntry>();
 
   for (const d of dossiers ?? []) {
@@ -128,11 +178,47 @@ export function deriveEvidenceLedger(dossiers: DossierView[] | undefined): Evide
     }
   }
 
+  /*
+   * Review propositions that survived, with their scope.
+   *
+   * `licensedFor` is the component the proposition is about — never the
+   * system. A publication that characterised one loudspeaker has licensed
+   * nothing about the amplifier feeding it, and the ledger is the last place
+   * that distinction could quietly be lost.
+   */
+  for (const [component, propositions] of synthesis?.character ?? []) {
+    for (const proposition of propositions) {
+      for (const observation of proposition.support) {
+        const label = observation.publication;
+        if (!label) continue;
+        const cls: LedgerClass = observation.observationType === 'measurement'
+          ? 'independent_measurement'
+          : 'independent_review';
+        const key = `${cls}::${label.toLowerCase()}`;
+        const existing = byKey.get(key);
+        if (existing) {
+          if (!existing.licensedFor.includes(component)) existing.licensedFor.push(component);
+          existing.url ??= observation.sourceUrl;
+          continue;
+        }
+        byKey.set(key, {
+          label, url: observation.sourceUrl, evidenceClass: cls, licensedFor: [component],
+        });
+      }
+    }
+  }
+
   const entries = [...byKey.values()].sort((a, b) => {
     // Published specifications lead; observations follow. Not a ranking of
     // authority — a reading order, so the reader meets the maker's own figures
     // before anyone's impression of them.
-    const rank = (c: LedgerClass) => (c === 'maker_published' ? 0 : c === 'catalog' ? 1 : 2);
+    // Reading order, not authority: the maker's own figures, then the catalog
+    // record, then measurements, then what people heard, then owners.
+    const order: LedgerClass[] = [
+      'maker_published', 'third_party_reported', 'catalog',
+      'independent_measurement', 'independent_review', 'owner_report', 'audio_xx_derived',
+    ];
+    const rank = (c: LedgerClass) => order.indexOf(c);
     return rank(a.evidenceClass) - rank(b.evidenceClass) || a.label.localeCompare(b.label);
   });
 
@@ -151,6 +237,8 @@ function statementFor(entries: LedgerEntry[]): string {
   const parts: string[] = [];
   if (classes.has('maker_published')) parts.push('published manufacturer specifications');
   if (classes.has('third_party_reported')) parts.push('reported specifications');
+  if (classes.has('independent_measurement')) parts.push('independent measurements');
+  if (classes.has('owner_report')) parts.push('owner reports, identified as such');
   if (classes.has('independent_review')) {
     const pubs = [...new Set(entries
       .filter((e) => e.evidenceClass === 'independent_review')

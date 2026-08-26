@@ -188,13 +188,15 @@ export function synthesise(
       requires: [a, b],
       statement: `${hedge(a, b)} the ${upstream.name} and the ${downstream.name} `
         + `pushing the same way in ${DIMENSION_LABEL[dimension]} — both are described as `
-        + `${a.direction}. Characteristics in the same direction compound rather than `
-        + `offset each other`
+        + `${a.direction}. Nothing in that evidence establishes what the two do to one `
+        + `another — no reviewer heard them together — so this is a hypothesis about the `
+        + `pair rather than an observed interaction`
         + (unhelpful
-          ? `, so this is the tendency most likely to become audible as a system trait, `
-            + `and the one to listen for first.`
-          : `, so expect this quality to be a property of the system rather than of `
-            + `either box alone.`),
+          ? `. If it holds, this is the tendency to listen for first, because same-direction `
+            + `characteristics are more likely to add than to cancel.`
+          : `. Where it holds, characteristics pointing the same way are more likely to add `
+            + `than to cancel; whether they audibly do is not something separate reviews of `
+            + `each box can settle.`),
     };
   }
 
@@ -231,9 +233,10 @@ export function synthesise(
       requires: [a, b],
       statement: `${hedge(a, b)} a possible complement in ${DIMENSION_LABEL[dimension]}: `
         + `the ${upstream.name} is described as ${a.direction} where the `
-        + `${downstream.name} is described as ${b.direction}. Whether they meet in the `
-        + `middle or one dominates depends on the room, the level and the recording, `
-        + `none of which the review evidence covers.`,
+        + `${downstream.name} is described as ${b.direction}. That is a hypothesis about `
+        + `the pair, not an observed interaction. Whether they meet in the middle or one `
+        + `dominates depends on the room, the level and the recording, none of which the `
+        + `review evidence covers.`,
     };
   }
 
@@ -350,11 +353,12 @@ export function mergeByPair(relations: SonicRelation[]): SonicRelation[] {
         + `same terms across ${['', 'one', 'two', 'three', 'four', 'five'][dims.length] ?? String(dims.length)} `
         + `dimensions — ${list}`
         + `${directions.length === 1 ? `, each of them ${directions[0]}` : ''}. `
-        + `Characteristics pointing the same way compound rather than offset each other, so `
+        + `No reviewer heard the two together, so this is a bounded hypothesis about the `
+        + `pair rather than an established interaction: same-direction characteristics are `
+        + `more likely to add than to cancel, and `
         + `${first.kind === 'tension'
-          ? 'these are the tendencies most likely to become audible as system traits, and the '
-            + 'ones to listen for first.'
-          : 'expect these to be properties of the system rather than of either box alone.'}`,
+          ? 'these are the tendencies to listen for first if it holds.'
+          : 'whether they audibly do is not something separate reviews of each box can settle.'}`,
     });
   }
   return merged;

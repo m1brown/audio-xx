@@ -80,6 +80,59 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
   },
 
   // ── Tier 2 — Acceptable ─────────────────────────────
+  /*
+   * ADDED 2026-08-25 after an acquisition pass that treated the existing list
+   * as incomplete rather than authoritative.
+   *
+   * Each was evaluated on the same four questions the earlier entries were:
+   * does it have a named editorial masthead; does it publish long-form
+   * reviews that state associated equipment and listening conditions; is it
+   * independent of the makers it covers; and does it name its reviewers. All
+   * four are `acceptable` rather than `preferred` — the tier reflects
+   * editorial alignment with Audio XX's register, not credibility, and the
+   * character layer weights every admitted publication equally regardless.
+   *
+   * The occasion was Nathan: the Butler MONAD A100 and Acora QRC-2 have no
+   * coverage in the previously listed publications, and treating that as "no
+   * evidence exists" was a statement about our list rather than about the
+   * world.
+   */
+  {
+    name: 'The Audio Beatnik',
+    tier: 'acceptable',
+    perspective: 'Long-form single-reviewer listening notes with associated equipment '
+      + 'stated throughout. Enthusiast register; light on measurement.',
+    url: 'https://theaudiobeatnik.com/',
+  },
+  {
+    name: 'Enjoy the Music',
+    tier: 'acceptable',
+    perspective: 'Long-running US publication with a named masthead and a wide review '
+      + 'roster. Review depth varies by contributor.',
+    url: 'https://www.enjoythemusic.com/',
+  },
+  {
+    name: 'Positive Feedback',
+    tier: 'acceptable',
+    perspective: 'Established US publication, essayistic register, strong on design '
+      + 'philosophy and system context.',
+    url: 'https://positive-feedback.com/',
+  },
+  {
+    name: 'Part-Time Audiophile',
+    tier: 'acceptable',
+    perspective: 'Show coverage and equipment reviews. Show reports are heavily '
+      + 'conditioned by definition and must carry that condition.',
+    url: 'https://parttimeaudiophile.com/',
+    alternateDomains: ['pt.audio'],
+  },
+  {
+    name: 'Tracking Angle',
+    tier: 'acceptable',
+    perspective: 'Analog-led publication under a named editor. Detailed on setup '
+      + 'conditions and comparisons.',
+    url: 'https://trackingangle.com/',
+  },
   {
     name: 'Stereophile',
     tier: 'acceptable',

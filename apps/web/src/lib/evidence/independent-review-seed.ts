@@ -321,9 +321,80 @@ const CANDIDATES: Candidate[] = [
   },
 
   // ------------------------------------------------------------ Butler ----
-  // Intentionally empty. See the header: the absence is the finding, and a row
-  // here sourced from 6moons, The Audio Beatnik, a dealer listing or Butler's
-  // own copy would be rejected by the gate anyway.
+  /*
+   * REVISED 2026-08-25. This section used to be empty, and the header used to
+   * cite The Audio Beatnik as a non-approved site. That was a statement about
+   * Audio XX's publication list rather than about the world: the Beatnik has a
+   * named editor, publishes long-form listening notes and states its
+   * associated equipment throughout, so it was evaluated and added rather than
+   * left out by inertia. 6moons remains excluded and its coverage stays unused.
+   *
+   * The tube dependency is the condition that matters here and it is unusual
+   * enough to be worth naming: the A100's 300B is user-replaceable, and the
+   * reviewer reports materially different balance with different tubes. A
+   * claim about this amplifier's tonal balance is therefore a claim about this
+   * amplifier WITH A STATED TUBE, and cannot travel without it.
+   */
+  {
+    productKey: 'butler monad a100',
+    productName: 'Butler MONAD A100',
+    publication: 'The Audio Beatnik',
+    reviewer: 'Jack Roberts',
+    sourceUrl: 'https://theaudiobeatnik.com/review-part-2-monad-a100-monoblocks/',
+    publishedAt: '2020-03-08',
+    observationType: 'listening',
+    claim: 'Reproduced a dynamic range extending from very quiet detail to a life-sized '
+      + 'piano that filled the room.',
+    condition: {
+      kind: 'associated_equipment',
+      description: 'heard driving Quad ESL 57 electrostatics and DeVore Gibbon Super Nines, '
+        + 'from an LTA microZOTL MZ3 preamplifier',
+    },
+  },
+  {
+    productKey: 'butler monad a100',
+    productName: 'Butler MONAD A100',
+    publication: 'The Audio Beatnik',
+    reviewer: 'Jack Roberts',
+    sourceUrl: 'https://theaudiobeatnik.com/review-part-2-monad-a100-monoblocks/',
+    publishedAt: '2020-03-08',
+    observationType: 'listening',
+    claim: 'Rendered harmonics audibly, particularly on piano, in a presentation the '
+      + 'reviewer described as organic and involving.',
+    condition: {
+      kind: 'associated_equipment',
+      description: 'heard driving Quad ESL 57 electrostatics from an LTA microZOTL MZ3 '
+        + 'preamplifier, with an AMG V12 turntable and BorderPatrol DAC as sources',
+    },
+    axis: 'warm_bright', direction: 'warm',
+  },
+  {
+    /*
+     * RELATIONAL, and the most useful row in this file.
+     *
+     * A statement about how the A100 behaved WITH a particular preamplifier —
+     * the kind of observation separate reviews of two boxes can never produce,
+     * and the reason the relational layer otherwise has to keep saying nobody
+     * heard these together. It is still scoped hard: one reviewer, one tube
+     * choice, one preamplifier that is not the listener's.
+     */
+    productKey: 'butler monad a100',
+    productName: 'Butler MONAD A100',
+    publication: 'The Audio Beatnik',
+    reviewer: 'Jack Roberts',
+    sourceUrl: 'https://theaudiobeatnik.com/review-part-1-butler-a100-monoblocks-a-little-history-and-design/',
+    publishedAt: '2020-03-08',
+    observationType: 'listening',
+    claim: 'Presented a slightly darker tonal balance that the reviewer found complemented '
+      + 'a preamplifier of slightly lighter balance.',
+    condition: {
+      kind: 'mode',
+      description: 'fitted with Takatsuki TA-300B tubes, driving an LTA microZOTL MZ3 '
+        + 'preamplifier; the reviewer reports a different, more forward balance with '
+        + 'PSVANE tubes in the same amplifier',
+    },
+    axis: 'warm_bright', direction: 'warm',
+  },
 ];
 
 /** The reason a candidate did not make it in, for the acquisition report. */
