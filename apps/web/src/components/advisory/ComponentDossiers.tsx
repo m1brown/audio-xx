@@ -73,7 +73,16 @@ function Line({ l, meaning }: {
   );
 }
 
-export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView[] }) {
+export default function ComponentDossiers({ dossiers, showEvidence = true }: {
+  dossiers?: DossierView[];
+  /**
+   * The artifact renders its own canonical EVIDENCE footer; when this
+   * component is embedded there, printing its internal evidence block too
+   * put the same ledger on the page twice. Everywhere else the block stays —
+   * the conversation has no other evidence surface.
+   */
+  showEvidence?: boolean;
+}) {
   // Render-worthiness is decided in the presentation layer; a component with
   // only detail-level knowledge still gets a card, because holding four
   // published specifications and showing nothing is worse than a short card.
@@ -372,7 +381,7 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
         * canonical decided what they got. Derived from the SAME dossiers
         * rendered above, so a source can appear here only because evidence
         * from it survives into the assessment. */}
-      {(() => {
+      {showEvidence && (() => {
         /*
          * The ledger now sees the review evidence too.
          *

@@ -315,7 +315,7 @@ export default function SnapshotArtifact(
         * conversation uses. Same data, one design, and the sideways print's
         * pages 2\u20133 duplicate disappears with it. */}
       {s.componentDossiers && s.componentDossiers.length > 0 && (
-        <ComponentDossiers dossiers={s.componentDossiers as never} />
+        <ComponentDossiers dossiers={s.componentDossiers as never} showEvidence={false} />
       )}
 
 
