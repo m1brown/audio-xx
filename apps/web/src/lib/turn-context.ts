@@ -203,7 +203,11 @@ export function buildTurnContext(
     proposed: { components: Array<{ brand?: string | null; name?: string | null }> } | null | undefined,
   ): boolean => {
     if (!proposed || !savedForGuard || savedForGuard.components.length === 0) return false;
-    if (proposed.components.length > savedForGuard.components.length) return false;
+    // No count comparison: the parser can split one saved product into two
+    // fragments ("DeVore Orangutan O/96" → "DeVore Orangutan" + "DeVore
+    // O/96"), and a fragment count above the saved count is not new
+    // equipment. New equipment is a component that matches NOTHING saved —
+    // one such component and the inline chain wins exactly as before.
     const fold = (x: string) => new Set(
       (x ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
         .filter((t) => t.length >= 2).map((t) => t.replace(/s$/, '')));

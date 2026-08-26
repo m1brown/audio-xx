@@ -89,6 +89,16 @@ export interface UnknownField {
   decisionRelevant: boolean;
   /** What would close it. */
   wouldCloseWith?: string;
+  /**
+   * WHICH physical quantity is missing (P0, 2026-08-26). The review composer
+   * used to wrap the first gap it found — whatever it was — in the
+   * explanation authored for the loudspeaker impedance-plot gap, and so told
+   * a listener that an amplifier's rated output would reveal a loudspeaker's
+   * impedance dips. Prose about a missing figure is licensed by the KIND of
+   * figure; a gap with no stated kind licenses only its own naming.
+   */
+  quantity?: 'speaker_impedance_curve' | 'amplifier_rated_output'
+    | 'speaker_load_profile' | 'speaker_sensitivity';
 }
 
 /** One admitted review observation, as the dossier exposes it. */
@@ -251,6 +261,41 @@ export function specRoleFor(field: string, role: string | undefined): SpecRole |
  * and read as what it actually establishes; `manufacture_country` is never
  * inferred from it.
  */
+/**
+ * May a held specification field appear AT ALL on a component in this role?
+ *
+ * THE UNIVERSAL INVARIANT (P0, 2026-08-26): a fact may only license reasoning
+ * — including the reasoning embodied in showing it under a labelled predicate
+ * — compatible with both its typed meaning and the physical role of the
+ * component it belongs to.
+ *
+ * Eversolo publishes "Rated Power: 13W" for a streaming DAC — the unit's
+ * power draw. Acquisition filed it under `power_output`, the only watt-shaped
+ * field in the controlled vocabulary, and the dossier then printed POWER
+ * OUTPUT 13W over the amplifier gloss on a component that drives nothing.
+ * What a watt figure MEANS on a non-amplifier is not established, and a
+ * figure whose meaning is not established licenses nothing — not a line, not
+ * a gloss, not a relation. Same rule for loudspeaker-load fields on
+ * non-loudspeakers. An unknown role is not a usable one: fail closed.
+ */
+export function factCompatibleWithRole(field: string, role: string | undefined): boolean {
+  const amp = role === 'amplifier' || role === 'integrated';
+  const spk = role === 'speaker' || role === 'headphone';
+  switch (field) {
+    case 'power_output':
+      return amp;
+    case 'sensitivity':
+    case 'impedance':
+    case 'nominal_impedance':
+    case 'power_handling':
+    case 'driver_complement':
+    case 'cabinet_material':
+      return spk;
+    default:
+      return true;
+  }
+}
+
 export function dossierFor(
   productKey: string,
   displayName: string,
@@ -280,6 +325,7 @@ export function dossierFor(
   }
 
   for (const s of input.heldSpecs ?? []) {
+    if (!factCompatibleWithRole(s.field, input.role)) continue;
     facts.push({
       productKey,
       predicate: 'specification',

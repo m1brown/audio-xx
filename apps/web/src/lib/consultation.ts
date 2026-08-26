@@ -13060,15 +13060,37 @@ function buildSystemChain(components: SystemComponent[], rawMessage: string): Me
    * assessment was then computed on that chain. Clean interrogative debris and
    * withhold bare category words; withheld names are returned so the caller
    * can ask rather than drop them silently. */
-  const validated = validateChainNames(sorted.map((c) => c.displayName));
+  /*
+   * ONE PROJECTION (P0, 2026-08-26). `roles` was mapped from `sorted` while
+   * `names` was mapped from the validated SURVIVORS of `sorted`. When
+   * validation withheld a name (a phantom bare-category component from the
+   * parser, say), the roles array kept the withheld slot and every later
+   * component read its neighbour's role — which is how a loudspeaker rendered
+   * as AMPLIFIER. Names and roles are now projections of one surviving list
+   * and cannot disagree in length or order.
+   */
+  const surviving: Array<{ name: string; role: SystemComponent['role'] }> = [];
+  const withheld: string[] = [];
+  const seenSurvivors = new Set<string>();
+  for (const c of sorted) {
+    const single = validateChainNames([c.displayName]);
+    if (single.needsClarification.length) {
+      for (const w of single.needsClarification) if (!withheld.includes(w)) withheld.push(w);
+      continue;
+    }
+    const cleaned = single.names[0];
+    if (!cleaned) continue;
+    const k = cleaned.toLowerCase();
+    if (seenSurvivors.has(k)) continue;
+    seenSurvivors.add(k);
+    surviving.push({ name: cleaned, role: c.role });
+  }
 
   return {
     fullChain: fullChain ? validateChainNames(fullChain).names : fullChain,
-    roles: sorted.map((c) => canonicalRole(c.role)),
-    names: validated.names,
-    unverifiedComponents: validated.needsClarification.length
-      ? validated.needsClarification
-      : undefined,
+    roles: surviving.map((c) => canonicalRole(c.role)),
+    names: surviving.map((c) => c.name),
+    unverifiedComponents: withheld.length ? withheld : undefined,
   };
 }
 

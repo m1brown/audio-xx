@@ -149,6 +149,7 @@ export const NATHAN_UNKNOWN_BY_PRODUCT: Record<string, UnknownField[]> = {
     {
       predicate: 'specification',
       decisionRelevant: true,
+      quantity: 'speaker_impedance_curve',
       wouldCloseWith: 'an impedance-magnitude and phase plot, which Acora does not '
         + 'publish and which no approved measurement of this model supplies',
     },

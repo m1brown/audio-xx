@@ -51,6 +51,9 @@ export interface DossierView {
   secondary: DossierLine[];
   /** Absences worth stating. Usually empty. */
   gaps: string[];
+  /** The same gaps with their typed quantity, for consumers whose prose
+   *  depends on WHICH figure is missing. Parallel to `gaps`. */
+  typedGaps: Array<{ text: string; quantity?: string }>;
   /**
    * Whether Audio XX holds anything worth opening the expansion for.
    *
@@ -198,9 +201,11 @@ export function presentDossier(d: ProductDossier): DossierView {
 
   // Absence is expensive to print and cheap to accumulate, so only the
   // decision-relevant ones are stated, and each says what would close it.
-  const gaps = d.unknowns
-    .filter((u) => u.decisionRelevant && u.wouldCloseWith)
-    .map((u) => u.wouldCloseWith as string);
+  const relevantUnknowns = d.unknowns
+    .filter((u) => u.decisionRelevant && u.wouldCloseWith);
+  const gaps = relevantUnknowns.map((u) => u.wouldCloseWith as string);
+  const typedGaps = relevantUnknowns
+    .map((u) => ({ text: u.wouldCloseWith as string, quantity: u.quantity }));
 
   // Dimensions and weight alone are not knowledge worth a card. Anything else
   // — architecture, a tube or driver complement, a response figure, review
@@ -233,7 +238,7 @@ export function presentDossier(d: ProductDossier): DossierView {
     : undefined;
 
   return {
-    displayName: d.displayName, primary, secondary, gaps, hasDetail, detailSummary,
+    displayName: d.displayName, primary, secondary, gaps, typedGaps, hasDetail, detailSummary,
   };
 }
 

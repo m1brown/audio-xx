@@ -94,11 +94,11 @@ export const FRANCE_UNKNOWNS: UnknownField[] = [
 
 export const FRANCE_UNKNOWN_BY_PRODUCT: Record<string, UnknownField[]> = {
   'job integrated': [{
-    predicate: 'specification', decisionRelevant: true,
+    predicate: 'specification', decisionRelevant: true, quantity: 'amplifier_rated_output',
     wouldCloseWith: 'a rated output figure from JOB — the amplifier’s side of the drive question',
   }],
   'wlm diva monitor': [{
-    predicate: 'specification', decisionRelevant: true,
+    predicate: 'specification', decisionRelevant: true, quantity: 'speaker_load_profile',
     wouldCloseWith: 'sensitivity and nominal impedance from WLM — the loudspeaker’s side of the drive question',
   }],
 };

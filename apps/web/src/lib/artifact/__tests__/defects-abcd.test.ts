@@ -136,7 +136,16 @@ describe('D — load difficulty is not acoustic headroom', () => {
     components: NATHAN,
     dossiers: PROD_DOSSIERS.map((d) => (
       d.displayName === 'Acora QRC-2'
-        ? { ...d, gaps: ['an impedance-magnitude and phase plot, which Acora does not publish'] } as DossierView
+        ? {
+          ...d,
+          gaps: ['an impedance-magnitude and phase plot, which Acora does not publish'],
+          // The composer's prose about a gap is licensed by the KIND of gap
+          // (P0 2026-08-26); production dossiers carry the typed quantity.
+          typedGaps: [{
+            text: 'an impedance-magnitude and phase plot, which Acora does not publish',
+            quantity: 'speaker_impedance_curve',
+          }],
+        } as DossierView
         : d
     )),
   });

@@ -659,14 +659,41 @@ export function detectSystemDescription(
         const candidate = m[1].trim().replace(/[.,;:]+$/, '');
         const hasDigit = /\d/.test(candidate);
         const hasAllCapsToken = /\b[A-Z]{2,}\b/.test(candidate);
-        if (hasDigit || hasAllCapsToken) extractedModel = candidate;
+        // A hyphen joining a letter run to a capital or digit is model
+        // morphology ("Elex-R", "M-CR612") — prose does not hyphenate that
+        // way. Without this the Elex-R reduced to a bare "Rega".
+        const hasModelHyphen = /[A-Za-z]-[A-Z0-9]/.test(candidate);
+        if (hasDigit || hasAllCapsToken || hasModelHyphen) extractedModel = candidate;
       }
+    }
+
+    /*
+     * THE LISTENER'S OWN ROLE WORDS OUTRANK THE BRAND DEFAULT (P0,
+     * 2026-08-26). "Rega Elex-R integrated amp" was categorised from
+     * BRAND_CATEGORY_MAP — turntable, because that is what Rega is best
+     * known for — while the listener said, in the same breath, that this
+     * box is an integrated amplifier. A brand default is a guess about a
+     * typical product; the listener's descriptor is a statement about THIS
+     * one, and every downstream role decision keys off this category.
+     */
+    let explicitCategory: ProductCategory | undefined;
+    if (typeof match.index === 'number') {
+      const descTail = truncateAtListBoundary(
+        currentMessage.slice(match.index + match.name.length)).toLowerCase();
+      if (/\bintegrated\b/.test(descTail)) explicitCategory = 'integrated';
+      else if (/\b(?:power\s+)?amp(?:lifier)?s?\b/.test(descTail)
+        && !/\bpre-?amp/.test(descTail)) explicitCategory = 'amplifier';
+      else if (/\b(?:loud)?speakers?\b/.test(descTail)) explicitCategory = 'speaker';
+      else if (/\bstreamer\b/.test(descTail) && /\bdac\b/.test(descTail)) explicitCategory = 'streamer_dac';
+      else if (/\bdac\b/.test(descTail)) explicitCategory = 'dac';
+      else if (/\bstreamer\b/.test(descTail)) explicitCategory = 'streamer';
+      else if (/\bturntable\b/.test(descTail)) explicitCategory = 'turntable';
     }
 
     components.push({
       brand: CANONICAL_BRANDS[key] ?? capitalize(match.name),
       name: extractedModel,
-      category,
+      category: explicitCategory ?? category,
       role: null,
     });
   }
@@ -699,6 +726,27 @@ export function detectSystemDescription(
       const desc = matchResult[0];
       const matchIdx = matchResult.index;
       if (isLabelAt(matchIdx + desc.length)) continue;
+
+      /*
+       * ROLE-SUFFIX GUARD (P0, 2026-08-26). In "Eversolo DMP-A6 streamer/dac
+       * --> JOB Job integrated amp --> WLM Diva monitor speakers" the words
+       * "streamer" and "integrated amp" are role suffixes on components this
+       * pass has already extracted — not equipment of their own. Promoting
+       * them created brandless phantom components, and the chain projection
+       * downstream then carried more roles than names, which is how a
+       * loudspeaker rendered as AMPLIFIER. A descriptor is a component only
+       * when its list segment names no equipment already extracted;
+       * "I have a streamer and some monitors" still promotes.
+       */
+      const segStart = Math.max(
+        ...['-->', '\u2192', ',', ';'].map((d) => currentMessage.lastIndexOf(d, matchIdx)), -1);
+      const segEndCands = ['-->', '\u2192', ',', ';']
+        .map((d) => currentMessage.indexOf(d, matchIdx)).filter((i) => i >= 0);
+      const segEnd = segEndCands.length ? Math.min(...segEndCands) : currentMessage.length;
+      const segment = currentMessage.slice(segStart + 1, segEnd).toLowerCase();
+      const segmentClaimed = components.some((c) =>
+        [c.brand, c.name].some((t) => t && t.length >= 2 && segment.includes(t.toLowerCase())));
+      if (segmentClaimed) continue;
 
       const descKey = desc.toLowerCase();
       if (!seen.has(descKey) && !components.some((c) => c.name.toLowerCase() === descKey)) {

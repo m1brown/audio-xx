@@ -141,7 +141,11 @@ describe('the FRANCE dossiers', () => {
     expect(p('parent_company')).toBe('Zidoo');
     expect(p('successor')).toBe('DMP-A6 Gen 2');
     expect(p('range_position')).toContain('Master Edition');
-    expect(d.facts.find((f) => f.qualifier === 'power_output')?.specRole).toBe('source_output');
+// P0 2026-08-26: a watt figure on a component that drives nothing licenses
+    // no dossier line at all — Eversolo's "Rated Power: 13W" is the unit's
+    // power draw, and rendering it as POWER OUTPUT under the amplifier gloss
+    // was the defect. Role-incompatible held specs are excluded, not retyped.
+    expect(d.facts.find((f) => f.qualifier === 'power_output')).toBeUndefined();
   });
 
   it('does NOT back-apply Gen 2 architecture to the model the listener owns', () => {

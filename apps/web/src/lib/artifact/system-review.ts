@@ -813,30 +813,63 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // Read from the dossiers rather than taken as an argument: the gaps are
   // already frozen in this snapshot, and a second channel for the same fact is
   // a second thing to keep in step.
-  const gap = input.dossiers.flatMap((d) => d.gaps)[0];
-  if (gap) {
-    /*
-     * ── D: TWO DIFFERENT QUESTIONS, TWO DIFFERENT MISSING DATA ──
-     *
-     * This said the impedance and phase plot "alone would let Audio XX finish
-     * the headroom question". It would not. Acoustic headroom is already
-     * computed, from sensitivity and rated power; what bounds it in a real
-     * room is distance, listening level and how much of its rated power the
-     * amplifier delivers into the actual load. The impedance plot answers a
-     * different question — how DIFFICULT the load is — and conflating the two
-     * told the listener that one specification would settle something it
-     * cannot touch.
-     */
-    limits.push(
-      `The gap is narrow and specific: ${gap.replace(/\.$/, '')}. That figure answers `
-      + `how hard this loudspeaker is to drive — whether its impedance dips or its phase `
-      + `angle asks more of the amplifier than the nominal rating suggests. It is not the `
-      + `same question as acoustic headroom, which the published sensitivity and power `
-      + `figures already bound; what limits that in your room is listening distance, the `
-      + `level you actually use, and how much of its rated power the amplifier delivers `
-      + `into the real load. So the plot would settle load difficulty — and what you hear `
-      + `at the volumes you actually use answers the rest better than any specification.`,
-    );
+  /*
+   * ── THE PROSE ABOUT A GAP IS LICENSED BY THE KIND OF GAP (P0) ──
+   *
+   * This block used to wrap the FIRST gap it found — whatever it was — in
+   * the explanation authored for the loudspeaker impedance-plot gap. On the
+   * FRANCE system the first gap is JOB's missing rated output, and the review
+   * then claimed an amplifier's output figure would reveal whether the
+   * loudspeaker's impedance dips — physics no quantity supports — and that
+   * "the published sensitivity and power figures already bound" a headroom
+   * the same artifact says are not established. Each kind of missing figure
+   * now gets only the explanation that is true of it, and the headroom clause
+   * renders only when the figures it cites actually survive in the dossiers
+   * this snapshot renders.
+   */
+  // Dossiers built before the quantity existed carry only the strings; a
+  // string-only gap is still named — it just borrows no physics.
+  const typedGap = input.dossiers.flatMap((d) =>
+    d.typedGaps ?? (d.gaps ?? []).map((text) => ({ text, quantity: undefined })))[0];
+  if (typedGap) {
+    const gapText = typedGap.text.replace(/\.$/, '');
+    const headroomBounded = !!findLine(spk?.dossier, 'sensitivity')
+      && !!findLine(amp?.dossier, 'power output');
+    const headroomClause = headroomBounded
+      ? ` It is not the same question as acoustic headroom, which the published `
+        + `sensitivity and power figures already bound; what limits that in your room is `
+        + `listening distance, the level you actually use, and how much of its rated `
+        + `power the amplifier delivers into the real load.`
+      : '';
+    if (typedGap.quantity === 'speaker_impedance_curve') {
+      limits.push(
+        `The gap is narrow and specific: ${gapText}. That figure answers `
+        + `how hard this loudspeaker is to drive — whether its impedance dips or its phase `
+        + `angle asks more of the amplifier than the nominal rating suggests.`
+        + headroomClause
+        + ` So the plot would settle load difficulty — and what you hear `
+        + `at the volumes you actually use answers the rest better than any specification.`,
+      );
+    } else if (typedGap.quantity === 'amplifier_rated_output') {
+      limits.push(
+        `The gap is narrow and specific: ${gapText}. That figure answers what the `
+        + `amplifier can deliver into this loudspeaker's load — and only that: it says `
+        + `nothing about the loudspeaker itself.`
+        + headroomClause,
+      );
+    } else if (typedGap.quantity === 'speaker_load_profile'
+      || typedGap.quantity === 'speaker_sensitivity') {
+      limits.push(
+        `The gap is narrow and specific: ${gapText}. Those figures are the `
+        + `loudspeaker's side of the drive question — what load it presents and how loud `
+        + `it plays per watt — and without them neither the drive relationship nor `
+        + `acoustic headroom can be assessed. Audio XX will not estimate either from `
+        + `reputation.`,
+      );
+    } else {
+      // A gap with no stated kind licenses only its own naming.
+      limits.push(`The gap is narrow and specific: ${gapText}.`);
+    }
   }
 
   /*
