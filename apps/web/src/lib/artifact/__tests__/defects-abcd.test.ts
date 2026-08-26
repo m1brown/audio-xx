@@ -84,8 +84,9 @@ describe('B — headroom reads the figure at the loudspeaker’s own load', () =
   it('and states which figure it read', () => {
     const h = conclusions().find((c) => c.kind === 'headroom');
     expect(h!.statement).toMatch(/200W figure at the 4-ohm load/);
-    // A ceiling, not a prediction — and it says which assumption it rests on.
-    expect(h!.statement).toMatch(/ceiling, not a prediction/);
+    // Still a ceiling with its assumption named — the "not a prediction"
+    // narration was trimmed in the editorial pass; the bound survives.
+    expect(h!.statement).toMatch(/a ceiling that assumes rated power/);
   });
 });
 

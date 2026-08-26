@@ -10,6 +10,7 @@
  * boundary is what is being proved. Typography, print polish and artifact
  * styling are held.
  */
+import ComponentDossiers from '@/components/advisory/ComponentDossiers';
 import React from 'react';
 import type { AssessmentSnapshotV1 } from '@/lib/artifact/snapshot';
 import type { AxisReading } from '@/lib/artifact/canonical';
@@ -301,8 +302,13 @@ export default function SnapshotArtifact(
         </section>
       )}
 
+      {/* ONE canonical YOUR SYSTEM. The artifact's own raw dossier list —
+        * run-together labels, uncurated spec dumps, unconstrained images —
+        * is retired in favour of the editorial dossier component the
+        * conversation uses. Same data, one design, and the sideways print's
+        * pages 2\u20133 duplicate disappears with it. */}
       {s.componentDossiers && s.componentDossiers.length > 0 && (
-        <Dossiers dossiers={s.componentDossiers} />
+        <ComponentDossiers dossiers={s.componentDossiers as never} />
       )}
 
 

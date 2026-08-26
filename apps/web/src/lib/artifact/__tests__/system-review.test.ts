@@ -122,10 +122,12 @@ describe('the review reasons ACROSS facts rather than restating them', () => {
     expect(out).toMatch(/sensitivity/i);
   });
 
-  it('says what conditioned observations do NOT establish', () => {
+  it('never flattens a conditioned observation into character', () => {
+    // The methodology narration was cut (convergence brief §9); the bound now
+    // rides inside each statement. The review must still never make the
+    // flattening move the narration used to warn about.
     const out = joined(NATHAN);
-    expect(out).toMatch(/not a description of how the unit sounds/i);
-    expect(out).toMatch(/supports nothing about the other components/i);
+    expect(out).not.toMatch(/the (dCS )?Rossini Apex is (warm|smooth|bright|detailed)\b/i);
   });
 });
 
@@ -147,9 +149,15 @@ describe('the review never exceeds its licence', () => {
     expect(out).not.toMatch(/wider bandwidth|narrowest bandwidth|extends lower than/i);
   });
 
-  it('attributes listening evidence to its publication and its scope', () => {
-    expect(out).toMatch(/Stereophile/);
-    expect(out).toMatch(/dCS Rossini Apex/);
+  it('carries no unattributed listening claim', () => {
+    /*
+     * The fixture supplies dossier observation LINES but no synthesis map, so
+     * the review's listening section is empty by design — observations live
+     * in the dossiers now. What the review must never do is mention a
+     * listening quality without a publication owning it; with no synthesis it
+     * must simply stay silent on listening.
+     */
+    expect(out).not.toMatch(/reviewers? (say|report|describe)/i);
   });
 
   it('the architecture claim never overreaches into sound', () => {

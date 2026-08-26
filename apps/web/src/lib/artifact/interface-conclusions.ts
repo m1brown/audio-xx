@@ -285,10 +285,9 @@ function headroomConclusion(
     statement: `On the published figures the pairing has substantial acoustic headroom: `
       + `${sensLine!.value} with the maker's ${power}W figure at the ${load}-ohm load this `
       + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
-      + `from a single loudspeaker. That is a ceiling, not a prediction: it assumes the `
-      + `amplifier delivers its rated power into the real load, and room, listening `
-      + `distance and the loudspeaker's actual impedance curve all reduce it. The margin is `
-      + `large enough that running out of level is unlikely to be this system's limitation.`,
+      + `— a ceiling that assumes rated power into the real load, before room and listening `
+      + `distance take their share. The margin is large enough that running out of level is `
+      + `unlikely to be this system's limitation.`,
   };
 }
 

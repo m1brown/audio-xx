@@ -5451,6 +5451,7 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
   // always show images when available — no dedup.
   // Narrative prose references use claimImage() for first-reference dedup.
   let content: React.ReactNode;
+  let renderedByEmbeddedArtifact = false;
 
   if (advisory.quickRecommendation) {
     content = <QuickRecFormat quickRec={advisory.quickRecommendation} />;
@@ -5503,6 +5504,11 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
       ) : (
         <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />
       );
+      // The snapshot above IS the review, the dossiers and the evidence.
+      // Rendering artifactActions' copies beneath it printed the whole of
+      // YOUR SYSTEM twice — raw then designed — with EVIDENCE both times,
+      // which is exactly what the sideways PDF showed on pages 2\u20135.
+      renderedByEmbeddedArtifact = !!assessment;
     } else if (SYSTEM_ASSESSMENT_ARTIFACT_ENABLED) {
       content = (
         <>
@@ -5544,7 +5550,7 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
         * REVIEW mode label, and a second identical heading lower down read as
         * two sections rather than one continuing. The paragraphs simply
         * continue the assessment they belong to, and precede YOUR SYSTEM. */}
-      {advisory.systemReview && advisory.systemReview.length > 0 && (
+      {!renderedByEmbeddedArtifact && advisory.systemReview && advisory.systemReview.length > 0 && (
         <section style={{ marginTop: '1rem' }} aria-label="System review">
           {advisory.systemReview.map((p, i) => (
             <p key={i} style={{
@@ -5566,8 +5572,9 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
         }}>{advisory.followUp}</p>
       )}
 
-      {/* Component-scoped: single-subject facts, outside the relational filter. */}
-      <ComponentDossiers dossiers={advisory.componentDossiers} />
+      {/* Component-scoped: single-subject facts, outside the relational filter.
+        * Skipped when the embedded snapshot already rendered the dossiers. */}
+      {!renderedByEmbeddedArtifact && <ComponentDossiers dossiers={advisory.componentDossiers} />}
       <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
     </>
   );
@@ -5618,7 +5625,16 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     >
       {content}
       {artifactActions}
-      {footer && <ResponseFooter groups={footer.groups} resources={footer.resources} />}
+      {/* CONTINUE EXPLORING and PRODUCT RESOURCES are conversation
+        * navigation, not part of the saved assessment. In the sideways print
+        * they trailed the document and left a near-blank final page — site
+        * chrome inside what should be a finished artifact. On screen they
+        * stay; the durable PDF ends with EVIDENCE. */}
+      {footer && (
+        <div data-print-hide>
+          <ResponseFooter groups={footer.groups} resources={footer.resources} />
+        </div>
+      )}
     </ProductImageProvider>
   );
 }

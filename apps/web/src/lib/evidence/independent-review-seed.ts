@@ -64,6 +64,27 @@ export interface ProductIdentity {
 
 export const PRODUCT_IDENTITIES: ProductIdentity[] = [
   {
+    /*
+     * The sideways-system pair (2026-08-26). Both heavily reviewed; both
+     * carry live variant traps. Leben's CS600X is a later, different circuit
+     * (6L6 family retained, redesigned drive stage) reviewed separately;
+     * DeVore's O/93 is the smaller sibling everyone shortens to "the
+     * Orangutan".
+     */
+    productKey: 'leben cs600',
+    canonical: 'Leben CS600',
+    aliases: ['leben cs600 integrated', 'leben cs600 integrated amplifier', 'cs600'],
+    excludes: ['leben cs600x', 'leben cs300', 'leben cs300x', 'leben cs300xs', 'leben cs1000p'],
+  },
+  {
+    productKey: 'devore orangutan o/96',
+    canonical: 'DeVore Fidelity Orangutan O/96',
+    aliases: ['devore o/96', 'devore o96', 'orangutan o/96', 'devore orangutan o/96',
+      'devore fidelity o/96', 'o/96'],
+    excludes: ['devore o/93', 'devore orangutan o/93', 'devore o/reference',
+      'devore micro', 'devore gibbon'],
+  },
+  {
     productKey: 'dcs rossini apex',
     canonical: 'dCS Rossini Apex',
     aliases: ['dcs rossini apex dac', 'rossini apex'],
@@ -332,6 +353,130 @@ const CANDIDATES: Candidate[] = [
       description: 'a comparison made in passing during a review of the MRC-2, not a '
         + 'review of the QRC-2',
     },
+  },
+
+  // ------------------------------------------------- DeVore O/96 ----------
+  // Art Dudley's full Stereophile review (December 2012) — rare in this store
+  // for carrying ABSOLUTE listening observations: a home review in a known
+  // room, most claims unconditioned, comparisons anchored to the Audio Note
+  // AN-E he owned. Also the closest thing the store holds to relational
+  // evidence for low-power amplification: Dudley ran the O/96 from 20W and
+  // 25W Shindo amplifiers and a 4W Fi 421A single-ended triode.
+  {
+    productKey: 'devore orangutan o/96',
+    productName: 'DeVore Fidelity Orangutan O/96',
+    publication: 'Stereophile',
+    reviewer: 'Art Dudley',
+    sourceUrl: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker',
+    publishedAt: '2012-12-03',
+    observationType: 'listening',
+    claim: 'Served every record with clarity, colour, impact, drama and scale, with a '
+      + 'superb overall tonal balance.',
+    axis: 'warm_bright', direction: 'neutral',
+  },
+  {
+    productKey: 'devore orangutan o/96',
+    productName: 'DeVore Fidelity Orangutan O/96',
+    publication: 'Stereophile',
+    reviewer: 'Art Dudley',
+    sourceUrl: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker',
+    publishedAt: '2012-12-03',
+    observationType: 'listening',
+    claim: 'Rendered singing voices clear and uncoloured, timbrally a shade richer than '
+      + 'the mean, and conveyed the substance of musical sound with an exceptional sense '
+      + 'of sonic flesh and blood.',
+    axis: 'warm_bright', direction: 'warm',
+  },
+  {
+    productKey: 'devore orangutan o/96',
+    productName: 'DeVore Fidelity Orangutan O/96',
+    publication: 'Stereophile',
+    reviewer: 'Art Dudley',
+    sourceUrl: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker',
+    publishedAt: '2012-12-03',
+    observationType: 'comparison',
+    claim: 'Reached further into the bottom octaves than the Audio Note AN-E, with a '
+      + 'flatter in-room response and markedly superior image focus and depth of stage.',
+    axis: 'airy_closed', direction: 'airy',
+  },
+  {
+    /*
+     * The relational row. Not a claim about how the O/96 sounds — a report of
+     * how it behaved WITH very low-power amplification, which is the exact
+     * interface question a Leben pairing raises.
+     */
+    productKey: 'devore orangutan o/96',
+    productName: 'DeVore Fidelity Orangutan O/96',
+    publication: 'Stereophile',
+    reviewer: 'Art Dudley',
+    sourceUrl: 'https://www.stereophile.com/content/devore-fidelity-orangutan-o96-loudspeaker',
+    publishedAt: '2012-12-03',
+    observationType: 'listening',
+    claim: 'Worked distinctly well with low-power amplification: a 20W Shindo drove a '
+      + 'tight, rhythmically engaging sound, and even a 4W single-ended 421A produced '
+      + 'the biggest sense of scale the reviewer heard from the pair.',
+    condition: {
+      kind: 'associated_equipment',
+      description: 'driven by Shindo Haut-Brion (20W), Shindo Corton Charlemagne (25W) '
+        + 'and a Fi 421A single-ended amplifier (4W) in the reviewer\u2019s own room',
+    },
+  },
+
+  // ------------------------------------------------- Leben CS600 ----------
+  // John Marks, Stereophile, The Fifth Element #60 (June 2010). The column
+  // carries a show-conditioned first encounter and direct home listening,
+  // and the amplifier subsequently held a Stereophile Class A recommendation.
+  {
+    productKey: 'leben cs600',
+    productName: 'Leben CS600',
+    publication: 'Stereophile',
+    reviewer: 'John Marks',
+    sourceUrl: 'https://www.stereophile.com/thefifthelement/the_fifth_element_60/index.html',
+    publishedAt: '2010-06-28',
+    observationType: 'listening',
+    claim: 'Presented music with an unforced, tactile easefulness and a distinctly '
+      + 'clean, fog-free window on the music — a sound the reviewer stressed was '
+      + 'neither retro nor euphonic.',
+    condition: {
+      kind: 'associated_equipment',
+      description: 'first heard at the 2008 Festival Son et Image driving ProAc Response '
+        + 'D Two loudspeakers in an exhibitor\u2019s room',
+    },
+    axis: 'smooth_detailed', direction: 'smooth',
+  },
+  {
+    productKey: 'leben cs600',
+    productName: 'Leben CS600',
+    publication: 'Stereophile',
+    reviewer: 'John Marks',
+    sourceUrl: 'https://www.stereophile.com/thefifthelement/the_fifth_element_60/index.html',
+    publishedAt: '2010-06-28',
+    observationType: 'listening',
+    claim: 'Struck an experienced listener in the reviewer\u2019s room as uncoloured — '
+      + 'free of the typical tube sound.',
+    axis: 'warm_bright', direction: 'neutral',
+  },
+  {
+    productKey: 'leben cs600',
+    productName: 'Leben CS600',
+    publication: 'Stereophile',
+    reviewer: 'John Marks',
+    sourceUrl: 'https://www.stereophile.com/thefifthelement/the_fifth_element_60/index.html',
+    publishedAt: '2010-06-28',
+    observationType: 'listening',
+    claim: 'Showed an almost indefinable sweetness and a notably beguiling presentation '
+      + 'of inner detail.',
+    axis: 'smooth_detailed', direction: 'detailed',
+  },
+  {
+    productKey: 'leben cs600',
+    productName: 'Leben CS600',
+    publication: 'Stereophile',
+    sourceUrl: 'https://www.stereophile.com/thefifthelement/the_fifth_element_60/index.html',
+    publishedAt: '2010-06-28',
+    observationType: 'positioning',
+    claim: 'Held a Stereophile Class A recommendation as a 32Wpc valve integrated '
+      + 'amplifier at $5,895.',
   },
 
   // ------------------------------------------------------------ Butler ----

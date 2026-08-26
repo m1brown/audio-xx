@@ -77,9 +77,16 @@ const review = () => composeSystemReview(NATHAN).join('\n\n');
 
 describe('listening evidence reaches SYSTEM REVIEW rather than being dropped', () => {
   it('uses the observations at all', () => {
+    /*
+     * SUPERSEDED FRAME (2026-08-26): the review no longer narrates the
+     * evidence methodology; observations reach the reader through the
+     * dossiers, and the review's listening section carries only synthesis.
+     * What must remain true: a system with observations never simply loses
+     * them. The fixture has no synthesis map, so the review is silent on
+     * listening — and must not FABRICATE any listening claim either way.
+     */
     const out = review();
-    expect(out).toMatch(/Stereophile/);
-    expect(out).toMatch(/dCS Rossini Apex/);
+    expect(out).not.toMatch(/the (dCS )?Rossini Apex is (warm|detailed|smooth|bright)/i);
   });
 
   it('disappears entirely when no observation is held', () => {
@@ -95,15 +102,14 @@ describe('listening evidence reaches SYSTEM REVIEW rather than being dropped', (
 describe('the comparison an observation was made under is preserved', () => {
   const out = review();
 
-  it('says the observations are comparative, not absolute', () => {
-    expect(out).toMatch(/stated under a specific comparison/i);
-    expect(out).toMatch(/against the earlier model, or between one input and another/i);
-  });
-
   it('refuses the generalisation from comparative to absolute', () => {
-    // "warmer than the earlier Rossini" → "the Rossini Apex is warm" is the
-    // exact move that turns a licensed observation into an unlicensed claim.
-    expect(out).toMatch(/not a description of how the unit sounds on its own/i);
+    /*
+     * The methodology narration ("stated under a specific comparison...") was
+     * cut per the convergence brief; the comparative bound now travels INSIDE
+     * each statement ("next to the earlier Rossini — a comparison, not an
+     * absolute placement"), which the character tests pin. What this review
+     * fixture must never do is flatten a comparison into a character claim.
+     */
     for (const flattened of [
       /the (dCS )?Rossini Apex is (warm|detailed|smooth|bright)/i,
       /the Rossini Apex sounds/i,
@@ -114,8 +120,12 @@ describe('the comparison an observation was made under is preserved', () => {
 describe('an observation about one component licenses nothing about another', () => {
   const out = review();
 
-  it('says so explicitly', () => {
-    expect(out).toMatch(/supports nothing about the other components/i);
+  it('licenses nothing about the other components', () => {
+    // The explicit sentence was methodology narration and is gone. The
+    // INVARIANT stays: no other component acquires character from the dCS
+    // observations in this fixture.
+    expect(out).not.toMatch(/Leben.{0,40}(warm|detailed|smooth|rich)/i);
+    expect(out).not.toMatch(/(Cornwall|speaker).{0,30}(warm|rich|smooth)\b/i);
   });
 
   it('claims no synergy, cancellation or counterweight', () => {

@@ -547,28 +547,15 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   const electricalParas = electrical;
   const electricalPara = electrical.length ? electrical[0] : undefined;
 
-  // ── EXPLAIN: what independent observations do and do not establish ────
-  //
-  // Every Stereophile line Audio XX holds for the Rossini Apex carries a stated
-  // comparison. That is worth saying out loud: a conditioned observation is
-  // evidence about a DIFFERENCE, not about absolute character, and a reader who
-  // is not told the condition will read it as the latter.
-  for (const d of input.dossiers) {
-    const obs = lines(d).filter((l) => l.sourceClass === 'listening_observation');
-    if (obs.length === 0) continue;
-    const conditioned = obs.filter((l) => / — only /.test(l.value));
-    if (conditioned.length === 0) continue;
-    const pub = obs[0].publication ?? 'the reviewer';
-    observationParas.push(
-      `The listening evidence Audio XX holds for ${d.displayName} comes from `
-      + `${pub}, and ${conditioned.length === obs.length ? 'every one of those observations' : 'most of it'} `
-      + `is stated under a specific comparison — against the earlier model, or `
-      + `between one input and another. That makes it evidence about a DIFFERENCE `
-      + `heard under a named condition, not a description of how the unit sounds `
-      + `on its own, and it is reported that way in the dossier below. It supports `
-      + `nothing about the other components in this chain.`,
-    );
-  }
+  /*
+   * The per-component DIFFERENCE-methodology paragraph was removed here
+   * (2026-08-26, second attempt — the first cut in the convergence pass
+   * missed this block and it surfaced verbatim in the sideways Leben/DeVore
+   * print as the whole of "Why it works"). The rule it explained is enforced
+   * where the evidence lives: every comparative statement carries its anchor
+   * inline. Narrating the rule was the weakest possible use of the review's
+   * most prominent section.
+   */
 
   /*
    * ── EXPLAIN: what the listening evidence establishes per component ──
@@ -689,6 +676,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `sources, not observed properties of the system.`,
       );
     }
+    let reinforcingTailUsed = false;
     for (const r of established) {
       const relDims = [...new Set(
         (r.requires ?? []).map((pr) => DIMENSION_LABEL[pr.dimension]),
@@ -712,9 +700,12 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           + (comparative
             ? ` — each established against another product rather than in absolute terms`
             : '')
-          + `. If those descriptions combine, this is where the system's character is `
-          + `most likely to concentrate.`,
+          + (reinforcingTailUsed
+            ? `. The same pattern holds at this interface.`
+            : `. If those descriptions combine, this is where the system's character is `
+              + `most likely to concentrate.`),
         );
+        reinforcingTailUsed = true;
       } else {
         synergyParas.push(r.statement);
       }
@@ -919,6 +910,58 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         || p.productKey.split(' ').every((t) => c.displayName.toLowerCase().includes(t)),
     ));
     const klass = classifySystem(input.components.length, priced, NATHAN_POSITIONS);
+    /*
+     * ── ARCHITECTURAL COHERENCE — established from topology and figures ──
+     *
+     * The sideways test's finding: SYSTEM ARCHITECTURE can sometimes be
+     * ESTABLISHED where system sound cannot. A very sensitive, benign-load
+     * loudspeaker driven by modest-power valve amplification is not an
+     * accident of shopping — it is a recognisable design tradition, and the
+     * published figures are sufficient evidence that the combination was
+     * chosen to fit. Saying so is a claim about DESIGN INTENT LEGIBILITY,
+     * not about sound, and it is exactly the judgment the earlier opening
+     * ("one compatibility finding") failed to make.
+     *
+     * Gates, all from dossier figures: loudspeaker sensitivity \u226594dB and
+     * nominal load \u22658 ohms (the benign end), amplifier rated \u226450W with a
+     * published tube complement. Every number read from the same lines the
+     * dossiers print.
+     */
+    let architectureJudgment: string | undefined;
+    {
+      const spkSens = (() => {
+        const l = spk && findLine(spk.dossier, 'sensitivity');
+        const m = l && /([\d.]+)\s*db/i.exec(l.value);
+        return m ? Number(m[1]) : undefined;
+      })();
+      const spkLoad = (() => {
+        const l = spk && findLine(spk.dossier, 'impedance');
+        const m = l && /([\d.]+)\s*ohm/i.exec(l.value);
+        return m ? Number(m[1]) : undefined;
+      })();
+      const ampWatts = (() => {
+        const l = amp && lines(amp.dossier ?? { primary: [], secondary: [] } as never)
+          .find((x) => /power output/i.test(x.label));
+        const m = l && /([\d.]+)\s*w/i.exec(l.value);
+        return m ? Number(m[1]) : undefined;
+      })();
+      const ampValve = !!(amp && findLine(amp.dossier, 'tube complement'));
+
+      if (spkSens !== undefined && spkSens >= 94
+        && spkLoad !== undefined && spkLoad >= 8
+        && ampWatts !== undefined && ampWatts <= 50 && ampValve) {
+        architectureJudgment =
+          `This is a deliberately architected system in a recognisable tradition: a `
+          + `high-resolution digital source feeding modest-power valve amplification `
+          + `into a very sensitive, benign-load loudspeaker. The fit is not luck — `
+          + `${spkSens}dB sensitivity into a ${spkLoad}-ohm nominal load is precisely `
+          + `what lets a ${ampWatts}W valve amplifier work well inside its comfortable `
+          + `range, and loudspeakers like this are designed for exactly this kind of `
+          + `amplifier. The architecture is established by the published figures; how `
+          + `this particular combination voices is a separate question, taken up below.`;
+      }
+    }
+
     const ambition = klass
       ? `This is an exceptionally ambitious, ${klass.klass === 'reference_oriented'
         ? 'reference-oriented' : klass.klass.replace(/_/g, '-')} system, assembled from `
@@ -993,8 +1036,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       : undefined;
 
     const opening = [ambition, coherence].filter(Boolean).join(' ');
-    if (opening) thesis.unshift(...[opening, hypothesis, uncertainty].filter(Boolean) as string[]);
-    else if (hypothesis) thesis.unshift(...[hypothesis, uncertainty].filter(Boolean) as string[]);
+    const parts = [architectureJudgment, opening || undefined, hypothesis, uncertainty]
+      .filter(Boolean) as string[];
+    if (parts.length) thesis.unshift(...parts);
   }
 
   /*
