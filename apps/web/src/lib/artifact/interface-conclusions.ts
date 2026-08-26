@@ -33,6 +33,14 @@ export interface InterfaceConclusion {
   statement: string;
   /** The figures it rests on, for the reader and for the ledger. */
   restsOn: string[];
+  /**
+   * Whether the established finding is a comfortable one.
+   *
+   * Set on established conclusions only. Lets the review say ONE thing about
+   * the engineering as a whole — "no electrical bottleneck" — without
+   * re-parsing its own prose to find out.
+   */
+  favourable?: boolean;
 }
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
@@ -152,11 +160,12 @@ function loadingConclusion(
 
   const ratio = inOhms / outOhms;
   const comfortable = ratio >= LOADING_RULE.threshold;
+
   const rounded = ratio >= 100 ? Math.round(ratio / 10) * 10 : Math.round(ratio);
 
   return {
     upstream: upstream.name, downstream: downstream.name, kind: 'loading',
-    status: 'established',
+    status: 'established', favourable: comfortable,
     restsOn: [
       `${upstream.name}: ${out.value} (${out.label.toLowerCase()})`,
       `${downstream.name}: ${inp.value} (${inp.label.toLowerCase()})`,
@@ -211,7 +220,7 @@ function levelConclusion(
 
   return {
     upstream: preamp.name, downstream: amp.name, kind: 'level',
-    status: 'established',
+    status: 'established', favourable: true,
     restsOn: [
       `${source.name}: ${outputs.value}`,
       `${preamp.name}: ${gainLine!.value} (${gainLine!.label.toLowerCase()})`,
@@ -255,7 +264,7 @@ function headroomConclusion(
   const peak = sens + 10 * Math.log10(power);
   return {
     upstream: amp.name, downstream: speaker.name, kind: 'headroom',
-    status: 'established',
+    status: 'established', favourable: true,
     restsOn: [
       `${speaker.name}: ${sensLine!.value}`,
       `${amp.name}: ${power}W at ${load} ohms (from ${powerLine.value})`,

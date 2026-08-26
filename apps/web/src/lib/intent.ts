@@ -1921,6 +1921,31 @@ export function detectIntent(
     && (subjectMatches.length >= 2 || chainSegmentCount >= 2)) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
+  /*
+   * Comma lists after an explicit assessment request (convergence pass,
+   * 2026-08-26). "Assess my system: Zorblax ZX-1 streamer, Quuxamp 9
+   * amplifier, Blorp Minis speakers." carries no chain punctuation and
+   * resolves no subjects when every product is uncatalogued — so the
+   * explicit request fell through consultation_entry into the knowledge
+   * lane, which INVENTED reputations for products that do not exist
+   * ("the Zorblax ZX-1 is known for its highly resolving nature").
+   *
+   * The routing doctrine runs the other way: an explicit assessment request
+   * over a listed chain is a typed constraint on the turn. How little
+   * Audio XX knows about the listed components is the assessment lane's
+   * finding to report honestly — never a reason to change lanes into one
+   * that will guess. Same principle as the chain-segment count above: the
+   * LIST asserts how many components the user named, whether or not any
+   * of them resolves.
+   */
+  const listAfterColon = /(?:system|setup|rig|chain)\s*[:\-\u2013\u2014]\s*(.+)$/is.exec(currentMessage);
+  const commaSegments = listAfterColon
+    ? listAfterColon[1].split(/[,;]/).map((x) => x.trim()).filter((x) => /[a-z]/i.test(x) && x.length > 2)
+    : [];
+  if (hasAssessmentLanguage && hasOwnership && commaSegments.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
   // Ownership + chain separator + 2+ subjects implies system presentation.
   // "here's my system: dac: X - amp: Y - speakers: Z" — the act of presenting
   // a multi-component chain with ownership language is itself an assessment request,

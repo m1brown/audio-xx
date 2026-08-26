@@ -202,15 +202,21 @@ describe('limits are consolidated, and the closing question is last', () => {
   });
 
   it('ends on what would materially improve the assessment', () => {
+    /*
+     * The gap paragraph moved from a closing NEXT slot into WHAT REMAINS
+     * UNKNOWN, which now closes the argument (recommendation before unknowns,
+     * per the convergence brief). The requirement it pins is unchanged: the
+     * document's final material is the specific missing evidence, not a
+     * generic sign-off.
+     */
     expect(r.paragraphs[r.paragraphs.length - 1]).toMatch(/The gap is narrow and specific/);
-    expect(r.nextIndex).toBe(r.paragraphs.length - 1);
   });
 
   it('exposes where a caller should insert its own limits material', () => {
-    // An unresolved-evidence statement appended at the very end landed BELOW
-    // "here is what would help" — an afterthought to the thing it motivates.
+    // Unresolved-evidence statements are LIMITS material, and the unknown
+    // region now closes the document — so the insertion point is its end.
     expect(typeof r.nextIndex).toBe('number');
-    expect(r.nextIndex).toBeLessThan(r.paragraphs.length);
+    expect(r.nextIndex).toBe(r.paragraphs.length);
   });
 });
 

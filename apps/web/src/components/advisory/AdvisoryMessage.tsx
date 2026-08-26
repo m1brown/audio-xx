@@ -5102,7 +5102,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 11b. Saved-system note ────────────────── */}
-      {a.savedSystemNote && (
+      {/* A SHOPPING NOTE NEVER RENDERS OVER AN ASSESSMENT.
+        *
+        * The intent guard upstream was supposed to keep this off assessment
+        * turns and production showed it can miss — the fragment rendered
+        * above a full SYSTEM REVIEW, promising "picks below" that do not
+        * exist. The renderer knows for certain whether this turn is an
+        * assessment: it is holding one. That knowledge, not the intent
+        * classifier, is the reliable gate. */}
+      {a.savedSystemNote && !(a.systemReview && a.systemReview.length > 0) && (
         <div
           style={{
             borderLeft: `3px solid ${COLORS.accent}`,

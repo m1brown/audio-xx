@@ -3690,12 +3690,43 @@ export default function Home() {
 
         return;
       }
-      // Launch gate 2026-07-19 (MVP review SA-08): when the extractor
-      // cannot form a system at all (e.g. active-monitor chains like
-      // Genelec + RME), the null result used to fall through the guarded
-      // consultation path into a partial card or nothing. A real prose
-      // answer about the named gear from the knowledge lane beats a
-      // broken assessment.
+      /*
+       * SA-08 (2026-07-19) sends a null assessment to the knowledge lane
+       * because a real prose answer about RECOGNISED gear (Genelec + RME)
+       * beats a broken assessment. That reasoning has a boundary the
+       * convergence pass found the hard way: when NOTHING in the message
+       * resolves — every listed product unknown — the knowledge lane has
+       * no knowledge to draw on and invents it. Production answered
+       * "Assess my system: Zorblax ZX-1..." with "the Zorblax ZX-1 is
+       * known for its highly resolving nature": a reputation authored for
+       * a product that does not exist, in Audio XX's voice.
+       *
+       * An explicit assessment request over an unrecognised chain gets the
+       * honest assessment-lane answer instead: name what was listed, say
+       * plainly that none of it is held, ask for exact makes and models.
+       * Sparse evidence produces explicit limits, never generic filler.
+       */
+      if (assessmentSubjects.length === 0) {
+        const listed = /(?:system|setup|rig|chain)\s*[:\-\u2013\u2014]\s*(.+)$/is
+          .exec(accumulatedText)?.[1]
+          ?.split(/[,;]/).map((x) => x.trim().replace(/\.$/, '')).filter(Boolean) ?? [];
+        pendingClarificationRef.current = { kind: 'system_components', originalRequest: submittedText };
+        dispatch({
+          type: 'ADD_QUESTION',
+          clarification: {
+            acknowledge: 'I can see the shape of your system, but none of these components '
+              + 'matches anything Audio XX holds evidence for.',
+            question: (listed.length
+              ? `I couldn't match ${listed.join(', ')} to any product I know — `
+              : 'I couldn\u2019t match any of the components you listed — ')
+              + 'could you check the exact makes and models? I would rather ask than '
+              + 'guess at gear I cannot verify.',
+            unresolved: listed.length ? listed : undefined,
+          },
+        });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
+      }
       runKnowledgeLane();
       return;
     }

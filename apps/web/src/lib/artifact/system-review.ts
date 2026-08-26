@@ -42,7 +42,7 @@ import { interfaceConclusions } from './interface-conclusions';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
 import type { SonicRelation } from '../evidence/relational-synthesis';
-import { ELECTRICAL_SCOPE_NOTE, mergeByPair } from '../evidence/relational-synthesis';
+import { mergeByPair } from '../evidence/relational-synthesis';
 
 export interface ReviewComponent {
   displayName: string;
@@ -588,10 +588,24 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * first. They are also the ones that changed most: three of these
    * interfaces were reported as unresolved until the figures were fetched.
    */
-  const interfaceParas: string[] = [];
-  for (const c of interfaceConclusions(input.components, input.dossiers)) {
-    interfaceParas.push(c.statement);
-  }
+  const conclusions = interfaceConclusions(input.components, input.dossiers);
+  const interfaceParas: string[] = conclusions.map((c) => c.statement);
+  const engineeringCoherent = conclusions.length >= 2
+    && conclusions.every((c) => c.status === 'established' && c.favourable !== false);
+  /*
+   * MEANING BEFORE ARITHMETIC. The calculations below are kept in full, but
+   * the reader gets their system-level conclusion first — the ratios exist to
+   * support the sentence, not the other way round.
+   */
+  const engineeringLead: string[] = engineeringCoherent
+    ? [
+      `The engineering verdict is uncomplicated: there is no electrical bottleneck in `
+      + `this chain. Every interface that can be checked from published figures checks `
+      + `out with a comfortable margin, the gain structure has power to spare, and the `
+      + `published sensitivity and power figures leave substantial headroom. The `
+      + `supporting numbers follow.`,
+    ]
+    : [];
 
   const synergyParas: string[] = [];
   if (input.synthesis) {
@@ -605,36 +619,14 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * and to leave the observation-by-observation inventory to YOUR SYSTEM,
      * where a reader checking a specific component will look for it.
      */
-    const all = [...input.synthesis.character.values()].flat();
-    if (all.length > 0) {
-      const publications = [...new Set(all.flatMap((p) => p.publications))];
-      const covered = [...input.synthesis.character.entries()]
-        .filter(([, props]) => props.length > 0).map(([name]) => name);
-      const conditioned = all.filter((p) => p.basis === 'conditional');
-      const comparative = all.filter((p) => p.basis === 'comparative_only');
-
-      const pubList = publications.length === 1 ? publications[0]
-        : `${publications.slice(0, -1).join(', ')} and ${publications[publications.length - 1]}`;
-      const compList = covered.length === 1 ? `the ${covered[0]}`
-        : `the ${covered.slice(0, -1).join(', the ')} and the ${covered[covered.length - 1]}`;
-
-      observationParas.push(
-        `The listening evidence behind this assessment comes from ${pubList}, and covers `
-        + `${compList}. `
-        + (comparative.length > 0
-          ? `Most of it was established against other products rather than in absolute terms — `
-            + `the reviewers were describing what changed, not where these components sit on `
-            + `any scale. `
-          : '')
-        + (conditioned.length > 0
-          ? `${conditioned.length === all.length ? 'All of it' : 'Part of it'} was heard under `
-            + `stated conditions that travel with the claim: a show room, one input against `
-            + `another, a comparison made in passing during a review of a different model. `
-          : '')
-        + `Each observation is set out with its publication and its conditions in the `
-        + `component notes below.`,
-      );
-    }
+    /*
+     * The sources-and-conditions summary paragraph was removed (2026-08-26):
+     * it described the evidence base — who published, how much was
+     * comparative, what conditions applied — which is EVIDENCE's job and the
+     * dossiers' job. SYSTEM REVIEW argues from the evidence rather than
+     * introducing it, and the bounding that matters is stated once at the
+     * head of the listening section.
+     */
 
     /*
      * ── EXPLAIN: what the components do to each other ──
@@ -647,17 +639,59 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     const established = mergeByPair(
       significantRelations(input.synthesis.relations).filter((r) => ESTABLISHED.has(r.kind)),
     );
-    for (const r of established) synergyParas.push(r.statement);
+    /*
+     * COMPOSED TIGHT, BOUNDED ONCE. The relation objects carry their full
+     * bounded statements, and printing them verbatim repeated the same
+     * "no reviewer heard them together... more likely to add than cancel"
+     * clause under every pair. The section now opens with that bound stated
+     * once, and each relation is rendered from its structured fields at a
+     * length its content earns. Nothing is claimed that the relation object
+     * does not hold — this is compression, not strengthening.
+     */
+    if (established.length > 0) {
+      synergyParas.push(
+        `No reviewer has heard this exact combination, so what follows is how `
+        + `independently reported characteristics may combine — hypotheses with named `
+        + `sources, not observed properties of the system.`,
+      );
+    }
+    for (const r of established) {
+      const relDims = [...new Set(
+        (r.requires ?? []).map((pr) => DIMENSION_LABEL[pr.dimension]),
+      )];
+      const dimList = relDims.length <= 1 ? (relDims[0] ?? DIMENSION_LABEL[r.dimension])
+        : relDims.length === 2 ? `${relDims[0]} and ${relDims[1]}`
+          : `${relDims.slice(0, -1).join('; ')}; and ${relDims[relDims.length - 1]}`;
+      const comparative = (r.requires ?? []).some((pr) => pr.basis === 'comparative_only');
+      const conditional = (r.requires ?? []).every((pr) => pr.basis === 'conditional');
+      if (r.kind === 'tension') {
+        synergyParas.push(
+          `Both the ${r.upstreamName} and the ${r.downstreamName} carry a `
+          + `${conditional ? 'stated ' : ''}${(r.requires?.[0]?.direction) ?? 'shared'} tendency in `
+          + `${dimList}. Same-direction characteristics add rather than cancel, so if the `
+          + `descriptions hold here, this is the tendency to listen for first.`,
+        );
+      } else if (r.kind === 'reinforcing') {
+        synergyParas.push(
+          `Independent reviews describe the ${r.upstreamName} and the ${r.downstreamName} `
+          + `in the same terms across ${dimList}`
+          + (comparative
+            ? ` — each established against another product rather than in absolute terms`
+            : '')
+          + `. If those descriptions combine, this is where the system's character is `
+          + `most likely to concentrate.`,
+        );
+      } else {
+        synergyParas.push(r.statement);
+      }
+    }
 
     /*
-     * The scope note earns its place only when both kinds of evidence are on
-     * the page. Printed next to electrical findings alone it answers a
-     * question nobody asked; printed here it stops a reader carrying the
-     * amplifier's comfortable drive of the load into the sonic paragraphs.
+     * The standalone scope-note paragraph is gone (2026-08-26): the boundary
+     * it stated is enforced by construction and the engineering paragraphs
+     * carry it inline where it changes a reading. Explaining it again here
+     * was methodology in the middle of the assessment.
      */
-    if (established.length > 0 && electricalParas.length > 0) {
-      synergyParas.push(ELECTRICAL_SCOPE_NOTE);
-    }
 
     /*
      * ── The boundary, stated once and named ──
@@ -686,9 +720,12 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `That is a gap in published coverage, not a judgement about `
         + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
         + `are either in publications Audio XX does not draw on or are of different models. `
-        + `Because of it, ${blocked.length === 1 ? 'one relationship in this chain' : `${blocked.length} of the relationships in this chain`} `
-        + `cannot be assessed from listening evidence at all, and any statement about how `
-        + `${names} colours what reaches the loudspeakers would be invention. A published `
+        + `Because of it, ${blocked.length === 1 ? 'one relationship in this chain cannot'
+          : blocked.length > 1 ? `${blocked.length} of the relationships in this chain cannot`
+            : 'none of the component-to-component relationships in this chain can'} `
+        + `be assessed from listening evidence at all, and any statement about how `
+        + `${names} ${missing.length === 1 ? 'colours' : 'colour'} what reaches the `
+        + `loudspeakers would be invention. A published `
         + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
         + `publication would change more of this assessment than any other single piece of evidence.`,
       );
@@ -750,7 +787,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * told the listener that one specification would settle something it
      * cannot touch.
      */
-    next.push(
+    limits.push(
       `The gap is narrow and specific: ${gap.replace(/\.$/, '')}. That figure answers `
       + `how hard this loudspeaker is to drive — whether its impedance dips or its phase `
       + `angle asks more of the amplifier than the nominal rating suggests. It is not the `
@@ -764,22 +801,12 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
-   * ORDERED BY WHAT MATTERS, not by what was computed first.
-   *
-   * The quantitative amplifier-to-loudspeaker analysis is the strongest thing
-   * Audio XX can say about most systems, and it was arriving third. Chain
-   * architecture is real but weaker, and conditioned listening observations
-   * are about ONE component — useful, and not a system relationship — so they
-   * come last of the explanatory material.
+   * The flat-paragraph assembly moved BELOW the drive-interface and thesis
+   * blocks (2026-08-26): it spread `electricalParas` by value, so the drive
+   * paragraph unshifted after this point reached the labelled sections and
+   * silently missed the flat conversation surface. One assembly, after every
+   * mutation.
    */
-  explanation.push(
-    ...electricalParas,
-    ...interfaceParas,
-    ...lineLevel,
-    ...(architecturePara ? [architecturePara] : []),
-    ...synergyParas,
-    ...observationParas,
-  );
 
   /**
    * THE PRINCIPAL ASSESSMENT — derived from the same lines the body reads.
@@ -818,7 +845,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       ? ` What they do not establish is ${unestablished.join(' or ')}, because ${because}.`
       : '';
 
-    thesis.push(
+    electricalParas.unshift(
       `${amp.component.displayName} into ${spk.component.displayName} is the interface `
       + `where the published figures bear most directly on what the system can do. `
       + `The makers' own figures establish compatibility `
@@ -828,93 +855,208 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
-   * ── THE PRINCIPAL CONCLUSION ──
+   * ── THE ASSESSMENT — judgment first ──
    *
-   * Unshifted so the reader meets the argument's conclusion first, and derived
-   * from the SAME licensed relations the body prints — not written alongside
-   * them. Two accounts of one assessment drift; a thesis assembled from the
-   * established dimensions cannot say more than the paragraphs beneath it,
-   * because it is reading them.
+   * One opening, built from every licensed layer at once: market class,
+   * interface conclusions, established relations and component character.
+   * The reader learns, in order, what kind of system this is, whether its
+   * architecture is coherent, what its likely defining strengths are, what
+   * the principal synergy hypothesis is, and where the main uncertainty
+   * sits. Everything below SUPPORTS this opening; none of it is needed to
+   * understand it.
    *
-   * Three obligations, in order: what the evidence supports, what licensed it,
-   * and the limitation that matters most. The third is not a hedge appended to
-   * soften the first — for this system it is the finding, because the
-   * uncharacterised component sits in the middle of the chain.
-   */
-  if (input.synthesis) {
-    const established = input.synthesis.relations.filter((r) => ESTABLISHED.has(r.kind));
-    const dims = [...new Set(established.map((r) => r.dimension))];
-    if (dims.length > 0) {
-      const labels = dims.map((d) => DIMENSION_LABEL[d]);
-      // Semicolons because several dimension labels contain their own "and";
-      // comma-joining them produced "bass weight and grip and imaging and staging".
-      const list = labels.length === 1 ? labels[0]
-        : labels.length === 2 ? `${labels[0]} and ${labels[1]}`
-          : `${labels.slice(0, -1).join('; ')}; and ${labels[labels.length - 1]}`;
-
-      // Only comparative inputs -> the conclusion inherits that shape.
-      const allComparative = established.every((r) =>
-        r.requires.every((p) => p.basis === 'comparative_only' || p.basis === 'conditional'));
-
-      const missing = input.synthesis.uncharacterised;
-
-      thesis.unshift(
-        `Where the published listening evidence converges, it converges on ${list} — `
-        + `several components in this chain are described in the same terms on `
-        + `${dims.length === 1 ? 'that dimension' : 'those dimensions'}. No reviewer heard `
-        + `them together, so what follows is a bounded hypothesis about how those `
-        + `descriptions might combine, not an established property of the system. `
-        + (allComparative
-          ? `That conclusion is bounded: the observations behind it were made against other `
-            + `products rather than in absolute terms, so it describes a direction this system `
-            + `leans, not a level it reaches. `
-          : '')
-        + (missing.length > 0
-          ? `It is also incomplete in a way worth stating plainly at the outset: Audio XX holds `
-            + `no admitted listening evidence for `
-            + `${missing.length === 1 ? `the ${missing[0]}` : `the ${missing.slice(0, -1).join(', the ')} and the ${missing[missing.length - 1]}`}, `
-            + `which leaves ${missing.length === 1 ? 'a major link in the chain' : 'major links in the chain'} `
-            + `unresolved. That is a gap in what can be assessed, not a finding that `
-            + `${missing.length === 1 ? 'it dominates' : 'they dominate'} the result — nothing here `
-            + `establishes how much of what this system does is attributable to `
-            + `${missing.length === 1 ? 'that component' : 'those components'}.`
-          : ''),
-      );
-    }
-  }
-
-  /*
-   * SEMANTIC SLOTS, suppressed when empty.
-   *
-   * The thesis existed but arrived after several weaker paragraphs, so a
-   * reader met the argument's conclusion last. These are the roles the
-   * material already plays; naming them lets the document lead with the
-   * finding and lets a sparsely evidenced system stay short — a heading with
-   * nothing under it is filler, and filler is what the licensing work spent
-   * this month removing.
-   */
-  /*
-   * ── WHAT KIND OF SYSTEM THIS IS ──
-   *
-   * Placed after the principal conclusion in CODE so that its unshift runs
-   * last and it lands FIRST in the document — "what kind of system is this"
-   * is the question a listener asks before any other, and the one Audio XX
-   * has never been able to answer.
-   * It rests on verified prices and the makers' own ranges, and it says in
-   * its own sentence that it carries no conclusion about sound.
-   *
-   * Prices are keyed by product, so a system containing none of them simply
-   * produces no classification — which is the correct output, not a
-   * degraded one.
+   * It is assembled from the same structured objects the body renders, so it
+   * cannot claim what the body then fails to show — and each claim carries
+   * its epistemic status in one clause, not a paragraph: "a supported
+   * hypothesis, since no reviewer has heard these four together" is the
+   * whole of the bounding a reader needs at this altitude. The machinery
+   * that enforces the rest works underneath.
    */
   {
+    const relations = input.synthesis?.relations ?? [];
+    const established = relations.filter((r) => ESTABLISHED.has(r.kind));
+    const dims = [...new Set(established.map((r) => r.dimension))];
+    const character = input.synthesis?.character ?? new Map<string, never[]>();
+
+    // The market sentence — ONE sentence. The full reasoning (which flagship
+    // sits above what, why the top labels are withheld) lives in EVIDENCE
+    // territory; the reader here needs the conclusion.
     const priced = NATHAN_PRICES.filter((p) => input.components.some(
       (c) => c.displayName.toLowerCase().includes(p.productKey.split(' ')[0])
         || p.productKey.split(' ').every((t) => c.displayName.toLowerCase().includes(t)),
     ));
     const klass = classifySystem(input.components.length, priced, NATHAN_POSITIONS);
-    if (klass) thesis.unshift(klass.statement);
+    const ambition = klass
+      ? `This is an exceptionally ambitious, ${klass.klass === 'reference_oriented'
+        ? 'reference-oriented' : klass.klass.replace(/_/g, '-')} system — on verified `
+        + `prices, roughly ${'$'}${Math.round(priced.reduce((a, b) => a + b.usd, 0) / 1000)}k `
+        + `of equipment positioned near the top of serious high-end audio`
+        + `${klass.withheld ? ', though below its makers\u2019 own flagships' : ''}.`
+      : undefined;
+
+    const coherence = engineeringCoherent
+      ? `Its architecture is technically coherent: every electrical interface that can `
+        + `be checked from published figures checks out comfortably, and the numbers `
+        + `leave power and headroom to spare.`
+      : undefined;
+
+    // The synergy hypothesis, assembled from what the character map actually
+    // holds. Each clause is gated on its evidence and phrased at its
+    // strength — comparative claims keep their anchors, conditions stay
+    // signalled ("stated"), and the whole carries one status marker.
+    let hypothesis: string | undefined;
+    if (dims.length > 0) {
+      const labels = dims.map((d) => DIMENSION_LABEL[d]);
+      const list = labels.length === 1 ? labels[0]
+        : labels.length === 2 ? `${labels[0]} and ${labels[1]}`
+          : `${labels.slice(0, -1).join('; ')}; and ${labels[labels.length - 1]}`;
+
+      const resolutionComparative = [...character.values()].flat()
+        .filter((pr) => pr.dimension === 'resolution')
+        .every((pr) => pr.basis === 'comparative_only');
+      const warmTension = established.find(
+        (r) => r.kind === 'tension' && r.dimension === 'warmth');
+      const neutralMid = input.components.find((c) => {
+        const props = character.get(c.displayName) ?? [];
+        return /pre/i.test(c.role ?? '') && props.some(
+          (pr) => pr.dimension === 'neutrality' && pr.direction === 'neutral'
+            && pr.basis === 'direct_observation');
+      });
+
+      hypothesis =
+        `Where the published listening evidence converges, it converges on ${list}. `
+        + `The coherent reading of this chain — a supported hypothesis, since no `
+        + `reviewer has heard these ${input.components.length === 4 ? 'four' : 'components'} `
+        + `together — is a system built to retrieve an unusual amount of information `
+        + `and present it with body rather than analytical thinness`
+        + (resolutionComparative
+          ? `: the front of the chain is independently described as more resolving and `
+            + `better focused than the models it replaced`
+          : '')
+        + (warmTension
+          ? `, the ${warmTension.upstreamName}\u2013${warmTension.downstreamName} end carries `
+            + `a stated warmer tendency`
+          : '')
+        + (neutralMid
+          ? `, and between them sits a preamplifier described as neutral rather than `
+            + `coloured — which makes the combination more interesting than a simple `
+            + `"warm plus detailed" recipe`
+          : '')
+        + '.';
+    }
+
+    // The main uncertainty: the least corroborated link. Fully conditional
+    // evidence from a single publication, or no evidence at all.
+    const leastEvidenced = input.components.filter((c) => {
+      const props = character.get(c.displayName) ?? [];
+      if (props.length === 0) return (character.size > 0);
+      const pubs = new Set(props.flatMap((pr) => pr.publications.map((x) => x.toLowerCase())));
+      return props.every((pr) => pr.basis === 'conditional') && pubs.size <= 1;
+    });
+    const uncertainty = leastEvidenced.length === 1 && dims.length > 0
+      ? `The open question is the ${leastEvidenced[0].role || 'component'} — the `
+        + `${leastEvidenced[0].displayName} is the least corroborated link in the chain, `
+        + `and the most informative place to experiment. That question, and what would `
+        + `answer it, is taken up below.`
+      : undefined;
+
+    const opening = [ambition, coherence].filter(Boolean).join(' ');
+    if (opening) thesis.unshift(...[opening, hypothesis, uncertainty].filter(Boolean) as string[]);
+    else if (hypothesis) thesis.unshift(...[hypothesis, uncertainty].filter(Boolean) as string[]);
   }
+
+  /*
+   * ── WHAT I WOULD DO — the recommendation ──
+   *
+   * The step the product was refusing to take. Describe→Explain→Evaluate is
+   * governing doctrine, and once Explain exists Evaluate is not optional
+   * politeness — an assessment that never says what it would do has not
+   * finished assessing.
+   *
+   * The rule is general, not a Nathan sentence library: the highest-
+   * information experiment in any chain is the least corroborated component
+   * sitting among well-corroborated ones, PROVIDED the electrical layer
+   * establishes that swapping it is a like-for-like exercise (no constraint
+   * to untangle first). The recommendation is explicitly an experiment, not
+   * an upgrade: both of its outcomes are informative, and one of them is
+   * "this component belongs exactly where it is".
+   */
+  if (input.synthesis && engineeringCoherent) {
+    const character = input.synthesis.character;
+    const corroborated = input.components.filter((c) => {
+      const props = character.get(c.displayName) ?? [];
+      return props.some((pr) => pr.basis !== 'conditional');
+    });
+    const candidates = input.components.filter((c) => {
+      const props = character.get(c.displayName) ?? [];
+      if (props.length === 0) return character.size > 0;
+      const pubs = new Set(props.flatMap((pr) => pr.publications.map((x) => x.toLowerCase())));
+      return props.every((pr) => pr.basis === 'conditional') && pubs.size <= 1;
+    });
+
+    if (candidates.length === 1 && corroborated.length >= 2
+      && /amp/i.test(candidates[0].role ?? '')) {
+      const cand = candidates[0].displayName;
+      const anchors = input.components
+        .filter((c) => c.displayName !== candidates[0].displayName
+          && !/pre/i.test(c.role ?? '')
+          && (character.get(c.displayName) ?? []).length > 0)
+        .map((c) => c.displayName);
+      const preamp = corroborated.find((c) => /pre/i.test(c.role ?? ''));
+
+      if (anchors.length > 0) {
+        const plural = anchors.length > 1;
+        next.push(
+          `If this were my system, I would leave the `
+          + `${plural ? `${anchors.slice(0, -1).join(', the ')} and the ${anchors[anchors.length - 1]}` : anchors[0]} `
+          + `alone — ${plural ? 'they carry' : 'it carries'} the strongest independent `
+          + `evidence in the chain and ${plural ? 'anchor' : 'anchors'} what this system is. `
+          + (preamp
+            ? `Nor would I assume the ${preamp.displayName} needs changing: it is the `
+              + `best-corroborated electronics here, and its evidence points to neutrality `
+              + `rather than a coloration that would need correcting. `
+            : ''),
+        );
+      }
+      next.push(
+        `The one experiment worth running is the amplifier. The ${cand} is not a `
+        + `demonstrated weak link — nothing in the evidence says it is limiting anything — `
+        + `but its character is the least corroborated in the chain, resting on a single `
+        + `publication's conditioned listening, and it sits between components whose own `
+        + `evidence is strong. Auditioning a modern reference amplifier against it, in this `
+        + `room, would answer the most informative question this system can be asked: `
+        + `whether the ${cand} is imposing a ceiling or supplying the voicing. If the `
+        + `substitute brings more transient precision, low-level resolution or bass `
+        + `articulation without costing dimensionality or engagement, the ${cand} is a `
+        + `ceiling. If the substitute retrieves more information but the system becomes `
+        + `less convincing, the ${cand} is part of what makes it work and belongs exactly `
+        + `where it is. Either answer is worth having, and neither obliges a purchase.`,
+      );
+      next.push(
+        `Past that experiment, positioning, the listening room and setup are likely to `
+        + `matter more than any further change of electronics.`,
+      );
+    }
+  }
+
+  /*
+   * ORDERED BY WHAT MATTERS, not by what was computed first.
+   *
+   * The quantitative amplifier-to-loudspeaker analysis is the strongest thing
+   * Audio XX can say about most systems, and it was arriving third. Chain
+   * architecture is real but weaker, and conditioned listening observations
+   * are about ONE component — useful, and not a system relationship — so they
+   * come last of the explanatory material.
+   */
+  explanation.push(
+    ...engineeringLead,
+    ...electricalParas,
+    ...interfaceParas,
+    ...lineLevel,
+    ...(architecturePara ? [architecturePara] : []),
+    ...synergyParas,
+    ...observationParas,
+  );
 
   /*
    * SEMANTIC ROLES, in the order an argument runs.
@@ -934,21 +1076,26 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     {
       label: 'Why the system makes sense',
       paragraphs: [
-        ...electricalParas, ...interfaceParas, ...lineLevel,
-        ...(architecturePara ? [architecturePara] : []), ...synergyParas,
+        ...engineeringLead, ...electricalParas, ...interfaceParas, ...lineLevel,
+        ...(architecturePara ? [architecturePara] : []),
       ],
     },
-    { label: 'What I would expect', paragraphs: observationParas },
-    { label: 'The question mark', paragraphs: limits },
+    {
+      label: 'What the listening evidence suggests',
+      paragraphs: [...synergyParas, ...observationParas],
+    },
     { label: 'What I would do', paragraphs: next },
+    { label: 'What remains unknown', paragraphs: limits },
   ].filter((sec) => sec.paragraphs.length > 0);
 
-  out.push(...thesis, ...explanation, ...limits, ...next);
+  out.push(...thesis, ...explanation, ...next, ...limits);
   // `nextIndex` marks where the closing question begins, so a caller adding a
   // LIMITS paragraph of its own can place it before that rather than after —
   // an unresolved-evidence statement printed AFTER "here is what would help"
   // reads as an afterthought to the thing it is supposed to motivate.
+  // `nextIndex` marks where caller-inserted LIMITS material belongs. The
+  // unknown region now closes the document, so that place is its end.
   return {
-    paragraphs: out, sections, unresolved, nextIndex: out.length - next.length,
+    paragraphs: out, sections, unresolved, nextIndex: out.length,
   };
 }

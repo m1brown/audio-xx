@@ -181,6 +181,24 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               )}
             </figure>
           )}
+          {/* EVIDENCE-GROUNDED CHARACTERISATION — one or two sentences,
+            * assembled from this component's admitted propositions and
+            * nothing else. The statements are the character layer's own,
+            * already phrased at licensed strength; this block selects the
+            * strongest one or two so the card opens with what independent
+            * listeners actually established, before the figures. */}
+          {(() => {
+            const props = dossierSynthesis.character.get(d.displayName) ?? [];
+            if (props.length === 0) return null;
+            const rank = { convergent_observations: 0, direct_observation: 1, comparative_only: 2, conditional: 3 };
+            const lead = [...props].sort((a, b) => rank[a.basis] - rank[b.basis]).slice(0, 2);
+            return (
+              <p style={{
+                margin: '0 0 0.7rem 0', fontSize: '0.88rem', lineHeight: 1.55,
+                color: 'rgba(27,26,24,0.8)',
+              }}>{lead.map((x) => x.statement).join(' ')}</p>
+            );
+          })()}
           {d.primary.map((l, i) => <Line key={i} l={l} />)}
           {/* `detailSummary` is NOT rendered. It announced "4 published
               details held" and then listed the four details immediately below
@@ -224,16 +242,41 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               a separate lightweight card, which is what made each component
               appear twice. Subordinate to the evidence above them, and built
               from canonical product identity. */}
+          {/* WHAT REVIEWERS HEARD — the rest of this component's admitted
+            * observations, inside its own card. The two shown in the
+            * characterisation above are not repeated. */}
+          {(() => {
+            const props = dossierSynthesis.character.get(d.displayName) ?? [];
+            if (props.length <= 2) return null;
+            const rank = { convergent_observations: 0, direct_observation: 1, comparative_only: 2, conditional: 3 };
+            const rest = [...props].sort((a, b) => rank[a.basis] - rank[b.basis]).slice(2);
+            return (
+              <div style={{ marginTop: '0.8rem' }}>
+                <p style={{ ...label, margin: '0 0 0.3rem 0' }}>What reviewers heard</p>
+                {rest.map((x, i) => (
+                  <p key={i} style={{
+                    margin: '0 0 0.3rem 0', fontSize: '0.83rem', lineHeight: 1.5,
+                    color: 'rgba(27,26,24,0.68)',
+                  }}>{x.statement}</p>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* FIND ONE — deliberately discoverable, deliberately subordinate.
+            * The blue is the action accent, not an advertisement: it marks
+            * navigation the way the app's own links do, and it sits last in
+            * the card, after photograph, identity, characterisation and
+            * evidence. Destinations derive from canonical identity. */}
           {d.resources && d.resources.length > 0 && (
             <p style={{
-              margin: '0.7rem 0 0 0',
+              margin: '0.85rem 0 0 0',
               fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-              fontSize: '0.68rem', letterSpacing: '0.06em',
-              color: 'rgba(27,26,24,0.45)',
+              fontSize: '0.7rem', letterSpacing: '0.06em',
             }}>
               <span style={{
-                textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600,
-                marginRight: '0.6rem',
+                textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700,
+                marginRight: '0.7rem', color: '#2b5e9e',
               }}>Find one</span>
               {d.resources.map((r) => (
                 <a
@@ -241,7 +284,10 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer nofollow"
-                  style={{ color: 'rgba(27,26,24,0.55)', marginRight: '0.75rem' }}
+                  style={{
+                    color: '#2b5e9e', marginRight: '0.8rem',
+                    textDecoration: 'none', borderBottom: '1px solid rgba(43,94,158,0.35)',
+                  }}
                 >{r.label}</a>
               ))}
             </p>
@@ -249,34 +295,12 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
         </div>
       ))}
 
-      {/* WHAT REVIEWERS OBSERVED — per component, attributed and conditioned.
-        *
-        * One block per component that has any, immediately under that
-        * component's specifications, so the reader meets the maker's figures
-        * and then what independent listeners said about the same box. */}
-      {present.some((d) => (dossierSynthesis.character.get(d.displayName) ?? []).length > 0) && (
-        <section style={{ marginTop: '1.4rem' }} aria-label="Independent observations">
-          <h3 style={{ ...label, marginBottom: '0.7rem' }}>What reviewers observed</h3>
-          {present.map((d) => {
-            const props = dossierSynthesis.character.get(d.displayName) ?? [];
-            if (props.length === 0) return null;
-            return (
-              <div key={`obs-${d.displayName}`} style={{ marginBottom: '0.9rem' }}>
-                <p style={{
-                  margin: '0 0 0.25rem 0', fontSize: '0.82rem', fontWeight: 600,
-                  color: 'rgba(27,26,24,0.75)',
-                }}>{d.displayName}</p>
-                {props.map((p, i) => (
-                  <p key={i} style={{
-                    margin: '0 0 0.3rem 0', fontSize: '0.83rem', lineHeight: 1.5,
-                    color: 'rgba(27,26,24,0.7)',
-                  }}>{p.statement}</p>
-                ))}
-              </div>
-            );
-          })}
-        </section>
-      )}
+      {/* The consolidated WHAT REVIEWERS OBSERVED section was REMOVED
+        * (2026-08-26, convergence): it re-listed every component a second
+        * time, after the dossiers, which made the review evidence read as a
+        * separate report rather than part of each product. The observations
+        * now render INSIDE each component's dossier above — where a reader
+        * examining that component actually looks. */}
 
       {/* EVIDENCE — the third principal section, on this surface too.
         *
