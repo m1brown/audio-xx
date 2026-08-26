@@ -358,6 +358,10 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       // Arithmetic over two published figures the snapshot has already frozen.
       // Reads no catalog, no engine, no network — the same terms as the rest.
       './interface-conclusions',
+      // Market evidence: verified prices and range positions, both frozen
+      // data. Reads no catalog, no engine, no network.
+      '../evidence/system-class',
+      '../evidence/nathan-market-facts',
       '../evidence/relational-synthesis',
       '../evidence/relational-synthesis',
     ]);
@@ -510,6 +514,8 @@ describe('the synthesis layer stays reachable-but-pure', () => {
   const REACHABLE = [
     '../sonic-synthesis',
     '../interface-conclusions',
+    '../../evidence/system-class',
+    '../../evidence/nathan-market-facts',
     '../../evidence/component-character',
     '../../evidence/relational-synthesis',
     '../../evidence/independent-review-seed',

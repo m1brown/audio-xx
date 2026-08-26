@@ -56,6 +56,17 @@ const NATHAN = {
 
 const r = composeSystemReviewDetailed(NATHAN);
 
+/*
+ * The DRIVE thesis, wherever it sits.
+ *
+ * It used to be paragraph 0. A verified-price classification now leads,
+ * because "what kind of system is this" is the question a listener asks
+ * first. These assertions are about the drive paragraph's CONTENT, not its
+ * index, so they find it rather than assuming position.
+ */
+const drivePara = () => r.paragraphs.find((x) => /into .* is the interface where/.test(x))
+  ?? r.paragraphs.find((x) => /nominal .* load/.test(x)) ?? '';
+
 describe('the review opens with the principal assessment', () => {
   it('states the principal conclusion first', () => {
     /*
@@ -65,22 +76,22 @@ describe('the review opens with the principal assessment', () => {
      * false in its own document — the review went on to settle two loading
      * interfaces and a gain structure underneath it.
      */
-    expect(r.paragraphs[0]).toMatch(
+    expect(drivePara()).toMatch(
       /Butler MONAD A100 into Acora QRC-2 is the interface where the published figures/);
   });
 
   it('names what licenses that conclusion', () => {
-    expect(r.paragraphs[0]).toMatch(/makers' own figures establish compatibility/);
-    expect(r.paragraphs[0]).toMatch(/nominal 4 ohm load/);
+    expect(drivePara()).toMatch(/makers' own figures establish compatibility/);
+    expect(drivePara()).toMatch(/nominal 4 ohm load/);
   });
 
   it('names the most important limitations, and why they hold', () => {
     // A reader who stops here should know what was concluded, on what, and
     // what bounds it.
-    expect(r.paragraphs[0]).toMatch(/how difficult that load actually is to drive/);
-    expect(r.paragraphs[0]).toMatch(/how much acoustic headroom the system has/);
-    expect(r.paragraphs[0]).toMatch(/impedance minimum and phase behaviour/);
-    expect(r.paragraphs[0]).toMatch(/sensitivity figure/);
+    expect(drivePara()).toMatch(/how difficult that load actually is to drive/);
+    expect(drivePara()).toMatch(/how much acoustic headroom the system has/);
+    expect(drivePara()).toMatch(/impedance minimum and phase behaviour/);
+    expect(drivePara()).toMatch(/sensitivity figure/);
   });
 
   it('is DERIVED from the dossiers, not authored separately', () => {
@@ -95,7 +106,7 @@ describe('the review opens with the principal assessment', () => {
       dossiers: NATHAN.dossiers.map((x) => (x.displayName === 'Acora QRC-2'
         ? { ...x, primary: x.primary.filter((l) => l.label !== 'impedance') } : x)),
     });
-    expect(noLoad.paragraphs[0] ?? '').not.toMatch(/nominal 4 ohm load/);
+    expect(noLoad.paragraphs.join('\n')).not.toMatch(/nominal 4 ohm load/);
   });
 
   it('drops a limitation the dossier actually resolves', () => {
@@ -107,8 +118,11 @@ describe('the review opens with the principal assessment', () => {
       dossiers: NATHAN.dossiers.map((x) => (x.displayName === 'Acora QRC-2'
         ? { ...x, primary: [...x.primary, { label: 'sensitivity', value: '86 dB', sourceClass: 'maker_published' as const }] } : x)),
     });
-    expect(withSens.paragraphs[0]).not.toMatch(/acoustic headroom/);
-    expect(withSens.paragraphs[0]).toMatch(/how difficult that load actually is/);
+    const p = withSens.paragraphs.find((x) => /how difficult that load actually is/.test(x)) ?? '';
+    expect(p).toBeTruthy();
+    // Sensitivity is held, so it is no longer listed among the missing figures
+    // in the drive paragraph — the headroom conclusion computes it elsewhere.
+    expect(p).not.toMatch(/how much acoustic headroom the system has/);
   });
 
   it('does not restate the verdict printed above it', () => {
@@ -210,14 +224,21 @@ describe('structure creates no unlicensed conclusion', () => {
   });
 
   it('the thesis claims only what the explanation then supports', () => {
-    expect(r.paragraphs[0]).toMatch(/makers' own figures establish compatibility/);
+    expect(drivePara()).toMatch(/makers' own figures establish compatibility/);
     expect(all).toMatch(/within the limits both makers state/);
   });
 
   it('the body develops the thesis rather than restating its limits', () => {
-    // The headroom limit appeared in the thesis AND as its own paragraph; the
-    // difficulty limit in the thesis AND mid-explanation. Each is stated once.
-    expect(all.match(/acoustic headroom/g) ?? []).toHaveLength(1);
+    /*
+     * Each limitation is STATED once. The closing paragraph now also
+     * DISTINGUISHES acoustic headroom from load difficulty — the two were
+     * being conflated, and one specification was said to settle a question it
+     * cannot touch. That sentence is a distinction, not a restatement, so it
+     * is excluded before counting.
+     */
+    const withoutDisambiguation = all
+      .replace(/not the same question as acoustic headroom[\s\S]*?into the real load\./g, '');
+    expect(withoutDisambiguation.match(/acoustic headroom/g) ?? []).toHaveLength(1);
     expect(all.match(/impedance minimum and phase behaviour/g) ?? []).toHaveLength(1);
     expect(all).not.toMatch(/Suitability and loudness are two different questions/);
   });

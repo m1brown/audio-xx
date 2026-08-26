@@ -18,6 +18,7 @@ import type { DossierView } from '@/lib/evidence/dossier-presentation';
 import { deriveEvidenceLedger } from '@/lib/artifact/evidence-ledger';
 import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 import { COLOR } from '@/lib/editorial-tokens';
+import { meaningFor } from '@/lib/evidence/spec-meaning';
 
 const label: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque, sans-serif)',
@@ -26,8 +27,21 @@ const label: React.CSSProperties = {
 };
 
 function Line({ l }: { l: DossierView['primary'][number] }) {
+  /*
+   * WHAT THE FIGURE MEANS, under the figure.
+   *
+   * A dossier printing "600 ohms" and "47K ohms" tells a reader who already
+   * knows exactly nothing new, and everyone else nothing at all. The gloss
+   * explains the QUANTITY — what output impedance is, which way is better —
+   * and never the product: every sentence it can produce would read the same
+   * under any component, which is what keeps it outside the character lane.
+   *
+   * Most labels get none. Dimensions and weight need no explaining, and a
+   * sentence under every row would bury the ones that earn their place.
+   */
+  const meaning = meaningFor(l.label);
   return (
-    <div style={{ display: 'flex', gap: '0.7rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: '0.7rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
       <span style={{ ...label, minWidth: '8.5rem' }}>{l.label}</span>
       <span style={{ fontSize: '0.86rem', lineHeight: 1.5, flex: 1, minWidth: '12rem' }}>
         {l.value}
@@ -35,6 +49,12 @@ function Line({ l }: { l: DossierView['primary'][number] }) {
           <em style={{ color: COLOR.textMuted, fontSize: '0.78rem' }}>
             {' '}— {l.standing}{l.publication ? ` by ${l.publication}` : ''}, not maker-published
           </em>
+        )}
+        {meaning && (
+          <span style={{
+            display: 'block', marginTop: '0.15rem', fontSize: '0.78rem',
+            lineHeight: 1.45, color: COLOR.textMuted,
+          }}>{meaning}</span>
         )}
       </span>
     </div>

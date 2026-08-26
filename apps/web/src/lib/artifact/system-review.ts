@@ -39,6 +39,8 @@ import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations } from './sonic-synthesis';
 import { interfaceConclusions } from './interface-conclusions';
+import { classifySystem } from '../evidence/system-class';
+import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
 import type { SonicRelation } from '../evidence/relational-synthesis';
 import { ELECTRICAL_SCOPE_NOTE, mergeByPair } from '../evidence/relational-synthesis';
 
@@ -193,17 +195,42 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     );
   }
 
+  /*
+   * ── C: A TUBE LIST IS NOT A TOPOLOGY ──
+   *
+   * This block read a `tube complement` on two components and concluded
+   * "both amplification stages are valve designs — the signal passes through
+   * vacuum tubes twice between the source and the loudspeaker terminals, the
+   * output stage built on the Butler Model 300B directly heated power triode".
+   *
+   * The Butler MONAD A100 is a hybrid. Its maker describes a Class-A design
+   * in which a 300B DRIVES a current-multiplying output arrangement, and The
+   * Audio Beatnik describes it as neither a transistor amplifier nor a
+   * conventional tube amplifier. The signal does not pass through a valve
+   * output stage on its way to the loudspeaker terminals, and saying it does
+   * is a claim about circuit topology drawn from a parts list.
+   *
+   * What a tube complement establishes is that the unit CONTAINS these
+   * valves. Where they sit is a separate fact, and it is only stated where an
+   * architecture fact establishes it.
+   */
   const tubeStages = [pre, amp]
     .filter((x): x is NonNullable<typeof x> => !!x)
     .filter((x) => !!findLine(x.dossier, 'tube complement'));
   if (tubeStages.length >= 2) {
-    const ampTubes = findLine(amp?.dossier, 'tube complement')?.value;
+    const names = tubeStages.map((t) => t.component.displayName);
+    const ampTopology = findLine(amp?.dossier, 'output stage')
+      ?? findLine(amp?.dossier, 'topology');
     architecture.push(
-      `Both amplification stages are valve designs — the signal passes through `
-      + `vacuum tubes twice between the source and the loudspeaker terminals`
-      + (ampTubes ? `, the output stage built on the ${ampTubes.replace(/\.$/, '').replace(/^Butler Model /, 'Butler Model ')}` : '')
-      + `. That is an architectural fact about the chain, not a prediction about `
-      + `how it sounds; Audio XX does not hold listening evidence for these units.`,
+      `${names[0]} and ${names[1]} both carry vacuum tubes in their published `
+      + `complements, so the signal meets valves at two points in this chain. `
+      + (ampTopology
+        ? `Where those valves sit differs: ${ampTopology.value.replace(/\.$/, '')}. `
+        : `A published tube complement establishes that a unit contains these valves, `
+          + `not where in its circuit they operate — so nothing here says the signal `
+          + `reaches the loudspeaker terminals through a valve output stage. `)
+      + `That is an architectural fact about the chain, not a prediction about how it `
+      + `sounds.`,
     );
   } else if (tubeStages.length === 1) {
     const t = tubeStages[0];
@@ -711,12 +738,28 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // a second thing to keep in step.
   const gap = input.dossiers.flatMap((d) => d.gaps)[0];
   if (gap) {
+    /*
+     * ── D: TWO DIFFERENT QUESTIONS, TWO DIFFERENT MISSING DATA ──
+     *
+     * This said the impedance and phase plot "alone would let Audio XX finish
+     * the headroom question". It would not. Acoustic headroom is already
+     * computed, from sensitivity and rated power; what bounds it in a real
+     * room is distance, listening level and how much of its rated power the
+     * amplifier delivers into the actual load. The impedance plot answers a
+     * different question — how DIFFICULT the load is — and conflating the two
+     * told the listener that one specification would settle something it
+     * cannot touch.
+     */
     next.push(
-      `The gap is narrow and specific: ${gap.replace(/\.$/, '')}. If you hold that `
-      + `figure — it is usually on the specification sheet or in the back of the `
-      + `manual — it alone would let Audio XX finish the headroom question. `
-      + `Failing that, what you hear at the volumes you actually use is the `
-      + `better evidence, which is why the question below is worth answering.`,
+      `The gap is narrow and specific: ${gap.replace(/\.$/, '')}. That figure answers `
+      + `how hard this loudspeaker is to drive — whether its impedance dips or its phase `
+      + `angle asks more of the amplifier than the nominal rating suggests. It is not the `
+      + `same question as acoustic headroom, which the published sensitivity and power `
+      + `figures already bound; what limits that in your room is listening distance, the `
+      + `level you actually use, and how much of its rated power the amplifier delivers `
+      + `into the real load. So the plot would settle load difficulty, and what you hear `
+      + `at the volumes you listen at would settle the rest — which is why the question `
+      + `below is worth answering.`,
     );
   }
 
@@ -850,6 +893,29 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * nothing under it is filler, and filler is what the licensing work spent
    * this month removing.
    */
+  /*
+   * ── WHAT KIND OF SYSTEM THIS IS ──
+   *
+   * Placed after the principal conclusion in CODE so that its unshift runs
+   * last and it lands FIRST in the document — "what kind of system is this"
+   * is the question a listener asks before any other, and the one Audio XX
+   * has never been able to answer.
+   * It rests on verified prices and the makers' own ranges, and it says in
+   * its own sentence that it carries no conclusion about sound.
+   *
+   * Prices are keyed by product, so a system containing none of them simply
+   * produces no classification — which is the correct output, not a
+   * degraded one.
+   */
+  {
+    const priced = NATHAN_PRICES.filter((p) => input.components.some(
+      (c) => c.displayName.toLowerCase().includes(p.productKey.split(' ')[0])
+        || p.productKey.split(' ').every((t) => c.displayName.toLowerCase().includes(t)),
+    ));
+    const klass = classifySystem(input.components.length, priced, NATHAN_POSITIONS);
+    if (klass) thesis.unshift(klass.statement);
+  }
+
   /*
    * SEMANTIC ROLES, in the order an argument runs.
    *

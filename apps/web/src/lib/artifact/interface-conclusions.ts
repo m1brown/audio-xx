@@ -37,10 +37,30 @@ export interface InterfaceConclusion {
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
 
-/** A figure whose label or qualifier names the concept. Text, not schema. */
-function figure(d: DossierView | undefined, concept: RegExp): DossierLine | undefined {
+/**
+ * A line that both NAMES the concept and CARRIES a usable figure.
+ *
+ * The parser is not optional and the reason is a real defect: the dCS
+ * dossier carries an admitted Stereophile observation reading "measured
+ * performance was beyond reproach, with wide input sampling range, very low
+ * output impedance, and excellent distortion metrics". It mentions output
+ * impedance, it sorts above the typed specification, and it contains no
+ * number. A first-match-on-text lookup found it, failed to read ohms, and the
+ * review announced that the output impedance was unpublished — four lines
+ * above where the dossier printed "2 ohms".
+ *
+ * So a line qualifies only if its VALUE parses into the quantity the caller
+ * needs. Prose about a quantity is not the quantity.
+ */
+function figure(
+  d: DossierView | undefined,
+  concept: RegExp,
+  parse: (v: string) => number | undefined,
+): DossierLine | undefined {
   if (!d) return undefined;
-  return lines(d).find((l) => concept.test(`${l.label} ${l.value}`));
+  return lines(d).find(
+    (l) => concept.test(`${l.label} ${l.value}`) && parse(l.value) !== undefined,
+  );
 }
 
 /** Ohms from "600 ohms" or "47K ohms". Returns undefined rather than guessing. */
@@ -65,6 +85,21 @@ function decibels(value: string | undefined): number | undefined {
   if (!value) return undefined;
   const m = /([\d.]+)\s*db/i.exec(value);
   return m ? Number(m[1]) : undefined;
+}
+
+/**
+ * The wattage the maker states AT a particular load.
+ *
+ * Segments are read separately and a "typical" figure preferred, so a
+ * multi-figure specification yields the number that actually applies to this
+ * loudspeaker rather than whichever appeared first.
+ */
+export function wattsAtStatedLoad(value: string, load: number): number | undefined {
+  const segments = value.split(/;/);
+  const atLoad = segments.filter((seg) => new RegExp(`${load}\\s*ohm`, 'i').test(seg));
+  if (atLoad.length === 0) return undefined;
+  const chosen = atLoad.find((seg) => /typical/i.test(seg)) ?? atLoad[0];
+  return watts(chosen);
 }
 
 /** Watts at a stated load from "200 Watts into 4 ohm loads". */
@@ -98,8 +133,8 @@ function loadingConclusion(
   upstream: { name: string; dossier?: DossierView },
   downstream: { name: string; dossier?: DossierView },
 ): InterfaceConclusion | undefined {
-  const out = figure(upstream.dossier, /output impedance/i);
-  const inp = figure(downstream.dossier, /input impedance/i);
+  const out = figure(upstream.dossier, /output impedance/i, ohms);
+  const inp = figure(downstream.dossier, /input impedance/i, ohms);
   const outOhms = ohms(out?.value);
   const inOhms = ohms(inp?.value);
 
@@ -154,9 +189,10 @@ function levelConclusion(
   preamp: { name: string; dossier?: DossierView },
   amp: { name: string; dossier?: DossierView },
 ): InterfaceConclusion | undefined {
-  const outputs = figure(source.dossier, /maximum balanced output|output level/i);
-  const gainLine = figure(preamp.dossier, /\bgain\b/i);
-  const sens = figure(amp.dossier, /input sensitivity/i);
+  const outputs = figure(source.dossier, /maximum balanced output|output level/i, volts);
+  const gainLine = figure(preamp.dossier, /\bgain\b/i,
+    (v) => (/([\d.]+)\s*db/i.test(v) ? Number(/([\d.]+)\s*db/i.exec(v)![1]) : undefined));
+  const sens = figure(amp.dossier, /input sensitivity/i, volts);
 
   const gainDb = gainLine ? Number(/([\d.]+)\s*db/i.exec(gainLine.value)?.[1]) : undefined;
   const needed = volts(sens?.value);
@@ -196,11 +232,25 @@ function headroomConclusion(
   amp: { name: string; dossier?: DossierView },
   speaker: { name: string; dossier?: DossierView },
 ): InterfaceConclusion | undefined {
-  const sensLine = figure(speaker.dossier, /sensitivity/i);
-  const powerLine = figure(amp.dossier, /power output/i);
+  const sensLine = figure(speaker.dossier, /sensitivity/i, decibels);
+  const powerLine = figure(amp.dossier, /power output/i, watts);
+  const loadLine = figure(speaker.dossier, /impedance/i, ohms);
   const sens = decibels(sensLine?.value);
-  const power = watts(powerLine?.value);
-  if (sens === undefined || power === undefined || power <= 0) return undefined;
+  const load = ohms(loadLine?.value);
+  if (sens === undefined || !powerLine || load === undefined) return undefined;
+
+  /*
+   * THE FIGURE AT THE LOUDSPEAKER'S OWN LOAD.
+   *
+   * The maker publishes three: "Minimum 100 Watts RMS @ 8 Ohms; 128 Watts,
+   * RMS typical @ 8 Ohms; 200 Watts, RMS typical @ 4 Ohms". Taking the first
+   * number took the MINIMUM at EIGHT ohms into a four-ohm loudspeaker, and
+   * put the theoretical peak at 113dB where the relevant figure gives 115.5.
+   * Wrong quantity, wrong load, and wrong by more than the rounding hid.
+   */
+  const atLoad = wattsAtStatedLoad(powerLine.value, load) ?? watts(powerLine.value);
+  const power = atLoad;
+  if (power === undefined || power <= 0) return undefined;
 
   const peak = sens + 10 * Math.log10(power);
   return {
@@ -208,14 +258,15 @@ function headroomConclusion(
     status: 'established',
     restsOn: [
       `${speaker.name}: ${sensLine!.value}`,
-      `${amp.name}: ${powerLine!.value}`,
+      `${amp.name}: ${power}W at ${load} ohms (from ${powerLine.value})`,
     ],
     statement: `On the published figures the pairing has substantial acoustic headroom: `
-      + `${sensLine!.value} with ${powerLine!.value} puts a theoretical peak near `
-      + `${Math.round(peak)}dB at one metre from a single loudspeaker. Room, distance and `
-      + `the loudspeaker's actual impedance curve all reduce that in practice, and none of `
-      + `those is published — but the margin is large enough that running out of level is `
-      + `unlikely to be this system's limitation.`,
+      + `${sensLine!.value} with the maker's ${power}W figure at the ${load}-ohm load this `
+      + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
+      + `from a single loudspeaker. That is a ceiling, not a prediction: it assumes the `
+      + `amplifier delivers its rated power into the real load, and room, listening `
+      + `distance and the loudspeaker's actual impedance curve all reduce it. The margin is `
+      + `large enough that running out of level is unlikely to be this system's limitation.`,
   };
 }
 

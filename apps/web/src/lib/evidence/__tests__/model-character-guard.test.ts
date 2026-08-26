@@ -41,10 +41,15 @@ describe('the model may not originate sonic character', () => {
     expect(r.text).toBe('');
   });
 
-  it('keeps character the evidence DOES license', () => {
-    // Resolution is licensed for the ARC by The Absolute Sound.
+  it('keeps character the evidence licenses WITHOUT qualification', () => {
+    /*
+     * The ARC's neutrality is a direct, unconditioned observation, so prose
+     * may state it plainly. Its RESOLUTION is comparative — "high relative to
+     * the Reference 3" — and is handled by the comparative-licence rule
+     * below, which now refuses the unqualified form.
+     */
     expect(isUnlicensedCharacter(
-      'The ARC ref 5 is credited with high resolution and low-level detail.', licensed,
+      'The ARC ref 5 is described as neutral rather than coloured.', licensed,
     )).toBe(false);
   });
 
@@ -87,5 +92,28 @@ describe('the model may not originate sonic character', () => {
     // A component absent from the licence list is not this guard's business —
     // other rules govern whether it may be characterised at all.
     expect(isUnlicensedCharacter('The Rega P3 sounds bright.', licensed)).toBe(false);
+  });
+});
+
+describe('a comparative licence does not license an absolute claim', () => {
+  it('removes the absolute restatement of a comparative proposition', () => {
+    /*
+     * The Rossini's resolution is admitted only as "high relative to the
+     * earlier Rossini". The model wrote it as a settled property of the unit,
+     * and the dimension check passed because the dimension IS licensed.
+     */
+    const r = guardModelProse(
+      "The system benefits from the dCS Rossini Apex's known transparency, detail "
+      + 'resolution, and spatial accuracy, which likely define its overall clarity.',
+      licensed,
+    );
+    expect(r.text).toBe('');
+  });
+
+  it('still permits prose on an unqualified direct observation', () => {
+    // The ARC's neutrality is a direct, unconditioned observation.
+    expect(isUnlicensedCharacter(
+      'The ARC ref 5 is described as neutral rather than coloured.', licensed,
+    )).toBe(false);
   });
 });
