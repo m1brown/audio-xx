@@ -60,13 +60,13 @@ export const NATHAN_FACTS: ProductFact[] = [
     unit: '1W/1m', specRole: 'loudspeaker_sensitivity', sourceUrl: ACORA,
     qualifier: 'sensitivity', quotedText: '92.5dB 1W/1M',
   }),
-  F('acora qrc-2', '4 ohms', {
-    specRole: 'loudspeaker_load', sourceUrl: ACORA, qualifier: 'impedance',
-  }),
-  F('acora qrc-2', '10w - 250w', {
-    specRole: 'loudspeaker_power_handling', sourceUrl: ACORA,
-    qualifier: 'power handling',
-  }),
+  /*
+   * Impedance and power handling are deliberately ABSENT. Both were already
+   * held, correctly and with proper labels; authoring them again produced a
+   * dossier listing each twice — "4 ohms" above "4 ohm". Acquisition fills
+   * gaps. A figure already on the page is not a gap, and re-authoring it is
+   * how a dossier starts disagreeing with itself over spelling.
+   */
 
   // ── Butler MONAD A100 ─────────────────────────────────────────────
   // From the maker's own manual, which is also where the amplifier's intended
