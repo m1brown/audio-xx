@@ -166,6 +166,16 @@ export default function ComponentDossiers({ dossiers, showEvidence = true }: {
           marginBottom: '1.3rem', paddingBottom: '1.1rem',
           borderBottom: '1px solid rgba(27,26,24,0.08)',
         }}>
+          {/* IDENTITY BLOCK — photograph, name, role and opening
+            * characterisation travel together across page breaks. The
+            * sideways PDF orphaned the DeVore photograph at the foot of the
+            * Leben page while its heading opened the next; a photograph
+            * separated from the identity it depicts is worse than either
+            * alone. `breakInside: avoid` on JUST this block keeps the pair
+            * intact without forcing whole dossiers onto one page — long
+            * dossiers still paginate naturally through their specs and
+            * evidence. */}
+          <div style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
           {/* Recognition, not evidence. Rendered only when the governed
               boundary admitted an exact-product asset; absent renders NOTHING
               — no frame, no placeholder, no reserved space — so a dossier
@@ -242,6 +252,7 @@ export default function ComponentDossiers({ dossiers, showEvidence = true }: {
               }}>{lead.map((x) => x.statement).join(' ')}</p>
             );
           })()}
+          </div>
           {/* KEY SPECIFICATIONS — edited, not exhaustive. The dossier shows
             * the figures that help a reader understand this component in THIS
             * system: loads, impedances, sensitivity, power, gain, valves,
