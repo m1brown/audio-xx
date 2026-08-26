@@ -4695,8 +4695,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </p>
       )}
 
-      {/* ── System Assessment Block ── */}
-      {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
+      {/* ── System Assessment Block ──
+        * NEVER above a composed review. The Fail-pass PDF opened with "The
+        * dCS Rossini Apex serves as a smooth and controlled source..." — a
+        * model-authored component character sentence — ahead of the review's
+        * own thesis. When a governed SYSTEM REVIEW exists it IS the beginning;
+        * the model's per-component readings are the ungoverned ancestor of
+        * the dossier characterisations and stand down entirely. */}
+      {!(a.systemReview && a.systemReview.length > 0)
+        && a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
         <AdvisorySection label="System character">
           <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {a.systemContext}
@@ -4704,7 +4711,8 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       )}
 
-      {a.componentReadings && a.componentReadings.length > 0 && (
+      {!(a.systemReview && a.systemReview.length > 0)
+        && a.componentReadings && a.componentReadings.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           {a.componentReadings.map((para, i) => (
             <p key={i} style={{ margin: '0 0 0.95rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>

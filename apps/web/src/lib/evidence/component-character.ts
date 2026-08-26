@@ -79,6 +79,39 @@ export const DIMENSION_LABEL: Record<CharacterDimension, string> = {
  * different SHAPE — about a pair — and the anchor is part of the claim
  * permanently, not a caveat that can be dropped when the sentence gets long.
  */
+/**
+ * The natural-language fragment for one licensed direction.
+ *
+ * Exported so the dossier renderer can COMBINE several of one publication's
+ * observations into a single sentence without re-deriving wording — one
+ * vocabulary for prose everywhere, and the tautology fix lives in one place.
+ */
+export function describePhrase(
+  dimension: CharacterDimension, direction: string,
+): string | undefined {
+  const naturally: Record<string, string> = {
+    'resolution:high': 'unusually resolving, with strong low-level detail',
+    'resolution:limited': 'limited in low-level detail',
+    'tonal_density:full': 'full and rich in tone',
+    'tonal_density:lean': 'lean in tone',
+    'warmth:warm': 'warm in balance',
+    'warmth:cool': 'cool in balance',
+    'transient:quick': 'quick on transients',
+    'transient:relaxed': 'relaxed on transients',
+    'dynamics:wide': 'wide-ranging dynamically',
+    'dynamics:compressed': 'dynamically compressed',
+    'spatial:developed': 'strong in imaging and staging',
+    'spatial:restricted': 'restricted in imaging',
+    'bass_control:controlled': 'firm and well-controlled in the bass',
+    'bass_control:loose': 'loose in the bass',
+    'refinement:refined': 'notably refined',
+    'refinement:coarse': 'coarse-sounding',
+    'neutrality:neutral': 'neutral rather than coloured',
+    'neutrality:coloured': 'audibly coloured',
+  };
+  return naturally[`${dimension}:${direction}`];
+}
+
 export type CharacterBasis =
   /** Several independent publications, same direction, no blocking condition. */
   | 'convergent_observations'
@@ -324,27 +357,7 @@ function phrase(
    * predicate, and where the direction word IS the dimension's own adjective
    * the sentence drops the label rather than repeating it.
    */
-  const naturally: Record<string, string> = {
-    'resolution:high': 'unusually resolving, with strong low-level detail',
-    'resolution:limited': 'limited in low-level detail',
-    'tonal_density:full': 'full and rich in tone',
-    'tonal_density:lean': 'lean in tone',
-    'warmth:warm': 'warm in balance',
-    'warmth:cool': 'cool in balance',
-    'transient:quick': 'quick on transients',
-    'transient:relaxed': 'relaxed on transients',
-    'dynamics:wide': 'wide-ranging dynamically',
-    'dynamics:compressed': 'dynamically compressed',
-    'spatial:developed': 'strong in imaging and staging',
-    'spatial:restricted': 'restricted in imaging',
-    'bass_control:controlled': 'firm and well-controlled in the bass',
-    'bass_control:loose': 'loose in the bass',
-    'refinement:refined': 'notably refined',
-    'refinement:coarse': 'coarse-sounding',
-    'neutrality:neutral': 'neutral rather than coloured',
-    'neutrality:coloured': 'audibly coloured',
-  };
-  const described = naturally[`${dimension}:${direction}`]
+  const described = describePhrase(dimension, direction)
     ?? `${direction} in ${subject}`;
 
   switch (basis) {

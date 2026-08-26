@@ -669,11 +669,21 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * length its content earns. Nothing is claimed that the relation object
      * does not hold — this is compression, not strengthening.
      */
-    if (established.length > 0) {
+    /*
+     * ONE qualification, stated once. The thesis already carries "a supported
+     * hypothesis, since no reviewer has heard these together" whenever it
+     * states the hypothesis; repeating the same rule at the head of this
+     * section made the reader meet the disclaimer twice before any content.
+     * The preface survives ONLY for the rare shape where relations exist but
+     * the thesis could not state the hypothesis.
+     */
+    const thesisWillQualify = [...new Set(
+      input.synthesis.relations.filter((r) => ESTABLISHED.has(r.kind)).map((r) => r.dimension),
+    )].length > 0;
+    if (established.length > 0 && !thesisWillQualify) {
       synergyParas.push(
-        `No reviewer has heard this exact combination, so what follows is how `
-        + `independently reported characteristics may combine — hypotheses with named `
-        + `sources, not observed properties of the system.`,
+        `No reviewer has heard this exact combination; what follows is how `
+        + `independently reported characteristics may combine.`,
       );
     }
     let reinforcingTailUsed = false;
@@ -688,22 +698,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       const conditional = (r.requires ?? []).every((pr) => pr.basis === 'conditional');
       if (r.kind === 'tension') {
         synergyParas.push(
-          `Both the ${r.upstreamName} and the ${r.downstreamName} carry a `
-          + `${conditional ? 'stated ' : ''}${(r.requires?.[0]?.direction) ?? 'shared'} tendency in `
-          + `${dimList}. Same-direction characteristics add rather than cancel, so if the `
-          + `descriptions hold here, this is the tendency to listen for first.`,
+          `Both the ${r.upstreamName} and the ${r.downstreamName} are `
+          + `${conditional ? 'reported' : 'described'} as leaning `
+          + `${(r.requires?.[0]?.direction) ?? 'the same way'} — so if anything colours `
+          + `this system's ${dimList}, it will come from that end of the chain, and it `
+          + `is the first thing to listen for.`,
         );
       } else if (r.kind === 'reinforcing') {
         synergyParas.push(
-          `Independent reviews describe the ${r.upstreamName} and the ${r.downstreamName} `
-          + `in the same terms across ${dimList}`
-          + (comparative
-            ? ` — each established against another product rather than in absolute terms`
-            : '')
-          + (reinforcingTailUsed
-            ? `. The same pattern holds at this interface.`
-            : `. If those descriptions combine, this is where the system's character is `
-              + `most likely to concentrate.`),
+          reinforcingTailUsed
+            ? `The same agreement appears between the ${r.upstreamName} and the `
+              + `${r.downstreamName}, this time on ${dimList}`
+              + (comparative ? ` — again measured against other products` : '')
+              + `.`
+            : `Reviewers reach for the same vocabulary for the ${r.upstreamName} and the `
+              + `${r.downstreamName}: ${dimList}`
+              + (comparative
+                ? ` — though each was measured against its predecessor rather than in `
+                  + `absolute terms`
+                : '')
+              + `. A system tends to take its character from what its parts already agree `
+              + `on, and this is where these two agree.`,
         );
         reinforcingTailUsed = true;
       } else {

@@ -8616,7 +8616,7 @@ const GI_ROLE_LABEL_ONLY =
  * de-duplicating identical wording. Deterministic segment count — not a
  * re-resolution.
  */
-function countMeaningfulInputComponents(rawMessage: string): number {
+function distinctInputComponentSegments(rawMessage: string): string[] {
   // Count per TURN and take the union. A listener who restates their whole
   // system has not doubled it; a listener who adds a component has added one.
   // Counting the joined text made "2 components you listed went unmatched" out
@@ -8646,7 +8646,11 @@ function countMeaningfulInputComponents(rawMessage: string): number {
     ))) continue;
     distinct.push(seg);
   }
-  return distinct.length;
+  return distinct;
+}
+
+function countMeaningfulInputComponents(rawMessage: string): number {
+  return distinctInputComponentSegments(rawMessage).length;
 }
 
 /** The distinct component-ish segments a single turn names. */
@@ -8929,9 +8933,67 @@ function checkGraphIntegrity(
     (c) => !c.product && (giTokens(c.displayName).size <= 1 || isBareBrandName(c.displayName)),
   );
 
-  // (1) Dropped: fewer components resolved than the user meaningfully listed.
+  /*
+   * (1) Dropped — decided by IDENTITY, not by count.
+   *
+   * The count comparison produced an internally impossible document: four
+   * components listed as RECOGNISED with ticks, followed by "one component in
+   * what you wrote I couldn't match". The phantom came from the two sides
+   * counting different things — `expected` is a union over EVERY accumulated
+   * turn's segments, `resolved` is the current graph — so any prior-turn
+   * residue that fails to collapse into a resolved identity ("the amp is a
+   * Butler Monad" beside "Butler Monads": 'monad' and 'monads' are different
+   * tokens) inflated expected past resolved with nothing actually missing.
+   *
+   * The invariant, both directions: a clarification fires exactly when some
+   * DISTINCT INPUT SEGMENT matches no resolved component's identity — and
+   * then it can say WHICH ONE, instead of reporting an arithmetic gap the
+   * recognised list contradicts two lines above.
+   */
+  const foldTokens = (x: string) =>
+    new Set([...giTokens(x)].map((t) => t.replace(/s$/, '')));
+  const segmentNamesResolved = (seg: string, name: string): boolean => {
+    if (samePhysicalComponent({ brand: '', name: seg }, { brand: '', name: name })) return true;
+    if (samePhysicalComponent({ brand: '', name: name }, { brand: '', name: seg })) return true;
+    /*
+     * Overlap, not subset — in either direction. Subset-of-resolved failed
+     * the moment identities were canonicalised: the listener types "DeVore
+     * O/96", the graph resolves "DeVore Orangutan O/96", and the resolved
+     * name now carries a token the input never contained. Subset-of-segment
+     * fails the other way on prose ("the amp is a Butler Monad" has six
+     * tokens). Two shared folded tokens identify one physical box — brand
+     * plus model — while a lone brand word still matches nothing, which is
+     * what keeps a genuinely unknown component able to raise its hand.
+     */
+    const resolvedToks = foldTokens(name);
+    const segToks = foldTokens(seg);
+    const overlap = [...resolvedToks].filter((t) => segToks.has(t)).length;
+    /*
+     * A component the graph resolved down to a BARE BRAND ("KEF" from "KEF
+     * LS50 Meta") still CONSUMED the listener's segment — the shallowness of
+     * that resolution is the separate unresolved-bare-brand gate's business,
+     * not a missing component. One shared token is identity enough when the
+     * resolved name has only one.
+     */
+    if (resolvedToks.size === 1) return overlap === 1;
+    return overlap >= 2;
+  };
+  const inputSegments = distinctInputComponentSegments(rawMessage);
+  const unmatchedSegments = inputSegments.filter((seg) =>
+    giTokens(seg).size > 0
+    && !components.some((c) => segmentNamesResolved(seg, c.displayName)));
+  /*
+   * BOTH tests must agree before a missing component is announced, because
+   * each covers the other's blind spot. The count comparison alone produced
+   * the 4/4-recognised phantom (prior-turn residue inflates the count with
+   * nothing missing); the identity test alone flagged misspelled inputs as
+   * missing (fuzzy-corrected "hegal h190" shares one token with "Hegel
+   * H190"). Count-excess says HOW MANY look absent; an identity-unmatched
+   * segment says WHICH ONE actually is. A clarification needs both — and a
+   * legitimate one always has both.
+   */
   const expected = countMeaningfulInputComponents(rawMessage);
-  const dropped = expected > resolved;
+  const dropped = expected > resolved && unmatchedSegments.length > 0;
 
   if (!dropped && !hasDuplicate && unresolved.length < 2) return null; // graph trusted
 

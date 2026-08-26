@@ -19,6 +19,7 @@ import { deriveEvidenceLedger } from '@/lib/artifact/evidence-ledger';
 import { synthesiseChain, canonicalDisplayName } from '@/lib/artifact/sonic-synthesis';
 import { COLOR } from '@/lib/editorial-tokens';
 import { meaningFor } from '@/lib/evidence/spec-meaning';
+import { describePhrase } from '@/lib/evidence/component-character';
 
 const label: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque, sans-serif)',
@@ -309,21 +310,50 @@ export default function ComponentDossiers({ dossiers, showEvidence = true }: {
               appear twice. Subordinate to the evidence above them, and built
               from canonical product identity. */}
           {/* WHAT REVIEWERS HEARD — the rest of this component's admitted
-            * observations, inside its own card. The two shown in the
-            * characterisation above are not repeated. */}
+            * observations, combined rather than serialised. "Stereophile
+            * found... Stereophile found... Stereophile heard..." read as
+            * database rows; unconditioned observations from one publication
+            * with one comparison anchor now join into one sentence, while
+            * CONDITIONED observations keep their full statements — a
+            * condition is part of the claim and does not get summarised
+            * away. The two shown in the characterisation are not repeated. */}
           {(() => {
             const props = dossierSynthesis.character.get(d.displayName) ?? [];
             if (props.length <= 2) return null;
             const rank = { convergent_observations: 0, direct_observation: 1, comparative_only: 2, conditional: 3 };
             const rest = [...props].sort((a, b) => rank[a.basis] - rank[b.basis]).slice(2);
+            const conditioned = rest.filter((x) => x.basis === 'conditional');
+            const plain = rest.filter((x) => x.basis !== 'conditional');
+            const groups = new Map<string, typeof plain>();
+            for (const x of plain) {
+              const key = `${x.publications[0] ?? ''}|${x.comparedWith ?? ''}`;
+              groups.set(key, [...(groups.get(key) ?? []), x]);
+            }
+            const sentences: string[] = [];
+            for (const [key, xs] of groups) {
+              const [pub, anchor] = key.split('|');
+              const frags = xs
+                .map((x) => describePhrase(x.dimension, x.direction))
+                .filter(Boolean) as string[];
+              if (frags.length === 0) { sentences.push(...xs.map((x) => x.statement)); continue; }
+              const list = frags.length === 1 ? frags[0]
+                : `${frags.slice(0, -1).join(', ')} and ${frags[frags.length - 1]}`;
+              sentences.push(
+                `${pub || 'Reviewers'} also heard it as ${list}`
+                + (anchor ? ` next to the ${anchor} — comparisons, not absolute placements` : '')
+                + '.',
+              );
+            }
+            sentences.push(...conditioned.map((x) => x.statement));
+            if (sentences.length === 0) return null;
             return (
               <div style={{ marginTop: '0.8rem' }}>
                 <p style={{ ...label, margin: '0 0 0.3rem 0' }}>What reviewers heard</p>
-                {rest.map((x, i) => (
+                {sentences.map((x, i) => (
                   <p key={i} style={{
                     margin: '0 0 0.3rem 0', fontSize: '0.83rem', lineHeight: 1.5,
                     color: 'rgba(27,26,24,0.68)',
-                  }}>{x.statement}</p>
+                  }}>{x}</p>
                 ))}
               </div>
             );
