@@ -4381,6 +4381,31 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
     return <EditorialFormat advisory={a} onPreferenceCapture={onPreferenceCapture} />;
   }
 
+  /*
+   * ── THE GOVERNED SHELL ──────────────────────────────────────────────
+   *
+   * When a composed SYSTEM REVIEW exists, it IS the assessment: thesis,
+   * synergy, engineering, recommendation, unknowns — every one of them
+   * licensed. This format's own body is the model-authored ancestor of that
+   * material, and gating it block-by-block is how holes keep appearing:
+   * `systemSignature` was gated, then `componentReadings`, then
+   * `systemContext` — and production still opened with "This combination
+   * suggests that the dynamic performance is likely well-managed", which is
+   * `systemInteraction`, the next block down a list of thirty.
+   *
+   * So the gate is structural, not enumerated: a governed assessment renders
+   * the header and nothing else here. The review, dossiers, evidence and
+   * follow-up all arrive through `artifactActions`, mounted after every
+   * format. Entry path may not change editorial generation.
+   */
+  if (a.systemReview && a.systemReview.length > 0) {
+    return (
+      <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+        <ResponseHeader advisory={a} />
+      </div>
+    );
+  }
+
   const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
     || (a.listenerAvoids && a.listenerAvoids.length > 0);
 
