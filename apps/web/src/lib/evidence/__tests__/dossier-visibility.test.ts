@@ -26,18 +26,29 @@ describe('no progressive disclosure on any surface', () => {
     expect(ARTIFACT).not.toMatch(/More detail|− Less|useState|details>|summary>/);
   });
 
-  it('both render every bucket of the view', () => {
-    for (const [name, src] of [['conversation', CONVERSATION], ['artifact', ARTIFACT]] as const) {
-      expect(src, `${name}: primary`).toMatch(/d\.primary\.map/);
-      expect(src, `${name}: secondary`).toMatch(/d\.secondary\.map/);
-      expect(src, `${name}: gaps`).toMatch(/d\.gaps\.map/);
-    }
+  /*
+   * POLICY SUPERSEDED (founder, 2026-08-26 editorial convergence): "Do not
+   * simply render every held fact because it exists. The evidence ledger can
+   * preserve exhaustive provenance. The dossier should be edited."
+   *
+   * The rule these tests pinned — no filtering between selection and display
+   * — protected against PROGRESSIVE DISCLOSURE: facts hidden behind a click.
+   * The new curation is not disclosure: nothing is behind an interaction,
+   * the KEY_SPEC predicate is visible policy, and when curation would empty
+   * a card the uncurated lines return. What the tests now pin is the new
+   * contract: curation exists, is fallback-safe, and hides nothing behind
+   * interaction.
+   */
+  it('curates key specifications with an empty-card fallback', () => {
+    expect(CONVERSATION).toMatch(/KEY_SPEC/);
+    expect(CONVERSATION).toMatch(/curated \? primary : d\.primary/);
   });
 
-  it('neither surface filters or reorders what selection chose', () => {
-    for (const src of [CONVERSATION, ARTIFACT]) {
-      // A `.filter(` or `.slice(` over a bucket would be a second selection.
-      expect(src).not.toMatch(/d\.(primary|secondary)\.(filter|slice|sort)\(/);
+  it('still renders gaps everywhere, and never behind a disclosure control', () => {
+    for (const [name, src] of [['conversation', CONVERSATION], ['artifact', ARTIFACT]] as const) {
+      expect(src, `${name}: gaps`).toMatch(/d\.gaps\.map/);
+      // Actual disclosure ELEMENTS — comments legitimately discuss the words.
+      expect(src, name).not.toMatch(/<details|<summary|aria-expanded/i);
     }
   });
 });

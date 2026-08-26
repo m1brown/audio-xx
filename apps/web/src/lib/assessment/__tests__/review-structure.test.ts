@@ -145,7 +145,9 @@ describe('the explanation is ordered by significance, not retrieval', () => {
      * audit of the evidence. The requirement it pins is unchanged: distinct
      * propositions get distinct paragraphs.
      */
-    const why = r.sections?.find((sec) => /why the system makes sense/i.test(sec.label));
+    // Relabelled in the editorial pass: the numbers live under
+    // 'Engineering check'; 'Why it works' carries the listening synthesis.
+    const why = r.sections?.find((sec) => /engineering check/i.test(sec.label));
     expect(why).toBeTruthy();
     expect(why!.paragraphs.length).toBeGreaterThanOrEqual(3);
   });
@@ -154,7 +156,7 @@ describe('the explanation is ordered by significance, not retrieval', () => {
     const labels = (r.sections ?? []).map((sec) => sec.label);
     // Roles a reader can act on, in the order an argument runs.
     expect(labels[0]).toBe('The assessment');
-    expect(labels).toContain('Why the system makes sense');
+    expect(labels).toContain('Engineering check');
     // A slot is only present when the material exists.
     for (const sec of r.sections ?? []) expect(sec.paragraphs.length).toBeGreaterThan(0);
   });
@@ -173,11 +175,17 @@ describe('the explanation is ordered by significance, not retrieval', () => {
     expect(bare.sections ?? []).toHaveLength(0);
   });
 
-  it('places the single-component listening evidence after the relationships', () => {
-    const rel = r.paragraphs.findIndex((p) => /published figures applies/.test(p));
-    const obs = r.paragraphs.findIndex((p) => /listening evidence Audio XX holds/.test(p));
-    expect(rel).toBeGreaterThan(-1);
-    expect(obs).toBeGreaterThan(rel);
+  it('the numbers still render in full when a constraint keeps them detailed', () => {
+    /*
+     * The single-component "listening evidence Audio XX holds" methodology
+     * paragraph was cut in the editorial pass, and the argument order
+     * inverted: listening synthesis leads, engineering validates. What this
+     * fixture (uncoherent engineering — loading unknowns present) must show
+     * is that the DETAILED numbers still render rather than the one-line
+     * summary: compression is earned by good news only.
+     */
+    expect(r.paragraphs.findIndex((p) => /published figures applies/.test(p))).toBeGreaterThan(-1);
+    expect(r.paragraphs.join('\n')).not.toMatch(/Electrically, the chain is exceptionally comfortable/);
   });
 });
 

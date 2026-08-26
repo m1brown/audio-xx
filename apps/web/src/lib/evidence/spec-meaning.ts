@@ -34,6 +34,14 @@ export interface SpecMeaning {
  * loudspeaker's nominal load and an amplifier's input would get the same gloss
  * and one of them would be wrong.
  */
+/*
+ * TRIMMED (2026-08-26 editorial pass): frequency response, driver complement,
+ * power handling and maximum-output glosses removed. They were textbook-true
+ * and appeared under nearly every card, which buried the four glosses that
+ * actually carry an interface conclusion. A gloss earns its place by helping
+ * the reader use a figure in THIS chain, not by having something accurate to
+ * say about it.
+ */
 export const SPEC_MEANINGS: SpecMeaning[] = [
   {
     match: /input impedance/i,
@@ -78,35 +86,16 @@ export const SPEC_MEANINGS: SpecMeaning[] = [
       + 'number on the list.',
   },
   {
-    match: /power handling/i,
-    meaning: 'The amplifier power range the maker warrants for these loudspeakers. It is a '
-      + 'guide to matching, not a measure of how loud they play.',
-  },
-  {
     match: /^impedance/i,
     meaning: 'The nominal load these loudspeakers present. It decides which of an '
       + 'amplifier’s power ratings applies — and it is an average: the real impedance '
       + 'varies with frequency, which is what a full plot would show.',
   },
   {
-    match: /frequency response/i,
-    meaning: 'The band the maker specifies, with the tolerance and measurement conditions '
-      + 'it was taken under. Comparable only against another figure quoted the same way.',
-  },
-  {
     match: /tube complement/i,
     meaning: 'Which valves the unit contains. It does not say where in the circuit they '
       + 'sit — a tube-driven stage and a valve output stage are different designs with '
       + 'the same parts list.',
-  },
-  {
-    match: /driver complement/i,
-    meaning: 'The drive units and how the range is divided between them.',
-  },
-  {
-    match: /maximum balanced output|output level/i,
-    meaning: 'The maximum this source delivers, selectable here. A lower setting usually '
-      + 'gives a preamplifier more usable range on its volume control.',
   },
 ];
 

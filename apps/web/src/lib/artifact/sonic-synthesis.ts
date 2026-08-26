@@ -103,6 +103,23 @@ export function observationKey(displayName: string): string {
  * stored "Acora Acoustics QRC-2" satisfy a listener's bare "Acora", which is
  * how one product's evidence ends up under another product's name.
  */
+/**
+ * The canonical prose identity for a listener's shorthand.
+ *
+ * "Butler Monads" is how the owner writes it and stays the KEY everywhere —
+ * the character map, the ledger scope, the invariants. But prose built on the
+ * shorthand produced number-agreement errors ("the Butler Monads is...") and
+ * a review that repeats the listener's abbreviation back at them. Where a
+ * governed identity exists, sentences use its canonical name; where none
+ * does, the listener's own words stand.
+ */
+export function canonicalDisplayName(displayName: string): string {
+  const key = resolveObservationKey(displayName, seedObservations().admitted);
+  if (!key) return displayName;
+  const identity = PRODUCT_IDENTITIES.find((i) => i.productKey === key);
+  return identity?.canonical ?? displayName;
+}
+
 export function resolveObservationKey(
   displayName: string,
   observations: ReviewObservation[],
@@ -177,7 +194,8 @@ export function synthesiseChain(
     const key = c.productKey
       ?? resolveObservationKey(c.displayName, observations)
       ?? observationKey(c.displayName);
-    const { propositions, gap } = deriveCharacter(key, c.displayName, observations);
+    // Canonical name in the SENTENCES; the listener's name as the KEY.
+    const { propositions, gap } = deriveCharacter(key, canonicalDisplayName(c.displayName), observations);
     character.set(c.displayName, propositions);
     if (gap) { gaps.push(gap); uncharacterised.push(c.displayName); }
   }
@@ -196,8 +214,14 @@ export function synthesiseChain(
   for (let i = 0; i + 1 < ordered.length; i += 1) {
     const up = ordered[i];
     const down = ordered[i + 1];
-    const upstream = { name: up.displayName, propositions: character.get(up.displayName) ?? [] };
-    const downstream = { name: down.displayName, propositions: character.get(down.displayName) ?? [] };
+    const upstream = {
+      name: canonicalDisplayName(up.displayName),
+      propositions: character.get(up.displayName) ?? [],
+    };
+    const downstream = {
+      name: canonicalDisplayName(down.displayName),
+      propositions: character.get(down.displayName) ?? [],
+    };
 
     for (const dimension of CHARACTER_DIMENSIONS) {
       const relation = synthesise(upstream, downstream, dimension);
@@ -221,8 +245,8 @@ export function synthesiseChain(
     const upstreamNames = ordered
       .filter((c) => chainIndex(c.role) < chainIndex('speaker'))
       .map((c) => c.displayName);
-    const r2 = revealingDownstream(upstreamNames, {
-      name: speaker.displayName,
+    const r2 = revealingDownstream(upstreamNames.map(canonicalDisplayName), {
+      name: canonicalDisplayName(speaker.displayName),
       propositions: character.get(speaker.displayName) ?? [],
     });
     if (r2) relations.push(r2);

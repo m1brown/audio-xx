@@ -111,8 +111,11 @@ describe('comparative evidence stays comparative', () => {
     const resolution = r.propositions.find((p) => p.dimension === 'resolution');
     expect(resolution?.basis).toBe('comparative_only');
     expect(resolution?.comparedWith).toBeTruthy();
-    expect(resolution?.statement).toMatch(/relative to/i);
-    expect(resolution?.statement).toMatch(/absolute terms was not established/i);
+    // Editorial rephrase (2026-08-26): the anchor and the bound survive in
+    // natural prose — "next to the earlier Rossini — a comparison, not an
+    // absolute placement" — rather than the database frame they replaced.
+    expect(resolution?.statement).toMatch(/next to the/i);
+    expect(resolution?.statement).toMatch(/a comparison, not an absolute placement/i);
   });
 
   it('the anchor survives a lowercase modifier', () => {
@@ -149,7 +152,10 @@ describe('conditions travel', () => {
   it('so the QRC-2 is never described as simply warm', () => {
     const warmth = character('acora qrc-2', 'Acora Acoustics QRC-2')
       .propositions.find((p) => p.dimension === 'warmth');
-    expect(warmth?.statement).toMatch(/though only/);
+    // The condition still travels — now as an appended clause rather than a
+    // "though only" frame. What matters is that the show context is IN the
+    // sentence, inseparable from the claim.
+    expect(warmth?.statement).toMatch(/heard the .* as warm in balance — heard at/i);
   });
 });
 
@@ -190,7 +196,8 @@ describe('the Butler, after a second acquisition pass', () => {
     for (const p of r.propositions) {
       expect(p.basis, p.dimension).toBe('conditional');
       expect(p.confidence).toBe('low');
-      expect(p.statement).toMatch(/though only/);
+      // The tube condition rides in the sentence itself.
+      expect(p.statement).toMatch(/heard the .* as .* — /);
     }
   });
 

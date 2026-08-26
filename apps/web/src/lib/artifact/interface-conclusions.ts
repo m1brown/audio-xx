@@ -41,6 +41,16 @@ export interface InterfaceConclusion {
    * re-parsing its own prose to find out.
    */
   favourable?: boolean;
+  /**
+   * The load-bearing numbers, structured.
+   *
+   * The editorial layer composes a one-paragraph engineering summary from
+   * these instead of re-parsing its own prose. Keys by kind:
+   *   loading  — outOhms, inOhms, ratio
+   *   level    — fraction (of preamp output at which the amp reaches full power)
+   *   headroom — peakDb, watts, loadOhms, sensitivity
+   */
+  figures?: Record<string, number | string>;
 }
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
@@ -166,6 +176,7 @@ function loadingConclusion(
   return {
     upstream: upstream.name, downstream: downstream.name, kind: 'loading',
     status: 'established', favourable: comfortable,
+    figures: { outOhms, inOhms, ratio: rounded },
     restsOn: [
       `${upstream.name}: ${out.value} (${out.label.toLowerCase()})`,
       `${downstream.name}: ${inp.value} (${inp.label.toLowerCase()})`,
@@ -221,6 +232,7 @@ function levelConclusion(
   return {
     upstream: preamp.name, downstream: amp.name, kind: 'level',
     status: 'established', favourable: true,
+    figures: { fraction: Math.round(fraction * 100) },
     restsOn: [
       `${source.name}: ${outputs.value}`,
       `${preamp.name}: ${gainLine!.value} (${gainLine!.label.toLowerCase()})`,
@@ -265,6 +277,7 @@ function headroomConclusion(
   return {
     upstream: amp.name, downstream: speaker.name, kind: 'headroom',
     status: 'established', favourable: true,
+    figures: { peakDb: Math.round(peak * 10) / 10, watts: power, loadOhms: load, sensitivity: sens },
     restsOn: [
       `${speaker.name}: ${sensLine!.value}`,
       `${amp.name}: ${power}W at ${load} ohms (from ${powerLine.value})`,

@@ -5554,9 +5554,13 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
           ))}
         </section>
       )}
-      {/* The closing question, now genuinely closing the review above it. */}
+      {/* The closing question closes the CONVERSATION, not the document.
+        * In chat it invites the next turn; in the durable Print/Save PDF it
+        * is conversational machinery trailing a finished assessment — the
+        * review now ends on its recommendation and unknowns, which is where
+        * an assessment should end. Hidden in print, kept on screen. */}
       {advisory.followUp && advisory.systemReview && advisory.systemReview.length > 0 && (
-        <p style={{
+        <p data-print-hide style={{
           margin: '0 0 1rem 0', fontSize: FONTS.bodySize,
           lineHeight: FONTS.lineHeight, color: COLORS.textSecondary, fontStyle: 'italic',
         }}>{advisory.followUp}</p>

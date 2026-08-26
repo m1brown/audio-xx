@@ -65,9 +65,11 @@ describe('NATHAN — the well-evidenced case', () => {
     // The regression: "preamplifier" did not match "preamp", so the ARC sorted
     // behind the loudspeaker and the review paired the speaker with the
     // preamplifier feeding it.
+    // Relation prose now carries CANONICAL names (the listener's shorthand
+    // stays the map key); "ARC ref 5" renders as "Audio Research Reference 5".
     const pairs = s.relations.map((r) => `${r.upstreamName}->${r.downstreamName}`);
-    expect(pairs).toContain('dCS Rossini Apex->ARC ref 5');
-    expect(pairs.some((p) => p.startsWith('Acora QRC-2->'))).toBe(false);
+    expect(pairs).toContain('dCS Rossini Apex->Audio Research Reference 5');
+    expect(pairs.some((p) => p.startsWith('Acora QRC-2->') || p.startsWith('Acora Acoustics QRC-2->'))).toBe(false);
   });
 });
 
@@ -122,8 +124,8 @@ describe('PREAMP + INTEGRATED — the topology the listener stated is preserved'
       { displayName: 'Acora QRC-2', role: 'speaker' },
     ], admitted);
     const pairs = s.relations.map((r) => `${r.upstreamName}->${r.downstreamName}`);
-    expect(pairs.some((p) => p.startsWith('ARC ref 5->Some Integrated'))).toBe(true);
-    expect(pairs.some((p) => p.startsWith('Some Integrated->ARC ref 5'))).toBe(false);
+    expect(pairs.some((p) => p.startsWith('Audio Research Reference 5->Some Integrated'))).toBe(true);
+    expect(pairs.some((p) => p.startsWith('Some Integrated->Audio Research Reference 5'))).toBe(false);
   });
 });
 

@@ -316,20 +316,50 @@ function phrase(
     ? publications[0]
     : `${publications.slice(0, -1).join(', ')} and ${publications[publications.length - 1]}`;
 
+  /*
+   * EDITORIAL PASS (2026-08-26). The earlier mechanical template produced
+   * database English — "described the dCS Rossini Apex's refinement as
+   * refined" — a tautology assembled by pushing a dimension label and its
+   * direction through one fixed frame. Each direction now has a natural
+   * predicate, and where the direction word IS the dimension's own adjective
+   * the sentence drops the label rather than repeating it.
+   */
+  const naturally: Record<string, string> = {
+    'resolution:high': 'unusually resolving, with strong low-level detail',
+    'resolution:limited': 'limited in low-level detail',
+    'tonal_density:full': 'full and rich in tone',
+    'tonal_density:lean': 'lean in tone',
+    'warmth:warm': 'warm in balance',
+    'warmth:cool': 'cool in balance',
+    'transient:quick': 'quick on transients',
+    'transient:relaxed': 'relaxed on transients',
+    'dynamics:wide': 'wide-ranging dynamically',
+    'dynamics:compressed': 'dynamically compressed',
+    'spatial:developed': 'strong in imaging and staging',
+    'spatial:restricted': 'restricted in imaging',
+    'bass_control:controlled': 'firm and well-controlled in the bass',
+    'bass_control:loose': 'loose in the bass',
+    'refinement:refined': 'notably refined',
+    'refinement:coarse': 'coarse-sounding',
+    'neutrality:neutral': 'neutral rather than coloured',
+    'neutrality:coloured': 'audibly coloured',
+  };
+  const described = naturally[`${dimension}:${direction}`]
+    ?? `${direction} in ${subject}`;
+
   switch (basis) {
     case 'convergent_observations':
-      return `Independent reviewers at ${sources} describe the ${productName}'s `
-        + `${subject} in consistent terms: ${direction}.`;
+      return `Independent reviewers at ${sources} consistently describe the `
+        + `${productName} as ${described}.`;
     case 'direct_observation':
-      return `${sources} described the ${productName}'s ${subject} as ${direction}.`;
+      return `${sources} described the ${productName} as ${described}.`;
     case 'comparative_only':
-      return `${sources} found the ${productName}'s ${subject} ${direction} `
-        + `relative to the ${comparedWith}. Where that pair sits in absolute terms `
-        + `was not established.`;
+      return `${sources} found the ${productName} ${described} next to the `
+        + `${comparedWith} — a comparison, not an absolute placement.`;
     case 'conditional': {
       const c = conditions[0];
-      return `${sources} described the ${productName}'s ${subject} as ${direction}, `
-        + `${c ? `though only ${c.description}` : 'under stated conditions'}.`;
+      return `${sources} heard the ${productName} as ${described}`
+        + `${c ? ` — ${c.description}` : ' under stated conditions'}.`;
     }
   }
 }

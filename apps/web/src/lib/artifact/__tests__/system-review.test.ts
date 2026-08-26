@@ -152,8 +152,19 @@ describe('the review never exceeds its licence', () => {
     expect(out).toMatch(/dCS Rossini Apex/);
   });
 
-  it('marks the architecture claim as architecture, not sound', () => {
-    expect(out).toMatch(/architectural fact about the chain, not a prediction/i);
+  it('the architecture claim never overreaches into sound', () => {
+    /*
+     * The "not a prediction about how it sounds" narration was cut in the
+     * editorial pass — the reader does not need telling twice per page. The
+     * INVARIANT it decorated is what matters and stays pinned: the valve
+     * paragraph never claims a valve output stage or predicts tone from
+     * topology.
+     */
+    // The affirmative overreach ("output stage built on the 300B") is what
+    // must never return; the guard sentence quoting the phrase inside a
+    // negation ("nothing here says the signal reaches...") is fine.
+    expect(out).not.toMatch(/output stage built on/i);
+    expect(out).not.toMatch(/will sound|sounds warm|tube warmth/i);
   });
 });
 

@@ -16,7 +16,7 @@
 import React from 'react';
 import type { DossierView } from '@/lib/evidence/dossier-presentation';
 import { deriveEvidenceLedger } from '@/lib/artifact/evidence-ledger';
-import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
+import { synthesiseChain, canonicalDisplayName } from '@/lib/artifact/sonic-synthesis';
 import { COLOR } from '@/lib/editorial-tokens';
 import { meaningFor } from '@/lib/evidence/spec-meaning';
 
@@ -26,7 +26,20 @@ const label: React.CSSProperties = {
   textTransform: 'uppercase', color: COLOR.textMuted,
 };
 
-function Line({ l }: { l: DossierView['primary'][number] }) {
+function Line({ l, meaning }: {
+  l: DossierView['primary'][number];
+  /**
+   * The gloss, decided by the PARENT during its own render.
+   *
+   * The first version had Line consult a shared Set while rendering — which
+   * met React StrictMode's double-invocation: the discarded first pass
+   * filled the set, the committed second pass found every gloss "already
+   * seen", and no gloss rendered at all. Mutation during child render is the
+   * bug class; the parent now assigns each gloss to its first occurrence
+   * while evaluating props, and Line just prints what it is given.
+   */
+  meaning?: string;
+}) {
   /*
    * WHAT THE FIGURE MEANS, under the figure.
    *
@@ -39,7 +52,6 @@ function Line({ l }: { l: DossierView['primary'][number] }) {
    * Most labels get none. Dimensions and weight need no explaining, and a
    * sentence under every row would bury the ones that earn their place.
    */
-  const meaning = meaningFor(l.label);
   return (
     <div style={{ display: 'flex', gap: '0.7rem', marginBottom: '0.45rem', flexWrap: 'wrap' }}>
       <span style={{ ...label, minWidth: '8.5rem' }}>{l.label}</span>
@@ -106,6 +118,19 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
    * Derived from the same pure function over the same admitted rows the
    * review used, so the two surfaces cannot drift.
    */
+  /*
+   * Glosses render ONCE per assessment: the 10:1 explanation is useful under
+   * the first output-impedance figure and clutter under the second. Assigned
+   * here, in the parent's render, so StrictMode's double-invocation gets a
+   * fresh set each pass and the committed pass keeps its glosses.
+   */
+  const seenGlosses = new Set<string>();
+  const glossOf = (l: { label: string }): string | undefined => {
+    const m = meaningFor(l.label);
+    if (!m || seenGlosses.has(m)) return undefined;
+    seenGlosses.add(m);
+    return m;
+  };
   const dossierSynthesis = synthesiseChain(
     present.map((d) => ({ displayName: d.displayName, role: d.role ?? '' })),
   );
@@ -131,9 +156,39 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
           marginBottom: '1.3rem', paddingBottom: '1.1rem',
           borderBottom: '1px solid rgba(27,26,24,0.08)',
         }}>
-          <p style={{ margin: '0 0 0.15rem 0', fontWeight: 600, fontSize: '0.95rem' }}>
-            {d.displayName}
+          {/* Recognition, not evidence. Rendered only when the governed
+              boundary admitted an exact-product asset; absent renders NOTHING
+              — no frame, no placeholder, no reserved space — so a dossier
+              without a photograph is a finished card rather than a gap. */}
+          {d.image && (
+            <figure style={{ margin: '0 0 0.7rem 0' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={d.image.url}
+                alt={d.displayName}
+                style={{
+                  display: 'block', maxWidth: '190px', width: '100%',
+                  height: 'auto', objectFit: 'contain', borderRadius: 2,
+                }}
+              />
+              {d.image.credit && (
+                <figcaption style={{ ...label, marginTop: '0.25rem' }}>
+                  {d.image.credit}
+                </figcaption>
+              )}
+            </figure>
+          )}
+          <p style={{ margin: '0 0 0.15rem 0', fontWeight: 600, fontSize: '1.02rem' }}>
+            {canonicalDisplayName(d.displayName)}
           </p>
+          {/* The listener's own shorthand, kept visible when the governed
+              identity differs — the mapping is theirs to see, not silent. */}
+          {canonicalDisplayName(d.displayName) !== d.displayName && (
+            <p style={{
+              margin: '0 0 0.2rem 0', fontSize: '0.72rem',
+              color: 'rgba(27,26,24,0.45)', fontStyle: 'italic',
+            }}>listed as “{d.displayName}”</p>
+          )}
           {/* IDENTITY PROVENANCE — a badge only where it tells the listener
               something. `model` (identity corroborated, nothing curated) is
               epistemically true and editorially empty: the listener owns the
@@ -159,28 +214,6 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               textTransform: 'uppercase', color: 'rgba(27,26,24,0.45)',
             }}>{d.role}</p>
           )}
-          {/* Recognition, not evidence. Rendered only when the governed
-              boundary admitted an exact-product asset; absent renders NOTHING
-              — no frame, no placeholder, no reserved space — so a dossier
-              without a photograph is a finished card rather than a gap. */}
-          {d.image && (
-            <figure style={{ margin: '0 0 0.7rem 0' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={d.image.url}
-                alt={d.displayName}
-                style={{
-                  display: 'block', maxWidth: '190px', width: '100%',
-                  height: 'auto', objectFit: 'contain', borderRadius: 2,
-                }}
-              />
-              {d.image.credit && (
-                <figcaption style={{ ...label, marginTop: '0.25rem' }}>
-                  {d.image.credit}
-                </figcaption>
-              )}
-            </figure>
-          )}
           {/* EVIDENCE-GROUNDED CHARACTERISATION — one or two sentences,
             * assembled from this component's admitted propositions and
             * nothing else. The statements are the character layer's own,
@@ -199,7 +232,24 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               }}>{lead.map((x) => x.statement).join(' ')}</p>
             );
           })()}
-          {d.primary.map((l, i) => <Line key={i} l={l} />)}
+          {/* KEY SPECIFICATIONS — edited, not exhaustive. The dossier shows
+            * the figures that help a reader understand this component in THIS
+            * system: loads, impedances, sensitivity, power, gain, valves,
+            * drivers. Dimensions, weight, connector inventories and the like
+            * remain held (and reachable through EVIDENCE); rendering every
+            * field because it exists is what made these cards read as a
+            * database dump. If curation would empty a card entirely, the
+            * uncurated lines return — a sparse card beats a blank one. */}
+          {(() => {
+            const KEY_SPEC = /impedance|sensitivit|power|gain|output|tube complement|driver complement|load/i;
+            const NOISE = /dimension|weight|shipping|inputs?$|cabinet|finish/i;
+            const keep = (l: { label: string }) => KEY_SPEC.test(l.label) && !NOISE.test(l.label);
+            const primary = d.primary.filter(keep);
+            const secondary = d.secondary.filter(keep);
+            const curated = primary.length + secondary.length > 0;
+            const p1 = curated ? primary : d.primary;
+            return p1.map((l, i) => <Line key={i} l={l} meaning={glossOf(l)} />);
+          })()}
           {/* `detailSummary` is NOT rendered. It announced "4 published
               details held" and then listed the four details immediately below
               — a count of what the reader can already see. It made sense when
@@ -223,7 +273,14 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
               Selection stays with `presentDossier`; display shows what it
               chose. Depth varies by component, and one with three useful facts
               is simply shorter than one with ten. */}
-          {d.secondary.map((l, i) => <Line key={`s${i}`} l={l} />)}
+          {(() => {
+            const KEY_SPEC = /impedance|sensitivit|power|gain|output|tube complement|driver complement|load/i;
+            const NOISE = /dimension|weight|shipping|inputs?$|cabinet|finish/i;
+            const keep = (l: { label: string }) => KEY_SPEC.test(l.label) && !NOISE.test(l.label);
+            const curated = d.primary.filter(keep).length + d.secondary.filter(keep).length > 0;
+            const s2 = curated ? d.secondary.filter(keep) : d.secondary;
+            return s2.map((l, i) => <Line key={`s${i}`} l={l} meaning={glossOf(l)} />);
+          })()}
 
           {/* A component Audio XX holds nothing about still appears, and says
               so. Silence here would read as an oversight; stating it is the
@@ -263,34 +320,39 @@ export default function ComponentDossiers({ dossiers }: { dossiers?: DossierView
             );
           })()}
 
-          {/* FIND ONE — deliberately discoverable, deliberately subordinate.
-            * The blue is the action accent, not an advertisement: it marks
-            * navigation the way the app's own links do, and it sits last in
-            * the card, after photograph, identity, characterisation and
+          {/* FIND ONE — a designed utility element, not body text. Blue is
+            * the action accent (navigation, in the app's own language), the
+            * links are bordered chips so they read as controls on the web and
+            * remain recognisable in print, and the whole row stays last in
+            * the card — after photograph, identity, characterisation and
             * evidence. Destinations derive from canonical identity. */}
           {d.resources && d.resources.length > 0 && (
-            <p style={{
-              margin: '0.85rem 0 0 0',
-              fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
-              fontSize: '0.7rem', letterSpacing: '0.06em',
-            }}>
-              <span style={{
-                textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700,
-                marginRight: '0.7rem', color: '#2b5e9e',
-              }}>Find one</span>
-              {d.resources.map((r) => (
-                <a
-                  key={r.url}
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  style={{
-                    color: '#2b5e9e', marginRight: '0.8rem',
-                    textDecoration: 'none', borderBottom: '1px solid rgba(43,94,158,0.35)',
-                  }}
-                >{r.label}</a>
-              ))}
-            </p>
+            <div style={{ marginTop: '0.9rem' }}>
+              <p style={{
+                margin: '0 0 0.35rem 0',
+                fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.14em',
+                textTransform: 'uppercase', color: '#2b5e9e',
+              }}>Find one</p>
+              <p style={{ margin: 0 }}>
+                {d.resources.map((r) => (
+                  <a
+                    key={r.url}
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    style={{
+                      display: 'inline-block', padding: '0.18rem 0.6rem',
+                      marginRight: '0.5rem', marginBottom: '0.25rem',
+                      fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
+                      fontSize: '0.74rem', letterSpacing: '0.04em',
+                      color: '#2b5e9e', textDecoration: 'none',
+                      border: '1px solid rgba(43,94,158,0.45)', borderRadius: 3,
+                    }}
+                  >{r.label}</a>
+                ))}
+              </p>
+            </div>
           )}
         </div>
       ))}

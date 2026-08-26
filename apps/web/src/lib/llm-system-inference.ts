@@ -1763,7 +1763,18 @@ function parseSystemInferenceResponse(
     // knows exactly what it established, so Audio XX states it.
     const physicalOnly = surviving.length > 0
       && surviving.every((r) => r.axis === 'power_load');
-    if (!verdictOut || (openGap && physicalOnly)) {
+    /*
+     * WIDENED (2026-08-26): previously the rebuild required an open gap as
+     * well, so once the sensitivity figure was acquired and the gap closed,
+     * the model's verdict came back — and promptly claimed the system "lacks
+     * specific acoustic headroom data due to undisclosed speaker sensitivity"
+     * directly above a review computing 115.5dB FROM that sensitivity. The
+     * doctrine in the comment above is the general rule, not a gap-day rule:
+     * when the surviving relations are physical only, the verdict slot states
+     * what Audio XX established, in Audio XX's own words. The model's account
+     * of the evidence base is not evidence about the evidence base.
+     */
+    if (!verdictOut || physicalOnly) {
       verdictOut = verdictFromEvidence(parsed.actionVerdict, surviving, openGap);
     }
 

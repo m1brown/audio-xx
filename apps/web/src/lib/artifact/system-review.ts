@@ -37,7 +37,7 @@ import {
 
 import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
-import { significantRelations } from './sonic-synthesis';
+import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
 import { interfaceConclusions } from './interface-conclusions';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
@@ -189,9 +189,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * which the chain line shows but does not state.
      */
     architecture.push(
-      `Gain and power are handled in separate boxes here, with `
-      + `${pre.component.displayName} doing the first and `
-      + `${amp.component.displayName} the second.`,
+      `Gain and power are handled in separate boxes here, with the `
+      + `${canonicalDisplayName(pre.component.displayName)} doing the first and the `
+      + `${canonicalDisplayName(amp.component.displayName)} the second.`,
     );
   }
 
@@ -218,7 +218,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     .filter((x): x is NonNullable<typeof x> => !!x)
     .filter((x) => !!findLine(x.dossier, 'tube complement'));
   if (tubeStages.length >= 2) {
-    const names = tubeStages.map((t) => t.component.displayName);
+    const names = tubeStages.map((t) => canonicalDisplayName(t.component.displayName));
     const ampTopology = findLine(amp?.dossier, 'output stage')
       ?? findLine(amp?.dossier, 'topology');
     architecture.push(
@@ -229,14 +229,13 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         : `A published tube complement establishes that a unit contains these valves, `
           + `not where in its circuit they operate — so nothing here says the signal `
           + `reaches the loudspeaker terminals through a valve output stage. `)
-      + `That is an architectural fact about the chain, not a prediction about how it `
-      + `sounds.`,
+,
     );
   } else if (tubeStages.length === 1) {
     const t = tubeStages[0];
     const tubes = findLine(t.dossier, 'tube complement')?.value;
     architecture.push(
-      `${t.component.displayName} is a valve design${tubes ? ` — ${tubes.replace(/\.$/, '')}` : ''}, `
+      `The ${canonicalDisplayName(t.component.displayName)} is a valve design${tubes ? ` — ${tubes.replace(/\.$/, '')}` : ''}, `
       + `and it is the only published tube stage in the chain.`,
     );
   }
@@ -597,15 +596,50 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * the reader gets their system-level conclusion first — the ratios exist to
    * support the sentence, not the other way round.
    */
-  const engineeringLead: string[] = engineeringCoherent
-    ? [
-      `The engineering verdict is uncomplicated: there is no electrical bottleneck in `
-      + `this chain. Every interface that can be checked from published figures checks `
-      + `out with a comfortable margin, the gain structure has power to spare, and the `
-      + `published sensitivity and power figures leave substantial headroom. The `
-      + `supporting numbers follow.`,
-    ]
-    : [];
+  /*
+   * ONE PARAGRAPH, WITH THE FIGURES FOLDED IN. The convergence brief's
+   * verdict on the earlier treatment was right: six paragraphs proving that
+   * comfortable interfaces are comfortable is engineering exposition, not
+   * assessment. When every conclusion is established and favourable, the
+   * reader gets the whole electrical picture in one dense paragraph — the
+   * ratios in parentheses, the headroom with its one honest caveat, and the
+   * single remaining unknown. The full derivations still exist underneath
+   * (in the conclusion objects and their restsOn chains); they simply stop
+   * occupying a page of the review.
+   *
+   * When the engineering is NOT uniformly comfortable, the detailed
+   * paragraphs return: a constraint deserves its full derivation in front of
+   * the reader, and compression is earned by good news only.
+   */
+  const engineeringLead: string[] = [];
+  if (engineeringCoherent) {
+    const loadings = conclusions.filter((c) => c.kind === 'loading' && c.figures);
+    const level = conclusions.find((c) => c.kind === 'level');
+    const headroom = conclusions.find((c) => c.kind === 'headroom');
+    const ratioList = loadings
+      .map((c) => `${c.figures!.outOhms} ohms into ${Number(c.figures!.inOhms).toLocaleString()} ohms`)
+      .join('; ');
+
+    engineeringLead.push(
+      `Electrically, the chain is exceptionally comfortable. `
+      + (loadings.length
+        ? `${loadings.length === 1 ? 'The line-level interface presents' : 'Neither line-level interface presents'} `
+          + `a meaningful loading problem (${ratioList})`
+        : `The line-level interfaces present no established loading problem`)
+      + (level?.figures
+        ? `; the preamplifier has considerably more output than the amplifier needs, `
+          + `reaching full power at about ${level.figures.fraction}% of its range`
+        : '')
+      + (headroom?.figures
+        ? `; and ${headroom.figures.watts}W into the loudspeaker's nominal `
+          + `${headroom.figures.loadOhms}-ohm load, against ${headroom.figures.sensitivity}dB `
+          + `sensitivity, puts theoretical headroom near ${headroom.figures.peakDb}dB — a `
+          + `ceiling that assumes rated power into the real load`
+        : '')
+      + `. The remaining technical unknown is the loudspeaker's actual impedance and `
+      + `phase behaviour, which would show how demanding it is beyond its nominal rating.`,
+    );
+  }
 
   const synergyParas: string[] = [];
   if (input.synthesis) {
@@ -794,9 +828,8 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       + `same question as acoustic headroom, which the published sensitivity and power `
       + `figures already bound; what limits that in your room is listening distance, the `
       + `level you actually use, and how much of its rated power the amplifier delivers `
-      + `into the real load. So the plot would settle load difficulty, and what you hear `
-      + `at the volumes you listen at would settle the rest — which is why the question `
-      + `below is worth answering.`,
+      + `into the real load. So the plot would settle load difficulty — and what you hear `
+      + `at the volumes you actually use answers the rest better than any specification.`,
     );
   }
 
@@ -888,10 +921,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     const klass = classifySystem(input.components.length, priced, NATHAN_POSITIONS);
     const ambition = klass
       ? `This is an exceptionally ambitious, ${klass.klass === 'reference_oriented'
-        ? 'reference-oriented' : klass.klass.replace(/_/g, '-')} system — on verified `
-        + `prices, roughly ${'$'}${Math.round(priced.reduce((a, b) => a + b.usd, 0) / 1000)}k `
-        + `of equipment positioned near the top of serious high-end audio`
-        + `${klass.withheld ? ', though below its makers\u2019 own flagships' : ''}.`
+        ? 'reference-oriented' : klass.klass.replace(/_/g, '-')} system, assembled from `
+        + `components positioned near the top of serious high-end audio`
+        + `${klass.withheld ? ' though below their makers\u2019 own flagships' : ''}.`
       : undefined;
 
     const coherence = engineeringCoherent
@@ -955,7 +987,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     });
     const uncertainty = leastEvidenced.length === 1 && dims.length > 0
       ? `The open question is the ${leastEvidenced[0].role || 'component'} — the `
-        + `${leastEvidenced[0].displayName} is the least corroborated link in the chain, `
+        + `${canonicalDisplayName(leastEvidenced[0].displayName)} is the least corroborated link in the chain, `
         + `and the most informative place to experiment. That question, and what would `
         + `answer it, is taken up below.`
       : undefined;
@@ -996,12 +1028,12 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
 
     if (candidates.length === 1 && corroborated.length >= 2
       && /amp/i.test(candidates[0].role ?? '')) {
-      const cand = candidates[0].displayName;
+      const cand = canonicalDisplayName(candidates[0].displayName);
       const anchors = input.components
         .filter((c) => c.displayName !== candidates[0].displayName
           && !/pre/i.test(c.role ?? '')
           && (character.get(c.displayName) ?? []).length > 0)
-        .map((c) => c.displayName);
+        .map((c) => canonicalDisplayName(c.displayName));
       const preamp = corroborated.find((c) => /pre/i.test(c.role ?? ''));
 
       if (anchors.length > 0) {
@@ -1012,7 +1044,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           + `alone — ${plural ? 'they carry' : 'it carries'} the strongest independent `
           + `evidence in the chain and ${plural ? 'anchor' : 'anchors'} what this system is. `
           + (preamp
-            ? `Nor would I assume the ${preamp.displayName} needs changing: it is the `
+            ? `Nor would I assume the ${canonicalDisplayName(preamp.displayName)} needs changing: it is the `
               + `best-corroborated electronics here, and its evidence points to neutrality `
               + `rather than a coloration that would need correcting. `
             : ''),
@@ -1049,13 +1081,13 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * come last of the explanatory material.
    */
   explanation.push(
-    ...engineeringLead,
-    ...electricalParas,
-    ...interfaceParas,
-    ...lineLevel,
-    ...(architecturePara ? [architecturePara] : []),
     ...synergyParas,
     ...observationParas,
+    ...(engineeringCoherent
+      ? engineeringLead
+      : [...electricalParas, ...interfaceParas]),
+    ...lineLevel,
+    ...(architecturePara ? [architecturePara] : []),
   );
 
   /*
@@ -1074,15 +1106,15 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   const sections: ReviewSection[] = [
     { label: 'The assessment', paragraphs: thesis },
     {
-      label: 'Why the system makes sense',
-      paragraphs: [
-        ...engineeringLead, ...electricalParas, ...interfaceParas, ...lineLevel,
-        ...(architecturePara ? [architecturePara] : []),
-      ],
+      label: 'Why it works',
+      paragraphs: [...synergyParas, ...observationParas],
     },
     {
-      label: 'What the listening evidence suggests',
-      paragraphs: [...synergyParas, ...observationParas],
+      label: 'Engineering check',
+      paragraphs: engineeringCoherent
+        ? [...engineeringLead, ...lineLevel, ...(architecturePara ? [architecturePara] : [])]
+        : [...electricalParas, ...interfaceParas, ...lineLevel,
+          ...(architecturePara ? [architecturePara] : [])],
     },
     { label: 'What I would do', paragraphs: next },
     { label: 'What remains unknown', paragraphs: limits },
