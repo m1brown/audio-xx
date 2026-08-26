@@ -92,6 +92,11 @@ import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
 import { dossierFor } from '@/lib/evidence/product-dossier';
 import { presentDossier, worthRendering } from '@/lib/evidence/dossier-presentation';
 import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-product-facts';
+import {
+  NATHAN_FACTS, NATHAN_UNKNOWN_BY_PRODUCT, NATHAN_SUPERSEDED_HELD_SPECS,
+} from '@/lib/evidence/nathan-product-facts';
+import { resolveObservationKey } from '@/lib/artifact/sonic-synthesis';
+import { seedObservations } from '@/lib/evidence/independent-review-seed';
 
 /**
  * Component dossiers for one assessment.
@@ -122,8 +127,26 @@ function buildDossierViews(
   return components.map((c) => {
     const key = c.displayName.toLowerCase()
       .replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+    /*
+     * Authored facts are filed under the CANONICAL product key; the listener
+     * writes "ARC ref 5" and "Butler Monads". Without this the dCS facts
+     * landed — its display name happens to be canonical — and the ARC and
+     * Butler ones silently did not, which reads exactly like "we hold nothing
+     * for those" rather than "we filed them under another name".
+     *
+     * Resolved through the same governed identity table the review evidence
+     * uses, so a shorthand either means the exact product on both paths or on
+     * neither. Falls back to the display key when nothing is registered.
+     */
+    const factKey = resolveObservationKey(c.displayName, seedObservations().admitted) ?? key;
+    const authoredFacts = [...FRANCE_FACTS, ...NATHAN_FACTS]
+      .map((f) => (f.productKey === factKey && factKey !== key ? { ...f, productKey: key } : f));
+    const superseded = new Set(NATHAN_SUPERSEDED_HELD_SPECS[factKey] ?? []);
     const heldSpecs = manufacturerEvidence
       .filter((m) => m.productKey === key)
+      // A held figure an authored fact corrects is dropped, not shown beside
+      // it: the ARC's held frequency response was the SE variant's.
+      .filter((m) => !superseded.has(String(m.field)))
       .map((m) => {
         const sourceUrl = (m.attribution as { sourceUrl?: string } | undefined)?.sourceUrl;
         return {
@@ -140,8 +163,10 @@ function buildDossierViews(
         };
       });
     const view = presentDossier(dossierFor(key, c.displayName, {
-      authoredFacts: FRANCE_FACTS, heldSpecs, role: c.role,
-      unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key],
+      // Two authored sets, one list. Facts are keyed by product, so a system
+      // drawing on both is simply a system whose components appear in both.
+      authoredFacts, heldSpecs, role: c.role,
+      unknowns: FRANCE_UNKNOWN_BY_PRODUCT[key] ?? NATHAN_UNKNOWN_BY_PRODUCT[factKey],
       reviews: (reviewObservations[c.displayName] ?? []) as never,
     }));
     // The ONE place a dossier photograph is attached, so conversation,
@@ -153,13 +178,17 @@ function buildDossierViews(
      * The image is resolved against the CORROBORATED identity where one
      * exists, and the listener's words only otherwise.
      *
-     * Nathan types "Butler Monads". Butler's own site lists MONAD and A100 as
-     * separate items, so that string does not by itself identify the MONAD
-     * A100 and correctly resolves to no photograph. Where entity corroboration
-     * has INDEPENDENTLY established the canonical designation, that is the
-     * identity to resolve against — using it is the opposite of guessing from
-     * a shorthand, and no image is admitted that the governed boundary would
-     * not admit for the canonical name.
+     * Nathan types "Butler Monads". That string now resolves, under a founder
+     * decision of 2026-08-26 recorded in `product-images.ts`: Butler's site
+     * has exactly one Monad, so the plural has no sibling it could denote and
+     * naming it is identity rather than substitution. The earlier reading here
+     * — that the site "lists MONAD and A100 as separate items" — was a
+     * misreading of a section link beside a product heading.
+     *
+     * The precedence is unchanged and still matters: where entity
+     * corroboration has INDEPENDENTLY established the canonical designation,
+     * that is the identity to resolve against, and no image is admitted that
+     * the governed boundary would not admit for the canonical name.
      */
     const admitted = (c.canonicalName && getProductImageEntry(undefined, c.canonicalName))
       || getProductImageEntry(undefined, c.displayName);

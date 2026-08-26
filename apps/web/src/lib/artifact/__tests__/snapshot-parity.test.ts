@@ -355,6 +355,9 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       './sonic-synthesis',
       '../evidence/component-character',
       './sonic-synthesis',
+      // Arithmetic over two published figures the snapshot has already frozen.
+      // Reads no catalog, no engine, no network — the same terms as the rest.
+      './interface-conclusions',
       '../evidence/relational-synthesis',
       '../evidence/relational-synthesis',
     ]);
@@ -506,6 +509,7 @@ describe('the synthesis layer stays reachable-but-pure', () => {
    */
   const REACHABLE = [
     '../sonic-synthesis',
+    '../interface-conclusions',
     '../../evidence/component-character',
     '../../evidence/relational-synthesis',
     '../../evidence/independent-review-seed',

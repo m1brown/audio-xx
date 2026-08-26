@@ -42,8 +42,18 @@ describe('every surviving review source reaches EVIDENCE', () => {
     expect(bySource.get('SoundStage!')).toEqual(['Acora QRC-2']);
   });
 
-  it('never scopes a source to the component it said nothing about', () => {
+  it('scopes the Butler evidence to the Butler, and only there', () => {
+    /*
+     * This used to assert that NO source scoped to the Butler, because it had
+     * none. The Audio Beatnik's A100 review is now admitted and the
+     * sole-model plural alias resolves "Butler Monads" to it, so the correct
+     * assertion is the scoping one: the Beatnik licensed the amplifier and
+     * nothing else in this chain.
+     */
+    const beatnik = ledger().entries.find((e) => e.label === 'The Audio Beatnik');
+    expect(beatnik?.licensedFor).toEqual(['Butler Monads']);
     for (const e of ledger().entries) {
+      if (e.label === 'The Audio Beatnik') continue;
       expect(e.licensedFor, e.label).not.toContain('Butler Monads');
     }
   });

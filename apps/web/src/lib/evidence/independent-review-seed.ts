@@ -80,6 +80,20 @@ export const PRODUCT_IDENTITIES: ProductIdentity[] = [
     ],
   },
   {
+    /*
+     * FOUNDER DECISION 2026-08-26. One identity decision, governing both the
+     * governed photograph and the admitted review evidence — the same question
+     * was gating both, and answering it twice invites the two to diverge.
+     * Condition: the A100 is the SOLE Monad on the maker's site, and the
+     * maker's own manual says "most applications will use at least a pair of
+     * MONAD amplifiers". Not generalised to any other plural or abbreviation.
+     */
+    productKey: 'butler monad a100',
+    canonical: 'Butler MONAD A100',
+    aliases: ['butler monads', 'butler monad', 'monad a100', 'butler a100'],
+    excludes: ['butler tdb', 'butler 2250', 'butler monad a200'],
+  },
+  {
     productKey: 'acora qrc-2',
     canonical: 'Acora Acoustics QRC-2',
     aliases: ['acora qrc2', 'acora acoustics qrc-2', 'qrc-2'],

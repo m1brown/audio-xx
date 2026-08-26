@@ -159,6 +159,35 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     url: 'https://butleraudio.com/img/monad001.jpg',
     source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
       captured: '2026-08-25' } },
+  /*
+   * "Butler Monads" — ADMITTED as an exact alias (founder decision, 2026-08-26).
+   *
+   * The earlier note here said butleraudio.com "lists MONAD and A100
+   * separately", and withheld on that basis. That was a misreading of the
+   * site's navigation: "MONAD" is a section link to esoteric.php, and "A100"
+   * is the heading of the product on it. Three independent checks of the
+   * maker's own site establish there is exactly one Monad —
+   *
+   *   the nav has a single MONAD entry and no second model link;
+   *   esoteric.php presents the A100 as the Monad, not as the first of a line;
+   *   esotericmanuals.php offers exactly one manual, "MONAD A100 Owners Manual".
+   *
+   * — and the A100 manual states the intended arrangement in the maker's own
+   * words: "most applications will use at least a pair of MONAD amplifiers".
+   * A monoblock owner writing the plural is naming two of the one model.
+   *
+   * The condition is therefore SOLE-MODEL, not convenience: there is no
+   * sibling the plural could denote, so this is identity, not substitution.
+   * It does NOT generalise. No other plural or abbreviated product name may be
+   * resolved this way without its own check, and if Butler ever ships a second
+   * Monad this row must be deleted the same day — the plural would become
+   * genuinely ambiguous and absence would again be correct.
+   */
+  { key: 'butler monads',
+    url: 'https://butleraudio.com/img/monad001.jpg',
+    source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
+      captured: '2026-08-25' } },
+
   // Denafrips — product hero shots on denafrips.com
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
   { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',

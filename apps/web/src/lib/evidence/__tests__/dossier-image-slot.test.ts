@@ -119,12 +119,35 @@ describe('Nathan carries no borrowed photography', () => {
     }
   });
 
-  it('an under-specified listener string resolves to nothing', () => {
-    // "Butler Monads" is what Nathan typed. Butler's own site lists MONAD and
-    // A100 as separate items, so that string does not identify the A100 and
-    // must not inherit its photograph by substring luck. Corroboration may
-    // supply the canonical name; the shorthand alone may not.
-    expect(getProductImageEntry(undefined, 'Butler Monads')).toBeUndefined();
+  /*
+   * SUPERSEDED BY IDENTITY RESEARCH (founder decision, 2026-08-26).
+   *
+   * This test withheld the A100's photograph from "Butler Monads" on the
+   * grounds that butleraudio.com "lists MONAD and A100 as separate items".
+   * That was a misreading of the navigation: MONAD is a section link, A100 is
+   * the product heading on it. The maker's site has one Monad — one nav entry,
+   * one product page, one manual — and that manual says "most applications
+   * will use at least a pair of MONAD amplifiers".
+   *
+   * With no sibling model in existence the plural cannot be ambiguous, so
+   * this is identity rather than substitution. The rule is SOLE-MODEL and does
+   * not generalise, which is what the rest of this block now pins.
+   */
+  it('the sole-model plural resolves to the exact product', () => {
+    const e = getProductImageEntry(undefined, 'Butler Monads');
+    expect(e).toBeDefined();
+    expect(e!.source?.tier).toBe('manufacturer');
+    expect(e!.url).toMatch(/butleraudio\.com/);
+    // The same asset the canonical name resolves to — one product, one photograph.
+    expect(e!.url).toBe(getProductImageEntry(undefined, 'Butler MONAD A100')!.url);
+  });
+
+  it('does NOT generalise the plural rule to other products', () => {
+    // Acora and dCS both ship multiple models, so a plural or bare-brand
+    // string remains ambiguous and must still resolve to nothing.
+    for (const name of ['Acora QRCs', 'Acoras', 'dCS Rossinis', 'Audio Research References']) {
+      expect(getProductImageEntry(undefined, name), name).toBeUndefined();
+    }
   });
 
   it('the fixture is a test fixture only — it names no Nathan product', () => {

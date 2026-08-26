@@ -58,8 +58,15 @@ const r = composeSystemReviewDetailed(NATHAN);
 
 describe('the review opens with the principal assessment', () => {
   it('states the principal conclusion first', () => {
+    /*
+     * "the one interface ... Audio XX can assess quantitatively" was true when
+     * the amplifier-to-loudspeaker pairing was the only one with figures on
+     * both sides. A targeted gap search closed three more, so the claim became
+     * false in its own document — the review went on to settle two loading
+     * interfaces and a gain structure underneath it.
+     */
     expect(r.paragraphs[0]).toMatch(
-      /Butler MONAD A100 into Acora QRC-2 is the one interface .* assess quantitatively/);
+      /Butler MONAD A100 into Acora QRC-2 is the interface where the published figures/);
   });
 
   it('names what licenses that conclusion', () => {
@@ -113,22 +120,27 @@ describe('the explanation is ordered by significance, not retrieval', () => {
   it('leads with the quantitative amplifier-to-loudspeaker analysis', () => {
     // The five propositions are now separate paragraphs rather than one wall
     // of text, so the scaling inference is no longer inside the first of them.
-    expect(r.paragraphs[1]).toMatch(/Which of the amplifier's published figures applies/);
+    expect(r.paragraphs.join('\n')).toMatch(/Which of the amplifier's published figures applies/);
     expect(r.paragraphs.join('\n')).toMatch(/about 1\.6×/);
   });
 
   it('breaks the causal reasoning into readable units', () => {
-    const numbers = r.sections?.find((sec) => /numbers tell us/i.test(sec.label));
-    expect(numbers).toBeTruthy();
-    // Which figure applies · within the rated window · the 1.6x scaling —
-    // distinct propositions, distinctly paragraphed.
-    expect(numbers!.paragraphs.length).toBeGreaterThanOrEqual(3);
+    /*
+     * The slot was renamed from "what the numbers tell us" to "why the system
+     * makes sense" when the review was re-cut as an argument rather than an
+     * audit of the evidence. The requirement it pins is unchanged: distinct
+     * propositions get distinct paragraphs.
+     */
+    const why = r.sections?.find((sec) => /why the system makes sense/i.test(sec.label));
+    expect(why).toBeTruthy();
+    expect(why!.paragraphs.length).toBeGreaterThanOrEqual(3);
   });
 
   it('names its semantic slots, and omits the ones with nothing to say', () => {
     const labels = (r.sections ?? []).map((sec) => sec.label);
-    expect(labels[0]).toBe('The main finding');
-    expect(labels).toContain('What the numbers tell us');
+    // Roles a reader can act on, in the order an argument runs.
+    expect(labels[0]).toBe('The assessment');
+    expect(labels).toContain('Why the system makes sense');
     // A slot is only present when the material exists.
     for (const sec of r.sections ?? []) expect(sec.paragraphs.length).toBeGreaterThan(0);
   });

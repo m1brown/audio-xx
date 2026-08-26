@@ -42,8 +42,23 @@ describe('NATHAN — the well-evidenced case', () => {
     expect(established.length).toBeGreaterThan(0);
   });
 
-  it('names the one component it has no evidence for', () => {
-    expect(s.uncharacterised).toEqual(['Butler Monads']);
+  it('now characterises every component in the chain', () => {
+    /*
+     * Nathan was the system with a hole in the middle. A second acquisition
+     * pass and one governed identity decision closed it: The Audio Beatnik
+     * covers the A100, and the sole-model plural alias connects it to the
+     * name this listener actually writes.
+     */
+    expect(s.uncharacterised).toEqual([]);
+  });
+
+  it('but the Butler’s character stays conditional on its fitted tube', () => {
+    const butler = s.character.get('Butler Monads') ?? [];
+    expect(butler.length).toBeGreaterThan(0);
+    for (const p of butler) {
+      expect(p.basis, p.dimension).toBe('conditional');
+      expect(p.confidence).toBe('low');
+    }
   });
 
   it('walks the chain in signal order, not input order', () => {

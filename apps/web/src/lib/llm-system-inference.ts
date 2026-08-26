@@ -19,7 +19,9 @@
 
 import type { ConsultationResponse } from './consultation';
 import { deriveCharacter } from './evidence/component-character';
+import { guardModelProse, licensedCharacterFrom } from './evidence/model-character-guard';
 import { seedObservations } from './evidence/independent-review-seed';
+const admittedForGuard = seedObservations().admitted;
 import { resolveObservationKey } from './artifact/sonic-synthesis';
 import type { EvidenceItem } from './evidence/evidence-types';
 import type { ReviewObservation } from './evidence/independent-review';
@@ -1497,6 +1499,39 @@ function parseSystemInferenceResponse(
     if (!parsed.systemThesis && !parsed.interactionExplanation && !parsed.verdict) {
       console.warn('[llm-system-inference] Parsed response has no content');
       return null;
+    }
+
+    /*
+     * ── THE EVIDENCE LANE IS AUTHORITATIVE (founder decision, 2026-08-26) ──
+     *
+     * Applied to every prose field before anything else reads them, so no
+     * downstream surface can receive character the evidence does not license.
+     * A guard at one renderer is a guard the next renderer forgets.
+     *
+     * What survives is the model doing the job it is good at — organising and
+     * explaining licensed propositions. What is removed is it authoring
+     * character on its own authority. Removals are logged rather than silently
+     * dropped, because a guard that fires constantly is telling us something
+     * about the prompt.
+     */
+    const licensed = licensedCharacterFrom(
+      new Map(componentNames.map((n) => {
+        const key = resolveObservationKey(n, admittedForGuard);
+        return [n, key ? deriveCharacter(key, n, admittedForGuard).propositions : []];
+      })),
+    );
+    const guardRemovals: string[] = [];
+    const guard = (v: string | undefined): string | undefined => {
+      const r = guardModelProse(v, licensed);
+      guardRemovals.push(...r.removed);
+      return r.text || undefined;
+    };
+    parsed.systemThesis = guard(parsed.systemThesis);
+    parsed.interactionExplanation = guard(parsed.interactionExplanation);
+    parsed.tradeoff = guard(parsed.tradeoff);
+    if (guardRemovals.length) {
+      console.warn('[character-guard] removed %d unlicensed sentence(s):', guardRemovals.length,
+        guardRemovals.map((x) => x.slice(0, 90)));
     }
 
     // Display copy only. The component identities the reader acts on come from

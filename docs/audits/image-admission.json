@@ -3,8 +3,8 @@
   "invariant": "exact identity AND approved provenance AND recorded rights, established independently",
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
-    "registry": 159,
-    "registryDisplayed": 138,
+    "registry": 160,
+    "registryDisplayed": 139,
     "catalog": 28,
     "catalogDisplayed": 24
   },
@@ -12,7 +12,7 @@
     "provenance_unestablished": 85,
     "identity_wrong": 9,
     "legacy_rights_pending": 13,
-    "identity_unverified": 40,
+    "identity_unverified": 41,
     "provenance_prohibited": 12
   },
   "catalogByState": {
@@ -148,6 +148,18 @@
     },
     {
       "key": "butler monad a100",
+      "url": "https://butleraudio.com/img/monad001.jpg",
+      "state": "identity_unverified",
+      "displayed": true,
+      "identityStatus": "unverified",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Butler Audio",
+      "captured": "2026-08-25"
+    },
+    {
+      "key": "butler monads",
       "url": "https://butleraudio.com/img/monad001.jpg",
       "state": "identity_unverified",
       "displayed": true,

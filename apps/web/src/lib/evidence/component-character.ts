@@ -234,7 +234,7 @@ function hasUnnegated(claim: string, re: RegExp): boolean {
   return false;
 }
 
-function directionOf(
+export function directionOf(
   observation: ReviewObservation,
   dimension: CharacterDimension,
 ): string | undefined {

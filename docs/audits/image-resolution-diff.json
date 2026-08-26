@@ -1,7 +1,7 @@
 {
   "baseline": "b9cc3ac",
   "head": "staged identity enforcement",
-  "productsProbed": 352,
+  "productsProbed": 353,
   "surfaces": [
     "getProductImage",
     "getProductImageEntry",
@@ -10,11 +10,11 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 241,
+  "changedResolutions": 247,
   "byKind": {
     "suppressed": 126,
-    "revealed": 12,
-    "substituted": 103
+    "revealed": 16,
+    "substituted": 105
   },
   "rows": [
     {
@@ -305,6 +305,50 @@
     },
     {
       "product": "butler monad a100",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "butler monads",
+      "surface": "getProductImage",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monads",
+      "surface": "getProductImageEntry",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monads",
+      "surface": "resolveProductImageStrict",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monads",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "butler monads",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://butleraudio.com/img/monad001.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "butler monads",
       "surface": "resolveProductImageWithConfidence",
       "before": "/images/placeholders/product.svg",
       "after": "https://butleraudio.com/img/monad001.jpg",

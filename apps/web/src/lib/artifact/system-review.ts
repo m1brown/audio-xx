@@ -38,6 +38,7 @@ import {
 import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations } from './sonic-synthesis';
+import { interfaceConclusions } from './interface-conclusions';
 import type { SonicRelation } from '../evidence/relational-synthesis';
 import { ELECTRICAL_SCOPE_NOTE, mergeByPair } from '../evidence/relational-synthesis';
 
@@ -552,6 +553,19 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * order is by what the reader can most act on — an established
    * characteristic before a conditioned one.
    */
+  /*
+   * ── ESTABLISHED: what the acquired figures settle ──
+   *
+   * Printed before any listening synthesis, because these are the strongest
+   * statements in the document and a reader should meet the settled things
+   * first. They are also the ones that changed most: three of these
+   * interfaces were reported as unresolved until the figures were fetched.
+   */
+  const interfaceParas: string[] = [];
+  for (const c of interfaceConclusions(input.components, input.dossiers)) {
+    interfaceParas.push(c.statement);
+  }
+
   const synergyParas: string[] = [];
   if (input.synthesis) {
     /*
@@ -717,6 +731,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    */
   explanation.push(
     ...electricalParas,
+    ...interfaceParas,
     ...lineLevel,
     ...(architecturePara ? [architecturePara] : []),
     ...synergyParas,
@@ -761,9 +776,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       : '';
 
     thesis.push(
-      `${amp.component.displayName} into ${spk.component.displayName} is the one `
-      + `interface in this system that the published evidence lets Audio XX `
-      + `assess quantitatively. The makers' own figures establish compatibility `
+      `${amp.component.displayName} into ${spk.component.displayName} is the interface `
+      + `where the published figures bear most directly on what the system can do. `
+      + `The makers' own figures establish compatibility `
       + `at${load ? ` the ${spk.component.displayName}'s nominal ${load} load` : ' the stated load'}.`
       + limitClause,
     );
@@ -820,8 +835,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + `${missing.length === 1 ? 'it dominates' : 'they dominate'} the result — nothing here `
             + `establishes how much of what this system does is attributable to `
             + `${missing.length === 1 ? 'that component' : 'those components'}.`
-          : `No reviewer has heard these components together, so this remains a statement about `
-            + `what the parts share rather than a description of the assembled system.`),
+          : ''),
       );
     }
   }
@@ -836,16 +850,31 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * nothing under it is filler, and filler is what the licensing work spent
    * this month removing.
    */
+  /*
+   * SEMANTIC ROLES, in the order an argument runs.
+   *
+   * Renamed from the earlier audit vocabulary ("what the numbers tell us",
+   * "what remains unknown"), which described the EVIDENCE rather than the
+   * assessment and made the document read as an inventory of what could and
+   * could not be said. These name the job each part does for a reader who
+   * wants to know what to think and what to do.
+   *
+   * They remain roles, not containers: a slot with nothing in it is dropped,
+   * so a thinly evidenced system produces a short review rather than a set of
+   * headings with apologies underneath.
+   */
   const sections: ReviewSection[] = [
-    { label: 'The main finding', paragraphs: thesis },
-    { label: 'What the numbers tell us', paragraphs: electricalParas },
+    { label: 'The assessment', paragraphs: thesis },
     {
-      label: 'How the system fits together',
-      paragraphs: [...lineLevel, ...(architecturePara ? [architecturePara] : []), ...synergyParas],
+      label: 'Why the system makes sense',
+      paragraphs: [
+        ...electricalParas, ...interfaceParas, ...lineLevel,
+        ...(architecturePara ? [architecturePara] : []), ...synergyParas,
+      ],
     },
-    { label: 'What the listening evidence adds', paragraphs: observationParas },
-    { label: 'What remains unknown', paragraphs: limits },
-    { label: 'What would help next', paragraphs: next },
+    { label: 'What I would expect', paragraphs: observationParas },
+    { label: 'The question mark', paragraphs: limits },
+    { label: 'What I would do', paragraphs: next },
   ].filter((sec) => sec.paragraphs.length > 0);
 
   out.push(...thesis, ...explanation, ...limits, ...next);
