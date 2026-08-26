@@ -178,6 +178,49 @@ describe('7 · saved systems through the Assess action (chip restatement)', () =
   });
 });
 
+describe('8 · saved record with stale shared categories — role is authoritative', () => {
+  /*
+   * The production shape that manufactured a duplicate-role clarification
+   * for a correctly saved system: the save endpoint reuses shared Component
+   * rows by brand+name, so the ARC preamplifier carried category
+   * 'amplifier' and the Acora loudspeaker category 'other' — while the
+   * listener's actual statement lived in the link's role. Role outranks
+   * category; a correctly saved system must never be asked to explain
+   * equipment it already described.
+   */
+  const STALE = {
+    id: 'p', name: 'Prod-shaped',
+    components: [
+      { brand: 'dCS', name: 'Rossini Apex', category: 'dac', role: null },
+      { brand: 'ARC', name: 'ref', category: 'amplifier', role: 'preamp' },
+      { brand: 'Butler', name: 'Monads', category: 'amplifier', role: 'power_amp' },
+      { brand: 'Acora', name: 'QRC-2', category: 'other', role: 'speaker' },
+    ],
+  };
+  it('the chip yields an assessment, not a duplicate-role question', () => {
+    const msg = 'Assess my system: dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2';
+    const ctx = buildTurnContext(msg, {
+      savedSystems: [STALE], activeSystemRef: { kind: 'saved', id: 'p' },
+      draftSystem: null, proposedSystem: null,
+    } as never, new Set(), null as never) as never as {
+      systemSource: string; activeSystem: unknown };
+    expect(ctx.systemSource).toBe('saved');
+    const r = assess(msg, ctx.activeSystem) as never as {
+      kind: string;
+      clarification?: { question?: string };
+      components?: Array<{ displayName: string; role: string }>;
+    };
+    expect(r.clarification?.question ?? '').not.toMatch(/both appear as/i);
+    const comps = r.components ?? [];
+    if (comps.length) {
+      const roleOf = (re: RegExp) =>
+        normalizeRole(comps.find((c) => re.test(c.displayName))?.role);
+      expect(roleOf(/arc/i)).toBe('preamplifier');
+      expect(roleOf(/acora/i)).toBe('speaker');
+    }
+  });
+});
+
 describe('universal invariant — a fact licenses only role-compatible reasoning', () => {
   it('amplifier power is never a predicate on a non-amplifier', () => {
     for (const role of ['streamer', 'dac', 'streamer_dac', 'preamplifier', 'speaker', 'turntable', undefined]) {

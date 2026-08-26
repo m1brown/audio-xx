@@ -9326,7 +9326,17 @@ export function buildSystemAssessment(
           || df.name.toLowerCase().includes(nameLower),
       );
 
-      const primaryRole = product?.category ?? ac.category ?? 'component';
+      /*
+       * THE LISTENER'S SAVED ROLE IS AUTHORITATIVE (P0, 2026-08-27). The
+       * saved record carries a per-system role ('preamp', 'power_amp',
+       * 'speaker'…) — the listener's own statement about THIS box in THIS
+       * chain — and it was never consulted: the catalog's category outranked
+       * it, and a stale shared catalog row ('other', or 'amplifier' for a
+       * preamplifier) then manufactured duplicate-role clarifications for a
+       * correctly saved system. Role first; catalog and category are
+       * fallbacks for records that carry no role.
+       */
+      const primaryRole = ac.role ?? product?.category ?? ac.category ?? 'component';
       components.push({
         displayName: fullName,
         role: primaryRole,

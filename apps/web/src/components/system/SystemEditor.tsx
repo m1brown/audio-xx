@@ -147,7 +147,16 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
               name: c.name.trim(),
               brand: c.brand.trim(),
               category: c.category,
-              roleOverride: c.role,
+              /*
+               * The link's roleOverride carries the listener's SELECTED
+               * identity for every row — not only the preamp/power-amp
+               * split. The shared Component row is global state another
+               * flow may have created with a different (or 'other')
+               * category, and the save endpoint reuses it by brand+name;
+               * without the role on the link, the listener's explicit
+               * "Speaker" silently became that stale record's category.
+               */
+              roleOverride: c.role ?? c.category,
             })),
           }),
         });
