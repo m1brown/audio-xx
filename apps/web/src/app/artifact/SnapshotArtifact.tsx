@@ -200,7 +200,14 @@ export default function SnapshotArtifact(
 
       <section aria-label="The system assessed">
         <p className="axx-credit">{s.components.map((c) => c.name).join(' · ')}</p>
-        <p className="axx-verdict">{s.verdict}</p>
+        {/* The engine's one-line verdict stands down when the review below
+            opens with its own assessment. "The evidence establishes one
+            compatibility finding" above "This is a deliberately architected
+            system..." led the document with the weakest true sentence in it —
+            what Audio XX could prove, ahead of what it thinks. */}
+        {s.verdict && !s.reviewSections?.some((x) => /the assessment/i.test(x.label)) && (
+          <p className="axx-verdict">{s.verdict}</p>
+        )}
         {/* Subordinate to the finding it bounds — one register down, never
             competing with it for the eye. */}
         {s.qualification && <p className="axx-qualification">{s.qualification}</p>}
