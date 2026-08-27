@@ -3303,7 +3303,11 @@ export default function Home() {
           // specifications this turn already read.
           const dossierViews = buildDossierViews(
             orderedComponents.map((c) => ({
-              displayName: c.displayName, role: c.role,
+              displayName: c.displayName,
+              // Saved records carry storage vocabulary ('power_amp',
+              // 'preamp'); the dossier's role line is an editorial surface
+              // and prints the normalised role, never the storage token.
+              role: dossierRole(c.role) ?? c.role,
               canonicalName: canonicalByName.get(c.displayName.toLowerCase().trim())?.canonicalName,
             })),
             manufacturerEvidence as Array<Record<string, unknown>>,
