@@ -3457,7 +3457,17 @@ export default function Home() {
         // duplicate the one already on screen). Composer returns null on
         // thin findings — then the standard artifact path below stands.
         if (isAssessmentFollowUpTurn) {
-          const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings);
+          // The standing review's own experiment, for substitution questions
+          // on sparse systems — the flat systemReview is the only stored
+          // shape, so the experiment paragraph is recovered by its content.
+          const lastReview = [...state.messages].reverse().find(
+            (m) => m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+              && ((m as { advisory?: { systemReview?: string[] } }).advisory?.systemReview?.length ?? 0) > 0,
+          ) as { advisory?: { systemReview?: string[] } } | undefined;
+          const reviewExperiment = (lastReview?.advisory?.systemReview ?? []).filter(
+            (para) => /most informative experiment|experiment worth running|conversion stages/i.test(para),
+          );
+          const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings, reviewExperiment);
           if (followUpAnswer) {
             dispatch({ type: 'ADD_NOTE', content: followUpAnswer });
             dispatch({ type: 'SET_LOADING', value: false });

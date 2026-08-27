@@ -1499,10 +1499,45 @@ export function transition(
         // naming a specific product (subjectCount > 0) keep the existing
         // accumulate-and-reassess behaviour. Checked before accumulation
         // so the question text never pollutes the stored system text.
+        /*
+         * OWN-COMPONENT SUBSTITUTION QUESTIONS STAY IN THE ASSESSMENT
+         * (sparse-evidence pass, 2026-08-27). "Would replacing the Eversolo
+         * with a much better external DAC be a worthwhile upgrade?" names a
+         * product — the system's OWN product — so subjectCount > 0 pushed it
+         * out of continuity and the shopping lane answered a reasoning
+         * question with a budget intake. A substitution question about a
+         * component of the system just assessed is a direction question
+         * about that assessment. A question naming NEW gear keeps the
+         * existing compare/shopping behaviour.
+         */
+        const assessedText = (facts.systemAssessmentText ?? '').toLowerCase();
+        // Generic audio vocabulary can overlap any two audio sentences;
+        // only a token that names the assessed system's own gear counts.
+        const GENERIC = new Set(['system', 'assess', 'assessment', 'amplifier', 'amp',
+          'amps', 'speaker', 'speakers', 'streamer', 'preamp', 'monitor', 'monitors',
+          'integrated', 'external', 'better', 'would', 'replacing', 'replace',
+          'upgrade', 'worthwhile', 'with', 'much', 'that', 'this', 'from', 'into',
+          'dac', 'source', 'change', 'swap', 'what', 'the', 'and', 'out']);
+        const qTokens = text.toLowerCase().split(/[^a-z0-9+/.-]+/)
+          .filter((w) => w.length >= 3 && !GENERIC.has(w));
+        const ownTokens = qTokens.filter((w) => assessedText.includes(w));
+        // A model-ish token (carries a digit, or a brand-like word of 4+
+        // letters the assessed text does not contain, adjacent to a swap
+        // verb's object) that names gear OUTSIDE the system keeps the
+        // existing compare/accumulate behaviour — proposing new gear is not
+        // a direction question about the standing assessment.
+        const proposesNamedReplacement = qTokens.some((w) =>
+          !assessedText.includes(w) && /\d/.test(w));
+        const namesOwnComponentOnly = context.subjectCount > 0 && assessedText.length > 0
+          && /\b(?:replac|swap|upgrad|substitut|instead of)\w*\b/i.test(text)
+          && ownTokens.length >= 1
+          && !proposesNamedReplacement;
+
         if (
           !facts.assessmentContinuityUsed
-          && context.subjectCount === 0
-          && ASSESSMENT_DIRECTION_FOLLOWUP.test(text)
+          && (context.subjectCount === 0 || namesOwnComponentOnly)
+          && (ASSESSMENT_DIRECTION_FOLLOWUP.test(text)
+            || (namesOwnComponentOnly && /\bupgrade|worthwhile|worth it|improve\b/i.test(text)))
         ) {
           facts.assessmentContinuityUsed = true;
           facts.assessmentFollowUpTurn = true;

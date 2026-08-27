@@ -38,11 +38,33 @@ function joinNatural(items: string[]): string {
  * Returns null when the findings are too thin to answer honestly —
  * the caller falls back to the standard assessment path.
  */
-export function composeAssessmentFollowUp(findings: MemoFindings): string | null {
+export function composeAssessmentFollowUp(
+  findings: MemoFindings,
+  /**
+   * The standing review's own recommendation paragraphs, where the caller
+   * holds them (sparse-evidence pass, 2026-08-27). A substitution question
+   * about a system whose review already names its highest-information
+   * experiment is answered FROM that experiment — not with "voiced as a
+   * whole" prose the sparse evidence never licensed, and never with a
+   * shopping intake.
+   */
+  reviewExperiment?: string[],
+): string | null {
   if (!findings || findings.componentNames.length === 0) return null;
   const paths = findings.upgradePaths ?? [];
   const keeps = findings.keeps ?? [];
   const sequence = findings.recommendedSequence ?? [];
+
+  if (paths.length === 0 && reviewExperiment && reviewExperiment.length > 0) {
+    return [
+      'The assessment already contains the first step of that answer, and it costs nothing.',
+      ...reviewExperiment,
+      'Nothing in the evidence held identifies the source as this system\u2019s limitation, '
+      + 'so a better external converter is an unresolved question rather than an indicated '
+      + 'upgrade. Run the free comparison first \u2014 what it shows about where conversion '
+      + 'should live is exactly the information a purchase decision needs.',
+    ].join(' ');
+  }
 
   // No upgrade paths — reference-tier or coherently voiced system.
   // The honest answer is the assessment's own verdict: stay put.

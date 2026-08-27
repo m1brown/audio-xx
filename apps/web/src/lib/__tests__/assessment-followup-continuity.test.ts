@@ -81,6 +81,20 @@ describe('state machine: first direction follow-up arms continuity', () => {
     expect(t.state.mode).toBe('diagnosis');
   });
 
+  it('a substitution question about the system\'s OWN component arms continuity', () => {
+    // "Would replacing the Eversolo with a much better external DAC be a
+    // worthwhile upgrade?" names a product — the system's own — and was
+    // being answered with a shopping budget intake. A direction question
+    // about the standing assessment stays in the assessment.
+    const q = 'Would replacing the Eversolo with a much better external DAC be a worthwhile upgrade?';
+    const ctx = defaultCtx(q);
+    const st = readyState();
+    st.facts.systemAssessmentText = 'assess my system: Eversolo DMP-A6 streamer/dac '
+      + '--> JOB Job integrated amp --> WLM Diva monitor speakers';
+    const t = transition(st, q, ctx);
+    expect(t.state.facts.assessmentFollowUpTurn).toBe(true);
+  });
+
   it('a follow-up naming a specific product keeps accumulate-and-reassess', () => {
     const q = 'What if I swap out the Marantz PM8006 and change to a Hegel H120?';
     const ctx = defaultCtx(q);
