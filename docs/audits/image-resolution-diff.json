@@ -1,7 +1,7 @@
 {
   "baseline": "b9cc3ac",
   "head": "staged identity enforcement",
-  "productsProbed": 353,
+  "productsProbed": 354,
   "surfaces": [
     "getProductImage",
     "getProductImageEntry",
@@ -10,11 +10,11 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 247,
+  "changedResolutions": 259,
   "byKind": {
-    "suppressed": 126,
-    "revealed": 16,
-    "substituted": 105
+    "revealed": 28,
+    "suppressed": 121,
+    "substituted": 110
   },
   "rows": [
     {
@@ -651,6 +651,64 @@
       "after": "/images/placeholders/dac.svg",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (eversolo dmp a6 gen 2)"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "getProductImage",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "getProductImageEntry",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "resolveProductImageStrict",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "eversolo dmp-a6",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Eversolo DMP-A6",
+      "surface": "getProductImage",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "Eversolo DMP-A6",
+      "surface": "getProductImageEntry",
+      "after": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
       "product": "Focal Aria 906",
@@ -1778,63 +1836,94 @@
       "reason": "correctness — the asset shown belonged to a different product (wilson audio sabrina)"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "getProductImage",
-      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "kind": "suppressed",
-      "reason": "correctness — prohibited source (unclassified)"
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "getProductImageEntry",
       "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "kind": "suppressed",
-      "reason": "correctness — prohibited source (unclassified)"
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "resolveProductImageStrict",
-      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "kind": "suppressed",
-      "reason": "correctness — prohibited source (unclassified)"
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "resolveProductImage",
-      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "after": "/images/placeholders/product.svg",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
       "kind": "substituted",
       "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "consumer: imageUrl ?? getProductImage",
-      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "kind": "suppressed",
-      "reason": "correctness — prohibited source (unclassified)"
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
-      "product": "wlm diva",
+      "product": "wlm diva monitor",
       "surface": "resolveProductImageWithConfidence",
-      "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "after": "/images/placeholders/product.svg",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
       "kind": "substituted",
       "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "getProductImage",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
       "product": "WLM Diva Monitor",
       "surface": "getProductImageEntry",
       "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "kind": "suppressed",
-      "reason": "correctness — the asset shown belonged to a different product (wlm diva)"
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "resolveProductImageStrict",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
     },
     {
       "product": "WLM Diva Monitor",
       "surface": "resolveProductImage",
       "before": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "after": "/images/placeholders/speaker.svg",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
       "kind": "substituted",
-      "reason": "correctness — the asset shown belonged to a different product (wlm diva)"
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "WLM Diva Monitor",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/speaker.svg",
+      "after": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "Yamamoto A-08S",

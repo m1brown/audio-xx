@@ -1896,7 +1896,26 @@ export function detectIntent(
   // isSystemDirectedEvaluation cannot drift apart.
   const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);
   const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain || hasProseChain;
-  if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
+  /*
+   * NATHAN BETA (2026-08-28): "Assess my dCS Rossini Apex, ARC Ref 5,
+   * Butler Monads and Acora QRC-2" — an assessment verb applied to an OWNED
+   * LIST of components — never matched SYSTEM_ASSESSMENT_PATTERNS because
+   * every assess-pattern requires the word system/setup/rig/chain. A listener
+   * who names the boxes instead of saying "system" is asking for exactly the
+   * same thing. The verb must govern the listener's own gear (ownership) and
+   * more than one component; "assess the JOB integrated" stays a product
+   * assessment, and comparisons were claimed earlier.
+   */
+  // Ownership patterns name category words ("my amp") and the word
+  // "system"; a possessive applied directly to a NAMED product ("my dCS
+  // Rossini Apex") is ownership of exactly the same kind.
+  const possessiveOnSubject = subjectMatches.some((m) =>
+    typeof m.index === 'number'
+    && /\b(?:my|our)\s+$/i.test(currentMessage.slice(Math.max(0, (m.index as number) - 6), m.index as number)));
+  const owns = hasOwnership || possessiveOnSubject;
+  const assessVerbOnOwnedList = /\b(?:assess|evaluate|review|rate|critique)\b/i.test(currentMessage)
+    && owns && subjectMatches.length >= 2;
+  if ((hasAssessmentLanguage || assessVerbOnOwnedList) && owns && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   // Assessment language + chain notation (+ or →) with 2+ components implies system

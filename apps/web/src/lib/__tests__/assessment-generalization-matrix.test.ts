@@ -221,6 +221,23 @@ describe('8 · saved record with stale shared categories — role is authoritati
   });
 });
 
+describe('9 · natural restatement — assessment verb on an owned list', () => {
+  it('"Assess my <four products>" is a system assessment, not a gear inquiry', () => {
+    // Nathan beta: this exact phrasing routed to gear_inquiry and rendered
+    // exploratory boilerplate, because every assess-pattern required the
+    // word "system". The verb + possessive-on-named-products + a list is
+    // the same request in the listener's own words.
+    const r = detectIntent('Assess my dCS Rossini Apex, ARC Ref 5, Butler Monads and Acora QRC-2') as never as { intent: string };
+    expect(r.intent).toBe('system_assessment');
+  });
+  it('single-product and comparison phrasings keep their lanes', () => {
+    expect((detectIntent('assess the JOB integrated') as never as { intent: string }).intent)
+      .not.toBe('system_assessment');
+    expect((detectIntent('What do you think of the dCS Rossini vs Chord Dave?') as never as { intent: string }).intent)
+      .toBe('comparison');
+  });
+});
+
 describe('universal invariant — a fact licenses only role-compatible reasoning', () => {
   it('amplifier power is never a predicate on a non-amplifier', () => {
     for (const role of ['streamer', 'dac', 'streamer_dac', 'preamplifier', 'speaker', 'turntable', undefined]) {

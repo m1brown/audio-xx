@@ -3,17 +3,17 @@
   "invariant": "exact identity AND approved provenance AND recorded rights, established independently",
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
-    "registry": 160,
-    "registryDisplayed": 139,
+    "registry": 161,
+    "registryDisplayed": 141,
     "catalog": 28,
     "catalogDisplayed": 24
   },
   "registryByState": {
     "provenance_unestablished": 85,
     "identity_wrong": 9,
-    "legacy_rights_pending": 13,
-    "identity_unverified": 41,
-    "provenance_prohibited": 12
+    "legacy_rights_pending": 14,
+    "identity_unverified": 42,
+    "provenance_prohibited": 11
   },
   "catalogByState": {
     "provenance_prohibited": 4,
@@ -315,6 +315,18 @@
       "hosting": "remote",
       "credit": "Bloom Audio",
       "captured": "2026-05-08"
+    },
+    {
+      "key": "eversolo dmp-a6",
+      "url": "https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png",
+      "state": "identity_unverified",
+      "displayed": true,
+      "identityStatus": "unverified",
+      "sourceClass": "authorized_dealer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Audio46",
+      "captured": "2026-08-27"
     },
     {
       "key": "totaldac d1 unity",
@@ -814,14 +826,16 @@
       "hosting": "remote"
     },
     {
-      "key": "wlm diva",
-      "url": "https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg",
-      "state": "provenance_prohibited",
-      "displayed": false,
+      "key": "wlm diva monitor",
+      "url": "https://www.onair-records.de/media/images/wlm_diva_monitor.jpg",
+      "state": "legacy_rights_pending",
+      "displayed": true,
       "identityStatus": "corroborated",
-      "sourceClass": "unclassified",
+      "sourceClass": "authorized_dealer",
       "rightsBasis": "none_recorded",
-      "hosting": "remote"
+      "hosting": "remote",
+      "credit": "Onair Records",
+      "captured": "2026-08-27"
     },
     {
       "key": "buchardt a700",
