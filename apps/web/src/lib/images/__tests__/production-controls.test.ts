@@ -21,9 +21,12 @@ const paths = (b: string, n: string) => [
 
 describe('FRANCE — Eversolo DMP-A6 / JOB INTegrated / WLM Diva Monitor', () => {
   it('the DMP-A6 is never shown its successor', () => {
-    // The only Eversolo asset is `eversolo-a6-gen2-thumb.webp`, and this
-    // listener owns the original.
-    for (const url of paths('Eversolo', 'DMP-A6')) expect(url).toBeUndefined();
+    // Admitted 2026-08-27: Audio46's explicitly-named Gen 1 asset. The
+    // invariant is unchanged — the original never wears the Gen 2's photo.
+    for (const url of paths('Eversolo', 'DMP-A6')) {
+      expect(url).toContain('audio46');
+      expect(url).not.toContain('gen2');
+    }
     expect(getProductImage('Eversolo', 'DMP-A6 Gen 2')).toContain('gen2');
   });
 
@@ -33,7 +36,13 @@ describe('FRANCE — Eversolo DMP-A6 / JOB INTegrated / WLM Diva Monitor', () =>
   });
 
   it('the WLM Diva Monitor is never shown the Diva MK IV', () => {
-    for (const url of paths('WLM', 'Diva Monitor')) expect(url).toBeUndefined();
+    // Admitted 2026-08-27: Onair Records' original-Diva-Monitor asset,
+    // presented distinctly from the MK IV on the dealer's own brand page.
+    for (const url of paths('WLM', 'Diva Monitor')) {
+      expect(url).toContain('wlm_diva_monitor');
+      expect(url ?? '').not.toMatch(/mk.?iv|mkii/i);
+    }
+    expect(getProductImage('WLM', 'Diva MK IV')).toBeUndefined();
   });
 });
 

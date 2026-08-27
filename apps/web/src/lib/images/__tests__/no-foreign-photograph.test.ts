@@ -131,8 +131,15 @@ describe('the six mechanisms that produced the class', () => {
   });
 
   it('2. predecessor/successor substitution', () => {
-    expect(getProductImage('Eversolo', 'DMP-A6')).toBeUndefined();
-    expect(getProductImage('Eversolo', 'DMP-A6 Gen 2')).toBeDefined();
+    // The mechanism pinned here is generations SHARING an asset. The
+    // original now has its own admitted asset (2026-08-27); each generation
+    // resolves to its own photograph and never the other's.
+    const original = getProductImage('Eversolo', 'DMP-A6');
+    const gen2 = getProductImage('Eversolo', 'DMP-A6 Gen 2');
+    expect(original).toBeDefined();
+    expect(gen2).toBeDefined();
+    expect(original).not.toBe(gen2);
+    expect(original).not.toContain('gen2');
   });
 
   it('3. variant suffixes survive normalisation', () => {

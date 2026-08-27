@@ -86,12 +86,14 @@ describe('ambiguity yields nothing', () => {
 });
 
 describe('the live registry serves no wrong-generation asset', () => {
-  it('the original DMP-A6 gets no image; the Gen 2 asset stays with the Gen 2', async () => {
-    // The asset is named `eversolo-a6-gen2-thumb.webp` and was keyed as the
-    // plain `eversolo dmp a6`, so FRANCE's original DMP-A6 was shown a
-    // photograph of its successor. Exact matching does not catch a wrong KEY.
+  it('the original DMP-A6 gets its own asset, never the Gen 2 thumbnail', async () => {
+    // History: the Gen 2 thumb was once keyed as the plain `eversolo dmp a6`,
+    // so FRANCE's original DMP-A6 was shown its successor. The original now
+    // carries Audio46's explicitly-named Gen 1 asset (admitted 2026-08-27);
+    // the invariant that survives is that the two generations never share.
     const { getProductImage } = await import('@/lib/product-images');
-    expect(getProductImage('Eversolo', 'DMP-A6')).toBeUndefined();
+    expect(getProductImage('Eversolo', 'DMP-A6')).toContain('audio46');
+    expect(getProductImage('Eversolo', 'DMP-A6')).not.toContain('gen2');
     expect(getProductImage('Eversolo', 'DMP-A6 Gen 2')).toContain('gen2');
   });
 

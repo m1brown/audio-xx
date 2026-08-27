@@ -27,9 +27,13 @@ describe('every user-visible resolver enforces exact identity', () => {
     ['Leben', 'CS600X'],
     ['Magnepan', 'LRS+'],
     ['Audio Research', 'Reference 5 SE'],
-    ['Eversolo', 'DMP-A6'],
+    // 2026-08-27: 'Eversolo DMP-A6' and 'WLM Diva Monitor' left this list —
+    // they were absence pins from when no admissible source existed, not
+    // variant traps. Both now carry identity-exact authorized-dealer assets
+    // (Audio46's explicitly-named Gen 1 page; Onair's original-Diva-Monitor
+    // asset, distinct from the MK IV). The variant separations stay pinned
+    // in production-controls and product-identity.
     ['JOB', 'Integrated'],
-    ['WLM', 'Diva Monitor'],
     ['Vinnie Rossi', 'L2i'],
     ['Chord', 'Mojo'],
     ['Klipsch', 'Heresy'],

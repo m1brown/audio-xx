@@ -239,6 +239,22 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // first-party source for the original that I could verify.
   { key: 'eversolo dmp a6 gen 2', url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
     source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
+  /*
+   * The ORIGINAL DMP-A6 — ADMITTED 2026-08-27. The 2026-08-23 note above
+   * stands: Eversolo replaced its own product page in place with the Gen 2,
+   * so no live first-party source names the original. Audio46's page does,
+   * three ways at once: the title is "DMP-A6 Gen 1 ... Discontinued", a
+   * banner distinguishes it from "the newer DMP-A6 Gen 2" by link, and the
+   * stock is new and factory-sealed under Eversolo's own warranty — a
+   * dealer selling the maker's product as the maker boxed it. The
+   * photograph itself carries the eversolo mark and the DMP-A6 model
+   * designation on the fascia. This is the identity discrimination the
+   * maker's own site no longer performs.
+   */
+  { key: 'eversolo dmp-a6',
+    url: 'https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png',
+    source: { tier: 'authorized_dealer', site: 'audio46.com', credit: 'Audio46',
+      captured: '2026-08-27' } },
 
   // TotalDAC — totaldac.com /fichiers/ CDN
   { key: 'totaldac d1 unity',   url: 'https://www.totaldac.com/fichiers/D1-core-front.jpg' },
@@ -455,8 +471,21 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // asset), Harbeth intentionally falls through to the category
   // placeholder rather than firing doomed network requests.
 
-  // WLM — hifi-guide.com product image
-  { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },
+  /*
+   * WLM Diva Monitor — REPLACED 2026-08-27. The old row pointed at
+   * hifi-guide.com, an aggregator whose page cannot establish WHICH Diva
+   * generation it shows — WLM has shipped four, and the registry key
+   * ('wlm diva') did not even match the component's name. Onair Records, a
+   * WLM dealer, presents the ORIGINAL Diva Monitor distinctly from the
+   * Diva MK IV on the same brand page — the generation discrimination the
+   * identity doctrine requires — and this asset is the one it files under
+   * the original. Exact-key matching keeps MkII and MK IV out: neither
+   * name matches 'wlm diva monitor'.
+   */
+  { key: 'wlm diva monitor',
+    url: 'https://www.onair-records.de/media/images/wlm_diva_monitor.jpg',
+    source: { tier: 'authorized_dealer', site: 'onair-records.de', credit: 'Onair Records',
+      captured: '2026-08-27' } },
 
   // Buchardt Audio — manufacturer-hosted Shopify CDN. Not in the curated
   // catalog yet; the entry exists so the unknown-product clarification
