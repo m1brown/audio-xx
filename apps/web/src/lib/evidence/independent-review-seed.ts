@@ -120,6 +120,32 @@ export const PRODUCT_IDENTITIES: ProductIdentity[] = [
     aliases: ['acora qrc2', 'acora acoustics qrc-2', 'qrc-2'],
     excludes: ['acora qrc-1', 'acora src-1', 'acora src-2', 'acora mrc-2', 'acora vrc'],
   },
+  /*
+   * The FRANCE system (2026-08-27 acquisition pass). Every identity here
+   * carries a live variant trap: the INTegrated is not the 225 or the Pre2;
+   * the original Diva Monitor is not the MkII or MK IV; the original DMP-A6
+   * is not the Gen 2 or the Master Edition.
+   */
+  {
+    productKey: 'job integrated',
+    canonical: 'JOB INTegrated',
+    aliases: ['job int', 'job integrated amp', 'job integrated amplifier', 'jobsys int'],
+    excludes: ['job 225', 'job pre2', 'job pre', 'job 250', 'job mono', 'goldmund telos'],
+  },
+  {
+    productKey: 'wlm diva monitor',
+    canonical: 'WLM Diva Monitor',
+    aliases: ['wlm diva monitor speakers', 'diva monitor', 'wlm divas'],
+    excludes: ['wlm diva mk iv', 'wlm diva mkiv', 'wlm diva monitor mkii',
+      'wlm diva mk ii', 'wlm diva grand', 'wlm diva floorstander'],
+  },
+  {
+    productKey: 'eversolo dmp-a6',
+    canonical: 'Eversolo DMP-A6',
+    aliases: ['eversolo dmp a6', 'dmp-a6', 'eversolo a6', 'eversolo dmp-a6 streamer'],
+    excludes: ['eversolo dmp-a6 gen 2', 'eversolo dmp-a6 gen2', 'eversolo dmp a6 gen 2',
+      'eversolo dmp-a6 master edition', 'eversolo dmp-a8', 'eversolo dmp-a10'],
+  },
 ];
 
 /** A candidate row, before the gate sees it. */
@@ -553,6 +579,140 @@ const CANDIDATES: Candidate[] = [
         + 'PSVANE tubes in the same amplifier',
     },
     axis: 'warm_bright', direction: 'warm',
+  },
+  // ---------------------------------------------------------- JOB (FRANCE) --
+  /*
+   * No professional publication on the whitelist reviewed the INTegrated
+   * itself. The maker's own (archived) products page states the bridge in
+   * its own words: "It provides the latest circuit of power amp equivalent
+   * to a JOB 225". Everything below is therefore FAMILY evidence about the
+   * JOB 225, admitted through that maker-stated bridge, and every row's
+   * condition names the 225 so the distance renders wherever the claim does.
+   */
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Part-Time Audiophile',
+    reviewer: 'John Richardson',
+    sourceUrl: 'https://pt.audio/2014/07/06/review-job-225-stereo-amplifier/',
+    publishedAt: '2014-07-06',
+    observationType: 'listening',
+    claim: 'Heard the JOB 225 as fast and detail-oriented, with a fair dose of '
+      + 'resolution and note incisiveness.',
+    condition: {
+      kind: 'other',
+      description: 'observation of the JOB 225 — the model whose power-amplifier '
+        + 'circuit the maker states the INTegrated shares — driving Fritz REV7 '
+        + 'monitors fed directly from a volume-controlled DAC',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
+  },
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Part-Time Audiophile',
+    reviewer: 'John Richardson',
+    sourceUrl: 'https://pt.audio/2014/07/06/review-job-225-stereo-amplifier/',
+    publishedAt: '2014-07-06',
+    observationType: 'comparison',
+    claim: 'Found the JOB 225 evenly balanced in tone but not as tonally fleshed out '
+      + 'as the reviewer\'s Class A Threshold SA/3.9e; the editor\'s note in the same '
+      + 'review calls it more speed than tone.',
+    condition: {
+      kind: 'other',
+      description: 'observation of the JOB 225 — the model whose power-amplifier '
+        + 'circuit the maker states the INTegrated shares',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
+  },
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Part-Time Audiophile',
+    reviewer: 'John Richardson',
+    sourceUrl: 'https://pt.audio/2014/07/06/review-job-225-stereo-amplifier/',
+    publishedAt: '2014-07-06',
+    observationType: 'listening',
+    claim: 'Found it quite dimensional in imaging and staging, conveying recorded '
+      + 'depth more effectively than most amplifiers the reviewer had used.',
+    condition: {
+      kind: 'other',
+      description: 'observation of the JOB 225 — the model whose power-amplifier '
+        + 'circuit the maker states the INTegrated shares',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
+  },
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Sound & Vision',
+    reviewer: 'Brent Butterworth',
+    sourceUrl: 'https://www.soundandvision.com/content/review-job-225-stereo-amplifier-page-2',
+    publishedAt: '2013-08-05',
+    observationType: 'comparison',
+    claim: 'Heard the JOB 225 as more lifelike than a Krell S-300i\'s internal '
+      + 'amplifier at matched levels — smoother, with a more realistic sense of '
+      + 'ambience and natural, airy cymbals.',
+    condition: {
+      kind: 'other',
+      description: 'observation of the JOB 225 — the model whose power-amplifier '
+        + 'circuit the maker states the INTegrated shares — level-matched against '
+        + 'a Krell S-300i driving Thiel CS1.7 loudspeakers',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
+  },
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Sound & Vision',
+    reviewer: 'Brent Butterworth',
+    sourceUrl: 'https://www.soundandvision.com/content/review-job-225-stereo-amplifier-page-2',
+    publishedAt: '2013-08-05',
+    observationType: 'listening',
+    claim: 'Heard superb control of a difficult 4-ohm loudspeaker\'s woofer — bass '
+      + 'firm and well-controlled, a shade tighter than the comparison amplifier.',
+    condition: {
+      kind: 'other',
+      description: 'observation of the JOB 225 — the model whose power-amplifier '
+        + 'circuit the maker states the INTegrated shares — driving Thiel CS1.7, '
+        + 'a 4-ohm nominal load with a 2.6-ohm minimum',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
+  },
+  {
+    productKey: 'job integrated',
+    productName: 'JOB 225',
+    publication: 'Sound & Vision',
+    reviewer: 'Brent Butterworth',
+    sourceUrl: 'https://www.soundandvision.com/content/review-job-225-stereo-amplifier-page-2',
+    publishedAt: '2013-08-05',
+    observationType: 'measurement',
+    claim: 'Measured 201W into 8 ohms and 227W into 4 ohms at 1% THD (one channel '
+      + 'driven) against a 125W rating, with response flat within 0.11dB to 88kHz.',
+    condition: {
+      kind: 'other',
+      description: 'bench measurement of the JOB 225 — the model whose '
+        + 'power-amplifier circuit the maker states the INTegrated shares',
+    },
+    familyBridge: {
+      referenceName: 'JOB 225',
+      makerStatementUrl: 'https://web.archive.org/web/20160309134059/http://jobsys.com/products.htm',
+    },
   },
 ];
 

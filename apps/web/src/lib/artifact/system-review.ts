@@ -1008,6 +1008,65 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           + `amplifier. The architecture is established by the published figures; how `
           + `this particular combination voices is a separate question, taken up below.`;
       }
+
+      /*
+       * ── HIGH SENSITIVITY + SUBSTANTIAL POWER (sparse-evidence pass, 2026-08-27) ──
+       *
+       * The second recognisable architecture: a high-sensitivity loudspeaker
+       * paired with amplification that has power to spare. Two evidence
+       * grades feed it and the prose keeps them apart:
+       *
+       *   - a maker-published sensitivity and a rated amplifier output make
+       *     the judgment ESTABLISHED;
+       *   - a REPORTED sensitivity claim (line standing 'reported'), or an
+       *     amplifier whose only power figure is a maker-stated FAMILY
+       *     reference ("circuit equivalent to the X, rated NW"), make it a
+       *     SUPPORTED reading with its caveats named in the sentence.
+       *
+       * Family reference power is read from the architecture line's own
+       * wording and never enters drive arithmetic — this is architecture
+       * judgment, not a headroom computation.
+       */
+      if (!architectureJudgment) {
+        const sensLine = spk && lines(spk.dossier ?? { primary: [], secondary: [] } as never)
+          .find((x) => x.label.toLowerCase().startsWith('sensitivity'));
+        const sensVal = sensLine && /([\d.]+)\s*db/i.exec(sensLine.value);
+        const sens = sensVal ? Number(sensVal[1]) : undefined;
+        const sensReported = sensLine?.standing === 'reported'
+          || /reported|claim/i.test(sensLine?.label ?? '');
+
+        const famLine = amp && lines(amp.dossier ?? { primary: [], secondary: [] } as never)
+          .find((x) => /equivalent to the .+ rates .+ per channel|equivalent to the .+, which the maker rates/i.test(x.value));
+        const famMatch = famLine
+          && /equivalent to the ([A-Za-z0-9 .\-]+?), which the maker rates at (\d{2,4})\s*W per channel/i.exec(famLine.value);
+        const famName = famMatch?.[1];
+        const famWatts = famMatch ? Number(famMatch[2]) : undefined;
+        const ratedWatts = ampWatts; // the amplifier's own published figure, where one exists
+
+        const power = ratedWatts ?? famWatts;
+        if (sens !== undefined && sens >= 93 && power !== undefined && power >= 80) {
+          const fewBoxes = input.components.length <= 3;
+          const opening = fewBoxes
+            ? `This is a deliberately simple system — ${input.components.length === 3 ? 'three boxes' : 'two boxes'}, a short signal path, and an architecture organised around a high-sensitivity loudspeaker. `
+            : `This system is organised around a high-sensitivity loudspeaker. `;
+          const powerClause = ratedWatts !== undefined
+            ? `${ratedWatts}W of rated amplification`
+            : `amplification whose circuit the maker ties to the ${famName}, a ${famWatts}W design`;
+          const caveats: string[] = [];
+          if (sensReported) caveats.push('the sensitivity figure is the maker\u2019s claim as a publication reported it, not a published specification');
+          if (ratedWatts === undefined && famWatts !== undefined) caveats.push(`the amplifier\u2019s own rating is unpublished — the ${famName} figure is the maker\u2019s stated reference point, not a rating for this unit`);
+          const established = caveats.length === 0;
+          architectureJudgment = opening
+            + `A loudspeaker ${sensReported ? 'reported' : 'specified'} at ${sens}dB `
+            + `sensitivity asks very little of ${powerClause}, so on `
+            + `${established ? 'the published figures' : 'every figure available'}, amplifier `
+            + `power is ${established ? 'not' : 'very unlikely to be'} this system\u2019s `
+            + `constraint`
+            + (established
+              ? `. The architecture is established by the published figures; how this combination voices is a separate question, taken up below.`
+              : `. That is a supported reading rather than an established one: ${caveats.join('; ')}. How this combination voices is a separate question, taken up below.`);
+        }
+      }
     }
 
     const ambition = klass
@@ -1159,6 +1218,42 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       next.push(
         `Past that experiment, positioning, the listening room and setup are likely to `
         + `matter more than any further change of electronics.`,
+      );
+    }
+  }
+
+  /*
+   * ── THE FREE EXPERIMENT — dual conversion stages (2026-08-27) ──
+   *
+   * A structural observation, not a sonic one: when the chain contains a
+   * source that performs D/A conversion AND an amplifier whose own dossier
+   * says it converts too, the system already contains the most informative
+   * comparison it can run, at no cost. This is architecture licensing an
+   * EXPERIMENT, never a verdict — no claim about which conversion is better
+   * is made or implied, and the recommendation only fires when the richer
+   * corroboration-based experiment above had nothing to say.
+   */
+  if (next.length === 0) {
+    const srcComp = input.components.find((c) =>
+      ['streamer_dac', 'dac', 'streamer'].includes((c.role ?? '').toLowerCase()));
+    const ampComp = input.components.find((c) =>
+      ['integrated', 'amplifier'].includes((c.role ?? '').toLowerCase()));
+    const ampView = ampComp && input.dossiers.find((d) => d.displayName === ampComp.displayName);
+    const ampConverts = !!(ampView && lines(ampView).some((l) =>
+      /d\/a|dac|onboard.*conversion|digital.*input/i.test(l.value) && /conver|d\/a|dac/i.test(l.value)));
+    if (srcComp && ampComp && ampConverts && srcComp !== ampComp) {
+      const srcName = canonicalDisplayName(srcComp.displayName);
+      const ampName = canonicalDisplayName(ampComp.displayName);
+      next.push(
+        `One structural fact is worth acting on before any purchase: this chain `
+        + `contains two conversion stages — the ${srcName} performs D/A conversion, `
+        + `and the ${ampName}\u2019s own published architecture includes onboard `
+        + `conversion of its own. Nothing in the evidence says either is better; `
+        + `that is exactly why the most informative experiment this system can run `
+        + `is free. Feed the ${ampName} digitally and let it convert, then feed it `
+        + `from the ${srcName}\u2019s analogue output, level-matched, and keep `
+        + `whichever presentation you prefer. Either answer settles where conversion `
+        + `should live in this system — and neither costs anything.`,
       );
     }
   }

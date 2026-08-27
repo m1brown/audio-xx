@@ -74,6 +74,25 @@ export interface ReviewObservation {
   direction?: string;
   condition?: ObservationCondition;
   /**
+   * FAMILY EVIDENCE, explicitly bridged (Capability 2-G, 2026-08-27).
+   *
+   * Present only when the observation is about a DIFFERENT model whose
+   * relationship to this product the MAKER has stated in its own words —
+   * "the INTegrated provides the latest circuit of power amp equivalent to
+   * a JOB 225" (jobsys.com). The bridge is data, not inference: it names
+   * the reference model and cites the maker's statement, and admission
+   * additionally requires a condition that names the reference model, so
+   * the distance travels with every rendered use. Family evidence licenses
+   * family-level context only — the character layer receives it as
+   * conditional, never as exact-product character.
+   */
+  familyBridge?: {
+    /** The model the publication actually reviewed. */
+    referenceName: string;
+    /** The maker's own statement tying the two models. */
+    makerStatementUrl: string;
+  };
+  /**
    * Set only when the publication ITSELF states the observation holds across
    * variants. Relaxes the variant check; never inferred by us.
    */
@@ -341,7 +360,20 @@ export function admitReviewObservation(
   // evidence — unless the publication itself said otherwise.
   if (!observation.appliesAcrossVariants) {
     const identity = compareProductIdentity(requestedProductName, observation.productName);
-    if (identity === 'different') return no('different_product', observation.productName);
+    if (identity === 'different') {
+      /*
+       * A different model is admissible ONLY as maker-bridged family
+       * evidence: the bridge must cite the maker's statement and the
+       * condition must name the reference model, so no rendering can
+       * present it as exact-product evidence.
+       */
+      const fb = observation.familyBridge;
+      const bridged = !!(fb?.referenceName?.trim() && fb?.makerStatementUrl?.trim()
+        && observation.condition?.description
+        && observation.condition.description.toLowerCase()
+          .includes(fb.referenceName.toLowerCase()));
+      if (!bridged) return no('different_product', observation.productName);
+    }
     if (identity === 'brand_omitted' && brandEstablished !== true) {
       // The model designation matches and the maker is unstated. Without
       // independent confirmation from the publication's own page, a different

@@ -371,6 +371,20 @@ function phrase(
         + `${comparedWith} — a comparison, not an absolute placement.`;
     case 'conditional': {
       const c = conditions[0];
+      /*
+       * FAMILY EVIDENCE NAMES WHAT WAS ACTUALLY REVIEWED (2026-08-27).
+       * A bridged observation's condition begins "observation of the
+       * <reference model>". The sentence must not say the reviewer heard
+       * THIS product — nobody did. It names the reference model, states
+       * the maker's bridge, and only then the characteristic.
+       */
+      const fam = c && /^(?:bench measurement|observation) of the ([^—]+?) — (the model[^—]*)(?: — (.*))?$/
+        .exec(c.description);
+      if (fam) {
+        const tail = fam[3] ? ` (${fam[3]})` : '';
+        return `${sources} heard the ${fam[1].trim()} — ${fam[2].trim()} — as `
+          + `${described}${tail}.`;
+      }
       return `${sources} heard the ${productName} as ${described}`
         + `${c ? ` — ${c.description}` : ' under stated conditions'}.`;
     }

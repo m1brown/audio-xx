@@ -149,8 +149,17 @@ describe('the FRANCE dossiers', () => {
   });
 
   it('does NOT back-apply Gen 2 architecture to the model the listener owns', () => {
+    // The original now carries its own architecture fact, acquired from a
+    // page that names the Gen 1 explicitly (2026-08-27). The invariant that
+    // survives: nothing sourced from the Gen 2 announcement may appear here,
+    // and the original's facts carry the weaker 'reported' provenance their
+    // dealer sourcing honestly is.
     const d = dossierFor('eversolo dmp-a6', 'Eversolo DMP-A6', { authoredFacts: FRANCE_FACTS });
-    expect(d.facts.some((f) => f.predicate === 'architecture_element')).toBe(false);
+    const arch = d.facts.filter((f) => f.predicate === 'architecture_element');
+    for (const f of arch) {
+      expect(f.sourceUrl ?? '').not.toContain('shop.zidoo.tv');
+      expect(f.state).toBe('reported');
+    }
   });
 
   it('JOB carries the Goldmund relationship as first-party', () => {

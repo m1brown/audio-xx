@@ -91,7 +91,7 @@ import { inferProvisionalSystemAssessment } from '@/lib/llm-system-inference';
 import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
 import { dossierFor } from '@/lib/evidence/product-dossier';
 import { presentDossier, worthRendering } from '@/lib/evidence/dossier-presentation';
-import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/france-product-facts';
+import { FRANCE_FACTS, FRANCE_UNKNOWN_BY_PRODUCT, FRANCE_SUPERSEDED_HELD_SPECS } from '@/lib/evidence/france-product-facts';
 import {
   NATHAN_FACTS, NATHAN_UNKNOWN_BY_PRODUCT, NATHAN_SUPERSEDED_HELD_SPECS,
 } from '@/lib/evidence/nathan-product-facts';
@@ -141,7 +141,10 @@ function buildDossierViews(
     const factKey = resolveObservationKey(c.displayName, seedObservations().admitted) ?? key;
     const authoredFacts = [...FRANCE_FACTS, ...NATHAN_FACTS]
       .map((f) => (f.productKey === factKey && factKey !== key ? { ...f, productKey: key } : f));
-    const superseded = new Set(NATHAN_SUPERSEDED_HELD_SPECS[factKey] ?? []);
+    const superseded = new Set([
+      ...(NATHAN_SUPERSEDED_HELD_SPECS[factKey] ?? []),
+      ...(FRANCE_SUPERSEDED_HELD_SPECS[factKey] ?? []),
+    ]);
     const heldSpecs = manufacturerEvidence
       .filter((m) => m.productKey === key)
       // A held figure an authored fact corrects is dropped, not shown beside

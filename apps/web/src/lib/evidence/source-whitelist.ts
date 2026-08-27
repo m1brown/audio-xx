@@ -171,6 +171,21 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
     ],
   },
   {
+    /*
+     * ADDED 2026-08-27, FRANCE acquisition pass. Long-running professional
+     * AV magazine (AVTech Media), named masthead and reviewers, states
+     * associated equipment, and — rarely for this list — publishes its own
+     * bench measurements. Its JOB 225 review is the only independent
+     * measurement of the JOB amplifier circuit found in any professional
+     * publication.
+     */
+    name: 'Sound & Vision',
+    tier: 'acceptable',
+    perspective: 'Mainstream professional AV magazine; measurement-literate, '
+      + 'plain-spoken, value-aware. Publishes bench tests alongside listening.',
+    url: 'https://www.soundandvision.com/',
+  },
+  {
     name: 'Tone Publications',
     tier: 'acceptable',
     perspective: 'US publication. Strong on amplifier and speaker reviews. System-context aware.',

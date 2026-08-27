@@ -273,21 +273,62 @@ function headroomConclusion(
   const power = atLoad;
   if (power === undefined || power <= 0) return undefined;
 
-  const peak = sens + 10 * Math.log10(power);
+  /*
+   * 2.83V IS NOT ONE WATT (bad-drive-match control, 2026-08-27).
+   *
+   * Panel and low-impedance loudspeakers publish sensitivity at 2.83V/1m.
+   * Into 8 ohms that IS one watt; into 4 ohms it is TWO, so reading the
+   * figure as per-watt flatters the pairing by 3dB — the Magnepan LRS at
+   * "86dB / 2.83V" is an 83dB/W loudspeaker, and a 32W valve amplifier was
+   * being told it had headroom to spare. Where the sensitivity line states
+   * 2.83V, convert to per-watt at the stated load before any arithmetic.
+   */
+  const statedAt283 = /2\.83\s*v/i.test(sensLine!.value);
+  const wattsAt283 = statedAt283 ? (2.83 * 2.83) / load : 1;
+  const sensPerWatt = statedAt283 ? sens - 10 * Math.log10(wattsAt283) : sens;
+
+  const peak = sensPerWatt + 10 * Math.log10(power);
+  /*
+   * THE JUDGMENT FOLLOWS THE NUMBER (same control). "Substantial" was
+   * unconditional — a 98dB@1m ceiling was described in the same sentence
+   * that fits a 115dB one. Three bands, and the lowest is a finding of
+   * constraint, not comfort.
+   */
+  const generous = peak >= 108;
+  const modest = peak < 100;
+  const statement = generous
+    ? `On the published figures the pairing has substantial acoustic headroom: `
+      + `${sensLine!.value}${statedAt283 ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : ''} `
+      + `with the maker's ${power}W figure at the ${load}-ohm load this `
+      + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
+      + `— a ceiling that assumes rated power into the real load, before room and listening `
+      + `distance take their share. The margin is large enough that running out of level is `
+      + `unlikely to be this system's limitation.`
+    : modest
+      ? `On the published figures this pairing is genuinely power-constrained: `
+        + `${sensLine!.value}${statedAt283 ? ` is a 2.83V rating — about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms —` : ''} `
+        + `and the maker's ${power}W figure puts the theoretical ceiling near `
+        + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
+        + `their share. At a realistic seat that leaves little in reserve for dynamic `
+        + `peaks: the amplifier will spend real parts of ordinary listening near the top `
+        + `of its range, and running out of level is a live constraint of this pairing, `
+        + `not a theoretical one.`
+      : `On the published figures the pairing has workable but not generous headroom: `
+        + `${sensLine!.value}${statedAt283 ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : ''} `
+        + `with the maker's ${power}W figure puts the theoretical peak near `
+        + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
+        + `their share. Ordinary levels are comfortable; sustained high-level listening `
+        + `in a larger room will use much of what this amplifier has.`;
+
   return {
     upstream: amp.name, downstream: speaker.name, kind: 'headroom',
-    status: 'established', favourable: true,
-    figures: { peakDb: Math.round(peak * 10) / 10, watts: power, loadOhms: load, sensitivity: sens },
+    status: 'established', favourable: !modest,
+    figures: { peakDb: Math.round(peak * 10) / 10, watts: power, loadOhms: load, sensitivity: sensPerWatt },
     restsOn: [
       `${speaker.name}: ${sensLine!.value}`,
       `${amp.name}: ${power}W at ${load} ohms (from ${powerLine.value})`,
     ],
-    statement: `On the published figures the pairing has substantial acoustic headroom: `
-      + `${sensLine!.value} with the maker's ${power}W figure at the ${load}-ohm load this `
-      + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
-      + `— a ceiling that assumes rated power into the real load, before room and listening `
-      + `distance take their share. The margin is large enough that running out of level is `
-      + `unlikely to be this system's limitation.`,
+    statement,
   };
 }
 
