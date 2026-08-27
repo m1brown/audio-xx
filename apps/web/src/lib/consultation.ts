@@ -9336,7 +9336,8 @@ export function buildSystemAssessment(
        * correctly saved system. Role first; catalog and category are
        * fallbacks for records that carry no role.
        */
-      const primaryRole = ac.role ?? product?.category ?? ac.category ?? 'component';
+      const savedRole = ac.role ? (normaliseComponentRole(ac.role) ?? ac.role) : undefined;
+      const primaryRole = savedRole ?? product?.category ?? ac.category ?? 'component';
       components.push({
         displayName: fullName,
         role: primaryRole,

@@ -232,7 +232,7 @@ export default function ComponentDossiers({ dossiers, showEvidence = true }: {
               fontFamily: 'var(--face-grotesque), system-ui, sans-serif',
               fontSize: '0.66rem', fontWeight: 600, letterSpacing: '0.12em',
               textTransform: 'uppercase', color: 'rgba(27,26,24,0.45)',
-            }}>{d.role}</p>
+            }}>{String(d.role).replace(/_/g, ' / ')}</p>
           )}
           {/* EVIDENCE-GROUNDED CHARACTERISATION — one or two sentences,
             * assembled from this component's admitted propositions and

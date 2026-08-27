@@ -3149,7 +3149,7 @@ export default function Home() {
           // Order the chain by signal position rather than resolution order, so
           // the rendered line reads as a chain and not as a lookup log.
           const CHAIN_ORDER = ['turntable', 'cartridge', 'tonearm', 'phono', 'transport',
-            'source', 'streamer', 'dac', 'preamplifier', 'integrated', 'amplifier',
+            'source', 'streamer', 'streamer_dac', 'dac', 'preamplifier', 'integrated', 'amplifier',
             'speaker', 'headphone'];
           const orderedComponents = [...assessmentResult.components].sort((a, b) => {
             const ai = CHAIN_ORDER.indexOf(a.role); const bi = CHAIN_ORDER.indexOf(b.role);
