@@ -119,6 +119,14 @@ import { seedObservations } from '@/lib/evidence/independent-review-seed';
  * with the first one eventually. */
 const dossierRole = normalizeRole;
 
+/*
+ * The most recent composed system review, for follow-up continuity. Module
+ * scope on purpose: the submit handler's React state can be a stale closure
+ * and a ref proved instance-bounded in practice; one conversation per tab
+ * makes module scope the honest lifetime here.
+ */
+const lastSystemReviewStore: { paragraphs: string[] } = { paragraphs: [] };
+
 function buildDossierViews(
   components: Array<{ displayName: string; role: string; canonicalName?: string }>,
   manufacturerEvidence: Array<Record<string, unknown>>,
@@ -3351,7 +3359,7 @@ export default function Home() {
             const reviewComponents = orderedComponents.map((c) => ({
               displayName: c.displayName, role: c.role,
             }));
-            provisionalAdvisory.systemReview = composeSystemReview({
+            provisionalAdvisory.systemReview = lastSystemReviewStore.paragraphs = composeSystemReview({
               components: reviewComponents,
               synthesis: synthesiseChain(reviewComponents),
               dossiers: dossierViews,
@@ -3431,14 +3439,18 @@ export default function Home() {
             // Freeze what the listener was just shown. Built from the SAME
             // response object the conversation rendered, so parity is a
             // property of construction rather than something to verify later.
-            void createArtifactSnapshot(snapshotFromProvisional(provisional, {
+            const provisionalSnap = snapshotFromProvisional(provisional, {
               engineVersion: 'prod',
               createdAt: new Date().toISOString(),
               components: orderedComponents.map((c) => ({
                 name: c.displayName, role: c.role,
               })),
               componentDossiers: dossierViews,
-            })).then((viewToken) => {
+            });
+            // The snapshot's review is the one the listener actually reads;
+            // follow-up continuity answers from the same text.
+            lastSystemReviewStore.paragraphs = provisionalSnap.systemReview ?? [];
+            void createArtifactSnapshot(provisionalSnap).then((viewToken) => {
               if (viewToken) {
                 dispatch({ type: 'SET_ARTIFACT_TOKEN', id: provisionalMsgId, viewToken });
               }
@@ -3460,10 +3472,12 @@ export default function Home() {
           // The standing review's own experiment, for substitution questions
           // on sparse systems — the flat systemReview is the only stored
           // shape, so the experiment paragraph is recovered by its content.
-          const lastReview = [...state.messages].reverse().find(
-            (m) => m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
-              && ((m as { advisory?: { systemReview?: string[] } }).advisory?.systemReview?.length ?? 0) > 0,
-          ) as { advisory?: { systemReview?: string[] } } | undefined;
+          const lastReview = lastSystemReviewStore.paragraphs.length
+            ? { advisory: { systemReview: lastSystemReviewStore.paragraphs } }
+            : [...state.messages].reverse().find(
+              (m) => m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+                && ((m as { advisory?: { systemReview?: string[] } }).advisory?.systemReview?.length ?? 0) > 0,
+            ) as { advisory?: { systemReview?: string[] } } | undefined;
           const reviewExperiment = (lastReview?.advisory?.systemReview ?? []).filter(
             (para) => /most informative experiment|experiment worth running|conversion stages/i.test(para),
           );
@@ -3607,12 +3621,14 @@ export default function Home() {
         try {
           const synth = synthesizeArtifact(assessmentResult);
           const cam = toCanonicalAssessment(synth.payload, assessmentResult);
-          void createArtifactSnapshot(snapshotFromCanonical(cam, {
+          const canonicalSnap = snapshotFromCanonical(cam, {
             engineVersion: 'prod',
             createdAt: new Date().toISOString(),
             actionVerdict: assessmentResult.response?.actionVerdict,
             componentDossiers: assessmentResult.response?.componentDossiers,
-          })).then((viewToken) => {
+          });
+          lastSystemReviewStore.paragraphs = canonicalSnap.systemReview ?? [];
+          void createArtifactSnapshot(canonicalSnap).then((viewToken) => {
             if (viewToken) {
               dispatch({ type: 'SET_ARTIFACT_TOKEN', id: assessmentMsgId, viewToken });
             }
