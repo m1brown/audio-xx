@@ -15,7 +15,7 @@ import type { ConvState } from '../conversation-state';
 import { detectIntent } from '../intent';
 import { buildTurnContext } from '../turn-context';
 import { buildSystemAssessment } from '../consultation';
-import { composeAssessmentFollowUp } from '../assessment-followup';
+import { composeAssessmentFollowUp, composeReviewAnchoredAnswer } from '../assessment-followup';
 import type { AudioSessionState } from '../system-types';
 
 const defaultCtx = (text: string) => {
@@ -111,6 +111,29 @@ describe('state machine: first direction follow-up arms continuity', () => {
     const t = transition(readyState(), q, ctx);
     expect(t.state.mode).toBe('system_assessment');
     expect(t.state.facts.assessmentFollowUpTurn).not.toBe(true);
+  });
+});
+
+describe('review-anchored follow-up answers', () => {
+  const REVIEW = [
+    'This is an exceptionally ambitious, reference-oriented system.',
+    'The open question is the amplifier \u2014 the Butler MONAD A100 is the least corroborated link in the chain, and the most informative place to experiment.',
+    'If this were my system, I would leave the dCS Rossini Apex and the Acora Acoustics QRC-2 alone \u2014 they carry the strongest independent evidence in the chain.',
+    'The one experiment worth running is the amplifier. Auditioning a modern reference amplifier against it would answer the most informative question this system can be asked.',
+  ];
+  it('the Butler question is answered from the review, verbatim', () => {
+    const a = composeReviewAnchoredAnswer('Do you think the Butler is holding the system back?', REVIEW);
+    expect(a).toBeTruthy();
+    expect(a).toContain('least corroborated link');
+    expect(a).toContain('experiment worth running');
+  });
+  it('a change-first question gets the experiment and leave-alone judgment', () => {
+    const a = composeReviewAnchoredAnswer('What would you change first?', REVIEW);
+    expect(a).toBeTruthy();
+    expect(a).toContain('experiment worth running');
+  });
+  it('an unrelated question returns null and falls through', () => {
+    expect(composeReviewAnchoredAnswer('How do room modes work?', REVIEW.slice(0, 1))).toBeNull();
   });
 });
 

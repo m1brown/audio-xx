@@ -38,6 +38,41 @@ function joinNatural(items: string[]): string {
  * Returns null when the findings are too thin to answer honestly —
  * the caller falls back to the standard assessment path.
  */
+/**
+ * A follow-up answered FROM the standing review's own paragraphs.
+ *
+ * Nathan beta (2026-08-28): while a system review is on screen, questions
+ * like "What would you change first?" fell to the knowledge lane, whose
+ * generic essay ("many enthusiasts start with the speakers") both ignored
+ * and contradicted the review directly above it. The licensed answer to a
+ * direction question about an assessed system already exists — it is the
+ * review. This selects the paragraphs that speak to the question's own
+ * words plus the experiment paragraph, verbatim; it invents nothing, and
+ * returns null only when the review holds nothing relevant.
+ */
+export function composeReviewAnchoredAnswer(
+  question: string,
+  review: string[],
+): string | null {
+  if (!review?.length) return null;
+  const qTokens = question.toLowerCase().split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 4
+      && !['what', 'would', 'should', 'could', 'think', 'much', 'really',
+        'this', 'that', 'system', 'make', 'made', 'with', 'before',
+        'change', 'first', 'better', 'difference', 'replace'].includes(w));
+  const experiment = review.filter((p) =>
+    /experiment worth running|most informative experiment|conversion stages|leave the/i.test(p));
+  const relevant = review
+    .map((p) => ({ p, hits: qTokens.filter((w) => p.toLowerCase().includes(w)).length }))
+    .filter((x) => x.hits >= 1 && !experiment.includes(x.p))
+    .sort((a, b) => b.hits - a.hits)
+    .slice(0, 2)
+    .map((x) => x.p);
+  const body = [...relevant, ...experiment];
+  if (body.length === 0) return null;
+  return ['From the assessment above:', ...body].join('\n\n');
+}
+
 export function composeAssessmentFollowUp(
   findings: MemoFindings,
   /**

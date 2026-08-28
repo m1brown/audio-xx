@@ -74,7 +74,7 @@ import {
 } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
-import { composeAssessmentFollowUp } from '@/lib/assessment-followup';
+import { composeAssessmentFollowUp, composeReviewAnchoredAnswer } from '@/lib/assessment-followup';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
@@ -2912,6 +2912,25 @@ export default function Home() {
     // Fires ONLY where the alternative is nothing (or a canned
     // non-answer); populated lanes are untouched.
     const runKnowledgeLane = () => {
+      /*
+       * FOLLOW-UP NET (Nathan beta, 2026-08-28). While a system review
+       * stands, an assessment-directed question must answer FROM that
+       * review — the knowledge lane's generic essay both ignores and can
+       * contradict the judgment directly above it ("many enthusiasts start
+       * with the speakers" under a review that says leave them alone). The
+       * net renders the review's own paragraphs, verbatim; it invents
+       * nothing, and questions the review holds nothing for fall through
+       * to the lane as before.
+       */
+      const FOLLOWUP_NET = /\b(?:what\s+would\s+you\s+(?:change|upgrade|do)|change\s+first|upgrade\s+first|holding\s+.{0,24}\bback|weak(?:est)?\s+link|would\s+a\s+(?:better|new|different)\b|make\s+much\s+difference|should\s+i\s+(?:replace|upgrade|change)|contribute|why\s+do(?:es)?\s+.{0,30}\bwork|is\s+this\s+really|experiment\s+with|before\s+buying)\b/i;
+      if (lastSystemReviewStore.paragraphs.length > 0 && FOLLOWUP_NET.test(submittedText)) {
+        const anchored = composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
+        if (anchored) {
+          dispatch({ type: 'ADD_NOTE', content: anchored });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
       const knowledgeCtx: KnowledgeContext = {
         currentMessage: submittedText,
         subjectMatches: turnCtx.subjectMatches,
@@ -3481,7 +3500,8 @@ export default function Home() {
           const reviewExperiment = (lastReview?.advisory?.systemReview ?? []).filter(
             (para) => /most informative experiment|experiment worth running|conversion stages/i.test(para),
           );
-          const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings, reviewExperiment);
+          const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings, reviewExperiment)
+            ?? composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
           if (followUpAnswer) {
             dispatch({ type: 'ADD_NOTE', content: followUpAnswer });
             dispatch({ type: 'SET_LOADING', value: false });
