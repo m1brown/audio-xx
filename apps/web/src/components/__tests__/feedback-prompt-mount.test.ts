@@ -38,23 +38,39 @@ describe('LB-6 feedback capture mount', () => {
     expect(src).toMatch(/<FeedbackPrompt\b/);
   });
 
+  /*
+   * Placement re-pinned 2026-08-28 (founder): the prompt renders ONCE per
+   * conversation, below the composer, joined to the LATEST non-intake
+   * advisory. The two gating rules LB-6 protects are unchanged in
+   * substance — intake advisories never receive the prompt, and no id
+   * means no prompt — they are simply enforced in the selector that picks
+   * the latest advisory rather than per-message.
+   */
   it('is gated off intake advisories', () => {
-    // The render must be guarded by an explicit intake exclusion.
-    const guarded = /message\.advisory\.kind\s*!==\s*'intake'[\s\S]{0,200}?<FeedbackPrompt\b/.test(src);
+    const guarded = /advisory\?\.kind\s*!==\s*'intake'[\s\S]{0,400}?<FeedbackPrompt\b/.test(src);
     expect(
       guarded,
-      "The <FeedbackPrompt> render must be guarded by message.advisory.kind !== 'intake'.",
+      "The latest-advisory selector must exclude intake advisories before <FeedbackPrompt> renders.",
     ).toBe(true);
   });
 
   it('is gated on a present message id, and passes that id through', () => {
-    const idGuarded = /'id'\s+in\s+message[\s\S]{0,200}?<FeedbackPrompt\b/.test(src);
+    const idGuarded = /'id'\s+in\s+m[\s\S]{0,400}?<FeedbackPrompt\b/.test(src);
     expect(
       idGuarded,
-      "The <FeedbackPrompt> render must be guarded by `'id' in message` so feedback " +
-        'is always joinable to its advisory.',
+      "The latest-advisory selector must require a message id so feedback stays joinable.",
     ).toBe(true);
-    expect(src).toMatch(/<FeedbackPrompt\s+advisoryId=\{message\.id\}/);
+    expect(src).toMatch(/<FeedbackPrompt\s+advisoryId=\{lastAdvisory\.id\}/);
+  });
+
+  it('renders once, below the composer, not inside the per-message flow', () => {
+    // One render site only.
+    expect((src.match(/<FeedbackPrompt\b/g) ?? []).length).toBe(1);
+    // And that site sits after the composer textarea in source order.
+    const ta = src.indexOf('ref={textareaRef}');
+    const fb = src.indexOf('<FeedbackPrompt');
+    expect(ta).toBeGreaterThan(0);
+    expect(fb).toBeGreaterThan(ta);
   });
 
   it('still emits the existing feedback_submitted event to the existing sink', () => {
