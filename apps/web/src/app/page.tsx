@@ -74,7 +74,7 @@ import {
 } from '@/lib/conversation-router';
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
-import { composeAssessmentFollowUp, composeReviewAnchoredAnswer } from '@/lib/assessment-followup';
+import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '@/lib/assessment-followup';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
@@ -2911,26 +2911,28 @@ export default function Home() {
     // through to a real answer instead of ending the turn in silence.
     // Fires ONLY where the alternative is nothing (or a canned
     // non-answer); populated lanes are untouched.
-    const runKnowledgeLane = () => {
-      /*
-       * FOLLOW-UP NET (Nathan beta, 2026-08-28). While a system review
-       * stands, an assessment-directed question must answer FROM that
-       * review — the knowledge lane's generic essay both ignores and can
-       * contradict the judgment directly above it ("many enthusiasts start
-       * with the speakers" under a review that says leave them alone). The
-       * net renders the review's own paragraphs, verbatim; it invents
-       * nothing, and questions the review holds nothing for fall through
-       * to the lane as before.
-       */
-      const FOLLOWUP_NET = /\b(?:what\s+would\s+you\s+(?:change|upgrade|do)|change\s+first|upgrade\s+first|holding\s+.{0,24}\bback|weak(?:est)?\s+link|would\s+a\s+(?:better|new|different)\b|make\s+much\s+difference|should\s+i\s+(?:replace|upgrade|change)|contribute|why\s+do(?:es)?\s+.{0,30}\bwork|is\s+this\s+really|experiment\s+with|before\s+buying)\b/i;
-      if (lastSystemReviewStore.paragraphs.length > 0 && FOLLOWUP_NET.test(submittedText)) {
-        const anchored = composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
-        if (anchored) {
-          dispatch({ type: 'ADD_NOTE', content: anchored });
-          dispatch({ type: 'SET_LOADING', value: false });
-          return;
-        }
+    /*
+     * FOLLOW-UP NET (Nathan beta, 2026-08-28 — lifted above ALL lane
+     * dispatch). While a system review stands, a judgment question about it
+     * must answer FROM that review. Inside the knowledge lane it caught
+     * only essays; shopping, diagnosis and unknown-product intakes were
+     * still claiming these turns first — "Should I replace the ARC?" was
+     * answered with "What component are you looking to change?". The net
+     * runs before every lane; genuine shopping transitions (audition/
+     * recommend/which-amp questions) are excluded by the predicate and
+     * proceed to the shopping experience as designed.
+     */
+    if (lastSystemReviewStore.paragraphs.length > 0
+      && isReviewDirectedFollowUp(submittedText)) {
+      const anchored = composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
+      if (anchored) {
+        dispatch({ type: 'ADD_NOTE', content: anchored });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
       }
+    }
+
+    const runKnowledgeLane = () => {
       const knowledgeCtx: KnowledgeContext = {
         currentMessage: submittedText,
         subjectMatches: turnCtx.subjectMatches,

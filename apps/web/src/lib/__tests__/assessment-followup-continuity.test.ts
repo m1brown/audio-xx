@@ -15,7 +15,7 @@ import type { ConvState } from '../conversation-state';
 import { detectIntent } from '../intent';
 import { buildTurnContext } from '../turn-context';
 import { buildSystemAssessment } from '../consultation';
-import { composeAssessmentFollowUp, composeReviewAnchoredAnswer } from '../assessment-followup';
+import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '../assessment-followup';
 import type { AudioSessionState } from '../system-types';
 
 const defaultCtx = (text: string) => {
@@ -111,6 +111,33 @@ describe('state machine: first direction follow-up arms continuity', () => {
     const t = transition(readyState(), q, ctx);
     expect(t.state.mode).toBe('system_assessment');
     expect(t.state.facts.assessmentFollowUpTurn).not.toBe(true);
+  });
+});
+
+describe('the follow-up net predicate', () => {
+  const YES = [
+    'Do you think the Butler is holding the system back?',
+    'Would a modern reference amplifier improve it?',
+    'What would you change first?',
+    'Should I replace the ARC?',
+    'Would a better DAC make much difference?',
+    'What should I experiment with before buying anything?',
+    'Why do you think this system works?',
+    'What do the Acoras contribute?',
+    'Is this really a reference-level system?',
+  ];
+  const NO = [
+    'What amplifier would you compare with the Butler?',
+    'What modern amplifier should I audition against the Butler?',
+    'Can you recommend a DAC under $2000?',
+    'Which amp should I buy?',
+    'How do room modes work?',
+  ];
+  it.each(YES.map((q) => [q]))('review-directed: %s', (q) => {
+    expect(isReviewDirectedFollowUp(q)).toBe(true);
+  });
+  it.each(NO.map((q) => [q]))('not review-directed: %s', (q) => {
+    expect(isReviewDirectedFollowUp(q)).toBe(false);
   });
 });
 

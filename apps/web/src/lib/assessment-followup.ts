@@ -50,6 +50,25 @@ function joinNatural(items: string[]): string {
  * words plus the experiment paragraph, verbatim; it invents nothing, and
  * returns null only when the review holds nothing relevant.
  */
+/**
+ * Is this question ABOUT the standing assessment (answerable from its
+ * review), as opposed to a request to find/recommend products (which may
+ * proceed to the shopping experience) or a fresh topic?
+ *
+ * The boundary that matters: "Should I replace the ARC?" and "Would a
+ * modern reference amplifier improve it?" are judgment questions about the
+ * assessed system — they were being answered with shopping and diagnosis
+ * intakes that re-asked what the listener had just said. "What amplifier
+ * should I audition against the Butler?" is a genuine shopping transition
+ * and stays out of the net.
+ */
+export function isReviewDirectedFollowUp(q: string): boolean {
+  if (/\b(?:audition|recommend|suggest|shortlist|candidates?|which\s+(?:amp|amplifier|dac|speaker)|what\s+(?:amp|amplifier|dac|speaker)\w*\s+(?:would|should|do)\s+(?:you|i)\s+(?:compare|audition|consider|buy|look))/i.test(q)) {
+    return false;
+  }
+  return /\b(?:what\s+would\s+you\s+(?:change|upgrade|do)|change\s+first|upgrade\s+first|holding\s+.{0,24}\bback|weak(?:est)?\s+link|would\s+an?\s+(?:modern|reference|better|new|different)\b[^?]{0,50}\b(?:improve|help|difference)|make\s+much\s+difference|should\s+i\s+(?:replace|upgrade|change)\b|contribute|why\s+do(?:es)?\s+.{0,40}\bworks?\b|is\s+this\s+really|experiment\s+with|before\s+buying)\b/i.test(q);
+}
+
 export function composeReviewAnchoredAnswer(
   question: string,
   review: string[],
