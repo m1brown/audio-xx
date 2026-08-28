@@ -6780,6 +6780,19 @@ export default function Home() {
 
         </div>
 
+        {/* HELP US IMPROVE — once per conversation, BELOW the reply box,
+          * joined to the most recent advisory so feedback stays attributable.
+          * Blue-eyebrow tinted card: product chrome, visually distinct from
+          * both the editorial advisory above and the composer it follows. */}
+        {hasMessages && (() => {
+          const lastAdvisory = [...state.messages].reverse().find(
+            (m) => m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
+              && (m as { advisory?: { kind?: string } }).advisory?.kind !== 'intake'
+              && 'id' in m && (m as { id?: string }).id,
+          ) as { id?: string } | undefined;
+          return lastAdvisory?.id ? <FeedbackPrompt advisoryId={lastAdvisory.id} /> : null;
+        })()}
+
         {/* Editorial secondary entry — the example assessment IS the
          *  publication's strongest proof, so it gets its own centered
          *  line beneath the composer rather than hiding beside Send.
@@ -7161,9 +7174,9 @@ function MessageBubble({ message, onIntakeSubmit, onPreferenceCapture, onFollowU
          *
          *  Uses the existing `feedback_submitted` event and /api/events sink
          *  unchanged; the component dedups per advisory via localStorage. */}
-        {message.advisory.kind !== 'intake' && 'id' in message && message.id && (
-          <FeedbackPrompt advisoryId={message.id} />
-        )}
+        {/* FeedbackPrompt moved below the composer (founder, 2026-08-28):
+          * rendered once per conversation, joined to the latest advisory,
+          * so it no longer sits between an advisory and the reply box. */}
       </div>
     );
   }

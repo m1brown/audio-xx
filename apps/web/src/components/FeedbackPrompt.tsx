@@ -108,10 +108,17 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
 
   return (
     <div
+      /* Site chrome, not conversation (founder, 2026-08-28): the prompt sat
+       * between the advisory and the reply box and read as part of the
+       * chat. It now renders once, below the composer, as a quietly tinted
+       * card with the product-chrome blue eyebrow — the same family as
+       * FIND ONE, which is exactly what it is: tooling, not editorial. */
       style={{
-        marginTop: '1.25rem',
-        paddingTop: '1rem',
-        borderTop: `1px solid ${COLOR.border}`,
+        marginTop: '2rem',
+        padding: '1rem 1.15rem',
+        background: '#f4f7fb',
+        border: '1px solid #d9e2ef',
+        borderRadius: 8,
         display: 'flex',
         flexDirection: 'column',
         gap: '0.7rem',
@@ -120,7 +127,7 @@ export default function FeedbackPrompt({ advisoryId }: { advisoryId: string }) {
       aria-label="Feedback"
       data-print-hide
     >
-      <p style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: COLOR.textMuted, margin: 0 }}>
+      <p style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#2b5e9e', margin: 0 }}>
         Help us improve
       </p>
 
