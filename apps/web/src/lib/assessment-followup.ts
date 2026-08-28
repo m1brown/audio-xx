@@ -59,10 +59,8 @@ export function composeAssessmentFollowUp(
     return [
       'The assessment already contains the first step of that answer, and it costs nothing.',
       ...reviewExperiment,
-      'Nothing in the evidence held identifies the source as this system\u2019s limitation, '
-      + 'so a better external converter is an unresolved question rather than an indicated '
-      + 'upgrade. Run the free comparison first \u2014 what it shows about where conversion '
-      + 'should live is exactly the information a purchase decision needs.',
+      'Nothing in the evidence held demonstrates a constraint there \u2014 the experiment '
+      + 'is how you find out, and either outcome is worth having before any money moves.',
     ].join(' ');
   }
 

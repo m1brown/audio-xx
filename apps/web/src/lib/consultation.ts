@@ -8641,6 +8641,18 @@ function distinctInputComponentSegments(rawMessage: string): string[] {
 
   const distinct: string[] = [];
   for (const seg of segments) {
+    /*
+     * A QUESTION IS NOT A COMPONENT (Nathan beta, 2026-08-28). The
+     * accumulate-and-reassess loop appends follow-up turns to the system
+     * text, so "Do you think the Butler is holding the system back?"
+     * arrived here as a segment. It contains a brand word, fails identity
+     * against "Butler Monads" (single-token overlap on a two-token name),
+     * and the count then manufactured the 4/4-recognised-but-one-missing
+     * phantom this check was built to kill. An interrogative sentence names
+     * a question, not equipment.
+     */
+    if (/^\s*(?:do|does|did|what|which|where|when|why|how|is|are|was|were|should|would|could|can|will)\b/i.test(seg)
+      || /\?\s*$/.test(seg)) continue;
     if (distinct.some((kept) => samePhysicalComponent(
       { brand: '', name: kept }, { brand: '', name: seg },
     ))) continue;

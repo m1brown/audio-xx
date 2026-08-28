@@ -571,7 +571,7 @@ const GEAR_OPINION_QUESTION = /\bwhat\s+do\s+you\s+think\s+(?:of|about)\b|\bthou
 const SYSTEM_REFERENT = /\b(?:system|setup|rig|chain)\b|\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:it|this|that|these|them)\b/i;
 
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
-  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|my\s+system)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
+  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|(?:my|the|this|our)\s+system|(?:the\s+)?\w+(?:\s+\w+)?)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
   + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
   'i',
 );
@@ -1529,7 +1529,8 @@ export function transition(
         const proposesNamedReplacement = qTokens.some((w) =>
           !assessedText.includes(w) && /\d/.test(w));
         const namesOwnComponentOnly = context.subjectCount > 0 && assessedText.length > 0
-          && /\b(?:replac|swap|upgrad|substitut|instead of)\w*\b/i.test(text)
+          && (/\b(?:replac|swap|upgrad|substitut|instead of)\w*\b/i.test(text)
+            || ASSESSMENT_DIRECTION_FOLLOWUP.test(text))
           && ownTokens.length >= 1
           && !proposesNamedReplacement;
 

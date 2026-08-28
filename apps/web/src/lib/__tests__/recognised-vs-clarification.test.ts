@@ -94,3 +94,19 @@ describe('legitimate clarifications still fire', () => {
     expect(r.clarification?.question ?? '').toMatch(/both appear as amplifiers/i);
   });
 });
+describe('questions accumulated into the system text are not components', () => {
+  it('the direction question does not manufacture a missing component', () => {
+    // Production, Nathan beta: "What would you change first?" after the
+    // assessment re-ran with the prior question in the accumulated text and
+    // rendered 4/4 RECOGNISED plus "one component I couldn't match".
+    const MSG = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. '
+      + '- Amps: Butler Monads. - Speakers: Acora QRC-2.'
+      + TURN_SEPARATOR + 'Do you think the Butler is holding the system back?'
+      + TURN_SEPARATOR + 'What would you change first?';
+    const { desires } = detectIntent(MSG) as never as { desires: unknown };
+    const r = buildSystemAssessment(MSG, extractSubjectMatches(MSG), null as never, desires as never) as never as {
+      kind: string; clarification?: { question?: string } };
+    expect(r.kind).not.toBe('clarification');
+  });
+});
+

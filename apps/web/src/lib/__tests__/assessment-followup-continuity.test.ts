@@ -95,6 +95,15 @@ describe('state machine: first direction follow-up arms continuity', () => {
     expect(t.state.facts.assessmentFollowUpTurn).toBe(true);
   });
 
+  it('"is the Butler holding the system back?" is a direction question, not diagnosis', () => {
+    const q = 'Do you think the Butler is holding the system back?';
+    const ctx = defaultCtx(q);
+    const st = readyState();
+    st.facts.systemAssessmentText = 'Assess my system: dCS Rossini Apex, ARC ref 5, Butler Monads, Acora QRC-2';
+    const t = transition(st, q, ctx);
+    expect(t.state.facts.assessmentFollowUpTurn).toBe(true);
+  });
+
   it('a follow-up naming a specific product keeps accumulate-and-reassess', () => {
     const q = 'What if I swap out the Marantz PM8006 and change to a Hegel H120?';
     const ctx = defaultCtx(q);
