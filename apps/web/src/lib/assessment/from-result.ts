@@ -66,5 +66,12 @@ export function authoritativeAssessment(
     componentDossiers: options.dossiers,
     coverageNote: options.coverageNote,
     findings: result.findings,
+    // The counterfactual frame ("You asked about the X in place of the Y…")
+    // travels with the findings. This route is the one the conversation
+    // renders — omitting it here meant the frame existed only in the saved
+    // snapshot, never on the surface the listener was actually reading
+    // (Wave 2, 2026-08-30).
+    statedSubstitution: (result.findings as { statedSubstitution?: { incumbent: string; candidate: string } } | undefined)
+      ?.statedSubstitution,
   });
 }

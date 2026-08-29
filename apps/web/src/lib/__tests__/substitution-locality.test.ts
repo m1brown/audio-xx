@@ -385,3 +385,18 @@ describe('terse fragments and what-if hypotheticals stay with the assessment', (
     it(`"${q}" → not system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(false));
   }
 });
+
+import { authoritativeAssessment } from '../assessment/from-result';
+
+describe('the conversation-rendered assessment carries the counterfactual frame', () => {
+  it('authoritativeAssessment surfaces "in place of" for a stated substitution', () => {
+    const T1 = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
+    const M = T1 + TURN_SEPARATOR + 'What about a Leben CS600 instead of the Butler?';
+    const r = buildSystemAssessment(M, extractSubjectMatches(M), null as never, []);
+    const snap = authoritativeAssessment(r);
+    expect(snap).not.toBeNull();
+    const review = (snap?.systemReview ?? []).join('\n');
+    expect(review).toContain('in place of the Butler Monads');
+    expect(review).toContain('your saved system itself is unchanged');
+  });
+});
