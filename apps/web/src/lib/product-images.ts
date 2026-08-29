@@ -534,6 +534,10 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // Klipsch Heritage — klipsch.com /medias/ CDN
   { key: 'klipsch heresy',      url: 'https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg',
     source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-05-12' } },
+  // Cornwall IV — klipsch.com product page hero (campaign, 2026-08-29). The
+  // page names Cornwall IV exactly; the asset filename carries the model.
+  { key: 'klipsch cornwall iv', url: 'https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png',
+    source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-08-29' } },
   // Boenicke — boenicke-audio.ch /wp-content/uploads/ CDN
   { key: 'boenicke w5',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg' },
   { key: 'boenicke w8',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg' },
@@ -619,6 +623,11 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // KEF — us.kef.com Shopify CDN (additional models)
   { key: 'kef ls60',            url: 'https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png' },
+  // LS50 Meta — kef.com product page (campaign, 2026-08-29). Exact-variant
+  // key on purpose: the original LS50 and the Wireless II are different
+  // products and must never borrow this asset.
+  { key: 'kef ls50 meta',       url: 'https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200',
+    source: { tier: 'manufacturer', site: 'us.kef.com', credit: 'KEF', captured: '2026-08-29' } },
 
   // McIntosh — mcintoshlabs.com /-/media/ CDN (pattern from MA252)
   // Hegel — hegel.com /images/products/ CDN (pattern from H390/H190)

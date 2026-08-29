@@ -1,7 +1,7 @@
 {
   "baseline": "b9cc3ac",
   "head": "staged identity enforcement",
-  "productsProbed": 354,
+  "productsProbed": 356,
   "surfaces": [
     "getProductImage",
     "getProductImageEntry",
@@ -10,11 +10,11 @@
     "consumer: imageUrl ?? getProductImage",
     "resolveProductImageWithConfidence"
   ],
-  "changedResolutions": 259,
+  "changedResolutions": 276,
   "byKind": {
-    "revealed": 28,
+    "revealed": 40,
     "suppressed": 121,
-    "substituted": 110
+    "substituted": 115
   },
   "rows": [
     {
@@ -1004,6 +1004,50 @@
       "reason": "correctness — the asset shown belonged to a different product (goldmund job 225)"
     },
     {
+      "product": "kef ls50 meta",
+      "surface": "getProductImage",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "kef ls50 meta",
+      "surface": "getProductImageEntry",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "kef ls50 meta",
+      "surface": "resolveProductImageStrict",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "kef ls50 meta",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "kef ls50 meta",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "kef ls50 meta",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
       "product": "kef ls60",
       "surface": "getProductImage",
       "before": "https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png",
@@ -1070,12 +1114,92 @@
       "reason": "correctness — the asset shown belonged to a different product (kinki studio ex m1)"
     },
     {
+      "product": "klipsch cornwall iv",
+      "surface": "getProductImage",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "klipsch cornwall iv",
+      "surface": "getProductImageEntry",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "klipsch cornwall iv",
+      "surface": "resolveProductImageStrict",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "klipsch cornwall iv",
+      "surface": "resolveProductImage",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "klipsch cornwall iv",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "klipsch cornwall iv",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/product.svg",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "getProductImage",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "getProductImageEntry",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "resolveProductImageStrict",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
       "product": "Klipsch Cornwall IV",
       "surface": "resolveProductImage",
       "before": "https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg",
-      "after": "/images/placeholders/speaker.svg",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
       "kind": "substituted",
       "reason": "correctness — the asset shown belonged to a different product (klipsch heresy)"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "consumer: imageUrl ?? getProductImage",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "revealed",
+      "reason": "exact-matcher shadowing change — a nearer entry was previously hidden by a substring match"
+    },
+    {
+      "product": "Klipsch Cornwall IV",
+      "surface": "resolveProductImageWithConfidence",
+      "before": "/images/placeholders/speaker.svg",
+      "after": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "kind": "substituted",
+      "reason": "exact-matcher shadowing change — a different entry now matches exactly"
     },
     {
       "product": "klipsch heresy",

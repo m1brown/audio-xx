@@ -3,15 +3,15 @@
   "invariant": "exact identity AND approved provenance AND recorded rights, established independently",
   "enforcement": "identity (staged) — see lib/images/admission.ts",
   "totals": {
-    "registry": 161,
-    "registryDisplayed": 141,
+    "registry": 163,
+    "registryDisplayed": 143,
     "catalog": 28,
     "catalogDisplayed": 24
   },
   "registryByState": {
     "provenance_unestablished": 85,
     "identity_wrong": 9,
-    "legacy_rights_pending": 14,
+    "legacy_rights_pending": 16,
     "identity_unverified": 42,
     "provenance_prohibited": 11
   },
@@ -957,6 +957,18 @@
       "captured": "2026-05-12"
     },
     {
+      "key": "klipsch cornwall iv",
+      "url": "https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png",
+      "state": "legacy_rights_pending",
+      "displayed": true,
+      "identityStatus": "corroborated",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "Klipsch",
+      "captured": "2026-08-29"
+    },
+    {
       "key": "boenicke w5",
       "url": "https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg",
       "state": "provenance_unestablished",
@@ -1247,6 +1259,18 @@
       "rightsBasis": "none_recorded",
       "hosting": "remote",
       "identityNote": "asset asserts 'ls60w', which the key does not name"
+    },
+    {
+      "key": "kef ls50 meta",
+      "url": "https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200",
+      "state": "legacy_rights_pending",
+      "displayed": true,
+      "identityStatus": "corroborated",
+      "sourceClass": "manufacturer",
+      "rightsBasis": "none_recorded",
+      "hosting": "remote",
+      "credit": "KEF",
+      "captured": "2026-08-29"
     },
     {
       "key": "hegel rost",
