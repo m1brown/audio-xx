@@ -265,3 +265,24 @@ describe('the early review-anchored net yields to counterfactual turns', () => {
     expect(isReviewDirectedFollowUp('What would you change first?')).toBe(true);
   });
 });
+
+import { isCounterfactualTurn } from '../conversation-state';
+
+describe('isCounterfactualTurn — the orchestrator override contract', () => {
+  for (const q of [
+    'What about a Leben CS600 instead of the Butler?',
+    'What about a Hegel H590 instead?',
+    'What if I replace the Butler with a Hegel H590?',
+    'Keep the Butler. What would you change next?',
+    'Actually, go back to the original system.',
+  ]) {
+    it(`"${q}" → true`, () => expect(isCounterfactualTurn(q)).toBe(true));
+  }
+  for (const q of [
+    'Would I lose bass control?',
+    'What is the weak link?',
+    'What do you think of Goldmund amps?',
+  ]) {
+    it(`"${q}" → false`, () => expect(isCounterfactualTurn(q)).toBe(false));
+  }
+});

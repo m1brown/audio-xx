@@ -584,6 +584,18 @@ const SYSTEM_REFERENT = /\b(?:system|setup|rig|chain)\b|\bwhat\s+do\s+you\s+thin
  */
 const SUBSTITUTION_REFERENT = /\binstead\b|\bin\s+place\s+of\b|\brather\s+than\b|\breplac(?:e|ing)\b[^.?!]{0,60}\bwith\b|\bswap(?:ping|ped)?\b/i;
 
+/**
+ * Is this turn a counterfactual mutation of the system under assessment —
+ * a substitution proposal or a revert of one? Such turns are OWNED by the
+ * assessment flow: the orchestrator must keep them on the assessment path
+ * even when detectIntent reads the product name and classifies them as a
+ * product inquiry.
+ */
+export function isCounterfactualTurn(text: string): boolean {
+  return SUBSTITUTION_REFERENT.test(text)
+    || /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text);
+}
+
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
   /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|(?:my|the|this|our)\s+system|(?:the\s+)?\w+(?:\s+\w+)?)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
   + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,

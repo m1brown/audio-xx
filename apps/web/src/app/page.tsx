@@ -58,7 +58,7 @@ import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, isGearQuestionEscape, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
-import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom } from '@/lib/conversation-state';
+import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom, isCounterfactualTurn } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
 // P0 fix: resolveSavedSystemForAdvisory no longer called from page.tsx.
 // System resolution now uses turnCtx.activeSystem exclusively (single source of truth).
@@ -1823,6 +1823,18 @@ export default function Home() {
             // Continuity turn: survive the main detectIntent re-assignment
             // below (see assessmentFollowUpOverride declaration).
             if (convResult.state.facts.assessmentFollowUpTurn) {
+              assessmentFollowUpOverride = true;
+            }
+            // Counterfactual turns (Wave 2, 2026-08-29): a substitution
+            // proposal or revert that the state machine kept in
+            // ready_to_assess is OWNED by the assessment flow. The main
+            // detectIntent below reads the product name and returns
+            // product_assessment — the same clobber the continuity flag
+            // was invented for — which sent "What about a Leben CS600
+            // instead of the Butler?" to the product lane as an isolated
+            // unknown-product inquiry. Same restore mechanism, same scope
+            // rule: only a turn transition() itself kept.
+            if (isCounterfactualTurn(submittedText)) {
               assessmentFollowUpOverride = true;
             }
             // Do NOT reset convState — keep system_assessment mode active.
