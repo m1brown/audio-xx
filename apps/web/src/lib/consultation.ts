@@ -8807,7 +8807,7 @@ function resolvesToProduct(displayName: string, product: Product): boolean {
 function applyStatedSubstitutions(
   components: SystemComponent[],
   rawMessage: string,
-): void {
+): { incumbent: string; candidate: string } | null {
   const lower = rawMessage.toLowerCase();
   const tokensOf = (name: string) => name.toLowerCase().split(/[^a-z0-9+]+/)
     .filter((t) => t.length >= 3 && !['the', 'and', 'with'].includes(t));
@@ -8830,10 +8830,14 @@ function applyStatedSubstitutions(
     const nb = ROLE_EQUIVALENCES[b.role?.toLowerCase() ?? ''] ?? b.role?.toLowerCase();
     return !!na && na === nb;
   };
+  let swapped: { incumbent: string; candidate: string } | null = null;
   const drop = (incumbent: SystemComponent, candidate: SystemComponent) => {
     if (!sameRole(incumbent, candidate) || incumbent === candidate) return;
     const idx = components.indexOf(incumbent);
-    if (idx >= 0) components.splice(idx, 1);
+    if (idx >= 0) {
+      components.splice(idx, 1);
+      swapped = { incumbent: incumbent.displayName, candidate: candidate.displayName };
+    }
   };
 
   const INSTEAD = /\binstead\s+of\b|\bin\s+place\s+of\b|\brather\s+than\b/g;
@@ -8854,6 +8858,7 @@ function applyStatedSubstitutions(
     const candidate = findNear(w.index + w[0].length, 60, true, incumbent);
     if (candidate) drop(incumbent, candidate);
   }
+  return swapped;
 }
 
 
@@ -10038,7 +10043,7 @@ export function buildSystemAssessment(
    * ambiguity ("I run Leben and Butler amps") has no such phrasing and
    * still asks.
    */
-  applyStatedSubstitutions(components, currentMessage);
+  const statedSubstitution = applyStatedSubstitutions(components, currentMessage);
 
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
@@ -10224,7 +10229,7 @@ export function buildSystemAssessment(
   // ── Extract MemoFindings contract ──────────────────
   // The structured contract between the deterministic pipeline and
   // all downstream renderers. Produced BEFORE any prose rendering.
-  const findings: MemoFindings = extractMemoFindings(
+  const findingsBase: MemoFindings = extractMemoFindings(
     components,
     componentAxisProfiles,
     memoChain,
@@ -10242,6 +10247,9 @@ export function buildSystemAssessment(
     voicingCoherence,
     manufacturerEvidence,
   );
+  const findings: MemoFindings = statedSubstitution
+    ? { ...findingsBase, statedSubstitution }
+    : findingsBase;
 
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.

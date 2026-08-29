@@ -56,6 +56,9 @@ export interface SystemReviewInput {
   driveFinding?: string;
   driveQualification?: string;
   coverageNote?: string;
+  /** The listener asked about a substitution; frame the review as the
+   *  counterfactual it is, and say the saved system is untouched. */
+  statedSubstitution?: { incumbent: string; candidate: string };
   /**
    * What the listening evidence licenses about this chain, already synthesised.
    *
@@ -1143,7 +1146,12 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       : undefined;
 
     const opening = [ambition, coherence].filter(Boolean).join(' ');
-    const parts = [architectureJudgment, opening || undefined, hypothesis, uncertainty]
+    const counterfactualFrame = input.statedSubstitution
+      ? `You asked about the ${input.statedSubstitution.candidate} in place of the `
+        + `${input.statedSubstitution.incumbent}. What follows reads your system as it `
+        + `would be with that change made — your saved system itself is unchanged.`
+      : undefined;
+    const parts = [counterfactualFrame, architectureJudgment, opening || undefined, hypothesis, uncertainty]
       .filter(Boolean) as string[];
     if (parts.length) thesis.unshift(...parts);
   }

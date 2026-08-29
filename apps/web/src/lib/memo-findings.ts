@@ -450,6 +450,13 @@ export interface MemoFindings {
   // ── Sources ──
   /** References from catalogued products. */
   sourceReferences: SourceReferenceFinding[];
+  /**
+   * Present when the listener STATED a substitution this turn ("X instead
+   * of Y") and the graph assessed the counterfactual. The renderer frames
+   * the review as an evaluation of the proposed system; the saved system
+   * is never mutated by a hypothetical.
+   */
+  statedSubstitution?: { incumbent: string; candidate: string };
 
   // ── Knowledge evidence (Phase 2A — knowledge utilisation) ──
   /**

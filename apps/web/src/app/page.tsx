@@ -3652,6 +3652,7 @@ export default function Home() {
             createdAt: new Date().toISOString(),
             actionVerdict: assessmentResult.response?.actionVerdict,
             componentDossiers: assessmentResult.response?.componentDossiers,
+            statedSubstitution: assessmentResult.findings?.statedSubstitution,
           });
           trackEvent('unmatched_model', { model: 'PROBE-w3', reason: 'probe' });
           convStateRef.current.facts.lastSystemReview = canonicalSnap.systemReview ?? [];

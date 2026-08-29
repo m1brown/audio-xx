@@ -113,6 +113,7 @@ export interface AssessmentSnapshotV1 {
    * renderer displays them and makes none of its own: a second editorial
    * selection layer is how two surfaces start disagreeing about what is known.
    */
+  statedSubstitution?: { incumbent: string; candidate: string };
   componentDossiers?: DossierView[];
 
   relations?: SnapshotRelation[];
@@ -180,6 +181,7 @@ export function snapshotFromCanonical(
     coverageNote?: string;
     /** The engine's own findings, read ONLY for licensed relationships. */
     findings?: unknown;
+    statedSubstitution?: { incumbent: string; candidate: string };
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -232,6 +234,7 @@ export function snapshotFromCanonical(
     driveFinding: cam.identity.signature,
     driveQualification: undefined,
     coverageNote: meta.coverageNote,
+    statedSubstitution: meta.statedSubstitution,
   });
   if (cam.reading.engineering.length) {
     sections.push({ label: 'Engineering', paragraphs: cam.reading.engineering });
@@ -408,6 +411,7 @@ export function snapshotFromProvisional(
     driveFinding: response.systemSignature ?? undefined,
     driveQualification: response.qualification,
     coverageNote: meta.coverageNote,
+    statedSubstitution: meta.statedSubstitution,
   });
 
   const snap: AssessmentSnapshotV1 = {
