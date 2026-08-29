@@ -4576,8 +4576,29 @@ export default function Home() {
     const priorityOverride = isShoppingRefinement
       ? extractPriorityCategory(submittedText)
       : undefined;
+    /*
+     * THE CURRENT QUESTION'S CATEGORY IS AUTHORITATIVE (Nathan beta,
+     * 2026-08-28). "What modern amplifier should I audition against the
+     * Butler?" — a fresh shopping turn after an assessment — resolved its
+     * category from allUserText, where the system description's
+     * "Dac/Streamer" leads, and recommended DACs for an amplifier
+     * question. When a shopping-intent message names exactly ONE product
+     * category, that category scopes the turn, exactly as an explicit
+     * switch does. Messages naming none or several keep the accumulated
+     * context.
+     */
+    const CURRENT_CATEGORY_RES: Array<[import('@/lib/shopping-intent').ShoppingCategory, RegExp]> = [
+      ['amplifier', /\b(?:amplifiers?|power\s+amps?|integrateds?|monoblocks?)\b|\bamps?\b/i],
+      ['dac', /\bdacs?\b|\bd\/a\b|digital-to-analog/i],
+      ['speaker', /\b(?:loud)?speakers?\b|\bmonitors?\b|\bfloorstanders?\b/i],
+    ];
+    const categoriesNamedNow = CURRENT_CATEGORY_RES.filter(([, re]) => re.test(submittedText));
+    const currentMessageCategory = (intent === 'shopping' && categoriesNamedNow.length === 1)
+      ? categoriesNamedNow[0][0]
+      : null;
+
     const earlyCategorySwitch: import('@/lib/shopping-intent').ShoppingCategory | null =
-      verbDirectiveSwitch ?? priorityOverride?.category ?? null;
+      verbDirectiveSwitch ?? priorityOverride?.category ?? currentMessageCategory ?? null;
     if (priorityOverride && !verbDirectiveSwitch) {
       console.log('[category-override] priority pattern treated as explicit switch → %s', priorityOverride.category);
     }
