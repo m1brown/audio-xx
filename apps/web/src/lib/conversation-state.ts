@@ -593,7 +593,9 @@ const SUBSTITUTION_REFERENT = /\binstead\b|\bin\s+place\s+of\b|\brather\s+than\b
  */
 export function isCounterfactualTurn(text: string): boolean {
   return SUBSTITUTION_REFERENT.test(text)
-    || /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text);
+    || /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text)
+    // "what if I went solid state?" — a hypothetical about the system.
+    || /\bwhat\s+if\b/i.test(text);
 }
 
 /**
@@ -610,7 +612,19 @@ export function isSystemDirectedAssessmentTurn(text: string): boolean {
   if (/\b(?:better|good|worse)\s+match\b|\bmatch\s+for\s+(?:this|it|my)\b/i.test(text)) return true;
   const deictic = /\b(?:this|that|it|those|my\s+(?:system|setup|chain)|the\s+(?:system|setup|chain))\b|\bwould\s+i\b/i;
   const judgment = /\b(?:improve|upgrad\w*|better|worse|help|change|match|fit|worth|lose|gain)\b|\bhold\w*\s+back\b/i;
-  return deictic.test(text) && judgment.test(text);
+  if (deictic.test(text) && judgment.test(text)) return true;
+  /*
+   * A terse fragment question mid-assessment ("too much amp?", "worth
+   * it?") elides its referent BECAUSE the system under review is the
+   * obvious one. Definitional fragments ("what is THD?") and purchase
+   * fragments keep their own lanes.
+   */
+  const t = text.trim();
+  const tokens = t.split(/\s+/).filter(Boolean);
+  return /\?\s*$/.test(t)
+    && tokens.length <= 4
+    && !/^what(?:'s|\s+is|\s+does|\s+are)\b/i.test(t)
+    && !/\b(?:buy|budget|recommend|price|best)\b/i.test(t);
 }
 
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(

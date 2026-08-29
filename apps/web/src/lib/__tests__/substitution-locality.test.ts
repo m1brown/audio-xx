@@ -376,3 +376,12 @@ describe('a bare-brand candidate never swaps silently', () => {
     }
   });
 });
+
+describe('terse fragments and what-if hypotheticals stay with the assessment', () => {
+  for (const q of ['too much amp?', 'worth it?', 'what if I went solid state?']) {
+    it(`"${q}" → system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(true));
+  }
+  for (const q of ['what is THD?', 'best amp?', 'what does damping factor mean?']) {
+    it(`"${q}" → not system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(false));
+  }
+});
