@@ -238,6 +238,15 @@ describe('9 · natural restatement — assessment verb on an owned list', () => 
   });
 });
 
+describe('10 · audition requests are shopping, never diagnosis or knowledge', () => {
+  it.each([
+    ['What modern amplifier should I audition against the Butler?'],
+    ['Can you shortlist DACs I should audition?'],
+  ])('%s → shopping', (m) => {
+    expect((detectIntent(m) as never as { intent: string }).intent).toBe('shopping');
+  });
+});
+
 describe('universal invariant — a fact licenses only role-compatible reasoning', () => {
   it('amplifier power is never a predicate on a non-amplifier', () => {
     for (const role of ['streamer', 'dac', 'streamer_dac', 'preamplifier', 'speaker', 'turntable', undefined]) {

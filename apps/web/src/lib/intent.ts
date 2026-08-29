@@ -1714,6 +1714,18 @@ export function detectIntent(
   //     that case and let the message fall through to the diagnosis
   //     default — page.tsx will then route it to the active-system
   //     tuning handler (which uses the saved chain as context).
+  /*
+   * AUDITION IS SHOPPING VOCABULARY (Nathan beta, 2026-08-28). "What modern
+   * amplifier should I audition against the Butler?" classified as
+   * audio_knowledge and the conversation then triaged it as a FAULT report
+   * ("is it distorting, running hot…"). A request to audition, shortlist or
+   * hear candidates is a request to find products — the shopping lane, with
+   * the assessment as its reasoning context, is the designed home for it.
+   */
+  if (/\b(?:audition|shortlist|short-list)\b|\bcandidates?\s+to\s+(?:hear|try|consider)\b|\bdemo\b[^.?]{0,30}\bagainst\b/i.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
   const REFINEMENT_ESCAPE = /\b(?:(?:make\s+it\s+)?(?:warmer|brighter|smoother|punchier|cheaper)|more\s+(?:detail(?:ed)?|transparent|resolving|spacious|dynamic|relaxed|lush|forgiving|air(?:y|ier)?|body|warmth|clarity|impact|energy|punch|expensive)|less\s+(?:bright|harsh|aggressive|fatiguing|expensive)|richer|cleaner|higher\s+end|better\s+(?:for|with)\s+my\s+system|fit\s+my\s+system)\b/i;
   if (currentMessage.length < 60 && REFINEMENT_ESCAPE.test(currentMessage) && !options.hasActiveSavedSystem) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
