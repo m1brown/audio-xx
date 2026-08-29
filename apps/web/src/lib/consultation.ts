@@ -8793,6 +8793,70 @@ function resolvesToProduct(displayName: string, product: Product): boolean {
   return aliasCatalogLookup(typedModel) === model;
 }
 
+
+/**
+ * Remove the INCUMBENT when the message states a substitution.
+ *
+ * Patterns understood, all requiring the candidate and incumbent to share a
+ * functional role so unrelated mentions can never delete a component:
+ *   "<candidate> … instead of / in place of / rather than … <incumbent>"
+ *   "replace/swap (out) <incumbent> … with/for <candidate>"
+ * Matching is by distinctive name token near the marker, so "the Butler"
+ * finds "Butler Monads".
+ */
+function applyStatedSubstitutions(
+  components: SystemComponent[],
+  rawMessage: string,
+): void {
+  const lower = rawMessage.toLowerCase();
+  const tokensOf = (name: string) => name.toLowerCase().split(/[^a-z0-9+]+/)
+    .filter((t) => t.length >= 3 && !['the', 'and', 'with'].includes(t));
+  const findNear = (pos: number, span: number, dirAfter: boolean, exclude?: SystemComponent) => {
+    let best: { c: SystemComponent; d: number } | undefined;
+    for (const c of components) {
+      if (c === exclude) continue;
+      for (const t of tokensOf(c.displayName)) {
+        let i = -1;
+        while ((i = lower.indexOf(t, i + 1)) >= 0) {
+          const d = dirAfter ? i - pos : pos - (i + t.length);
+          if (d >= 0 && d <= span && (!best || d < best.d)) best = { c, d };
+        }
+      }
+    }
+    return best?.c;
+  };
+  const sameRole = (a: SystemComponent, b: SystemComponent) => {
+    const na = ROLE_EQUIVALENCES[a.role?.toLowerCase() ?? ''] ?? a.role?.toLowerCase();
+    const nb = ROLE_EQUIVALENCES[b.role?.toLowerCase() ?? ''] ?? b.role?.toLowerCase();
+    return !!na && na === nb;
+  };
+  const drop = (incumbent: SystemComponent, candidate: SystemComponent) => {
+    if (!sameRole(incumbent, candidate) || incumbent === candidate) return;
+    const idx = components.indexOf(incumbent);
+    if (idx >= 0) components.splice(idx, 1);
+  };
+
+  const INSTEAD = /\binstead\s+of\b|\bin\s+place\s+of\b|\brather\s+than\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = INSTEAD.exec(lower)) !== null) {
+    const candidate = findNear(m.index, 80, false);
+    const incumbent = candidate ? findNear(m.index + m[0].length, 50, true, candidate) : undefined;
+    if (candidate && incumbent) drop(incumbent, candidate);
+  }
+  const REPLACE = /\b(?:replace|swap(?:\s+out)?)\b/g;
+  while ((m = REPLACE.exec(lower)) !== null) {
+    const incumbent = findNear(m.index + m[0].length, 50, true);
+    if (!incumbent) continue;
+    const WITH = /\b(?:with|for)\b/g;
+    WITH.lastIndex = m.index + m[0].length;
+    const w = WITH.exec(lower);
+    if (!w) continue;
+    const candidate = findNear(w.index + w[0].length, 60, true, incumbent);
+    if (candidate) drop(incumbent, candidate);
+  }
+}
+
+
 /**
  * Merge component records that describe the SAME physical unit.
  *
@@ -9963,6 +10027,18 @@ export function buildSystemAssessment(
   // components existed — the duplicate-role clarification fired on a graph the
   // integrity gate had already cleaned.
   collapsePhysicalRepresentations(components, currentMessage);
+
+  /*
+   * STATED SUBSTITUTION (Wave 2, 2026-08-29). "What about a Leben CS600
+   * instead of the Butler?" accumulated BOTH amplifiers and then asked
+   * "has one replaced the other?" — a question the listener's own words
+   * had just answered. A message that names a candidate and an incumbent
+   * through substitution phrasing is a COUNTERFACTUAL: the graph swaps the
+   * incumbent for the candidate and assesses the proposed system. Genuine
+   * ambiguity ("I run Leben and Butler amps") has no such phrasing and
+   * still asks.
+   */
+  applyStatedSubstitutions(components, currentMessage);
 
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
