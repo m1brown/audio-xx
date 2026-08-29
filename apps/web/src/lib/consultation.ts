@@ -8743,10 +8743,19 @@ function countMeaningfulSegments(rawMessage: string): string[] {
     const norm = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (!norm || norm.length < 2) continue;
     if (GI_ROLE_LABEL_ONLY.test(norm)) continue;
+    // Discourse filler split off by punctuation ("Actually, go back…")
+    // carries no component identity and must not count as one.
+    if (norm.split(' ').every((t) => GI_DISCOURSE_TOKENS.has(t))) continue;
     seen.add(norm);
   }
   return [...seen];
 }
+
+const GI_DISCOURSE_TOKENS: ReadonlySet<string> = new Set([
+  'actually', 'anyway', 'also', 'ok', 'okay', 'right', 'well', 'sure',
+  'thanks', 'thank', 'you', 'please', 'so', 'then', 'though', 'really',
+  'yes', 'no', 'yeah', 'hmm', 'oh', 'now', 'instead', 'never', 'mind',
+]);
 
 /** Token set of a display name, minus trivial tokens. */
 function giTokens(name: string): Set<string> {
@@ -8807,6 +8816,10 @@ function resolvesToProduct(displayName: string, product: Product): boolean {
 function applyStatedSubstitutions(
   components: SystemComponent[],
   rawMessage: string,
+  /** OUT: display names whose raw-text mentions are explained by
+   *  substitution phrasing (candidates and displaced incumbents), so the
+   *  graph-integrity gate does not read them as dropped components. */
+  consumedNames: string[] = [],
 ): { incumbent: string; candidate: string } | null {
   const lower = rawMessage.toLowerCase();
   const tokensOf = (name: string) => name.toLowerCase().split(/[^a-z0-9+]+/)
@@ -8831,12 +8844,29 @@ function applyStatedSubstitutions(
     return !!na && na === nb;
   };
   let swapped: { incumbent: string; candidate: string } | null = null;
-  const drop = (incumbent: SystemComponent, candidate: SystemComponent) => {
+  /*
+   * Chained counterfactuals collapse to the ORIGINAL incumbent. Across
+   * accumulated turns — "Leben instead of the Butler?" then "a Hegel H590
+   * instead?" — the second swap displaces the first CANDIDATE from the
+   * graph, but the question the listener is asking is still "this in place
+   * of the Butler". The frame must name the original occupant, not the
+   * previous hypothesis.
+   */
+  const chainOrigin = new Map<string, string>();
+  type Removal = { incumbent: SystemComponent; candidate: SystemComponent; at: number; pos: number };
+  const removals: Removal[] = [];
+  const drop = (incumbent: SystemComponent, candidate: SystemComponent, pos: number) => {
     if (!sameRole(incumbent, candidate) || incumbent === candidate) return;
     const idx = components.indexOf(incumbent);
     if (idx >= 0) {
       components.splice(idx, 1);
-      swapped = { incumbent: incumbent.displayName, candidate: candidate.displayName };
+      const origin = chainOrigin.get(incumbent.displayName) ?? incumbent.displayName;
+      swapped = { incumbent: origin, candidate: candidate.displayName };
+      chainOrigin.set(candidate.displayName, origin);
+      removals.push({ incumbent, candidate, at: idx, pos });
+      for (const n of [incumbent.displayName, candidate.displayName]) {
+        if (!consumedNames.includes(n)) consumedNames.push(n);
+      }
     }
   };
 
@@ -8845,7 +8875,22 @@ function applyStatedSubstitutions(
   while ((m = INSTEAD.exec(lower)) !== null) {
     const candidate = findNear(m.index, 80, false);
     const incumbent = candidate ? findNear(m.index + m[0].length, 50, true, candidate) : undefined;
-    if (candidate && incumbent) drop(incumbent, candidate);
+    if (candidate && incumbent) drop(incumbent, candidate, m.index);
+  }
+  /*
+   * Trailing bare "instead" — "What about a Hegel H590 instead?" names no
+   * incumbent, because its referent is the same-role component already in
+   * the system. The swap is licensed only when that referent is UNIQUE:
+   * one other component sharing the candidate's role. Ambiguity (two
+   * sources, unknown role) never deletes — the engine's clarification
+   * path handles it.
+   */
+  const BARE_INSTEAD = /\binstead\b(?!\s+of)/g;
+  while ((m = BARE_INSTEAD.exec(lower)) !== null) {
+    const candidate = findNear(m.index, 80, false);
+    if (!candidate) continue;
+    const peers = components.filter((c) => c !== candidate && sameRole(c, candidate));
+    if (peers.length === 1) drop(peers[0], candidate, m.index);
   }
   const REPLACE = /\b(?:replace|swap(?:\s+out)?)\b/g;
   while ((m = REPLACE.exec(lower)) !== null) {
@@ -8856,7 +8901,65 @@ function applyStatedSubstitutions(
     const w = WITH.exec(lower);
     if (!w) continue;
     const candidate = findNear(w.index + w[0].length, 60, true, incumbent);
-    if (candidate) drop(incumbent, candidate);
+    if (candidate) drop(incumbent, candidate, m.index);
+  }
+  /*
+   * REVERTS (multi-turn counterfactual state). "Keep the Butler." cancels
+   * the amplifier-slot hypothesis; "go back to the original system" cancels
+   * every hypothesis. A revert undoes only swap chains whose last marker
+   * precedes it, restores the original occupant at its old position, and
+   * removes the hypothetical candidates from the graph. After a full
+   * revert, no counterfactual frame is reported: the system under
+   * assessment IS the original again.
+   */
+  const undo = (r: Removal) => {
+    const ci = components.indexOf(r.candidate);
+    if (ci >= 0) components.splice(ci, 1);
+    if (!components.includes(r.incumbent)) {
+      components.splice(Math.min(r.at, components.length), 0, r.incumbent);
+    }
+  };
+  const RESTORE_ALL = /\b(?:go|going)\s+back\b|\brevert\b|\breturn\s+to\s+(?:the\s+)?original\b/g;
+  const KEEP = /\bkeep\s+(?:the\s+|my\s+)?([a-z0-9][a-z0-9 +/-]{2,30}?)(?=[.,?!;]|\s+(?:and|but|what|which|for)\b|$)/g;
+  const undone = new Set<Removal>();
+  const undoChain = (seed: Removal, pos: number) => {
+    // Undo the whole chain in this slot: every removal transitively linked
+    // through chainOrigin to the same original occupant, if its marker
+    // precedes the revert.
+    const origin = chainOrigin.get(seed.candidate.displayName) ?? seed.incumbent.displayName;
+    for (let i = removals.length - 1; i >= 0; i--) {
+      const r = removals[i];
+      if (undone.has(r) || r.pos > pos) continue;
+      const rOrigin = chainOrigin.get(r.candidate.displayName)
+        ?? r.incumbent.displayName;
+      if (rOrigin !== origin) continue;
+      undo(r);
+      undone.add(r);
+    }
+  };
+  while ((m = RESTORE_ALL.exec(lower)) !== null) {
+    const pos = m.index;
+    if (!/\b(?:original|previous|whole|everything|system|setup)\b/.test(lower.slice(pos, pos + 60))) continue;
+    for (const r of [...removals]) if (!undone.has(r) && r.pos < pos) { undoChain(r, pos); }
+  }
+  while ((m = KEEP.exec(lower)) !== null) {
+    const named = m[1].trim();
+    for (const r of [...removals]) {
+      if (undone.has(r) || r.pos > m.index) continue;
+      const inc = r.incumbent.displayName.toLowerCase();
+      const nameTokens = named.split(/[^a-z0-9+]+/).filter((t) => t.length >= 3);
+      if (nameTokens.some((t) => inc.includes(t))) undoChain(r, m.index);
+    }
+  }
+  if (undone.size > 0 && undone.size === removals.length) swapped = null;
+  else if (undone.size > 0) {
+    // Report the latest surviving swap.
+    const live = removals.filter((r) => !undone.has(r));
+    const last = live[live.length - 1];
+    swapped = last
+      ? { incumbent: chainOrigin.get(last.candidate.displayName) ?? last.incumbent.displayName,
+          candidate: last.candidate.displayName }
+      : null;
   }
   return swapped;
 }
@@ -9000,6 +9103,9 @@ function collapsePhysicalRepresentations(
 function checkGraphIntegrity(
   rawMessage: string,
   allComponents: SystemComponent[],
+  /** Names consumed by substitution phrasing — a segment naming a swap's
+   *  candidate or displaced incumbent is explained, not dropped. */
+  substitutionConsumed: string[] = [],
 ): ClarificationResponse | null {
   // Drop spurious bare-brand echoes of a properly-cataloged component: when a
   // bare-brand entry (≤1 token, no product) is a token-subset of another
@@ -9098,9 +9204,51 @@ function checkGraphIntegrity(
     return overlap >= 2;
   };
   const inputSegments = distinctInputComponentSegments(rawMessage);
+  const REVERT_PROSE = /\b(?:keep|go(?:ing)?\s+back|revert|stick\s+with)\b/i;
+  /*
+   * A directive about ROLES — "keep the speakers and change the amp" —
+   * names what the listener wants done, not a component. It is prose the
+   * moment no token could carry identity: no digits, and every word is a
+   * role label, a directive verb, or small-talk. A directive that names
+   * actual gear ("keep the Naim NAP 250") keeps its identity tokens and
+   * still counts.
+   */
+  const GI_DIRECTIVE = /\b(?:keep|change|swap|replace|upgrade|stick|go|went)\b/i;
+  const GI_DIRECTIVE_STOP: ReadonlySet<string> = new Set([
+    'keep', 'change', 'swap', 'replace', 'upgrade', 'stick', 'go', 'went', 'back',
+    'the', 'and', 'my', 'an', 'to', 'of', 'for', 'what', 'would', 'you', 'it',
+    'me', 'with', 'next', 'first', 'better', 'worse', 'new', 'modern', 'solid',
+    'state', 'tube', 'tubes', 'should', 'could', 'if', 'that', 'this', 'one',
+    'speaker', 'speakers', 'amp', 'amps', 'amplifier', 'amplifiers', 'integrated',
+    'dac', 'dacs', 'streamer', 'preamp', 'preamplifier', 'source', 'sources',
+    'turntable', 'headphone', 'headphones', 'monitor', 'monitors', 'cd', 'player',
+    'system', 'setup', 'original', 'previous', 'actually', 'instead',
+  ]);
+  const directiveProse = (seg: string) =>
+    GI_DIRECTIVE.test(seg) && !/\d/.test(seg)
+    && seg.toLowerCase().split(/[^a-z0-9+]+/).filter((t) => t.length >= 2)
+      .every((t) => GI_DIRECTIVE_STOP.has(t) || GI_DISCOURSE_TOKENS.has(t));
+  const consumedBySubstitution = (seg: string) =>
+    directiveProse(seg)
+    ||
+    substitutionConsumed.some((n) => segmentNamesResolved(seg, n))
+    /*
+     * A keep/revert sentence naming a component it refers to ("keep the
+     * butler — what would you change next") is an instruction about the
+     * graph, not a new component. It shares only ONE token with the
+     * component it names (prose around it dilutes the overlap), so the
+     * two-token identity rule correctly refuses to match it — and it must
+     * be exempted rather than read as a dropped component.
+     */
+    || (REVERT_PROSE.test(seg) && (
+      /\b(?:original|previous|system|setup|everything)\b/i.test(seg)
+      || [...foldTokens(seg)].some((t) =>
+        components.some((c) => foldTokens(c.displayName).has(t))
+        || substitutionConsumed.some((n) => foldTokens(n).has(t)))));
   const unmatchedSegments = inputSegments.filter((seg) =>
     giTokens(seg).size > 0
-    && !components.some((c) => segmentNamesResolved(seg, c.displayName)));
+    && !components.some((c) => segmentNamesResolved(seg, c.displayName))
+    && !consumedBySubstitution(seg));
   /*
    * BOTH tests must agree before a missing component is announced, because
    * each covers the other's blind spot. The count comparison alone produced
@@ -9111,7 +9259,11 @@ function checkGraphIntegrity(
    * segment says WHICH ONE actually is. A clarification needs both — and a
    * legitimate one always has both.
    */
-  const expected = countMeaningfulInputComponents(rawMessage);
+  const exempted = inputSegments.filter((seg) =>
+    giTokens(seg).size > 0
+    && !components.some((c) => segmentNamesResolved(seg, c.displayName))
+    && consumedBySubstitution(seg)).length;
+  const expected = countMeaningfulInputComponents(rawMessage) - exempted;
   const dropped = expected > resolved && unmatchedSegments.length > 0;
 
   if (!dropped && !hasDuplicate && unresolved.length < 2) return null; // graph trusted
@@ -10043,7 +10195,8 @@ export function buildSystemAssessment(
    * ambiguity ("I run Leben and Butler amps") has no such phrasing and
    * still asks.
    */
-  const statedSubstitution = applyStatedSubstitutions(components, currentMessage);
+  const substitutionConsumed: string[] = [];
+  const statedSubstitution = applyStatedSubstitutions(components, currentMessage, substitutionConsumed);
 
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
@@ -10059,7 +10212,7 @@ export function buildSystemAssessment(
   // ── Graph-integrity gate (G6-D1) — trust the parse before assessing ──
   // Detects a dropped, duplicated, or unresolvable component graph and asks
   // for a specific clarification instead of synthesising a wrong assessment.
-  const integrityClarification = checkGraphIntegrity(currentMessage, components);
+  const integrityClarification = checkGraphIntegrity(currentMessage, components, substitutionConsumed);
   if (integrityClarification) {
     return { kind: 'clarification', clarification: integrityClarification };
   }

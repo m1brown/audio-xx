@@ -104,3 +104,147 @@ describe('stated substitution is a counterfactual, never a duplicate-role questi
     }
   });
 });
+
+import { transition, INITIAL_CONV_STATE } from '../conversation-state';
+
+/**
+ * ROUTING BOUNDARY (Wave 2 battery, 2026-08-29). Production answered
+ * "What about a Leben CS600 instead of the Butler?" as an ISOLATED product
+ * inquiry: detectIntent reads the product name (product_assessment, a
+ * strong intent outside system_assessment's compatible set), and the
+ * intent-mismatch reset at the top of transition() destroyed the
+ * assessment context before the ready_to_assess case could accumulate.
+ * Every later turn in the conversation then cascaded into the wrong lane.
+ * A substitution proposal is a question about the ACTIVE system.
+ */
+describe('substitution turns stay in the assessment conversation', () => {
+  const T1 = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
+  const ready = {
+    mode: 'system_assessment', stage: 'ready_to_assess',
+    facts: { ...INITIAL_CONV_STATE.facts, hasSystem: true, systemAssessmentText: T1, systemComponents: [T1] },
+  } as never as Parameters<typeof transition>[0];
+
+  const CASES = [
+    ['What about a Leben CS600 instead of the Butler?', 'product_assessment'],
+    ['What about a Hegel H590 instead?', 'product_assessment'],
+    ['Would swapping the Butler for solid state be worse?', 'product_assessment'],
+  ] as const;
+  for (const [q, intent] of CASES) {
+    it(`"${q}" (${intent}) accumulates instead of resetting`, () => {
+      const tr = transition(ready, q, { hasSystem: true, subjectCount: 1, detectedIntent: intent });
+      expect(tr.state.mode).toBe('system_assessment');
+      expect(tr.state.stage).toBe('ready_to_assess');
+      expect(tr.response?.kind).toBe('proceed');
+    });
+  }
+
+  it('a genuinely new-topic opinion question still leaves the mode', () => {
+    const tr = transition(ready, 'What do you think of Goldmund amps?', {
+      hasSystem: true, subjectCount: 1, detectedIntent: 'product_assessment',
+    });
+    expect(tr.state.mode).not.toBe('system_assessment');
+  });
+});
+
+describe('chained counterfactuals collapse to the original incumbent', () => {
+  const T1 = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
+  const runSeq = (...turns: string[]) => {
+    const M = [T1, ...turns].join(TURN_SEPARATOR);
+    return buildSystemAssessment(M, extractSubjectMatches(M), null as never, []) as never as {
+      kind: string;
+      findings?: { systemChain?: { names?: string[] }; statedSubstitution?: { incumbent: string; candidate: string } };
+      components?: Array<{ displayName: string }>;
+    };
+  };
+  const chain = (r: ReturnType<typeof runSeq>) =>
+    ((r.components ?? []).map((c) => c.displayName).join('|'))
+    + '|' + (r.findings?.systemChain?.names ?? []).join('|');
+
+  it('trailing bare "instead" swaps against the unique same-role peer', () => {
+    const r = runSeq('What about a Hegel H590 instead?');
+    expect(chain(r)).not.toContain('Butler');
+    expect(r.findings?.statedSubstitution?.incumbent).toBe('Butler Monads');
+  });
+
+  it('second counterfactual frames against the ORIGINAL occupant, not the prior hypothesis', () => {
+    const r = runSeq('What about a Leben CS600 instead of the Butler?', 'What about a Hegel H590 instead?');
+    expect(chain(r)).not.toContain('Butler');
+    expect(chain(r)).not.toContain('Leben');
+    expect(r.findings?.statedSubstitution?.incumbent).toBe('Butler Monads');
+  });
+});
+
+describe('multi-turn counterfactual state — keep and revert', () => {
+  const T1 = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
+  const NATHAN_SEQ = [
+    'What about a Leben CS600 instead of the Butler?',
+    'Would I lose bass control?',
+    'What about a Hegel H590 instead?',
+    'Which of the three would you choose?',
+  ];
+  const runSeq2 = (...turns: string[]) => {
+    const M = [T1, ...turns].join(TURN_SEPARATOR);
+    return buildSystemAssessment(M, extractSubjectMatches(M), null as never, []) as never as {
+      kind: string;
+      findings?: { statedSubstitution?: { incumbent: string; candidate: string } | null };
+      components?: Array<{ displayName: string }>;
+      clarification?: { question?: string };
+    };
+  };
+  const comps = (r: ReturnType<typeof runSeq2>) =>
+    (r.components ?? []).map((c) => c.displayName).join('|');
+
+  it('"Keep the Butler" cancels the whole amplifier hypothesis chain', () => {
+    const r = runSeq2(...NATHAN_SEQ, 'Keep the Butler. What would you change next?');
+    expect(r.kind).not.toBe('clarification');
+    expect(comps(r)).toContain('Butler Monads');
+    expect(comps(r)).not.toContain('Leben');
+    expect(comps(r)).not.toContain('Hegel');
+    expect(r.findings?.statedSubstitution ?? null).toBeNull();
+  });
+
+  it('"go back to the original system" restores the original, no counterfactual frame', () => {
+    const r = runSeq2(...NATHAN_SEQ,
+      'Keep the Butler. What would you change next?',
+      'What speakers would make sense?',
+      'Actually, go back to the original system.');
+    expect(r.kind).not.toBe('clarification');
+    expect(comps(r)).toContain('Butler Monads');
+    expect(comps(r)).not.toContain('Hegel');
+    expect(r.findings?.statedSubstitution ?? null).toBeNull();
+  });
+
+  it('"keep the speakers and change the amp" with no swap in play is a no-op, not a clarification', () => {
+    const r = runSeq2('keep the speakers and change the amp');
+    expect(r.kind).not.toBe('clarification');
+    expect(comps(r)).toContain('Butler Monads');
+    expect(comps(r)).toContain('Acora QRC-2');
+  });
+});
+
+describe('judgment questions do not leave the assessment for shopping', () => {
+  const readyG = {
+    mode: 'system_assessment', stage: 'ready_to_assess',
+    facts: {
+      ...INITIAL_CONV_STATE.facts, hasSystem: true,
+      systemAssessmentText: 'Assess my system: Chord DAVE DAC running directly into a Benchmark AHB2 power amplifier, KEF LS50 Meta speakers',
+      systemComponents: ['Assess my system: Chord DAVE DAC…'],
+    },
+  } as never as Parameters<typeof transition>[0];
+
+  it('"Should I add a preamp?" stays in assessment', () => {
+    const tr = transition(readyG, 'Should I add a preamp?', { hasSystem: true, subjectCount: 0, detectedIntent: 'audio_knowledge' });
+    expect(tr.state.mode).toBe('system_assessment');
+    expect(tr.response?.kind).toBe('proceed');
+  });
+
+  it('explicit purchase phrasing still goes to shopping', () => {
+    const tr = transition(readyG, 'what would you buy?', { hasSystem: true, subjectCount: 0, detectedIntent: 'audio_knowledge' });
+    expect(tr.state.mode).toBe('shopping');
+  });
+
+  it('declarative buy intent still goes to shopping', () => {
+    const tr = transition(readyG, 'I want to get a new amplifier', { hasSystem: true, subjectCount: 0, detectedIntent: 'shopping' });
+    expect(tr.state.mode).toBe('shopping');
+  });
+});

@@ -574,6 +574,16 @@ const GEAR_OPINION_QUESTION = /\bwhat\s+do\s+you\s+think\s+(?:of|about)\b|\bthou
 /** System referents — when present the question is about the system. */
 const SYSTEM_REFERENT = /\b(?:system|setup|rig|chain)\b|\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:it|this|that|these|them)\b/i;
 
+/**
+ * Substitution / counterfactual markers. A proposed component change
+ * ("What about a Leben CS600 instead of the Butler?", "…H590 instead?")
+ * is a question about the ACTIVE system — a counterfactual version of it —
+ * never a topic change, even though detectIntent reads the product name
+ * and returns a strong product_assessment. Trailing bare "instead" counts:
+ * its referent is the component the standing assessment is discussing.
+ */
+const SUBSTITUTION_REFERENT = /\binstead\b|\bin\s+place\s+of\b|\brather\s+than\b|\breplac(?:e|ing)\b[^.?!]{0,60}\bwith\b|\bswap(?:ping|ped)?\b/i;
+
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
   /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|(?:my|the|this|our)\s+system|(?:the\s+)?\w+(?:\s+\w+)?)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
   + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
@@ -627,6 +637,18 @@ function isIntentMismatch(mode: ConvMode, detectedIntent: string, text?: string)
   if (detectedIntent === 'diagnosis') {
     if (!text || !hasExplicitDiagnosisSignal(text)) return false;
     return !compatible.has('diagnosis');
+  }
+
+  // Counterfactual-substitution guard (Wave 2, 2026-08-29): mid-assessment,
+  // "What about a Leben CS600 instead of the Butler?" detects as
+  // product_assessment — strong, and absent from system_assessment's
+  // compatible set — so this reset destroyed the assessment context and the
+  // turn was answered as an isolated product inquiry. A substitution
+  // proposal belongs to the assessment; the ready_to_assess case owns the
+  // finer discrimination (accumulate-and-reassess vs the named-gear exit)
+  // and must not be short-circuited here.
+  if (mode === 'system_assessment' && text && SUBSTITUTION_REFERENT.test(text)) {
+    return false;
   }
 
   // Continuation-state guard: when the user is mid-diagnosis and
@@ -1578,8 +1600,21 @@ export function transition(
         // opening prose. See TURN_SEPARATOR in labelled-components.ts.
         facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
 
-        // Check for explicit mode changes
-        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
+        // Check for explicit mode changes.
+        //
+        // A JUDGMENT QUESTION about a hypothetical change is not purchase
+        // intent (Wave 2 battery, 2026-08-29): "Should I add a preamp?"
+        // matched \badd\b and was answered with "What component are you
+        // looking to change?" — a budget intake for an architecture question
+        // about the system just assessed. Question-shaped turns leave the
+        // assessment only on explicit shopping evidence; "what would you
+        // buy?" still goes to shopping, "should I add / replace X?" stays
+        // and re-assesses.
+        const questionShaped = /\?\s*$/.test(text.trim())
+          || /^\s*(?:should|would|could|can|is|are|do|does|what|which|how)\b/i.test(text);
+        const explicitPurchase = /\b(?:buy|shop(?:ping)?|looking\s+for|budget|recommend|price)\b/i.test(text);
+        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text)
+          && (!questionShaped || explicitPurchase);
         const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
 
         if (wantsDiagnose) {
