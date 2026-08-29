@@ -422,9 +422,26 @@ export function buildProductAssessment(
   // ── Brand sibling data for no-catalog fallback ────
   const productKey = productSubject?.name?.toLowerCase();
   const productNote = productKey ? KNOWN_PRODUCT_NOTES[productKey] : undefined;
+  /* D-7 (Wave-2 cold repro, 2026-08-29): "Leben CS600 instead of the
+   * PrimaLuna" carries two brands. The product subject ("leben cs600") is
+   * the assessment SUBJECT; the brand subject ("primaluna") names the
+   * component being replaced. Binding brandName to any brand match in the
+   * sentence grafted PrimaLuna's topology and house sound onto the Leben —
+   * a false attribution. A brand match may only supply the brand when the
+   * product subject's own tokens contain it (word-boundary, cf.
+   * brand-substring-boundary); otherwise the brand must come from the
+   * subject name itself or stay unresolved. */
+  const brandTokenInSubject = (subject: string, brand: string): boolean =>
+    new RegExp(
+      `(^|[^a-z0-9])${brand.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`,
+    ).test(subject.toLowerCase());
+  const brandSubjectBelongsToSubject = !!brandSubject?.name && (
+    !productSubject
+    || brandTokenInSubject(productSubject.name, brandSubject.name)
+  );
   const brandName = candidate?.brand
     ?? productNote?.brand
-    ?? (brandSubject?.name ? toDisplayName(brandSubject.name) : undefined)
+    ?? (brandSubjectBelongsToSubject ? toDisplayName(brandSubject!.name) : undefined)
     ?? (productSubject ? findBrandForProduct(productSubject.name) : undefined);
   const siblings = brandName ? findBrandSiblings(brandName) : [];
   const brandProfile = siblings.length > 0 ? describeBrandCharacter(siblings) : null;
@@ -439,7 +456,12 @@ export function buildProductAssessment(
   // real identity content instead of falling through to "I don't have
   // catalog data on the X." This is additive and only fires when
   // brandProfile is null.
-  const pilotCap: PilotCapsule | null = brandProfile ? null : getPilotCapsule(brandName);
+  // D-7 companion: when no brand could be bound from the sentence's brand
+  // matches, derive it from the product subject's own tokens — getPilotCapsule
+  // already falls back to the first word ("leben cs600" → Leben capsule).
+  const pilotCap: PilotCapsule | null = brandProfile
+    ? null
+    : getPilotCapsule(brandName ?? productSubject?.name);
 
   // ── Identify current component in same category ────
   let currentComponent: Product | null = null;
