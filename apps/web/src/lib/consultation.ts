@@ -8225,7 +8225,11 @@ function detectUserAppliedRole(
   // each segment to the chunk that belongs to its own role label, so a
   // subsequent "Streamer:" later in the message can't bleed back into
   // the "Amplifier:" segment that named the user's amplifier.
-  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*|\s+-\s+|\s*\/\s*|\s+(?=(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:))/g;
+  // Connector verbs added (campaign, 2026-08-29): "X amplifier driving Y
+  // speakers" was ONE segment, and the first role keyword in it — the
+  // amplifier's own descriptor — was returned for Y. A connector verb ends
+  // the segment the same way an arrow does.
+  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s*\u001E\s*|\s+into\s+|\s+driving\s+|\s+feeding\s+|\s+powering\s+|\s+paired\s+with\s+|\s+with\s+|\s*,\s*|\s+-\s+|\s*\/\s*|\s+(?=(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:))/g;
   const separators: { start: number; end: number }[] = [];
   let m;
   while ((m = SEP.exec(msgLower)) !== null) {
@@ -8258,10 +8262,41 @@ function detectUserAppliedRole(
     if (pattern.test(segment)) return role;
   }
 
-  for (const { pattern, role } of USER_ROLE_KEYWORDS) {
-    if (pattern.test(segment)) return role;
+  /*
+   * POSITIONAL BINDING (campaign, 2026-08-29). A role keyword describes the
+   * component it ADJOINS — "Magnepan LRS speakers" is a speaker; a keyword
+   * elsewhere in the segment belongs to something else. First-match-in-
+   * segment bound "amplifier" (the SIT-3's own descriptor) to the LRS and
+   * asked the listener to explain a role they never applied. The keyword
+   * nearest AFTER the product (a trailing descriptor, within a short
+   * window) wins; nothing after, nothing returned.
+   *
+   * A trailing "streaming DAC" (or DAC/streamer in either order) is a
+   * COMPOUND naming one box's two functions, never a conflict with either.
+   */
+  const prodInSeg = prodIdx - segStart;
+  const prodEndInSeg = prodInSeg + prodLower.length;
+  const after = segment.slice(prodEndInSeg, prodEndInSeg + 32);
+  if (/^[\s]*stream(?:er|ing)?[\s/-]*dac\b|^[\s]*dac[\s/-]*stream(?:er|ing)?\b/i.test(after)) {
+    return 'streamer_dac';
   }
-  return undefined;
+  let best: { role: string; dist: number } | undefined;
+  let bestBefore: { role: string; dist: number } | undefined;
+  for (const { pattern, role } of USER_ROLE_KEYWORDS) {
+    const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    let km: RegExpExecArray | null;
+    while ((km = re.exec(segment)) !== null) {
+      const dist = km.index - prodEndInSeg;
+      if (dist >= 0 && dist <= 24 && (!best || dist < best.dist)) best = { role, dist };
+      // Leading form — "my DAC is the Chord Hugo": keyword ends shortly
+      // before the product begins.
+      const beforeDist = prodInSeg - (km.index + km[0].length);
+      if (beforeDist >= 0 && beforeDist <= 14 && (!bestBefore || beforeDist < bestBefore.dist)) {
+        bestBefore = { role, dist: beforeDist };
+      }
+    }
+  }
+  return best?.role ?? bestBefore?.role;
 }
 
 /**
@@ -8270,6 +8305,9 @@ function detectUserAppliedRole(
  */
 function rolesConflict(userRole: string, expectedRole: string): boolean {
   if (userRole === expectedRole) return false;
+  // A compound streamer/DAC agrees with either half.
+  if (userRole === 'streamer_dac' && (expectedRole === 'dac' || expectedRole === 'streamer')) return false;
+  if (expectedRole === 'streamer_dac' && (userRole === 'dac' || userRole === 'streamer')) return false;
   // Check equivalences: amplifier ≈ integrated
   const userNorm = ROLE_EQUIVALENCES[userRole] ?? userRole;
   const expectedNorm = ROLE_EQUIVALENCES[expectedRole] ?? expectedRole;
@@ -9256,7 +9294,11 @@ export function buildSystemAssessment(
       const nameLower = ac.name.toLowerCase();
       const strippedNameLower = stripVersionTag(ac.name).toLowerCase();
       const brandLower = ac.brand.toLowerCase();
-      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower) || processedNames.has(brandLower)) continue;
+      // An empty brand is not an identity: checking/recording '' let the
+      // first brandless component poison the set and every later one was
+      // skipped — a two-unknown system collapsed to one (campaign, 2026-08-29).
+      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower)
+        || (brandLower !== '' && processedNames.has(brandLower))) continue;
 
       // Only seed if the component's brand or model name appears in the message.
       // Use word-boundary matching for short names (≤4 chars) to prevent
@@ -9295,7 +9337,7 @@ export function buildSystemAssessment(
 
       processedNames.add(nameLower);
       processedNames.add(strippedNameLower);
-      processedNames.add(brandLower);
+      if (brandLower !== '') processedNames.add(brandLower);
 
       // Try to find rich catalog data (use stripped name for matching too).
       // Apply CATALOG_NAME_ALIASES so family members without their own

@@ -97,16 +97,16 @@ describe('consultation-null guard — engine emptiness confirmed for the dead-en
     });
   }
 
-  // SA-08 (Genelec/RME) was scoped into this fix as a dead end, but the
-  // assessment-null path actually falls through to a partial catalog
-  // consultation card on prod — a different failure class (narrow
-  // answer, not silence). Documented here so the scope stays honest.
-  it('SA-08 (Genelec/RME) — assessment null, but consultation produces a partial card (guard correctly does not fire)', () => {
-    const prompt = 'Assess my system: Genelec 8341A monitors, RME ADI-2 DAC';
-    const turnCtx = buildTurnContext(prompt, GUEST, new Set(), undefined);
-    const assessment: any = buildSystemAssessment(prompt, turnCtx.subjectMatches, turnCtx.activeSystem, turnCtx.desires);
-    expect(assessment).toBeNull();
-    expect(buildConsultationResponse(prompt, turnCtx.subjectMatches)).not.toBeNull();
+  it('SA-08 (Genelec/RME) — parser generalization now assesses it (guard correctly does not fire)', () => {
+    /*
+     * Re-pinned (campaign, 2026-08-29): the leftover-segment pass now
+     * surfaces Genelec/RME as components, so the engine produces a real
+     * assessment instead of the old dead-end null. The guard's job — never
+     * fire when substance exists — is unchanged.
+     */
+    const turnCtx = buildTurnContext('Assess my system: RME ADI-2 DAC, Genelec 8341A monitors', GUEST, new Set(), undefined);
+    const r = buildSystemAssessment('Assess my system: RME ADI-2 DAC, Genelec 8341A monitors', turnCtx.subjectMatches, turnCtx.activeSystem, []);
+    expect(r).not.toBeNull();
   });
 });
 

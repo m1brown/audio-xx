@@ -14,6 +14,7 @@
 import type { SubjectMatch } from './intent';
 import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName, truncateAtListBoundary } from './labelled-components';
 import type { ProductCategory } from './catalog-taxonomy';
+import { isBareCategory } from './chain-validation';
 import type { ProposedSystem, DraftSystemComponent, AudioSessionState } from './system-types';
 import { findKnownSystemMatch, suggestKnownSystemName } from './known-systems';
 import type { KnownSystemMatch } from './known-systems';
@@ -60,6 +61,10 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   ortofon: 'cartridge', emt: 'cartridge',
   // DAC brands
   auralic: 'dac',
+  cambridge: 'streamer', 'cambridge audio': 'streamer',
+  'woo audio': 'amplifier', woo: 'amplifier',
+  '47 labs': 'amplifier', micromega: 'dac', snell: 'speaker',
+  sansui: 'amplifier',
   // Phono stages
   aurorasound: 'phono',
   // Headphones
@@ -472,7 +477,14 @@ export function detectSystemDescription(
   // counts — otherwise the save prompt disappears for exactly the listeners
   // whose gear we cover least.
   const labelledForGate = reconcileWithLabels(currentMessage, []);
-  if (subjectMatches.length < 2 && labelledForGate.matches.length < 2) return null;
+  // A colon-list assessment ("Assess my system: A, B and C") is structural
+  // evidence in its own right (campaign, 2026-08-29): obscure gear with no
+  // recognised brand was returning null HERE, before the leftover-segment
+  // pass could even run, and three named components vanished into a generic
+  // intake. Gate 4 still requires ≥2 real components to materialise.
+  const hasListShape = /\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage)
+    && /,|\band\b/i.test(currentMessage);
+  if (subjectMatches.length < 2 && labelledForGate.matches.length < 2 && !hasListShape) return null;
 
   // ── Build components from subject matches ──
   // Process products first, then brands. This allows us to suppress
@@ -508,10 +520,41 @@ export function detectSystemDescription(
     if (hint) {
       // Use the matched normalized key for canonical lookup so e.g.
       // "p3esr" → "P3ESR" instead of being mangled to "P3esr".
+      // Trailing model tokens extend a hinted name (campaign, 2026-08-29):
+      // the hint "aria" swallowed "Focal Aria 926"'s number, and 926 IS the
+      // model. Same morphology test as the brand pass.
+      let hintedName = displayName(key);
+      if (typeof match.index === 'number') {
+        const hTail = truncateAtListBoundary(
+          currentMessage.slice((match.index as number) + match.name.length));
+        const hm = hTail.match(/^\s+([A-Z\d][\w\-./+]*(?:\s+[A-Z\d][\w\-./+]*)*)/);
+        if (hm) {
+          const cand = hm[1].trim().replace(/[.,;:]+$/, '');
+          if ((/\d/.test(cand) || /\b[A-Z]{2,}\b/.test(cand) || /\+/.test(cand))
+            && !/\b(?:speakers?|amp|amplifier|dac|streamer|preamp)\b/i.test(cand)) {
+            hintedName = `${hintedName} ${cand}`;
+          }
+        }
+      }
+      // The listener's own trailing descriptor outranks a hint category of
+      // 'other' — "Rotel A11 Tribute integrated amp" is an integrated.
+      let hintCat: ProductCategory = hint.category;
+      if (typeof match.index === 'number' && (hintCat === 'other' || !hintCat)) {
+        const hTail2 = truncateAtListBoundary(
+          currentMessage.slice((match.index as number) + match.name.length))
+          .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+          .slice(0, 40).toLowerCase();
+        if (/\bintegrated\b/.test(hTail2)) hintCat = 'integrated';
+        else if (/\bpre-?amp/.test(hTail2)) hintCat = 'amplifier';
+        else if (/\bamp(?:lifier)?s?\b/.test(hTail2)) hintCat = 'amplifier';
+        else if (/\bspeakers?\b/.test(hTail2)) hintCat = 'speaker';
+        else if (/\bdac\b/.test(hTail2)) hintCat = 'dac';
+        else if (/\bstreamer\b/.test(hTail2)) hintCat = 'streamer';
+      }
       components.push({
         brand: hint.brand,
-        name: displayName(key),
-        category: hint.category,
+        name: hintedName,
+        category: hintCat,
         role: null,
       });
       coveredBrands.add(hint.brand.toLowerCase());
@@ -562,10 +605,36 @@ export function detectSystemDescription(
       if (embeddedBrand) {
         seen.add(`used:${embeddedBrand.name.toLowerCase()}`);
         coveredBrands.add(embeddedBrand.name.toLowerCase());
+        let prodName = displayName(match.name);
+        if (typeof match.index === 'number') {
+          const pTail = truncateAtListBoundary(
+            currentMessage.slice((match.index as number) + match.name.length));
+          const pm = pTail.match(/^\s+([A-Z\d][\w\-./+]*(?:\s+[A-Z\d][\w\-./+]*)*)/);
+          if (pm) {
+            const cand = pm[1].trim().replace(/[.,;:]+$/, '');
+            if ((/\d/.test(cand) || /\b[A-Z]{2,}\b/.test(cand) || /\+/.test(cand))
+              && !/\b(?:speakers?|amp|amplifier|dac|streamer|preamp)\b/i.test(cand)) {
+              prodName = `${prodName} ${cand}`;
+            }
+          }
+        }
+        let embCat: ProductCategory = BRAND_CATEGORY_MAP[embeddedBrand.name.toLowerCase()] ?? 'other';
+        if (embCat === 'other' && typeof match.index === 'number') {
+          const eTail = truncateAtListBoundary(
+            currentMessage.slice((match.index as number) + match.name.length))
+            .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+            .slice(0, 40).toLowerCase();
+          if (/\bintegrated\b/.test(eTail)) embCat = 'integrated';
+          else if (/\bpre-?amp/.test(eTail)) embCat = 'amplifier';
+          else if (/\bamp(?:lifier)?s?\b/.test(eTail)) embCat = 'amplifier';
+          else if (/\bspeakers?\b/.test(eTail)) embCat = 'speaker';
+          else if (/\bdac\b/.test(eTail)) embCat = 'dac';
+          else if (/\bstreamer\b/.test(eTail)) embCat = 'streamer';
+        }
         components.push({
           brand: capitalize(embeddedBrand.name),
-          name: displayName(match.name),
-          category: BRAND_CATEGORY_MAP[embeddedBrand.name.toLowerCase()] ?? 'other',
+          name: prodName,
+          category: embCat,
           role: null,
         });
       } else {
@@ -651,7 +720,7 @@ export function detectSystemDescription(
       const tail = truncateAtListBoundary(
         currentMessage.slice(match.index + match.name.length),
       );
-      const m = tail.match(/^\s+([A-Z][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
+      const m = tail.match(/^\s+([A-Z\d][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
       if (m) {
         // A sentence-terminating full stop is punctuation, not part of the
         // model: "ARC Reference 5." is the Reference 5. A trailing dot inside
@@ -663,7 +732,9 @@ export function detectSystemDescription(
         // morphology ("Elex-R", "M-CR612") — prose does not hyphenate that
         // way. Without this the Elex-R reduced to a bare "Rega".
         const hasModelHyphen = /[A-Za-z]-[A-Z0-9]/.test(candidate);
-        if (hasDigit || hasAllCapsToken || hasModelHyphen) extractedModel = candidate;
+        // "+"-suffixed models ("Freya+") are model morphology too.
+        const hasPlus = /\+/.test(candidate);
+        if (hasDigit || hasAllCapsToken || hasModelHyphen || hasPlus) extractedModel = candidate;
       }
     }
 
@@ -678,9 +749,18 @@ export function detectSystemDescription(
      */
     let explicitCategory: ProductCategory | undefined;
     if (typeof match.index === 'number') {
+      // IMMEDIATE trailing descriptor only (campaign, 2026-08-29): the whole
+      // truncated tail could reach a LATER component's role word — "Auralic
+      // Aries G1 streamer into … Focal Aria 926 speakers" categorised the
+      // Auralic as a speaker. The descriptor window ends at the first
+      // connector, comma or arrow, and never exceeds 40 characters.
       const descTail = truncateAtListBoundary(
-        currentMessage.slice(match.index + match.name.length)).toLowerCase();
-      if (/\bintegrated\b/.test(descTail)) explicitCategory = 'integrated';
+        currentMessage.slice(match.index + match.name.length))
+        .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+        .slice(0, 40)
+        .toLowerCase();
+      if (/\bpre-?amp(?:lifier)?\b/.test(descTail)) explicitCategory = 'amplifier';
+      else if (/\bintegrated\b/.test(descTail)) explicitCategory = 'integrated';
       else if (/\b(?:power\s+)?amp(?:lifier)?s?\b/.test(descTail)
         && !/\bpre-?amp/.test(descTail)) explicitCategory = 'amplifier';
       else if (/\b(?:loud)?speakers?\b/.test(descTail)) explicitCategory = 'speaker';
@@ -688,6 +768,7 @@ export function detectSystemDescription(
       else if (/\bdac\b/.test(descTail)) explicitCategory = 'dac';
       else if (/\bstreamer\b/.test(descTail)) explicitCategory = 'streamer';
       else if (/\bturntable\b/.test(descTail)) explicitCategory = 'turntable';
+      else if (/\bcd\s+player\b|\bas\s+(?:the\s+|a\s+)?source\b/.test(descTail)) explicitCategory = 'dac';
     }
 
     components.push({
@@ -697,6 +778,59 @@ export function detectSystemDescription(
       role: null,
     });
   }
+
+  /*
+   * ── Pass 3: leftover segments with model morphology ─────────────────
+   *
+   * (campaign, 2026-08-29) "Cambridge CXN V2 streamer" and "Woo Audio WA5
+   * 300B SET amplifier" VANISHED because no recognised brand or product
+   * matched, and a component the listener typed must never silently
+   * disappear — the graph's unresolved roster and entity corroboration
+   * exist precisely to handle names we cannot yet verify. A comma/connector
+   * segment that (a) is claimed by no extracted component, (b) carries
+   * model morphology (a digit-bearing or ALL-CAPS token beyond its first
+   * word), and (c) ends in a role descriptor, becomes an unresolved
+   * component with the descriptor's category.
+   */
+  {
+    const segs = currentMessage.split(/[,\n]|→|-{1,3}>|\bdriving\b|\bfeeding\b|\binto\b|\bwith\b|\band\b/i);
+    for (let seg of segs) {
+      seg = seg.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '')
+        .replace(/^\s*(?:and|with|plus|a|an|the|my)\s+/i, '')
+        .trim();
+      if (seg.length < 6 || seg.length > 70) continue;
+      const segLower = seg.toLowerCase();
+      if (components.some((c) => [c.brand, c.name].some((t) => t && t.length >= 3
+        && !isBareCategory(t) && segLower.includes(t.toLowerCase())))) continue;
+      const ROLE_TAIL = /\s+(cd\s+player|loud?speakers?|monitors?|speakers?|power\s+amps?|amplifiers?|amps?|integrateds?|preamps?|pre-amps?|dacs?|streamers?|turntables?|sources?)\.?\s*$/i;
+      const rm = ROLE_TAIL.exec(seg);
+      if (!rm) continue;
+      const namePart = seg.slice(0, rm.index).trim()
+        .replace(/\s+(?:tube|valve|solid[- ]state|set|300b|el34|kt88|vintage|active|powered)\s*$/i, '')
+        .trim();
+      const tokens = namePart.split(/\s+/);
+      if (tokens.length < 2) continue;
+      const modelish = tokens.slice(1).some((t) => /\d/.test(t) || /^[A-Z]{2,}/.test(t))
+        || tokens.some((t) => /\d/.test(t))
+        // Letters-only models ("Snell Type J"): every token brand-cased.
+        || (tokens.length >= 2 && tokens.every((t) => /^[A-Z]/.test(t)));
+      if (!modelish) continue;
+      const roleWord = rm[1].toLowerCase();
+      const cat: ProductCategory = /speaker|monitor/.test(roleWord) ? 'speaker'
+        : /integrated/.test(roleWord) ? 'integrated'
+        : /pre/.test(roleWord) ? 'amplifier'
+        : /amp/.test(roleWord) ? 'amplifier'
+        : /dac|cd|source/.test(roleWord) ? 'dac'
+        : /streamer/.test(roleWord) ? 'streamer'
+        : /turntable/.test(roleWord) ? 'turntable'
+        : 'other';
+      const dupKey = namePart.toLowerCase();
+      if (seen.has(dupKey)) continue;
+      seen.add(dupKey);
+      components.push({ brand: '', name: namePart, category: cat, role: null });
+    }
+  }
+
 
   // Also pick up generic component descriptors not in subject matches.
   //
@@ -739,8 +873,8 @@ export function detectSystemDescription(
        * "I have a streamer and some monitors" still promotes.
        */
       const segStart = Math.max(
-        ...['-->', '\u2192', ',', ';'].map((d) => currentMessage.lastIndexOf(d, matchIdx)), -1);
-      const segEndCands = ['-->', '\u2192', ',', ';']
+        ...['-->', '\u2192', ',', ';', ' and '].map((d) => currentMessage.lastIndexOf(d, matchIdx)), -1);
+      const segEndCands = ['-->', '\u2192', ',', ';', ' and ']
         .map((d) => currentMessage.indexOf(d, matchIdx)).filter((i) => i >= 0);
       const segEnd = segEndCands.length ? Math.min(...segEndCands) : currentMessage.length;
       const segment = currentMessage.slice(segStart + 1, segEnd).toLowerCase();

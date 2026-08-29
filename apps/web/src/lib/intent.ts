@@ -1590,6 +1590,22 @@ export function detectIntent(
   //   them (see LIFESTYLE_SPEAKER_PATTERN in shopping-intent.ts) and the
   //   knowledge lane answers naturally instead of recommending passive
   //   hi-fi floorstanders. Must fire before every shopping gate below.
+  /*
+   * 0-pre-c. EXPLICIT LIST ASSESSMENT IS AUTHORITATIVE (campaign,
+   * 2026-08-29). "Assess my system: Technics SL-1200MK2 turntable, Schiit
+   * Mani phono stage, …" was being claimed mid-pipeline by topical lanes
+   * (audio_knowledge on the phono/vintage vocabulary; consultation on
+   * zero recognised subjects for all-obscure gear). An assessment verb
+   * applied to a system-noun colon-list IS a system assessment regardless
+   * of which words happen to appear inside the list or whether any brand
+   * is recognised — the graph's unresolved roster and corroboration exist
+   * for exactly the unrecognised case.
+   */
+  if (/\b(?:assess|evaluate|review|rate)\b[^.?!]{0,60}\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage)
+    && /,|\band\b|→|-{1,3}>/i.test(currentMessage)) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
   if (LIFESTYLE_SPEAKER_PATTERN.test(currentMessage)) {
     return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
   }
@@ -1611,6 +1627,7 @@ export function detectIntent(
   if (CONCEPT_QUESTION_PATTERN.test(currentMessage)) {
     return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
   }
+
 
   // 0. Priority gate — when a known product is named and the user uses
   //    assessment language ("thoughts on", "what do you think of", "how is",
