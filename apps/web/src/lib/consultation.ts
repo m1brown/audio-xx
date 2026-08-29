@@ -8838,6 +8838,21 @@ function applyStatedSubstitutions(
     }
     return best?.c;
   };
+  /*
+   * A candidate that is only a BRAND cannot form a licensed counterfactual
+   * identity ("What about Harbeths instead?" — which Harbeth?). Swapping it
+   * in silently picks a model on the listener's behalf, and the dossier then
+   * shows one model's figures under a bare brand name. No swap: the extra
+   * same-role component flows to the duplicate-role clarification, which
+   * asks. EXCEPTION: when the listener's own words carried model morphology
+   * next to the brand ("a Hegel H590 instead?") the identity was stated —
+   * the parser merely lost the model token — and the swap stands.
+   */
+  const candidateHasIdentity = (c: SystemComponent) => {
+    if (!isBareBrandName(c.displayName)) return true;
+    const esc = c.displayName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`${esc}\\s+[a-z]*\\d`, 'i').test(lower);
+  };
   const sameRole = (a: SystemComponent, b: SystemComponent) => {
     const na = ROLE_EQUIVALENCES[a.role?.toLowerCase() ?? ''] ?? a.role?.toLowerCase();
     const nb = ROLE_EQUIVALENCES[b.role?.toLowerCase() ?? ''] ?? b.role?.toLowerCase();
@@ -8857,6 +8872,7 @@ function applyStatedSubstitutions(
   const removals: Removal[] = [];
   const drop = (incumbent: SystemComponent, candidate: SystemComponent, pos: number) => {
     if (!sameRole(incumbent, candidate) || incumbent === candidate) return;
+    if (!candidateHasIdentity(candidate)) return;
     const idx = components.indexOf(incumbent);
     if (idx >= 0) {
       components.splice(idx, 1);

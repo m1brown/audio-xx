@@ -58,7 +58,7 @@ import { checkGlossaryQuestion } from '@/lib/glossary';
 import { fetchWithTimeout, EVALUATE_TIMEOUT_MS } from '@/lib/fetch-with-timeout';
 import { detectIntent, detectExplicitCategoryPivot, extractSubjectMatches, isComparisonFollowUp, isConsultationFollowUp, isDiagnosisFollowUp, isGearQuestionEscape, detectContextEnrichment, respondToMusicInput, MUSIC_INPUT_FALLBACK, detectListeningPath, respondToListeningPath, synthesizeOnboardingQuery, isNonAdvisoryIntent, type SubjectMatch } from '@/lib/intent';
 import { attachQuickRecommendation } from '@/lib/quick-recommendation';
-import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom, isCounterfactualTurn } from '@/lib/conversation-state';
+import { type ConvState, INITIAL_CONV_STATE, transition as convTransition, detectInitialMode as detectConvMode, interpretSymptom, isSystemDirectedAssessmentTurn } from '@/lib/conversation-state';
 import { detectHypotheticalChain, chainToComponentNames, type HypotheticalChain } from '@/lib/hypothetical-system';
 // P0 fix: resolveSavedSystemForAdvisory no longer called from page.tsx.
 // System resolution now uses turnCtx.activeSystem exclusively (single source of truth).
@@ -1834,7 +1834,7 @@ export default function Home() {
             // instead of the Butler?" to the product lane as an isolated
             // unknown-product inquiry. Same restore mechanism, same scope
             // rule: only a turn transition() itself kept.
-            if (isCounterfactualTurn(submittedText)) {
+            if (isSystemDirectedAssessmentTurn(submittedText)) {
               assessmentFollowUpOverride = true;
             }
             // Do NOT reset convState — keep system_assessment mode active.
@@ -3516,7 +3516,7 @@ export default function Home() {
                 && ((m as { advisory?: { systemReview?: string[] } }).advisory?.systemReview?.length ?? 0) > 0,
             ) as { advisory?: { systemReview?: string[] } } | undefined;
           const reviewExperiment = (lastReview?.advisory?.systemReview ?? []).filter(
-            (para) => /most informative experiment|experiment worth running|conversion stages/i.test(para),
+            (para) => /most informative experiment|experiment worth running|conversion stages|informative place to experiment|informative question this system can be asked|if this were my system/i.test(para),
           );
           const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings, reviewExperiment)
             ?? composeReviewAnchoredAnswer(submittedText, convStateRef.current.facts.lastSystemReview ?? []);

@@ -286,3 +286,93 @@ describe('isCounterfactualTurn — the orchestrator override contract', () => {
     it(`"${q}" → false`, () => expect(isCounterfactualTurn(q)).toBe(false));
   }
 });
+
+import { composeAssessmentFollowUp } from '../assessment-followup';
+
+describe('direction answers honour the standing review over generic paths', () => {
+  const FINDINGS = {
+    componentNames: ['dCS Rossini Apex', 'ARC ref 5', 'Butler Monads', 'Acora QRC-2'],
+    upgradePaths: [{ targetRole: 'dac', examples: ['Topping D90'] }],
+    keeps: [], recommendedSequence: [], isCoherent: false,
+  } as never;
+  const EXPERIMENT = [
+    'The one experiment worth running is the amplifier. Auditioning a modern reference amplifier against it, in this room, would answer the most informative question this system can be asked.',
+  ];
+
+  it('review experiment outranks the paths heuristic', () => {
+    const a = composeAssessmentFollowUp(FINDINGS, EXPERIMENT);
+    expect(a).toContain('experiment worth running');
+    expect(a).not.toContain('Topping');
+    expect(a).not.toMatch(/make it the DAC/i);
+  });
+
+  it('paths still answer when the review made no call', () => {
+    const a = composeAssessmentFollowUp(FINDINGS, []);
+    expect(a).toMatch(/make it the DAC/i);
+  });
+});
+
+describe('a revert rider disqualifies the one-shot continuity composer', () => {
+  const T1 = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
+  const ready = {
+    mode: 'system_assessment', stage: 'ready_to_assess',
+    facts: { ...INITIAL_CONV_STATE.facts, hasSystem: true, systemAssessmentText: T1, systemComponents: [T1] },
+  } as never as Parameters<typeof transition>[0];
+
+  it('"Keep the Butler. What would you change next?" accumulates (full path), no continuity flag', () => {
+    const tr = transition(ready, 'Keep the Butler. What would you change next?', {
+      hasSystem: true, subjectCount: 0, detectedIntent: 'audio_knowledge',
+    });
+    expect(tr.state.mode).toBe('system_assessment');
+    expect(tr.response?.kind).toBe('proceed');
+    expect((tr.state.facts as { assessmentFollowUpTurn?: boolean }).assessmentFollowUpTurn ?? false).toBe(false);
+    expect((tr.state.facts as { systemAssessmentText?: string }).systemAssessmentText ?? '').toContain('Keep the Butler');
+  });
+
+  it('a plain direction question still arms the one-shot continuity turn', () => {
+    const tr = transition(ready, 'What would you change first?', {
+      hasSystem: true, subjectCount: 0, detectedIntent: 'audio_knowledge',
+    });
+    expect((tr.state.facts as { assessmentFollowUpTurn?: boolean }).assessmentFollowUpTurn).toBe(true);
+  });
+});
+
+import { isSystemDirectedAssessmentTurn } from '../conversation-state';
+
+describe('system-directed judgment questions stay with the assessment', () => {
+  for (const q of [
+    'Would a modern amplifier improve this?',
+    'would that be worse?',
+    'Would I lose bass control?',
+    'Would a 300B SET be a better match?',
+  ]) {
+    it(`"${q}" → system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(true));
+  }
+  for (const q of [
+    'what is damping factor?',
+    'what would you buy?',
+    'best DAC under $1000',
+  ]) {
+    it(`"${q}" → not system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(false));
+  }
+});
+
+describe('a bare-brand candidate never swaps silently', () => {
+  const T1G = 'Assess my system: Chord DAVE DAC running directly into a Benchmark AHB2 power amplifier, KEF LS50 Meta speakers';
+  it('"What about Harbeths instead?" keeps the KEF and asks, rather than picking a Harbeth model', () => {
+    const M = T1G + TURN_SEPARATOR + 'What about Harbeths instead?';
+    const r = buildSystemAssessment(M, extractSubjectMatches(M), null as never, []) as never as {
+      kind: string; components?: Array<{ displayName: string }>;
+      findings?: { systemChain?: { names?: string[] }; statedSubstitution?: unknown };
+      clarification?: { question?: string };
+    };
+    const names = ((r.components ?? []).map((c) => c.displayName).join('|'))
+      + '|' + (r.findings?.systemChain?.names ?? []).join('|');
+    if (r.kind === 'clarification') {
+      expect(r.clarification?.question ?? '').toBeTruthy();
+    } else {
+      expect(names).toContain('KEF');
+      expect(r.findings?.statedSubstitution ?? null).toBeNull();
+    }
+  });
+});

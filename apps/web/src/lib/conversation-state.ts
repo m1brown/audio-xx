@@ -596,6 +596,23 @@ export function isCounterfactualTurn(text: string): boolean {
     || /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text);
 }
 
+/**
+ * Is this turn DIRECTED AT the system under assessment? Counterfactual
+ * turns are; so is a judgment question whose referent is deictic ("Would
+ * a modern amplifier improve THIS?", "would THAT be worse?", "Would I
+ * lose bass control?") or a fit question ("Would a 300B SET be a better
+ * match?" — a match is always a match FOR the system under review).
+ * Definitional questions with no system referent ("what is damping
+ * factor?") are not, and keep their knowledge-lane routing.
+ */
+export function isSystemDirectedAssessmentTurn(text: string): boolean {
+  if (isCounterfactualTurn(text)) return true;
+  if (/\b(?:better|good|worse)\s+match\b|\bmatch\s+for\s+(?:this|it|my)\b/i.test(text)) return true;
+  const deictic = /\b(?:this|that|it|those|my\s+(?:system|setup|chain)|the\s+(?:system|setup|chain))\b|\bwould\s+i\b/i;
+  const judgment = /\b(?:improve|upgrad\w*|better|worse|help|change|match|fit|worth|lose|gain)\b|\bhold\w*\s+back\b/i;
+  return deictic.test(text) && judgment.test(text);
+}
+
 const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
   /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|(?:my|the|this|our)\s+system|(?:the\s+)?\w+(?:\s+\w+)?)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
   + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
@@ -659,7 +676,7 @@ function isIntentMismatch(mode: ConvMode, detectedIntent: string, text?: string)
   // proposal belongs to the assessment; the ready_to_assess case owns the
   // finer discrimination (accumulate-and-reassess vs the named-gear exit)
   // and must not be short-circuited here.
-  if (mode === 'system_assessment' && text && SUBSTITUTION_REFERENT.test(text)) {
+  if (mode === 'system_assessment' && text && isSystemDirectedAssessmentTurn(text)) {
     return false;
   }
 
@@ -1572,8 +1589,20 @@ export function transition(
           && ownTokens.length >= 1
           && !proposesNamedReplacement;
 
+        /*
+         * A REVERT rider disqualifies the one-shot continuity composer
+         * (Wave 2, 2026-08-29): "Keep the Butler. What would you change
+         * next?" is a state mutation first and a direction question second.
+         * Answering it compactly from findings computed on the superseded
+         * counterfactual graph recommended a $700 DAC into a dCS system,
+         * contradicting the review above it. The turn must accumulate so
+         * the engine applies the revert, then the restored assessment's own
+         * recommendation paragraphs ARE the direction answer.
+         */
+        const revertRider = /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text);
         if (
           !facts.assessmentContinuityUsed
+          && !revertRider
           && (context.subjectCount === 0 || namesOwnComponentOnly)
           && (ASSESSMENT_DIRECTION_FOLLOWUP.test(text)
             || (namesOwnComponentOnly && /\bupgrade|worthwhile|worth it|improve\b/i.test(text)))

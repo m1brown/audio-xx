@@ -117,7 +117,16 @@ export function composeAssessmentFollowUp(
   const keeps = findings.keeps ?? [];
   const sequence = findings.recommendedSequence ?? [];
 
-  if (paths.length === 0 && reviewExperiment && reviewExperiment.length > 0) {
+  /*
+   * The standing review's own recommendation outranks the generic upgrade
+   * paths (Wave 2, 2026-08-29). When the review has already made the call —
+   * named the experiment worth running, said which components to leave
+   * alone — the direction answer quotes THAT. The paths heuristic answered
+   * "what would you change next?" on a dCS-anchored system with a $700 DAC
+   * swap the review above it had explicitly argued against. Paths remain
+   * the answer for reviews that made no such call.
+   */
+  if (reviewExperiment && reviewExperiment.length > 0) {
     return [
       'The assessment already contains the first step of that answer, and it costs nothing.',
       ...reviewExperiment,
