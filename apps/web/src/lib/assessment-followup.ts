@@ -66,6 +66,14 @@ export function isReviewDirectedFollowUp(q: string): boolean {
   if (/\b(?:audition|recommend|suggest|shortlist|candidates?|which\s+(?:amp|amplifier|dac|speaker)|what\s+(?:amp|amplifier|dac|speaker)\w*\s+(?:would|should|do)\s+(?:you|i)\s+(?:compare|audition|consider|buy|look))/i.test(q)) {
     return false;
   }
+  // Substitution and revert turns mutate the counterfactual state ("Keep
+  // the Butler. What would you change next?", "…a Hegel instead?") — they
+  // must reach the state machine's accumulate/revert path, not be answered
+  // verbatim from a standing review that may describe a superseded
+  // hypothesis (Wave 2, 2026-08-29).
+  if (/\binstead\b|\bin\s+place\s+of\b|\brather\s+than\b|\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(q)) {
+    return false;
+  }
   return /\b(?:what\s+would\s+you\s+(?:change|upgrade|do)|change\s+first|upgrade\s+first|holding\s+.{0,24}\bback|weak(?:est)?\s+link|would\s+an?\s+(?:modern|reference|better|new|different)\b[^?]{0,50}\b(?:improve|help|difference)|make\s+much\s+difference|should\s+i\s+(?:replace|upgrade|change)\b|contribute|why\s+do(?:es)?\s+.{0,40}\bworks?\b|is\s+this\s+really|experiment\s+with|before\s+buying)\b/i.test(q);
 }
 

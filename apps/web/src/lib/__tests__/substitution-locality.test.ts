@@ -248,3 +248,20 @@ describe('judgment questions do not leave the assessment for shopping', () => {
     expect(tr.state.mode).toBe('shopping');
   });
 });
+
+import { isReviewDirectedFollowUp } from '../assessment-followup';
+
+describe('the early review-anchored net yields to counterfactual turns', () => {
+  for (const q of [
+    'Keep the Butler. What would you change next?',
+    'What about a Hegel H590 instead?',
+    'Actually, go back to the original system.',
+  ]) {
+    it(`"${q}" is NOT intercepted`, () => {
+      expect(isReviewDirectedFollowUp(q)).toBe(false);
+    });
+  }
+  it('a plain direction question still is intercepted', () => {
+    expect(isReviewDirectedFollowUp('What would you change first?')).toBe(true);
+  });
+});
