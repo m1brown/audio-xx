@@ -1,9 +1,12 @@
 import { chromium } from 'playwright';
+import { writeFileSync } from 'node:fs';
 const NATHAN = 'Assess my system: - Dac/Streamer: dCS Rossini Apex. - Pre-amp: ARC ref 5. - Amps: Butler Monads. - Speakers: Acora QRC-2.';
 const QS = process.argv.slice(2);
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 1400 } });
-await p.goto('https://audio-xx.com/', { waitUntil: 'networkidle', timeout: 180000 });
+p.on('pageerror', (e) => console.log('PAGEERR:', String(e).slice(0, 500)));
+p.on('console', (m) => { const ty = m.type(); if (ty === 'error') console.log('CERR:', m.text().slice(0, 300)); if (ty === 'warning' && /assess\]/.test(m.text())) console.log('W:', m.text().slice(0, 120)); });
+await p.goto('http://localhost:3000/', { waitUntil: 'networkidle', timeout: 180000 });
 const typeAndSend = async (msg) => {
   const box = p.locator('textarea:not([placeholder*="Anything else"]):visible, input[placeholder*="Help me choose"]:visible, input[placeholder*="Reply"]:visible').first();
   const send = p.getByRole('button', { name: 'Send', exact: true }).first();
@@ -44,6 +47,7 @@ for (const q of QS) {
   let end = t2.indexOf('HELP US IMPROVE', qi);
   if (end < 0) end = qi + q.length + 1600;
   const seg = t2.slice(qi + q.length, end);
+  writeFileSync(`/private/tmp/claude-501/-Users-mikebrown-audio-xx/4b31ef88-a78c-4b6b-a49b-9a695d816a5f/scratchpad/turn-${QS.indexOf(q)}.txt`, t2); // FULLDUMP
   console.log(`\n===== Q: ${q}`);
   console.log(seg.replace(/\n{2,}/g, '\n').slice(0, 1500));
 }

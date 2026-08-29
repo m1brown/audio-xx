@@ -90,6 +90,10 @@ export interface ConvFacts {
    * existing assessment instead of re-asking for the system.
    */
   assessmentFollowUpTurn?: boolean;
+  /** The standing system review's paragraphs, for follow-up answers. Written
+   *  where the review is composed; read by the follow-up net. Lives here —
+   *  not in a module store — because this ref provably survives every turn. */
+  lastSystemReview?: string[];
   /** Set once the single continuity turn has been used. */
   assessmentContinuityUsed?: boolean;
   /**

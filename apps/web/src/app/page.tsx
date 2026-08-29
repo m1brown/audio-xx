@@ -119,13 +119,6 @@ import { seedObservations } from '@/lib/evidence/independent-review-seed';
  * with the first one eventually. */
 const dossierRole = normalizeRole;
 
-/*
- * The most recent composed system review, for follow-up continuity. Module
- * scope on purpose: the submit handler's React state can be a stale closure
- * and a ref proved instance-bounded in practice; one conversation per tab
- * makes module scope the honest lifetime here.
- */
-const lastSystemReviewStore: { paragraphs: string[] } = { paragraphs: [] };
 
 function buildDossierViews(
   components: Array<{ displayName: string; role: string; canonicalName?: string }>,
@@ -1189,6 +1182,29 @@ export default function Home() {
     // or LLM unavailability, in which case we fall through to the existing
     // engine below (the default + fallback). Scope: known-system advisory
     // questions only — shopping/discovery/cold-start are untouched.
+    /*
+     * FOLLOW-UP NET — ABOVE the A3 advisor (Nathan beta, 2026-08-28). The
+     * experimental A3 branch was consuming review-directed questions before
+     * any user bubble rendered, and an uncaught rejection there ate the
+     * turn entirely. While a governed system review stands, a judgment
+     * question about it is answered FROM that review — deterministic,
+     * licensed, and ahead of any model advisor. Genuine shopping
+     * transitions are excluded by the predicate.
+     */
+    {
+      const standingReviewEarly = convStateRef.current.facts.lastSystemReview ?? [];
+      if (standingReviewEarly.length > 0 && isReviewDirectedFollowUp(submittedText)) {
+        const anchoredEarly = composeReviewAnchoredAnswer(submittedText, standingReviewEarly);
+        if (anchoredEarly) {
+          dispatch({ type: 'ADD_USER_MESSAGE' });
+          dispatch({ type: 'ADD_NOTE', content: anchoredEarly });
+          dispatch({ type: 'SET_INPUT', value: '' });
+          dispatch({ type: 'SET_LOADING', value: false });
+          return;
+        }
+      }
+    }
+
     if (a3Enabled() && !hasPendingImagesForTurn && a3IsAdvisoryQuestion(submittedText)) {
       const a3Ctx = buildTurnContext(
         submittedText,
@@ -1198,7 +1214,14 @@ export default function Home() {
       );
       if (a3Ctx.activeSystem && a3Ctx.activeSystem.components.length > 0) {
         dispatch({ type: 'SET_LOADING', value: true });
-        const a3 = await runA3Advisor({ question: submittedText, activeSystem: a3Ctx.activeSystem });
+        let a3: Awaited<ReturnType<typeof runA3Advisor>> = null;
+        try {
+          a3 = await runA3Advisor({ question: submittedText, activeSystem: a3Ctx.activeSystem });
+        } catch {
+          // An advisor failure must never eat the listener's turn — fall
+          // through to the engine exactly like a declined answer.
+          a3 = null;
+        }
         if (a3) {
           dispatch({ type: 'ADD_USER_MESSAGE' });
           dispatch({ type: 'ADD_NOTE', content: a3.answer });
@@ -2911,27 +2934,6 @@ export default function Home() {
     // through to a real answer instead of ending the turn in silence.
     // Fires ONLY where the alternative is nothing (or a canned
     // non-answer); populated lanes are untouched.
-    /*
-     * FOLLOW-UP NET (Nathan beta, 2026-08-28 — lifted above ALL lane
-     * dispatch). While a system review stands, a judgment question about it
-     * must answer FROM that review. Inside the knowledge lane it caught
-     * only essays; shopping, diagnosis and unknown-product intakes were
-     * still claiming these turns first — "Should I replace the ARC?" was
-     * answered with "What component are you looking to change?". The net
-     * runs before every lane; genuine shopping transitions (audition/
-     * recommend/which-amp questions) are excluded by the predicate and
-     * proceed to the shopping experience as designed.
-     */
-    if (lastSystemReviewStore.paragraphs.length > 0
-      && isReviewDirectedFollowUp(submittedText)) {
-      const anchored = composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
-      if (anchored) {
-        dispatch({ type: 'ADD_NOTE', content: anchored });
-        dispatch({ type: 'SET_LOADING', value: false });
-        return;
-      }
-    }
-
     const runKnowledgeLane = () => {
       const knowledgeCtx: KnowledgeContext = {
         currentMessage: submittedText,
@@ -3380,7 +3382,8 @@ export default function Home() {
             const reviewComponents = orderedComponents.map((c) => ({
               displayName: c.displayName, role: c.role,
             }));
-            provisionalAdvisory.systemReview = lastSystemReviewStore.paragraphs = composeSystemReview({
+            trackEvent('unmatched_model', { model: 'PROBE-w1', reason: 'probe' });
+            provisionalAdvisory.systemReview = convStateRef.current.facts.lastSystemReview = composeSystemReview({
               components: reviewComponents,
               synthesis: synthesiseChain(reviewComponents),
               dossiers: dossierViews,
@@ -3470,7 +3473,8 @@ export default function Home() {
             });
             // The snapshot's review is the one the listener actually reads;
             // follow-up continuity answers from the same text.
-            lastSystemReviewStore.paragraphs = provisionalSnap.systemReview ?? [];
+            trackEvent('unmatched_model', { model: 'PROBE-w2', reason: 'probe' });
+            convStateRef.current.facts.lastSystemReview = provisionalSnap.systemReview ?? [];
             void createArtifactSnapshot(provisionalSnap).then((viewToken) => {
               if (viewToken) {
                 dispatch({ type: 'SET_ARTIFACT_TOKEN', id: provisionalMsgId, viewToken });
@@ -3493,8 +3497,8 @@ export default function Home() {
           // The standing review's own experiment, for substitution questions
           // on sparse systems — the flat systemReview is the only stored
           // shape, so the experiment paragraph is recovered by its content.
-          const lastReview = lastSystemReviewStore.paragraphs.length
-            ? { advisory: { systemReview: lastSystemReviewStore.paragraphs } }
+          const lastReview = (convStateRef.current.facts.lastSystemReview?.length ?? 0) > 0
+            ? { advisory: { systemReview: convStateRef.current.facts.lastSystemReview as string[] } }
             : [...state.messages].reverse().find(
               (m) => m.role === 'assistant' && 'kind' in m && m.kind === 'advisory'
                 && ((m as { advisory?: { systemReview?: string[] } }).advisory?.systemReview?.length ?? 0) > 0,
@@ -3503,7 +3507,7 @@ export default function Home() {
             (para) => /most informative experiment|experiment worth running|conversion stages/i.test(para),
           );
           const followUpAnswer = composeAssessmentFollowUp(assessmentResult.findings, reviewExperiment)
-            ?? composeReviewAnchoredAnswer(submittedText, lastSystemReviewStore.paragraphs);
+            ?? composeReviewAnchoredAnswer(submittedText, convStateRef.current.facts.lastSystemReview ?? []);
           if (followUpAnswer) {
             dispatch({ type: 'ADD_NOTE', content: followUpAnswer });
             dispatch({ type: 'SET_LOADING', value: false });
@@ -3649,7 +3653,8 @@ export default function Home() {
             actionVerdict: assessmentResult.response?.actionVerdict,
             componentDossiers: assessmentResult.response?.componentDossiers,
           });
-          lastSystemReviewStore.paragraphs = canonicalSnap.systemReview ?? [];
+          trackEvent('unmatched_model', { model: 'PROBE-w3', reason: 'probe' });
+          convStateRef.current.facts.lastSystemReview = canonicalSnap.systemReview ?? [];
           void createArtifactSnapshot(canonicalSnap).then((viewToken) => {
             if (viewToken) {
               dispatch({ type: 'SET_ARTIFACT_TOKEN', id: assessmentMsgId, viewToken });

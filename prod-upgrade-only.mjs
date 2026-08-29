@@ -5,8 +5,8 @@ const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 1400 } });
 await p.goto('https://audio-xx.com/', { waitUntil: 'networkidle', timeout: 180000 });
 const typeAndSend = async (msg) => {
-  const box = p.locator('textarea:visible, input[placeholder*="Help me choose"]:visible, input[placeholder*="Reply"]:visible').last();
-  const send = p.locator('button[type="submit"]:visible, button:has-text("Send"):visible').last();
+  const box = p.locator('textarea:not([placeholder*="Anything else"]):visible, input[placeholder*="Help me choose"]:visible, input[placeholder*="Reply"]:visible').first();
+  const send = p.getByRole('button', { name: 'Send', exact: true }).first();
   let ok = false;
   for (let i = 0; i < 40; i++) {
     await box.click().catch(()=>{});

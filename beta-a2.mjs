@@ -2,8 +2,8 @@ import { chromium } from 'playwright';
 const OUT = '/private/tmp/claude-501/-Users-mikebrown-audio-xx/4b31ef88-a78c-4b6b-a49b-9a695d816a5f/scratchpad/vis';
 const b = await chromium.launch();
 const typeAndSend = async (p, msg) => {
-  const box = p.locator('textarea:visible, input[placeholder*="Help me choose"]:visible, input[placeholder*="Reply"]:visible').last();
-  const send = p.locator('button[type="submit"]:visible, button:has-text("Send"):visible').last();
+  const box = p.locator('textarea:not([placeholder*="Anything else"]):visible, input[placeholder*="Help me choose"]:visible, input[placeholder*="Reply"]:visible').first();
+  const send = p.getByRole('button', { name: 'Send', exact: true }).first();
   for (let i = 0; i < 40; i++) {
     await box.click().catch(()=>{});
     await box.fill(msg).catch(()=>{});
