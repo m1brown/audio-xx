@@ -75,6 +75,7 @@ import {
 import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '@/lib/assessment-followup';
+import { REASONING_LANE_ENABLED } from '@/lib/feature-flags';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
@@ -684,6 +685,17 @@ export default function Home() {
   const convStateRef = useRef<ConvState>(INITIAL_CONV_STATE);
   /** Set after the music-input first question is asked — next message is interpreted as the listening-path answer. */
   const awaitingListeningPathRef = useRef(false);
+  /**
+   * Governed reasoning lane state (Substrate Doctrine, flag-gated).
+   * The LAST rendered chain and the one-slot hypothetical — written where the
+   * canonical snapshot is written, read only when REASONING_LANE_ENABLED.
+   * This is deliberately ALL the conversational state the lane keeps.
+   */
+  const laneStateRef = useRef<{
+    components: Array<{ displayName: string; role: string }>;
+    hypothetical: { candidate: string; incumbent: string } | null;
+  } | null>(null);
+
   /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
   const onboardingContextRef = useRef<{
     musicDescription: string;
@@ -3069,6 +3081,49 @@ export default function Home() {
         ? (convStateRef.current.facts.systemAssessmentText ?? submittedText)
         : submittedText;
 
+      /*
+       * ── Governed reasoning lane (Substrate Doctrine, flag-gated) ──
+       * A post-assessment turn that stays with the assessment is a REASONING
+       * turn: the substrate assembles what is knowable (identity, candidate
+       * evidence, computed facts), the model resolves what it means over the
+       * raw recent turns, and the claim gate keeps prose inside the evidence.
+       * Off by default; with the flag off this block is inert and Wave-2
+       * behavior is byte-identical.
+       */
+      if (REASONING_LANE_ENABLED && isAccumulating && laneStateRef.current
+        && laneStateRef.current.components.length >= 2) {
+        try {
+          const recentTurns = messages.slice(-10).map((m) => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.role === 'user'
+              ? (('content' in m ? String((m as { content?: unknown }).content ?? '') : '') || submittedText)
+              : (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n'),
+          })).filter((t) => t.content.trim().length > 0);
+          const res = await fetchWithTimeout('/api/reasoning-lane', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              activeSystem: { components: laneStateRef.current.components, source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated' },
+              currentHypothetical: laneStateRef.current.hypothetical,
+              question: submittedText,
+              recentTurns,
+            }),
+          }, 45000);
+          if (res.ok) {
+            const data = await res.json();
+            if (typeof data?.answer === 'string' && data.answer.trim()) {
+              if (data?.contextMeta?.hypothetical) {
+                laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
+              }
+              dispatch({ type: 'ADD_NOTE', content: data.answer });
+              dispatch({ type: 'SET_LOADING', value: false });
+              return;
+            }
+          }
+          // Any lane failure falls through to the Wave-2 deterministic path.
+        } catch { /* fall through to the deterministic path */ }
+      }
+
       // Re-extract subjects from accumulated text to capture all components
       const assessmentSubjects = isAccumulating
         ? extractSubjectMatches(accumulatedText)
@@ -3668,6 +3723,10 @@ export default function Home() {
           });
           trackEvent('unmatched_model', { model: 'PROBE-w3', reason: 'probe' });
           convStateRef.current.facts.lastSystemReview = canonicalSnap.systemReview ?? [];
+          laneStateRef.current = {
+            components: chainComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+            hypothetical: assessmentResult.findings?.statedSubstitution ?? null,
+          };
           void createArtifactSnapshot(canonicalSnap).then((viewToken) => {
             if (viewToken) {
               dispatch({ type: 'SET_ARTIFACT_TOKEN', id: assessmentMsgId, viewToken });

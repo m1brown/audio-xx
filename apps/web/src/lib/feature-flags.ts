@@ -155,3 +155,22 @@ export function isCausalExplanationEnabled(): boolean {
 export function isBrandHouseVoicingEnabled(): boolean {
   return process.env.NEXT_PUBLIC_BRAND_HOUSE_VOICING === 'on';
 }
+
+/**
+ * Governed reasoning lane (Substrate Doctrine, 2026-08-31).
+ *
+ * Env var: `NEXT_PUBLIC_REASONING_LANE=on`
+ *
+ * - **On**: post-assessment conversation turns that stay with the assessment
+ *   (substitution proposals, judgment questions, referents, architecture
+ *   exploration) are answered by `/api/reasoning-lane` — deterministic
+ *   context assembly (identity, candidate-aware evidence, computed interface
+ *   facts) + model reasoning over raw recent turns + narrow D-7 claim
+ *   validation. The first-turn editorial assessment artifact is unchanged.
+ * - **Off (default)**: Wave-2 behavior byte-for-byte. The route stays inert.
+ *
+ * Safe-off invariant: with the flag off, no reasoning-lane module is invoked
+ * from any production path.
+ */
+export const REASONING_LANE_ENABLED: boolean =
+  process.env.NEXT_PUBLIC_REASONING_LANE === 'on';
