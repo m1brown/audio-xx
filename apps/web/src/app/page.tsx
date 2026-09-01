@@ -1850,6 +1850,52 @@ export default function Home() {
               assessmentFollowUpOverride = true;
             }
             // Do NOT reset convState — keep system_assessment mode active.
+
+            /*
+             * ── Governed reasoning lane (Substrate Doctrine, flag-gated) ──
+             * When the flag is on, EVERY turn the state machine keeps in the
+             * assessment is a reasoning turn and the lane owns it — the
+             * substrate assembles what is knowable, the model resolves what
+             * it means over the raw recent turns, the claim gate holds the
+             * evidence boundary. Placed HERE, before the main detectIntent
+             * clobber and the follow-up routing tower, so lane selection is
+             * one rule: "the conversation is about the system → the lane".
+             * Off by default; with the flag off this block is inert and
+             * Wave-2 behavior is byte-identical. Any failure falls through
+             * to the deterministic path below.
+             */
+            if (REASONING_LANE_ENABLED && laneStateRef.current
+              && laneStateRef.current.components.length >= 2) {
+              try {
+                const recentTurns = messages.slice(-10).map((m) => ({
+                  role: m.role === 'user' ? 'user' : 'assistant',
+                  content: m.role === 'user'
+                    ? (('content' in m ? String((m as { content?: unknown }).content ?? '') : ''))
+                    : (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n'),
+                })).filter((t) => t.content.trim().length > 0);
+                const res = await fetchWithTimeout('/api/reasoning-lane', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    activeSystem: { components: laneStateRef.current.components, source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated' },
+                    currentHypothetical: laneStateRef.current.hypothetical,
+                    question: submittedText,
+                    recentTurns,
+                  }),
+                }, 60000);
+                if (res.ok) {
+                  const data = await res.json();
+                  if (typeof data?.answer === 'string' && data.answer.trim()) {
+                    if (data?.contextMeta?.hypothetical !== undefined) {
+                      laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
+                    }
+                    dispatch({ type: 'ADD_NOTE', content: data.answer });
+                    dispatch({ type: 'SET_LOADING', value: false });
+                    return;
+                  }
+                }
+              } catch { /* fall through to the deterministic path */ }
+            }
           } else {
             convStateRef.current = INITIAL_CONV_STATE;
           }
@@ -3081,48 +3127,6 @@ export default function Home() {
         ? (convStateRef.current.facts.systemAssessmentText ?? submittedText)
         : submittedText;
 
-      /*
-       * ── Governed reasoning lane (Substrate Doctrine, flag-gated) ──
-       * A post-assessment turn that stays with the assessment is a REASONING
-       * turn: the substrate assembles what is knowable (identity, candidate
-       * evidence, computed facts), the model resolves what it means over the
-       * raw recent turns, and the claim gate keeps prose inside the evidence.
-       * Off by default; with the flag off this block is inert and Wave-2
-       * behavior is byte-identical.
-       */
-      if (REASONING_LANE_ENABLED && isAccumulating && laneStateRef.current
-        && laneStateRef.current.components.length >= 2) {
-        try {
-          const recentTurns = messages.slice(-10).map((m) => ({
-            role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.role === 'user'
-              ? (('content' in m ? String((m as { content?: unknown }).content ?? '') : '') || submittedText)
-              : (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n'),
-          })).filter((t) => t.content.trim().length > 0);
-          const res = await fetchWithTimeout('/api/reasoning-lane', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              activeSystem: { components: laneStateRef.current.components, source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated' },
-              currentHypothetical: laneStateRef.current.hypothetical,
-              question: submittedText,
-              recentTurns,
-            }),
-          }, 45000);
-          if (res.ok) {
-            const data = await res.json();
-            if (typeof data?.answer === 'string' && data.answer.trim()) {
-              if (data?.contextMeta?.hypothetical) {
-                laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
-              }
-              dispatch({ type: 'ADD_NOTE', content: data.answer });
-              dispatch({ type: 'SET_LOADING', value: false });
-              return;
-            }
-          }
-          // Any lane failure falls through to the Wave-2 deterministic path.
-        } catch { /* fall through to the deterministic path */ }
-      }
 
       // Re-extract subjects from accumulated text to capture all components
       const assessmentSubjects = isAccumulating
@@ -3450,6 +3454,12 @@ export default function Home() {
               displayName: c.displayName, role: c.role,
             }));
             trackEvent('unmatched_model', { model: 'PROBE-w1', reason: 'probe' });
+            laneStateRef.current = {
+              components: orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role ?? '' })),
+              // The low_confidence union carries no findings; a provisional
+              // assessment has no stated substitution to carry either.
+              hypothetical: null,
+            };
             provisionalAdvisory.systemReview = convStateRef.current.facts.lastSystemReview = composeSystemReview({
               components: reviewComponents,
               synthesis: synthesiseChain(reviewComponents),

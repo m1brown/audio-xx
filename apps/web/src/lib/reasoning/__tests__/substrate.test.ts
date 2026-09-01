@@ -209,3 +209,36 @@ describe('flag discipline — Wave 2 stays production behavior', () => {
     expect(REASONING_LANE_ENABLED).toBe(false);
   });
 });
+
+import { deriveHypothetical } from '../context-assembly';
+
+describe('one-slot hypothetical derivation — the only conversational state kept', () => {
+  const NATHAN_C = NATHAN;
+  it('substitution phrasing sets the slot', () => {
+    const h = deriveHypothetical('What about a Leben CS600 instead of the Butler?', NATHAN_C, null);
+    expect(h).toEqual({ candidate: 'Leben CS600', incumbent: 'Butler Monads' });
+  });
+  it('bare "instead" swaps the candidate, keeps the incumbent', () => {
+    const h = deriveHypothetical('What about a Hegel H590 instead?', NATHAN_C,
+      { candidate: 'Leben CS600', incumbent: 'Butler Monads' });
+    expect(h).toEqual({ candidate: 'Hegel H590', incumbent: 'Butler Monads' });
+  });
+  it('"Keep the Butler" clears the slot', () => {
+    const h = deriveHypothetical('Keep the Butler. What would you change next?', NATHAN_C,
+      { candidate: 'Hegel H590', incumbent: 'Butler Monads' });
+    expect(h).toBeNull();
+  });
+  it('"go back to my real system" clears the slot', () => {
+    const h = deriveHypothetical('Actually, go back to my real system.', NATHAN_C,
+      { candidate: 'Hegel H590', incumbent: 'Butler Monads' });
+    expect(h).toBeNull();
+  });
+  it('an unrelated question carries the slot forward', () => {
+    const inc = { candidate: 'Leben CS600', incumbent: 'Butler Monads' };
+    expect(deriveHypothetical('Would I lose bass control?', NATHAN_C, inc)).toEqual(inc);
+  });
+  it('"keep the speakers" does not clear an amplifier hypothesis', () => {
+    const inc = { candidate: 'Leben CS600', incumbent: 'Butler Monads' };
+    expect(deriveHypothetical('keep the speakers and change the amp', NATHAN_C, inc)).toEqual(inc);
+  });
+});
