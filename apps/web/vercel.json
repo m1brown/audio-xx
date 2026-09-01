@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "bash -c 'if git diff --quiet HEAD^ HEAD -- . \":(exclude,top)docs\" \":(exclude,top)*.md\"; then exit 0; else exit 1; fi'"
+}
