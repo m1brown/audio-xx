@@ -272,13 +272,13 @@ describe('integration — buildSystemAssessment renders the predicted sentences'
 
   it('my-system → timing-led identity + immediacy-first thesis', () => {
     const narrative = run('Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor');
-    expect(narrative).toContain('This system reflects a listener drawn to timing precision, elasticity, and dynamic immediacy.');
+    expect(narrative).toContain('This system reflects a listener drawn to precise timing, agility, and dynamic immediacy.');
     expect(narrative).toContain('This system is organized around immediacy, elasticity, and musical communication.');
   });
 
   it('leben-devore → harmonic-led identity + restraint-first thesis', () => {
     const narrative = run('Assess my system: Denafrips Pontus II, Leben CS600X, DeVore O/96');
-    expect(narrative).toContain('This system reflects a listener drawn to harmonic density, tonal continuity, and timbral depth.');
+    expect(narrative).toContain('This system reflects a listener drawn to rich tone, continuity, and timbral depth.');
     expect(narrative).toContain('This system is organized around harmonic restraint, smoothness, and unforced presence.');
   });
 

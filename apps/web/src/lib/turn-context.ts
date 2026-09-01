@@ -23,6 +23,12 @@ import type { ActiveSystemContext, AudioSessionState, ProposedSystem } from './s
 import { resolveActiveSystemContext, activeSystemToProfile } from './system-bridge';
 import type { SystemProfile } from './system-profile';
 import { detectSystemDescription } from './system-extraction';
+import type { ListenerProfile, PreferenceSignal } from './listener-preferences';
+import {
+  extractPreferenceSignals,
+  applySignals,
+  createDefaultProfile,
+} from './listener-preferences';
 
 // ── Types ────────────────────────────────────────────────
 
@@ -39,6 +45,19 @@ export interface TurnContext {
 
   /** Extracted desire signals ("want more warmth", "less brightness"). */
   desires: DesireSignal[];
+
+  /**
+   * Stage PB2.2 — Listener preference signals extracted from rawMessage.
+   * Per-turn snapshot only (no cross-turn accumulation in v1).
+   */
+  preferenceSignals: PreferenceSignal[];
+
+  /**
+   * Stage PB2.2 — Listener profile derived from this turn's signals
+   * applied to a fresh default profile. Cross-turn accumulation will
+   * be added by consumers that maintain their own profile state.
+   */
+  listenerProfile: ListenerProfile;
 
   /** Proposed system from system description detection. Null if not detected. */
   proposedSystem: ProposedSystem | null;
@@ -122,6 +141,14 @@ export function buildTurnContext(
   rawMessage: string,
   audioState: AudioSessionState,
   dismissedFingerprints: Set<string>,
+  /**
+   * Stage PB2.3 — optional accumulated listener profile from prior turns.
+   * When omitted, this turn starts from a fresh default profile (legacy
+   * per-turn snapshot behavior). When provided, the turn's signals are
+   * folded on top of the existing profile so confidence and lean
+   * accumulate across the conversation.
+   */
+  existingListenerProfile?: ListenerProfile,
 ): TurnContext {
   // ── Step 1: Subject extraction ──────────────────────
   const subjectMatches = extractSubjectMatches(rawMessage);
@@ -129,6 +156,15 @@ export function buildTurnContext(
 
   // ── Step 2: Desire extraction ───────────────────────
   const desires = extractDesires(rawMessage);
+
+  // ── Step 2b: Listener-preference extraction (PB2.2 / PB2.3) ──
+  // Sits alongside desire extraction. If an accumulated profile from
+  // earlier turns is passed in, this turn's signals are folded onto it
+  // so the lean strengthens (with diminishing returns) over time.
+  // Otherwise we fall back to the per-turn snapshot behaviour.
+  const preferenceSignals = extractPreferenceSignals(rawMessage);
+  const baseProfile = existingListenerProfile ?? createDefaultProfile();
+  const listenerProfile = applySignals(baseProfile, preferenceSignals);
 
   // ── Step 3: System description detection ────────────
   const proposedSystem = detectSystemDescription(rawMessage, subjectMatches, audioState);
@@ -144,7 +180,49 @@ export function buildTurnContext(
   let activeSystem: ActiveSystemContext | null = null;
   let systemSource: TurnContext['systemSource'] = null;
 
-  if (proposedSystem && proposedSystem.components.length >= 2) {
+  /*
+   * A DEGRADED RESTATEMENT OF THE SAVED SYSTEM IS NOT A NEW SYSTEM.
+   *
+   * "Assess this system" sends the saved chain as message text, and the
+   * inline detector re-parses it — often worse than the saved record it came
+   * from ("dCS Rossini Apex, ARC ref, ..." re-parsed to the bare brands
+   * "Dcs, ARC"). Inline precedence then displaced four resolved saved
+   * components with two bare brands, and the engine asked the listener to
+   * identify equipment it was holding a complete record of. That is the
+   * saved-system invariant violated at the layer above the seeding fix:
+   * selecting a saved system may never yield fewer components.
+   *
+   * Precedence is unchanged for genuine new chains: if ANY inline component
+   * fails to match a saved component's identity (or at least its brand), the
+   * user has stated different equipment and the inline system wins exactly
+   * as before. Only a restatement that adds nothing defers to the saved
+   * record it restates.
+   */
+  const savedForGuard = resolveActiveSystemContext(audioState);
+  const restatesSaved = (
+    proposed: { components: Array<{ brand?: string | null; name?: string | null }> } | null | undefined,
+  ): boolean => {
+    if (!proposed || !savedForGuard || savedForGuard.components.length === 0) return false;
+    // No count comparison: the parser can split one saved product into two
+    // fragments ("DeVore Orangutan O/96" → "DeVore Orangutan" + "DeVore
+    // O/96"), and a fragment count above the saved count is not new
+    // equipment. New equipment is a component that matches NOTHING saved —
+    // one such component and the inline chain wins exactly as before.
+    const fold = (x: string) => new Set(
+      (x ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ')
+        .filter((t) => t.length >= 2).map((t) => t.replace(/s$/, '')));
+    return proposed.components.every((c) => {
+      const inlineToks = fold(`${c.brand ?? ''} ${c.name ?? ''}`);
+      if (inlineToks.size === 0) return true;
+      return savedForGuard.components.some((sc) => {
+        const savedToks = fold(`${sc.brand ?? ''} ${sc.name ?? ''}`);
+        const overlap = [...inlineToks].filter((t) => savedToks.has(t)).length;
+        return overlap >= Math.min(2, inlineToks.size, savedToks.size);
+      });
+    });
+  };
+
+  if (proposedSystem && proposedSystem.components.length >= 2 && !restatesSaved(proposedSystem)) {
     // User explicitly stated a system in this message — use it,
     // regardless of whether a saved system exists.
     activeSystem = {
@@ -179,6 +257,7 @@ export function buildTurnContext(
     audioState.proposedSystem
     && audioState.proposedSystem.components.length >= 2
     && !dismissedFingerprints.has(audioState.proposedSystem.fingerprint)
+    && !restatesSaved(audioState.proposedSystem)
   ) {
     const persisted = audioState.proposedSystem;
     activeSystem = {
@@ -252,6 +331,8 @@ export function buildTurnContext(
     subjectMatches,
     subjects,
     desires,
+    preferenceSignals,
+    listenerProfile,
     proposedSystem,
     activeSystem,
     activeProfile,

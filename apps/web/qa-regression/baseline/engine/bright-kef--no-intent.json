@@ -1,0 +1,52 @@
+{
+  "id": "bright-kef--no-intent",
+  "label": "Bright analytical system · no intent",
+  "category": "no_intent",
+  "systemText": "Assess my system: Topping D90SE, Hegel H190, KEF R3",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "neutral",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "neutral"
+  },
+  "bottleneck": null,
+  "signature": "Tonally balanced, detail-forward, rhythmically articulate, spatially open system.",
+  "strengths": [
+    "Hegel H190 adds composure under complex passages",
+    "KEF R3 provides strong spatial definition"
+  ],
+  "limitations": [
+    "Stacked detail emphasis may feel analytical or fatiguing on lesser recordings",
+    "Stacked control may sound overdamped — reducing dynamic expression and musical life",
+    "KEF R3 has high placement sensitivity — Highly sensitive to positioning and room acoustics. Quality stands are essential. Benefits from acoustic treatment — the analytical presentation reveals room anomalies as readily as source quality."
+  ],
+  "upgradeDirection": "If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance. If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.",
+  "upgradePaths": [],
+  "keepRecommendations": [
+    {
+      "name": "Topping D90SE",
+      "reason": "Neutral tonal balance; Conversion-stage microdetail and transparency"
+    },
+    {
+      "name": "Hegel H190",
+      "reason": "Warm current delivery and tonal body; Circuit transparency — reveals source differences"
+    },
+    {
+      "name": "KEF R3",
+      "reason": "Neutral tonal balance; Driver resolution and crossover transparency"
+    }
+  ],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "Keep **Topping D90SE**, **Hegel H190**, **KEF R3** — performing well, no change warranted."
+    },
+    {
+      "step": 2,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **precision and analytical control**. Topping D90SE, Hegel H190, KEF R3 share this design philosophy. The system leans toward high damping / analytical control, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}

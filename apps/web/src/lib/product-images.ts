@@ -1,10 +1,13 @@
 /**
  * Audio XX — Product image overlay.
  *
- * Resolves an image URL for a product by (brand, name). Used as a fallback
- * when the catalog's own `imageUrl` field is empty. Catalog entries that
- * carry their own `imageUrl` always take precedence over this mapping —
- * the adapter layer wires this as `p.imageUrl ?? getProductImage(...)`.
+ * Resolves an image URL for a product by (brand, name).
+ *
+ * Every user-visible path runs through the admission boundary in
+ * `lib/images/admission.ts`: exact identity, approved provenance, and a
+ * recorded basis to display, each established independently. A catalog
+ * `imageUrl` is governed on the same terms — it used to take precedence
+ * outright, which exempted it from both identity and provenance policy.
  *
  * Rendering contract (enforced by AdvisoryProductCard):
  *   - Known product → returns a stable manufacturer/CDN URL
@@ -15,12 +18,18 @@
  * Portability note: this module contains no audio-domain reasoning. It is
  * a key-based lookup that would work unchanged in any product-card domain.
  *
- * Maintenance: each entry here is a (brand + name) substring keyed to a
- * canonical image URL. Additions are cheap — just append to the map. Keys
- * are normalized to lowercase, alphanumeric + spaces, and matched as
- * substrings so "harbeth p3esr" covers "Harbeth P3ESR XD" too.
+ * Maintenance: each entry is a (brand + name) key naming EXACTLY one product.
+ * Keys are compared as token multisets, so "harbeth p3esr" does NOT cover
+ * "Harbeth P3ESR XD" — a different product needs its own row. Adding a row is
+ * not sufficient to display it; see the admission boundary below.
  */
 
+import { keyNamesProduct } from '@/lib/images/product-identity';
+import {
+  admissionState, isDisplayable, admitUnregisteredImage,
+  variantDisagreement, assetCorroboratesKey,
+  type GovernedImage, type AdmissionState,
+} from '@/lib/images/admission';
 function normalize(s: string | undefined): string {
   if (!s) return '';
   return s
@@ -64,6 +73,21 @@ export type ImageSourceTier =
 export interface ImageSource {
   /** Provenance tier — used for trust/auditing, not surfaced to users. */
   tier: ImageSourceTier;
+  /**
+   * WHY Audio XX may use this image. The tier says where an asset came from;
+   * it has never said whether we are permitted to display it. Corroborating
+   * that a product exists proves a page exists — it grants nothing about the
+   * photograph on that page, and an existing manufacturer-hosted entry is a
+   * precedent for one maker, not permission for the next.
+   *
+   * Absent = rights were never established. That is an evidence state to be
+   * resolved, not a default to render around.
+   */
+  rightsBasis?: 'press_kit' | 'terms_permitted' | 'granted';
+  /** The terms or permission page that establishes rightsBasis. */
+  termsUrl?: string;
+  /** ISO date the rights were last confirmed — terms change. */
+  rightsCheckedAt?: string;
   /** Bare host where the image lives (e.g. 'bloomaudio.com'). */
   site: string;
   /** Human-readable credit line (e.g. 'Bloom Audio', 'Falcon Acoustics'). */
@@ -92,23 +116,87 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'schiit modius',       url: 'https://www.schiit.com/img/img_5100.jpg' },
   { key: 'schiit modi',         url: 'https://www.schiit.com/img/img_3680.jpg' },
 
+  // ── Nathan's system — first-party assets, identity established ──────
+  //
+  // Acquired 2026-08-25 against the standing image-acquisition backlog. Both
+  // sit on the MAKER'S OWN domain and are embedded on a page that names the
+  // exact model, so identity rests on the embedding page rather than on a
+  // filename — the filename only corroborates.
+  //
+  // Neither maker publishes media-use terms, so `rightsBasis` is deliberately
+  // ABSENT: rights were never established, which is an evidence state to be
+  // resolved and not a default to render around. Under the staged `identity`
+  // enforcement these are `legacy_rights_pending`, the same class as the
+  // twelve rows already carried. Permission requests are drafted and awaiting
+  // founder send — docs/audits/image-permission-requests.md.
+  //
+  // Acora QRC-2 — https://acoraacoustics.com/qrc-2-product-page/
+  // Identity corroborated THREE independent ways: the asset is embedded on
+  // the maker's own QRC-2 product page; the filename carries the exact model
+  // designation; and the photograph shows one dome tweeter above two cone
+  // woofers, matching Acora's published complement of "7\" Sandwich Paper
+  // Cone (2); 1\" Beryllium Dome Tweeter" that Audio XX already holds.
+  { key: 'acora qrc-2',
+    url: 'https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg',
+    source: { tier: 'manufacturer', site: 'acoraacoustics.com', credit: 'Acora Acoustics',
+      captured: '2026-08-25' } },
+  // The maker's own full company name, which is how the product is written on
+  // its product page. Same model designation, same asset — an exact alias, not
+  // a variant: 'acora acoustics qrc-2' does not substring-match 'acora qrc-2'.
+  { key: 'acora acoustics qrc-2',
+    url: 'https://acoraacoustics.com/wp-content/uploads/2025/03/QRC-2-1500-1.jpg',
+    source: { tier: 'manufacturer', site: 'acoraacoustics.com', credit: 'Acora Acoustics',
+      captured: '2026-08-25' } },
+
+  // Butler MONAD A100 — https://butleraudio.com/monadbig.php
+  // The embedding page's heading names "MONAD A100" exactly, which settles a
+  // real variant risk: the site's navigation lists MONAD and A100 separately,
+  // and `esoteric.php` covers "MONAD" without the model suffix. The
+  // photograph also carries the Butler brand mark and shows a single
+  // directly-heated triode, consistent with the held "Butler Model 300B
+  // directly heated power triode" fact.
+  { key: 'butler monad a100',
+    url: 'https://butleraudio.com/img/monad001.jpg',
+    source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
+      captured: '2026-08-25' } },
+  /*
+   * "Butler Monads" — ADMITTED as an exact alias (founder decision, 2026-08-26).
+   *
+   * The earlier note here said butleraudio.com "lists MONAD and A100
+   * separately", and withheld on that basis. That was a misreading of the
+   * site's navigation: "MONAD" is a section link to esoteric.php, and "A100"
+   * is the heading of the product on it. Three independent checks of the
+   * maker's own site establish there is exactly one Monad —
+   *
+   *   the nav has a single MONAD entry and no second model link;
+   *   esoteric.php presents the A100 as the Monad, not as the first of a line;
+   *   esotericmanuals.php offers exactly one manual, "MONAD A100 Owners Manual".
+   *
+   * — and the A100 manual states the intended arrangement in the maker's own
+   * words: "most applications will use at least a pair of MONAD amplifiers".
+   * A monoblock owner writing the plural is naming two of the one model.
+   *
+   * The condition is therefore SOLE-MODEL, not convenience: there is no
+   * sibling the plural could denote, so this is identity, not substitution.
+   * It does NOT generalise. No other plural or abbreviated product name may be
+   * resolved this way without its own check, and if Butler ever ships a second
+   * Monad this row must be deleted the same day — the plural would become
+   * genuinely ambiguous and absence would again be correct.
+   */
+  { key: 'butler monads',
+    url: 'https://butleraudio.com/img/monad001.jpg',
+    source: { tier: 'manufacturer', site: 'butleraudio.com', credit: 'Butler Audio',
+      captured: '2026-08-25' } },
+
   // Denafrips — product hero shots on denafrips.com
-  { key: 'denafrips terminator', url: 'https://www.denafrips.com/_files/ugd/d1b21d_b5deb62d43e84d9f8ea7cbf53bab8fd5~mv2.jpg' },
   { key: 'denafrips pontus',     url: 'https://static.wixstatic.com/media/d94477_67b3d20582784f36ab923d03ffd83ecd~mv2.jpg/v1/crop/x_0,y_93,w_3250,h_1758/fill/w_1960,h_1060,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/%E6%9C%AA%E6%A0%87%E9%A2%98-1.jpg' },
   { key: 'denafrips venus ii',   url: 'https://www.audiophonics.fr/60377-large_default/denafrips-venus-ii-12th-argent.jpg',
     source: { tier: 'retailer', site: 'audiophonics.fr', credit: 'Audiophonics', captured: '2026-05-08' } },
-  { key: 'denafrips ares',       url: 'https://www.denafrips.com/_files/ugd/d1b21d_2cb41c4b40ac4987aa8bbb2de1c06a3b~mv2.jpg' },
   { key: 'denafrips enyo',       url: 'https://static.wixstatic.com/media/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg/v1/crop/x_3,y_29,w_1164,h_599/fill/w_1096,h_564,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/2351c0_2a7299db962b4c6ca243bdcdbe3c71fa~mv2.jpg' },
 
   // iFi Audio — ifi-audio.com product assets
-  { key: 'ifi zen dac',         url: 'https://ifi-audio.com/wp-content/uploads/2020/02/ZEN-DAC_front_white_2000x1333.jpg' },
-
   // RME Audio — rme-audio.de product images
-  { key: 'rme adi 2 dac',       url: 'https://www.rme-audio.de/images/products/adi-2-dac-fs/adi-2-dac-fs-front.jpg' },
-
   // Bluesound — bluesound.com product catalog
-  { key: 'bluesound node',      url: 'https://www.bluesound.com/media/catalog/product/n/o/node_blk_front-top_1.png' },
-
   // WiiM — Amazon product images (manufacturer Linkplay CDN showed wrong product)
   { key: 'wiim pro plus',       url: 'https://m.media-amazon.com/images/I/51fa861331L._AC_SL1500_.jpg' },
   { key: 'wiim pro',            url: 'https://m.media-amazon.com/images/I/51ZFB75TQxL._AC_SL1500_.jpg' },
@@ -126,7 +214,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Gustard — gustard.com /qfy-content/uploads/ CDN
   { key: 'gustard x26 pro',    url: 'https://shenzhenaudio.com/cdn/shop/files/1-1_cec99a1e-1550-459b-b75a-565cbf322481.jpg?v=1730458884' },
-  { key: 'gustard x16',        url: 'https://www.gustard.com/qfy-content/uploads/2021/10/0d3d6e7e4f0a67feaef5e67d8e5b22d4-100.webp' },
   { key: 'gustard r26',        url: 'https://www.gustard.com/qfy-content/uploads/2022/10/ae6b2c24323caabb87bd8814319e8140-100.webp' },
 
   // Topping — upload.toppingaudio.com CDN
@@ -140,9 +227,34 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'retailer', site: 'apos.audio', credit: 'Apos Audio', captured: '2026-05-08' } },
 
   // Eversolo — eversolo.com /Uploads/product/ CDN + bloomaudio.com (DMP-A6)
-  { key: 'eversolo dac z8',     url: 'https://eversolo.com/Uploads/product/cc469ca22b4d35699bde1cdf245ef714.jpg' },
-  { key: 'eversolo dmp a6',     url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
+  // RE-KEYED 2026-08-23. This asset is named `eversolo-a6-gen2-thumb.webp`
+  // and depicts the DMP-A6 Gen 2, but was keyed as the plain `eversolo dmp a6`
+  // — so the original DMP-A6 in the FRANCE system was being shown a
+  // photograph of its own successor. Exact matching does not catch this: the
+  // matcher was right and the KEY was wrong.
+  //
+  // The original DMP-A6 now correctly carries no image. Eversolo replaced its
+  // product page in place, so the manufacturer URL for `model/DMP-A6` today
+  // presents the Gen 2 (og:title: "Eversolo DMP-A6 Gen 2") — there is no
+  // first-party source for the original that I could verify.
+  { key: 'eversolo dmp a6 gen 2', url: 'https://bloomaudio.com/cdn/shop/files/eversolo-a6-gen2-thumb.webp?v=1737733070&width=1080',
     source: { tier: 'authorized_dealer', site: 'bloomaudio.com', credit: 'Bloom Audio', captured: '2026-05-08' } },
+  /*
+   * The ORIGINAL DMP-A6 — ADMITTED 2026-08-27. The 2026-08-23 note above
+   * stands: Eversolo replaced its own product page in place with the Gen 2,
+   * so no live first-party source names the original. Audio46's page does,
+   * three ways at once: the title is "DMP-A6 Gen 1 ... Discontinued", a
+   * banner distinguishes it from "the newer DMP-A6 Gen 2" by link, and the
+   * stock is new and factory-sealed under Eversolo's own warranty — a
+   * dealer selling the maker's product as the maker boxed it. The
+   * photograph itself carries the eversolo mark and the DMP-A6 model
+   * designation on the fascia. This is the identity discrimination the
+   * maker's own site no longer performs.
+   */
+  { key: 'eversolo dmp-a6',
+    url: 'https://audio46.com/cdn/shop/files/1_59c7c1f6-899b-41cb-95df-7f124f6f1df3_740x.png',
+    source: { tier: 'authorized_dealer', site: 'audio46.com', credit: 'Audio46',
+      captured: '2026-08-27' } },
 
   // TotalDAC — totaldac.com /fichiers/ CDN
   { key: 'totaldac d1 unity',   url: 'https://www.totaldac.com/fichiers/D1-core-front.jpg' },
@@ -159,9 +271,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // Naim — Focal-Naim DAM CDN + naimaudio.com fallbacks
   { key: 'naim supernait 3',    url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
   { key: 'naim supernait',      url: 'https://dam.focal-naim.com/m/41d5e6176c409ae5/original/SUPERNAIT3_faceV2-jpg.jpg' },
-  { key: 'naim nait xs',        url: 'https://www.naimaudio.com/sites/default/files/nait-xs3-front.jpg' },
-  { key: 'naim nait',           url: 'https://www.naimaudio.com/sites/default/files/nait-5si-front.jpg' },
-
   // Boulder — boulderamp.com /wp-content/uploads/ CDN
   { key: 'boulder 866',         url: 'https://boulderamp.com/wp-content/uploads/866-Front-on-surface-Roon-1200x800.jpg' },
 
@@ -169,8 +278,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'decware se84ufo',     url: 'https://static.wixstatic.com/media/f1f204_31700c6023e1475b88ac443535dad8c7~mv2.jpg/v1/fill/w_396,h_336,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/SE84UFO2022.jpg' },
 
   // Line Magnetic — line-magnetic.eu /fileadmin/ CDN (EU distributor)
-  { key: 'line magnetic lm 211ia', url: 'https://www.line-magnetic.eu/fileadmin/_processed_/b/9/csm_LM-211IA_front_eb5372c116.png' },
-
   // Enleum — enleum.com /wp-content/uploads/ CDN
   { key: 'enleum amp 23r',      url: 'https://enleum.com/wp-content/uploads/2022/08/AMP-23R_1-scaled.jpg.webp' },
 
@@ -180,8 +287,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // McIntosh — mcintoshlabs.com /-/media/ CDN
   { key: 'mcintosh ma252',      url: 'https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma252/ma252-front.jpg' },
 
-  // JOB (Goldmund sub-brand) — tmraudio.com Shopify CDN (dealer; no manufacturer page)
-  { key: 'job integrated',      url: 'https://tmraudio.com/cdn/shop/files/56114-3__07620.1703123373.1280.1280_700x700.jpg' },
+  // JOB Integrated — REMOVED 2026-08-23 (founder decision). The asset was
+  // hosted by The Music Room, a used-gear reseller. Identity was exact, but
+  // the source class is a retailer, which the image policy excludes: images
+  // are identity assets and their provenance has to be first-party or an
+  // authorized dealer. Coverage is not a reason to broaden the policy.
+  //
+  // The JOB Integrated therefore carries no image until a first-party or
+  // authorized-dealer asset naming the exact product is found.
 
   // NAD — nadelectronics.com Shopify CDN
   { key: 'nad c 3050',          url: 'https://nadelectronics.com/cdn/shop/files/NAD-C-3050-3-4--on-black-for-web_2000x.jpg' },
@@ -200,10 +313,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'accuphase e 280',     url: 'https://www.accuphase.com/model/photo/e-280.jpg' },
 
   // Rega — rega.co.uk /wp-content/uploads/ CDN
-  { key: 'rega brio',           url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Brio-front.jpg' },
-  { key: 'rega elex',           url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Elex-R-front.jpg' },
-  { key: 'rega aethos',         url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Aethos-front.jpg' },
-
   // Schiit amps
   { key: 'schiit vidar',        url: 'https://www.schiit.com/img/img_2480.jpg' },
   { key: 'schiit aegir',        url: 'https://www.schiit.com/img/img_4195.jpg' },
@@ -217,28 +326,40 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'manufacturer', site: 'primaluna.nl', credit: 'PrimaLuna', captured: '2026-05-12' } },
   // EVO 400 left at legacy URL (404) — also needs manual curation; out
   // of scope for the 2026-05-12 narrow pass.
-  { key: 'primaluna evo 400',   url: 'https://www.primaluna.nl/wp-content/uploads/2019/01/EVO-400-Integrated-Amplifier-Silver-Front.jpg' },
-
-  // Leben — front-on hero from hifi.nl (Dutch HiFi review publication).
-  // Updated 2026-05-13: the previous McLean's CDN shot was a top/back
-  // angle that obscured the iconic VU meter and gold faceplate. The
-  // hifi.nl asset is the canonical front view and explicitly tagged
-  // CS600X (not the older CS600). Spaceless variants ("cs600x") cover
-  // catalog names where normalize strips the slash/hyphen but does not
-  // insert a space between letters and digits.
-  { key: 'leben cs 600',        url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
-    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
-  { key: 'leben cs600',         url: 'https://hifi.nl/gfx/20190205175617_2019-02-05_Leben600X_front_(980x457).jpg',
-    source: { tier: 'review_publication', site: 'hifi.nl', credit: 'HiFi.nl', captured: '2026-05-13' } },
+  // Leben — locally hosted CS600 front hero (2026-08-11, founder-approved
+  // repair). The previous hifi.nl entry carried tier 'review_publication',
+  // which the F4 gate correctly excludes from user-rendered output — so
+  // the CS600X tile rendered EMPTY in system assessments (observed on
+  // production 2026-08-10). Re-pointed to the pre-existing verified asset
+  // under apps/web/public/brand-heroes/ following the Marantz 2220B
+  // local-asset pattern: same-origin, source block omitted (locally
+  // hosted assets carry no provenance metadata in this file), F4 gate
+  // untouched. Front view, gold faceplate, wooden side panels — verified
+  // against the asset before wiring.
+  { key: 'leben cs 600',        url: '/brand-heroes/leben-cs600.jpg' },
+  { key: 'leben cs600',         url: '/brand-heroes/leben-cs600.jpg' },
   // Leben CS300 — left at legacy URL pending verification; CS300 not in
   // the narrow-pass scope.
-  { key: 'leben cs 300',        url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
-  { key: 'leben cs300',         url: 'https://www.leben-hifi.com/images/cs300xs-front.jpg' },
-
-  // Marantz — vintage-receiver reference image (the 2220 and 2220B
-  // share the same chassis; image is the canonical 2220 face).
-  { key: 'marantz 2220',        url: 'https://classicreceivers.com/wp-content/uploads/2022/06/marantz-2220.jpg',
-    source: { tier: 'review_publication', site: 'classicreceivers.com', credit: 'Classic Receivers', captured: '2026-05-08' } },
+  // Marantz — locally hosted 2220B chassis photo (2026-05-28). The
+  // prior entry pointed at classicreceivers.com with a
+  // tier: 'review_publication' source block, which the F4 gate skipped,
+  // leaving brand-only "marantz" queries with no image. Replaced with
+  // a same-origin asset under apps/web/public/brand-heroes/ sourced
+  // from radiomuseum.org (community vintage archive, not a reviewer
+  // publication). source block omitted so the F4 gate no longer
+  // applies — locally-hosted assets don't need provenance metadata
+  // for the audit, same as other un-sourced entries in this file.
+  //
+  // 15-chain acceptance fix F — within-brand wrong-image safety.
+  // The previous bare-brand "marantz" key caused chains containing
+  // other Marantz models (e.g. "Marantz 2270") to receive the 2220B
+  // image — a within-brand cross-model leak. Key tightened to the
+  // model-specific 'marantz 2220b' so non-2220B Marantz components
+  // gracefully omit imagery instead of borrowing the wrong photo.
+  // Brand Authority pages source Marantz imagery from BrandProfile
+  // media.images, not from this overlay, so the change is scoped to
+  // §5 component-card resolution.
+  { key: 'marantz 2220b',       url: '/brand-heroes/marantz-2220b.jpg' },
 
   // First Watt — Positive Feedback review hero (firstwatt.com only
   // hosts a generic site banner, not a SIT-3-specific shot).
@@ -251,8 +372,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Vinnie Rossi — Positive Feedback review (the legacy L2i collection
   // page is no longer hosted at vinnierossi.com)
-  { key: 'vinnie rossi l2i',    url: 'https://positive-feedback.com/wp-content/uploads/2020/09/L2i-SE-Front-Silver-1.jpg',
-    source: { tier: 'review_publication', site: 'positive-feedback.com', credit: 'Positive Feedback', captured: '2026-05-08' } },
+  // REMOVED 2026-08-23 — wrong variant. This key is the Vinnie Rossi L2i;
+  // the asset is `L2i-SE-Front-Silver-1.jpg`, a photograph of the L2i-SE.
+  // Two independent grounds, either sufficient: the variant is wrong, and the
+  // host is a review publication (F4). The URL is recorded here rather than in
+  // the table so the removal stays explicable without being resolvable:
+  //   https://positive-feedback.com/wp-content/uploads/2020/09/L2i-SE-Front-Silver-1.jpg
+  // No replacement. The legacy L2i collection page is no longer hosted at
+  // vinnierossi.com, and no image is preferable to the successor's photograph.
 
   // ── Round 2 amplifier additions (2026-05-08) ─────────────
 
@@ -314,9 +441,9 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'singxer sa 90',       url: 'https://kitsunehifi.com/cdn/shop/files/sa901.jpg?v=1742920926&width=1232',
     source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
 
-  // LinnenberG — 6moons review (linnenberg-audio.de site uses Mobirise template, no per-product image)
-  { key: 'linnenberg liszt',    url: 'https://6moons.com/audioreviews/linnenberg/1.jpg',
-    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+  // LinnenberG — no image. The prior entry hotlinked a 6moons asset;
+  // removed 2026-07-31 (6moons content must not be used). The
+  // linnenberg-audio.de site has no per-product image to substitute.
 
   // AGD Productions — manufacturer WordPress CDN (image is Gran Vivace MK IV;
   // catalog "Vivace" matches via substring — same product family).
@@ -328,21 +455,49 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // ── Speakers ──────────────────────────────────────────
 
   // KEF — kef.com product assets
-  { key: 'kef ls50 meta',       url: 'https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg' },
-  { key: 'kef ls50',            url: 'https://www.kef.com/cdn/shop/products/LS50-Meta-Carbon-Black-Single-Front_1200x.jpg' },
   { key: 'kef r3',              url: 'https://us.kef.com/cdn/shop/files/r3-meta_sp4053b1_product__front-side.png?v=1773978064&width=1024' },
 
-  // Harbeth — harbeth.co.uk
-  { key: 'harbeth p3esr',       url: 'https://harbeth.co.uk/wp-content/uploads/2024/11/P3ESR-XD2-cherry.png' },
-  { key: 'harbeth super hl5',   url: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg' },
-  { key: 'harbeth 30',          url: 'https://www.harbeth.co.uk/images/M30.2-XD-Cherry-Front.jpg' },
+  // Harbeth — still no working external URL as of 2026-07-02.
+  //
+  // Cross-checked in the XXI pass while wiring the brand page through
+  // resolveProductImageStrict: harbeth.co.uk 301-redirects EVERY
+  // /wp-content/uploads request to the homepage (content-type
+  // text/html, ORB-blocked in Chrome regardless of HTTP status).
+  // Wayback Machine has zero image snapshots for that path. Dealer
+  // sites (Music Direct, Upscale Audio) load product images from
+  // JS-driven galleries that don't expose stable direct URLs. Until
+  // a licensed image can be sourced (press kit request, a permitted
+  // dealer CDN URL, or a locally-hosted /public/images/products/
+  // asset), Harbeth intentionally falls through to the category
+  // placeholder rather than firing doomed network requests.
 
-  // WLM — hifi-guide.com product image
-  { key: 'wlm diva',            url: 'https://www.hifi-guide.com/wp-content/uploads/2023/02/WLM-Diva-Monitor.jpg' },
+  /*
+   * WLM Diva Monitor — REPLACED 2026-08-27. The old row pointed at
+   * hifi-guide.com, an aggregator whose page cannot establish WHICH Diva
+   * generation it shows — WLM has shipped four, and the registry key
+   * ('wlm diva') did not even match the component's name. Onair Records, a
+   * WLM dealer, presents the ORIGINAL Diva Monitor distinctly from the
+   * Diva MK IV on the same brand page — the generation discrimination the
+   * identity doctrine requires — and this asset is the one it files under
+   * the original. Exact-key matching keeps MkII and MK IV out: neither
+   * name matches 'wlm diva monitor'.
+   */
+  { key: 'wlm diva monitor',
+    url: 'https://www.onair-records.de/media/images/wlm_diva_monitor.jpg',
+    source: { tier: 'authorized_dealer', site: 'onair-records.de', credit: 'Onair Records',
+      captured: '2026-08-27' } },
 
-  // Hornshoppe — 6moons review (manufacturer site only hosts a tiny banner crop)
-  { key: 'hornshoppe horn',     url: 'https://6moons.com/audioreviews/hornshoppe2/hero_cameohorns.jpg',
-    source: { tier: 'review_publication', site: '6moons.com', credit: '6moons', captured: '2026-05-08' } },
+  // Buchardt Audio — manufacturer-hosted Shopify CDN. Not in the curated
+  // catalog yet; the entry exists so the unknown-product clarification
+  // can surface the real product photo (via getProductImage name-only
+  // lookup) instead of the generic placeholder when a user asks about
+  // the A700 LE specifically.
+  { key: 'buchardt a700',       url: 'https://buchardtaudio.com/cdn/shop/files/5eacfaf1-bc58-4b67-a747-6869592f8bf3_900x.jpg?v=1773302031',
+    source: { tier: 'manufacturer', site: 'buchardtaudio.com', credit: 'Buchardt Audio', captured: '2026-05-19' } },
+
+  // Hornshoppe — no image. The prior entry hotlinked a 6moons asset;
+  // removed 2026-07-31 (6moons content must not be used). The
+  // manufacturer site only hosts a tiny banner crop — no substitute.
 
   // XSA Labs — Stereo Times review hero (xsa-labs.com hosts multiple
   // finishes / configs without a designated single hero shot).
@@ -360,22 +515,29 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // DeVore Fidelity — devorefidelity.com
   // Keys include "fidelity" to match the catalog brand "DeVore Fidelity".
   // Shorter alias without "fidelity" kept as fallback for contexts that
-  // use the abbreviated brand name.
-  { key: 'devore fidelity orangutan o 93', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
-  { key: 'devore orangutan o 93',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-93-Front.jpg' },
-  { key: 'devore fidelity orangutan o 96', url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
-  { key: 'devore orangutan o 96',          url: 'https://www.devorefidelity.com/wp-content/uploads/2019/06/Orangutan-O-96-Front.jpg' },
+  // use the abbreviated brand name. URLs verified 2026-05-19 — the
+  // previous 2019/06 Orangutan-O-9x-Front.jpg paths now return 404;
+  // the live product pages link to the 2021/05 crop assets used in
+  // the catalog imageUrl fields below.
+  { key: 'devore fidelity orangutan o 93', url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O93new-682x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore orangutan o 93',          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O93new-682x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore fidelity orangutan o 96', url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
+  { key: 'devore orangutan o 96',          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    source: { tier: 'manufacturer', site: 'devorefidelity.com', credit: 'DeVore Fidelity', captured: '2026-05-19' } },
 
   // Magico — Squarespace CDN (manufacturer-hosted)
   { key: 'magico a3',            url: 'https://images.squarespace-cdn.com/content/v1/5d6806d4d4a70b00015c75b4/1567191992078-77SK24QU4NQ1S2MILAHZ/3+%284%29.jpg?format=2500w' },
 
   // Klipsch Heritage — klipsch.com /medias/ CDN
-  { key: 'klipsch la scala',    url: 'https://www.klipsch.com/medias/la-scala-al5-natural-cherry-front.jpg' },
   { key: 'klipsch heresy',      url: 'https://klipsch.imgix.net/product-images/Heresy-IV_American-Walnut_Front_2024-07-09-235240_vpra.jpg',
     source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-05-12' } },
-  { key: 'klipsch cornwall',    url: 'https://www.klipsch.com/medias/cornwall-iv-natural-cherry-front.jpg' },
-  { key: 'klipsch forte',       url: 'https://www.klipsch.com/medias/forte-iv-natural-cherry-front.jpg' },
-
+  // Cornwall IV — klipsch.com product page hero (campaign, 2026-08-29). The
+  // page names Cornwall IV exactly; the asset filename carries the model.
+  { key: 'klipsch cornwall iv', url: 'https://klipsch.imgix.net/product-images/Cornwall-IV-Carousel-7.png',
+    source: { tier: 'manufacturer', site: 'klipsch.imgix.net', credit: 'Klipsch', captured: '2026-08-29' } },
   // Boenicke — boenicke-audio.ch /wp-content/uploads/ CDN
   { key: 'boenicke w5',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg' },
   { key: 'boenicke w8',          url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg' },
@@ -389,20 +551,14 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Focal — focal.com + Focal-Naim DAM CDN
   { key: 'focal kanta no 2',     url: 'https://dam.focal-naim.com/m/52fdcf02309f4f88/original/KantaN2_walnut-mat_Ivory_mat_34-jpg.jpg' },
-  { key: 'focal aria 906',       url: 'https://www.focal.com/sites/www.focal.com/files/aria-906-walnut-front.jpg' },
-
   // Wharfedale — wharfedaleusa.com Shopify CDN (official US distributor)
   { key: 'wharfedale linton',    url: 'https://www.wharfedaleusa.com/cdn/shop/products/LINTONHeritageWalnut_1_1200x.jpg?v=1630422663' },
 
   // Bowers & Wilkins — bowerswilkins.com
-  { key: 'bowers wilkins 705',  url: 'https://www.bowerswilkins.com/medias/705-s3-gloss-black-front.png' },
-
   // Spendor — spendoraudio.com
   { key: 'spendor d7',          url: 'https://spendoraudio.com/wp-content/uploads/d7.2-natural-oak-front.jpg' },
 
   // Dynaudio — dynaudio.com
-  { key: 'dynaudio heritage',   url: 'https://www.dynaudio.com/media/product/heritage-special-rosewood-front.jpg' },
-
   // Wilson Audio — wilsonaudio.com /media/ CDN
   { key: 'wilson audio sabrina', url: 'https://www.wilsonaudio.com/media/941/sabrinax.jpg' },
 
@@ -452,9 +608,6 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'hifiman ef400',       url: 'https://store.hifiman.com/media/catalog/product/cache/1/image/9df78eab33525d08d6e5fb8d27136e95/1/2/1200_1200_-3.jpg' },
 
   // Sennheiser — sennheiser.com product assets
-  { key: 'sennheiser hd 800 s', url: 'https://assets.sennheiser.com/img/hd-800-s/gallery/hd-800-s_1.jpg' },
-  { key: 'sennheiser hd 600',   url: 'https://assets.sennheiser.com/img/hd-600/gallery/hd-600_1.jpg' },
-
   // ZMF — shop.zmfheadphones.com Shopify CDN
   { key: 'zmf verite closed',   url: 'https://shop.zmfheadphones.com/cdn/shop/files/DSC0072_1200x1200.jpg' },
 
@@ -470,18 +623,18 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // KEF — us.kef.com Shopify CDN (additional models)
   { key: 'kef ls60',            url: 'https://us.kef.com/cdn/shop/files/pdt-ls60w-stn-pks-040_1200x1200.png' },
+  // LS50 Meta — kef.com product page (campaign, 2026-08-29). Exact-variant
+  // key on purpose: the original LS50 and the Wireless II are different
+  // products and must never borrow this asset.
+  { key: 'kef ls50 meta',       url: 'https://us.kef.com/cdn/shop/files/ls50-meta_sp4027j2_product__front-side.png?v=1787143453&width=1200',
+    source: { tier: 'manufacturer', site: 'us.kef.com', credit: 'KEF', captured: '2026-08-29' } },
 
   // McIntosh — mcintoshlabs.com /-/media/ CDN (pattern from MA252)
-  { key: 'mcintosh ma12000',    url: 'https://www.mcintoshlabs.com/-/media/images/mcintoshlabs/products/productimages/ma12000/ma12000-front.jpg' },
-
   // Hegel — hegel.com /images/products/ CDN (pattern from H390/H190)
   { key: 'hegel rost',          url: 'https://www.hegel.com/images/products/discontinued/Rost.jpg' },
 
   // Rega — rega.co.uk /wp-content/uploads/ CDN (turntable)
-  { key: 'rega planar 3',       url: 'https://www.rega.co.uk/wp-content/uploads/2020/01/Planar-3-front.jpg' },
   // Pro-Ject — project-audio.com product assets
-  { key: 'pro ject debut pro',  url: 'https://www.project-audio.com/wp-content/uploads/2020/09/Debut-PRO_1_black_o_cartridge-1536x1536.png' },
-
   // WiiM — wiimhome.com / Linkplay CDN (additional models)
   { key: 'wiim ultra',          url: 'https://cdn.shopify.com/s/files/1/0833/6441/3757/files/listing_1_Main_picture_Gray_2056e197-e4f8-4e39-8f41-bd792622f0a8.jpg' },
   { key: 'wiim amp',            url: 'https://cloudadmin-file.linkplay.com/product/image/b4bb2c26859e4f68b32df583307bf82e.png' },
@@ -497,19 +650,18 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
 
   // Sony — sony.com product assets
   { key: 'sony wh 1000xm5',    url: 'https://www.sony.com/image/5d02da5df552836db894cead8a68f5f3' },
-  { key: 'sony ier m7',         url: 'https://www.sony.com/image/a7b7c7f037f84ee1b17df8e57534ed70' },
-
   // Etymotic — etymotic.com product assets
-  { key: 'etymotic er2xr',     url: 'https://www.etymotic.com/wp-content/uploads/2022/03/er2xr-earphone-front.jpg' },
-
   // Shure — shure.com product assets
   { key: 'shure aonic 3',      url: 'https://pubs.shure.com/guide/aonic3/images/aonic3-hero.png' },
 
   // Sennheiser — sennheiser.com (additional models)
-  { key: 'sennheiser momentum 4', url: 'https://assets.sennheiser.com/img/momentum-4-wireless/gallery/momentum-4-wireless_1.jpg' },
-
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
   { key: 'holo audio may',          url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
+  // Some engine outputs name the DAC as "Holo May" (model alone), without
+  // the "Audio" brand-suffix that the more specific key above requires.
+  // This alias matches both forms so the artifact's component-photo strip
+  // can resolve the image either way.
+  { key: 'holo may',                url: 'https://kitsunehifi.com/cdn/shop/files/may1.jpg' },
   { key: 'holo audio spring 3',     url: 'https://kitsunehifi.com/cdn/shop/files/2-scaled.jpg?v=1743712210&width=2560',
     source: { tier: 'authorized_dealer', site: 'kitsunehifi.com', credit: 'Kitsune HiFi', captured: '2026-05-08' } },
   { key: 'holo audio cyan 2',       url: 'https://kitsunehifi.com/cdn/shop/files/cyan-1_1c3a3843-8b1c-44f8-9c5f-df64340e856c.jpg?v=1712877064&width=1232',
@@ -524,21 +676,25 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   // NAD — nadelectronics.com Shopify CDN (additional model)
   { key: 'nad c 316bee',        url: 'https://nadelectronics.com/cdn/shop/files/NAD-C-316BEE-Intagrated-amplifier-Front.jpg' },
 
-  // MHDT — mhdtlab.com product image
-  { key: 'mhdt orchid',         url: 'https://www.mhdtlab.com/images/product/orchid/orchid-front.jpg' },
+  // MHDT Orchid overlay removed 2026-07-01. The mhdtlab.com URL
+  // returned HTTP 404 (site restructured; the /images/product/orchid/
+  // path no longer exists) and Mike observed a placeholder rendering
+  // on the Primary card. Until we source a working photo from a
+  // known-good dealer or manufacturer origin, we leave MHDT Orchid
+  // without an overlay entry — the shopping anchor Rule 4 (prefer
+  // with-image candidates for the Primary card) then pushes it out
+  // of the anchor slot instead of surfacing the placeholder as the
+  // loudest visual element. If MHDT Orchid is still sonically
+  // relevant to a query, it can still appear as an Alternative or
+  // additional option — just not as the visual anchor.
 
   // Holo Audio — kitsunehifi.com Shopify CDN (US distributor)
-  { key: 'holo cyan',           url: 'https://kitsunehifi.com/cdn/shop/files/cyan2.jpg' },
-
   // Sonnet — sonnetaudio.com product assets + eliseaudio.com (Pasithea)
   // Note: catalog uses inconsistent brand strings — "Sonnet" for Pasithea
   // (dacs.ts:3704), "Sonnet Digital Audio" for Morpheus (dacs.ts:2365).
   // Both keys below are needed to match each catalog brand+name pair.
   { key: 'sonnet pasithea',           url: 'https://eliseaudio.com/cdn/shop/files/eliseaudiopasithea.png?v=1693561670&width=1946',
     source: { tier: 'authorized_dealer', site: 'eliseaudio.com', credit: 'Elise Audio', captured: '2026-05-08' } },
-  { key: 'sonnet digital audio morpheus', url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
-  { key: 'sonnet morpheus',           url: 'https://www.sonnetaudio.com/images/products/morpheus-front.jpg' },
-
   // Merason — Squarespace CDN (merason.ch swapped hosting; old URL stale)
   // Catalog stores "Frérot" with diacritic. The `normalize()` regex
   // strips non-ASCII letters → "fr rot", not "frerot". Both keys cover
@@ -559,11 +715,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'smsl su 9',           url: 'https://www.smsl-audio.com/upload/portal/20210301/SU-9-1.jpg' },
 
   // Weiss — weiss.ch product assets
-  { key: 'weiss dac204',        url: 'https://weiss.ch/wp-content/uploads/2023/11/DAC204-front-silver.jpg' },
-
   // Musical Fidelity — musicalfidelity.com product assets
-  { key: 'musical fidelity v90', url: 'https://musicalfidelity.com/wp-content/uploads/2020/01/V90-DAC-front.jpg' },
-
   // ── Remaining Amplifiers ──────────────────────────────
 
   // Scott — vintage tube amplifier
@@ -609,9 +761,7 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
   { key: 'mola mola tambaqui',  url: 'https://www.mola-mola.nl/img/tambaqui/Mola_Mola_studio-32.jpg',
     source: { tier: 'manufacturer', site: 'mola-mola.nl', credit: 'Mola Mola', captured: '2026-05-08' } },
 
-  // Cen.Grand — manufacturer (cen-grand.com)
-  { key: 'cen grand dsdac',     url: 'https://en.cen-grand.com/repository/image/2c07e7b2-91d2-4ef5-b5e5-a9ba9a642fec.jpg',
-    source: { tier: 'manufacturer', site: 'en.cen-grand.com', credit: 'Cen.Grand', captured: '2026-05-08' } },
+  // Cen.Grand overlay removed 2026-07-01 — HTTP 567 from en.cen-grand.com.
 
   // ── Amplifiers (round-2 retries) ─────────────────────
 
@@ -680,6 +830,130 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
     source: { tier: 'manufacturer', site: 'vpidirect.com', credit: 'VPI Industries', captured: '2026-05-08' } },
 ];
 
+// ── The admission boundary ─────────────────────────────
+//
+// Every user-visible image resolves through here, whether it came from this
+// registry or from a catalog `imageUrl`. Before this existed the catalog was
+// a second trust boundary: `p.imageUrl ?? getProductImage(...)` let a catalog
+// URL win outright, so the exact-identity and provenance rules applied only
+// to assets that happened to be curated in this file.
+//
+// See lib/images/admission.ts for the invariant and the state derivation.
+
+/**
+ * Keys whose asset is also claimed by a MORE SPECIFIC key.
+ *
+ * `chord mojo` and `chord mojo 2` pointed at the same file, so the original
+ * Mojo was illustrated with a photograph of the Mojo 2. Neither the filename
+ * check nor exact key matching catches this: the matcher was right and the
+ * table was wrong, and `Mojo-2-...jpg` names no token from the variant list.
+ *
+ * The signal is structural rather than lexical, and it must be narrow. Many
+ * keys deliberately share a URL as ALIASES of one product — `qualio iq` and
+ * `qualio audio iq`, `altec model 19` and `altec lansing model 19`, `1995
+ * immanis` and `raal requisite 1995 immanis`. Those differ by how the BRAND is
+ * written, which the identity rule expressly permits.
+ *
+ * What distinguishes a conflict is where the extra tokens sit. An alias varies
+ * at the front; a variant appends at the END. So a key is conflicted only when
+ * another key sharing its asset EXTENDS it — same tokens, in order, plus a
+ * suffix. `chord mojo` is a prefix of `chord mojo 2`; `qualio iq` is not a
+ * prefix of `qualio audio iq`.
+ */
+/** Conflicts where the rival key names a DIFFERENT MODEL, not a longer one. */
+const siblingConflict = new Set<string>();
+
+const CONFLICTED_KEYS: ReadonlySet<string> = (() => {
+  const byUrl = new Map<string, string[]>();
+  for (const e of PRODUCT_IMAGE_URLS) {
+    if (!e.url) continue;
+    byUrl.set(e.url, [...(byUrl.get(e.url) ?? []), e.key]);
+  }
+  const conflicted = new Set<string>();
+  for (const [url, keys] of byUrl.entries()) {
+    if (keys.length < 2) continue;
+    for (const a of keys) {
+      const at = keyTokens(a);
+      for (const b of keys) {
+        if (a === b) continue;
+        const bt = keyTokens(b);
+        if (bt.length > at.length && at.every((t, i) => bt[i] === t)) conflicted.add(a);
+      }
+      // SIBLINGS SHARING ONE ASSET. `goldmund telos 590` and `goldmund telos
+      // 690` both claimed the same file, and neither is a prefix of the other,
+      // so the extension rule above never saw it. When several non-alias keys
+      // share an asset and the filename corroborates EXACTLY ONE of them, the
+      // others are asserting something the evidence contradicts.
+      //
+      // Requiring exactly one keeps aliases safe: `qualio iq` and `qualio audio
+      // iq` share a file that corroborates NEITHER, so nothing is flagged, and
+      // an ambiguous case stays unverified rather than being called wrong.
+      //
+      // Corroboration alone is NOT enough to call the others wrong, because
+      // aliases fail it routinely: `soundkaos vox` matches `VOX_3.jpg` while
+      // `sound kaos vox` does not, and `merason frerot` matches while the
+      // alias spelled from its broken tokenisation does not. Both name one
+      // product. Flagging them would withdraw correct photography and call a
+      // spelling a wrong identity.
+      //
+      // What separates the Goldmund pair from an alias is a MODEL token: `590`
+      // appears in one key and nowhere in the other, so they cannot be the
+      // same product. An alias differs only in how the brand is written.
+      const corroborated = keys.filter((k) => assetCorroboratesKey(k, url));
+      if (corroborated.length === 1 && !corroborated.includes(a)) {
+        const winnerFlat = keyTokens(corroborated[0]).join('');
+        const namesDistinctModel = at.some(
+          (t) => /[0-9]/.test(t) && !winnerFlat.includes(t),
+        );
+        if (namesDistinctModel) { conflicted.add(a); siblingConflict.add(a); }
+      }
+    }
+  }
+  return conflicted;
+})();
+
+
+
+function keyTokens(k: string): string[] {
+  return k.toLowerCase().replace(/\+/g, ' plus ').replace(/[^a-z0-9]+/g, ' ')
+    .trim().split(' ').filter(Boolean);
+}
+
+/** Lift a registry row into the governed form. Derived, never stored. */
+function governed(entry: { key: string; url: string; source?: ImageSource }): GovernedImage {
+  const disagreement = entry.url ? variantDisagreement(entry.key, entry.url) : undefined;
+  return {
+    key: entry.key,
+    url: entry.url,
+    identityStatus: (disagreement || CONFLICTED_KEYS.has(entry.key))
+      ? 'known_wrong'
+      : (entry.url && assetCorroboratesKey(entry.key, entry.url) ? 'corroborated' : 'unverified'),
+    identityNote: disagreement
+      ? `asset asserts '${disagreement}', which the key does not name`
+      : (CONFLICTED_KEYS.has(entry.key)
+        ? (siblingConflict.has(entry.key)
+          ? 'a key naming a different model claims this same asset'
+          : 'a more specific key claims this same asset')
+        : undefined),
+    // A row with no source block records no provenance at all. That is an
+    // unanswered question, not a lenient default.
+    sourceClass: entry.source?.tier ?? 'unclassified',
+    rightsBasis: entry.source?.rightsBasis ? 'published_terms' : 'none_recorded',
+    termsUrl: entry.source?.termsUrl,
+    rightsCheckedAt: entry.source?.rightsCheckedAt,
+    credit: entry.source?.credit,
+    captured: entry.source?.captured,
+    hosting: entry.url.startsWith('/') ? 'local' : 'remote',
+  };
+}
+
+/** The whole registry, governed. Exported for the audit and the lock tests. */
+export const GOVERNED_REGISTRY: ReadonlyArray<GovernedImage & { state: AdmissionState }> =
+  PRODUCT_IMAGE_URLS.map((e) => {
+    const g = governed(e);
+    return { ...g, state: admissionState(g) };
+  });
+
 /**
  * Resolve an image for a product by brand + name.
  *
@@ -697,6 +971,64 @@ const PRODUCT_IMAGE_URLS: ReadonlyArray<{ key: string; url: string; source?: Ima
  * shipping the wrong image for TT2). Empty-URL entries are a positive
  * curation statement, not a placeholder waiting to be filled.
  */
+/**
+ * Resolved image entry with provenance — used when callers need to
+ * render an "Image source: <site>" attribution alongside the image.
+ */
+export interface ResolvedProductImage {
+  url: string;
+  source?: ImageSource;
+}
+
+/**
+ * Like `getProductImage` but also returns the entry's `source`
+ * metadata so the renderer can surface attribution
+ * ("Image source: buchardtaudio.com", etc.).
+ *
+ * Same F4 gate applies — entries with `tier === 'review_publication'`
+ * are skipped. Empty-URL entries return undefined identically to the
+ * URL-only function.
+ */
+export function getProductImageEntry(
+  brand: string | undefined,
+  name: string | undefined,
+): ResolvedProductImage | undefined {
+  if (!normalize(`${brand ?? ''} ${name ?? ''}`)) return undefined;
+  for (const entry of PRODUCT_IMAGE_URLS) {
+    // EXACT identity, never substring — this function kept the substring match
+    // after `getProductImage` was fixed, so the CS600/CS600X class of defect
+    // stayed reachable through the attribution path alone.
+    if (!keyNamesProduct(entry.key, { brand, name })) continue;
+    // Intentionally uncurated. Stop rather than fall through.
+    if (entry.url === '') return undefined;
+    if (!isDisplayable(governed(entry))) continue;
+    return { url: entry.url, source: entry.source };
+  }
+  return undefined;
+}
+
+/**
+ * Does the catalog hold imagery anywhere in this product's FAMILY?
+ *
+ * Deliberately loose, and deliberately not a rendering function. Shortlist
+ * pool filtering asks "is this the kind of product we have photography for";
+ * rendering asks "do we have THIS product's photograph". Conflating them is
+ * what produced the CS600/CS600X defect.
+ *
+ * Kept because shortlist selection is coupled to image availability
+ * (shopping-intent.ts), and tightening this predicate silently shrinks
+ * shopping pools — a recommendation change wearing an image fix. Nothing
+ * this returns is ever displayed; `getProductImage` decides that, exactly.
+ */
+export function hasFamilyImagery(
+  brand: string | undefined,
+  name: string | undefined,
+): boolean {
+  const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
+  if (!haystack) return false;
+  return PRODUCT_IMAGE_URLS.some((entry) => haystack.includes(entry.key));
+}
+
 export function getProductImage(
   brand: string | undefined,
   name: string | undefined,
@@ -704,44 +1036,42 @@ export function getProductImage(
   const haystack = normalize(`${brand ?? ''} ${name ?? ''}`);
   if (!haystack) return undefined;
   for (const entry of PRODUCT_IMAGE_URLS) {
-    if (haystack.includes(entry.key)) {
-      // Empty string = intentionally uncurated for this key. Stop and
-      // return undefined so the substring match doesn't fall through to
-      // a less-specific entry that would ship the wrong product image.
-      return entry.url === '' ? undefined : entry.url;
-    }
-  }
-  return undefined;
-}
-
-// ── Brand-level fallback ────────────────────────────────
-//
-// Scans the existing PRODUCT_IMAGE_URLS map for any entry whose key
-// starts with the normalized brand name. Returns the first match —
-// no new external URLs, just reuses what's already curated.
-
-/** @internal Cache brand→URL so repeated lookups are O(1). */
-const _brandCache = new Map<string, string | undefined>();
-
-/**
- * Return an existing product image for the same brand, if any entry
- * in PRODUCT_IMAGE_URLS matches. No new external URLs — reuses the
- * curated overlay map. Returns undefined when the brand has zero coverage.
- */
-export function getBrandImage(brand: string | undefined): string | undefined {
-  if (!brand) return undefined;
-  const key = normalize(brand);
-  if (!key) return undefined;
-  if (_brandCache.has(key)) return _brandCache.get(key);
-  for (const entry of PRODUCT_IMAGE_URLS) {
-    if (entry.key.startsWith(key)) {
-      _brandCache.set(key, entry.url);
+    // EXACT identity, never substring. `haystack.includes(entry.key)` served
+    // the `leben cs600` photograph for a Leben CS600X, and the table's own
+    // comments relied on careful ordering to avoid it — a convention, not a
+    // guarantee. See lib/images/product-identity.ts.
+    if (keyNamesProduct(entry.key, { brand, name })) {
+      // F4 gate (private beta, 2026-05-18):
+      //   Skip entries hosted by reviewer publications. Hotlinked
+      //   images and their credit fields are review-derived material
+      //   and must not appear in user-visible product cards under the
+      //   F4 reviewer-data exclusion rule. Match falls through to the
+      //   next entry (typically a less specific match or none), which
+      //   means callers fall back to the category placeholder.
+      // Empty string = intentionally uncurated for this key. Stop rather
+      // than fall through to a less-specific entry.
+      if (entry.url === '') return undefined;
+      // The F4 reviewer gate is now one clause of the admission state, which
+      // also withholds wrong-variant, un-provenanced and unverified assets.
+      if (!isDisplayable(governed(entry))) continue;
       return entry.url;
     }
   }
-  _brandCache.set(key, undefined);
   return undefined;
 }
+
+// ── Brand-level fallback: REMOVED 2026-08-23 ───────────
+//
+// `getBrandImage(brand)` returned the first registry entry whose key merely
+// STARTED WITH the brand name, so any DeVore product could be illustrated
+// with whichever DeVore photograph appeared first in the table. That is the
+// substring defect at brand scope: a reader takes a photograph as confirmation
+// that Audio XX knows which product they own, and a sibling model is exactly
+// the wrong thing to confirm.
+//
+// It had no callers outside this file. Deleted rather than deprecated, and
+// deliberately not replaced with a narrower fallback — exact product imagery
+// or no imagery. Absence is a finished state.
 
 // ── Category placeholders ──────────────────────────────
 //
@@ -766,7 +1096,7 @@ const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
 // ── Canonical image resolver (2026-05-11) ──────────────
 //
 // Single entry point that consumers should prefer over the raw
-// `getProductImage` / `getBrandImage` helpers. The resolver returns:
+// `getProductImage` helper. The resolver returns:
 //   - the chosen URL (always a string — never undefined)
 //   - the confidence tag for that URL
 //   - the source path that produced it
@@ -781,10 +1111,8 @@ const DEFAULT_PLACEHOLDER = '/images/placeholders/product.svg';
 //      image when the catalog has none. These are hand-keyed to the
 //      product line so they are not cross-product substitutions.
 //   3. Otherwise the category placeholder renders. Brand-family
-//      fallback (`getBrandImage`) is intentionally NOT used here — the
-//      task's "never silently substitute a clearly different product"
-//      rule treats sibling-product images as substitution. The helper
-//      remains available for explicit opt-in only.
+//      fallback is not available anywhere — sibling-product imagery is
+//      substitution, and the helper that did it has been deleted.
 //
 // The returned URL is always renderable; consumers do not need to
 // check for empty strings or null. Cards always have visual weight.
@@ -844,13 +1172,16 @@ export function resolveProductImageWithConfidence(args: {
     category,
   } = args;
 
-  // 1. Catalog `imageUrl` — curator's explicit choice. Honor it.
-  if (catalogUrl && catalogUrl.length > 0) {
+  // 1. Catalog `imageUrl` — governed on the same terms as everything else.
+  //    Honouring a curator's choice unconditionally is how an un-provenanced
+  //    URL bypassed identity and provenance policy entirely.
+  const admittedCatalog = admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogUrl);
+  if (admittedCatalog) {
     const confidence: ImageConfidence =
       catalogConfidence
       ?? (catalogVerified ? 'high' : 'medium');
     return {
-      url: catalogUrl,
+      url: admittedCatalog,
       confidence,
       source: catalogVerified ? 'catalog-verified' : 'catalog',
     };
@@ -882,10 +1213,9 @@ export function getGenericPlaceholder(category?: string): string {
 
 /**
  * Full image resolution chain for product cards:
- *   1. product.imageUrl (catalog field)
+ *   1. product.imageUrl (catalog field) — GOVERNED, see below
  *   2. getProductImage(brand, name) (curated overlay map)
- *   3. getBrandImage(brand) (first existing entry for same brand)
- *   4. getGenericPlaceholder(category) (static local SVG)
+ *   3. getGenericPlaceholder(category) (static local SVG)
  *
  * Always returns a string — no card should ever render without an image.
  *
@@ -903,9 +1233,8 @@ export function resolveProductImage(
   category?: string,
 ): string {
   return (
-    catalogImageUrl
+    admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogImageUrl)
     ?? getProductImage(brand, name)
-    ?? getBrandImage(brand)
     ?? getGenericPlaceholder(category)
   );
 }
@@ -918,10 +1247,15 @@ export function resolveProductImage(
  * (placeholder) is worse than gracefully omitting the image block.
  *
  * Chain:
- *   1. catalogImageUrl (product.imageUrl from the catalog)
- *   2. getProductImage(brand, name) (curated overlay map — substring
- *      key match against normalized brand+name)
- *   3. undefined  ← does NOT fall through to brand-image or placeholder
+ *   1. catalogImageUrl, PASSED THROUGH THE ADMISSION BOUNDARY. It used to win
+ *      outright — `catalogImageUrl ?? getProductImage(...)` — which made the
+ *      catalog an alternate trust boundary: a catalog URL faced neither the
+ *      exact-identity test nor the provenance test that every curated entry
+ *      faces. A suppressed catalog URL falls through to step 2 rather than
+ *      blocking it, because the question is which asset may be SHOWN, not
+ *      which field was populated first.
+ *   2. getProductImage(brand, name) (curated overlay map — exact identity)
+ *   3. undefined  ← does NOT fall through to a placeholder
  *
  * Renderer contract: callers downstream (the comparison artifact's
  * `hasImages` gate, `EditorialProductSection`'s image block, etc.)
@@ -935,5 +1269,8 @@ export function resolveProductImageStrict(
   name: string | undefined,
   catalogImageUrl?: string,
 ): string | undefined {
-  return catalogImageUrl ?? getProductImage(brand, name);
+  return (
+    admitUnregisteredImage(brand, `${brand ?? ''} ${name ?? ''}`, catalogImageUrl)
+    ?? getProductImage(brand, name)
+  );
 }

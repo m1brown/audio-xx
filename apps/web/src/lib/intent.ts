@@ -16,10 +16,38 @@ import { isIntakeQuery } from './intake';
 import { extractBipolarPreference } from './bipolar-preference';
 import { detectTopologyQuestion } from './topology-philosophy';
 import { detectPairingIntent } from './pairing-resolver';
+import { LIFESTYLE_SPEAKER_PATTERN, parseBudgetAmount, extractBrandExclusions } from './shopping-intent';
 
 // ── Intent type ──────────────────────────────────────
 
-export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational';
+export type UserIntent = 'gear_inquiry' | 'shopping' | 'comparison' | 'diagnosis' | 'system_assessment' | 'consultation_entry' | 'cable_advisory' | 'product_assessment' | 'audio_knowledge' | 'audio_assistant' | 'exploration' | 'intake' | 'music_input' | 'greeting' | 'educational' | 'preference_reflection';
+
+/**
+ * Intents that must NOT be force-routed through advisory builders
+ * (consultation, shopping, diagnosis pipelines). They have their own
+ * direct handlers and need to reach them intact.
+ *
+ * QA C2 (PB beta-hardening): without this guard, intents like
+ * `audio_knowledge` ("what is soundstage?") or `greeting` ("hi")
+ * were clobbered to `intent = 'shopping'` by mid-conversation
+ * shopping-lock overrides and consumed as recommendation refinements,
+ * producing advisory framing for non-advisory questions.
+ *
+ * Glossary is handled separately by `checkGlossaryQuestion` at the
+ * top of handleSubmit — it bypasses the intent system entirely.
+ */
+export const NON_ADVISORY_INTENTS: ReadonlySet<UserIntent> = new Set<UserIntent>([
+  'audio_knowledge',
+  'audio_assistant',
+  'greeting',
+  'educational',
+  'preference_reflection',
+]);
+
+/** True when the intent has its own direct handler and must bypass advisory overrides. */
+export function isNonAdvisoryIntent(intent: string | undefined): boolean {
+  return !!intent && NON_ADVISORY_INTENTS.has(intent as UserIntent);
+}
 
 /** A desire the user has expressed — "want more speed", "wish it had warmth". */
 export interface DesireSignal {
@@ -79,7 +107,7 @@ export interface IntentResult {
 // ── Known brands / product names ─────────────────────
 
 /** Brand / manufacturer names — not specific models. */
-const BRAND_NAMES = [
+export const BRAND_NAMES = [
   // DAC / digital / streamers
   'denafrips', 'chord', 'schiit', 'topping', 'smsl', 'gustard',
   'holo', 'holo audio', 'benchmark', 'rme', 'mytek', 'weiss',
@@ -100,6 +128,17 @@ const BRAND_NAMES = [
   'pass labs', 'first watt', 'naim', 'luxman', 'accuphase',
   'parasound', 'hegel', 'mcintosh', 'marantz', 'yamaha',
   'shindo', 'leben', 'audio note',
+  // Brands carrying an authored BrandProfile that recognition had drifted
+  // from (2026-08-15). Bare 'spec' is deliberately NOT listed: it is a
+  // common English word ('spec sheet', 'what are the specs'), and the
+  // matcher's plural tolerance would claim 'specs' too. The qualified
+  // forms carry the brand unambiguously.
+  'sugden', 'sugden audio', 'j.e. sugden', 'je sugden',
+  'auditorium 23', 'auditorium-23', 'a23',
+  'spec corporation', 'spec corp',
+  // Vintage. 'h.h. scott' / 'hh scott' listed before bare 'scott' so the
+  // longest-match sort claims the full brand form first.
+  'h.h. scott', 'hh scott', 'scott',
   'line magnetic', 'primaluna', 'cary', 'arc', 'audio research',
   'job', 'goldmund', 'crayon', 'xsa', 'trends', 'trends audio',
   'kinki studio', 'kinki', 'enleum', 'bakoon', 'grandinote', 'singxer',
@@ -162,6 +201,7 @@ const PRODUCT_NAMES = [
   'auralic vega', 'hegel h190', 'hegel h190 integrated', 'hegel h190 integrated amplifier', 'hegel rost', 'marantz 2220b', 'oppo opdv971h',
   'job integrated', 'job int',
   'leben cs600x', 'leben cs600', 'leben cs300x', 'leben cs300', 'leben cs-300',
+  'scott 222b', 'scott 222c', '222b', '222c',
   'may kte', 'holo may',
   'srda', 'cia-1', 'cia-1t', 'ta-10', 'trends ta-10',
   'ex-m1+', 'ex-m1 plus', 'kinki studio ex-m1', 'kinki studio ex m1', 'kinki ex-m1', 'kinki ex m1', 'ex-m1', 'ex m1',
@@ -195,6 +235,7 @@ const PRODUCT_NAMES = [
   'bottlehead crack', 'crack', 'a-08s', 'a08s',
   // New speaker products
   'ls3/5a', 'ls3-5a', 'mission 770', '770', 'ms 50 8vet', 'ms 50',
+  'linton heritage', 'linton',
   'argon3s', 'argon 3s', 'l100 classic', 'l100',
   'altec 19', 'model 19', 'sabrina x', 'sabrina',
   'magico a3', 'a3', '1.7i',
@@ -213,7 +254,7 @@ const PRODUCT_NAMES = [
   // "Super HL5" in renders because only the shorter alias was registered.
   // Listing the longer compound BEFORE the short form ensures the
   // longest-match-wins sort selects the correct canonical name.
-  'super hl5 plus', 'hl5 plus',
+  'super hl5 plus', 'hl5 plus', 'shl5+', 'shl5 plus', 'shl5',
   'diva monitor', 'super hl5', 'dirty weekend', 'hornshoppe horn', 'hornshoppe horns',
   // Turntable / tonearm / cartridge / phono products
   'gyro se', 'gyrodec', 'sa1.2',
@@ -305,7 +346,17 @@ const COMPARISON_PATTERNS = [
   /\bhow\s+(?:does|do)\b.*\bcompare\b/i,
   // ── Upgrade / replacement patterns ─────────────────
   // "upgrade from X to Y", "replace X with Y", "swap X for Y"
-  /\bupgrade\s+(?:from|my)\b/i,
+  //
+  // Every pattern in this block requires an explicit TARGET, because a
+  // comparison needs something to compare against. `upgrade` previously did
+  // not: `/\bupgrade\s+(?:from|my)\b/` matched "upgrade from a chord hugo —
+  // more resolution", a one-sided request naming a single product. The
+  // comparison branch then had no second subject and printed prose about
+  // "the other product", asking the user what drew them to a thing they had
+  // never mentioned. One-sided upgrade requests belong to the recommendation
+  // frame; only "from X **to** Y" is a comparison.
+  /\bupgrade\s+from\b.*\bto\b/i,
+  /\bupgrade\s+my\b.*\bto\b/i,
   /\breplace\s+(?:my|the|a)\b.*\bwith\b/i,
   /\bswap\s+(?:my|the|a)\b.*\b(?:for|with|to)\b/i,
   /\bchange\s+(?:from|my)\b.*\bto\b/i,
@@ -334,11 +385,21 @@ const SHOPPING_PATTERNS = [
   /\bany\s+suggestions\b/i,
   /\bwhat\s+should\s+i\b/i,
   /\bgood\s+(?:dac|amp|amplifier|speaker|headphone|streamer)\b/i,
-  /\b(?:dac|amp|amplifier|integrated|speaker|headphone|streamer)\s+(?:for|that)\b/i,
+  // Plural forms included — "speakers for 2000 dollars" must route to
+  // shopping exactly like "speaker for 2000 dollars" (launch hardening
+  // 2026-08-10: the singular-only alternation sent plural phrasings to
+  // the knowledge lane, which answered with an essay instead of picks).
+  /\b(?:dacs?|amps?|amplifiers?|integrated|speakers?|headphones?|streamers?)\s+(?:for|that)\b/i,
   /\bgood\s+integrated\b/i,
   /\bbest\s+integrated\b/i,
   // Upgrade-desire: "I need a better amp", "want a new DAC", "need a different turntable"
   /\b(?:need|want)\s+(?:a\s+)?(?:better|new|different|another|upgraded?)\s+(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|preamp|power\s*amp)\b/i,
+  // "Help me choose/pick/find/select …" — shopping, not diagnostic.
+  // Prod bug 2026-07-01: "help me choose a dac" was falling through to
+  // the diagnosis default and asked "does it sound thin, digital,
+  // fatiguing…" instead of routing to a purchase recommendation.
+  /\bhelp\s+me\s+(?:choose|pick|find|select|shop\s+for)\b/i,
+  /\bi\s+(?:want|need|would\s+like)\s+help\s+(?:choosing|picking|finding|selecting)\b/i,
 ];
 
 // ── Gear inquiry patterns ────────────────────────────
@@ -357,6 +418,10 @@ const GEAR_INQUIRY_PATTERNS = [
   /\btell\s+me\s+about\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
   /\bhow\s+(?:does|do)\s+(?:the\s+)?(?:\w+\s+)?sound\b/i,
+  // Plural opinion form — "are Shindo amps any good?". The singular
+  // "is the X good" pattern above requires an article, which plural
+  // brand-noun phrasings never carry (routing battery, 2026-08-10).
+  /\bare\s+.+\s+any\s+good\b/i,
 ];
 
 // ── Product assessment patterns ──────────────────────
@@ -393,17 +458,273 @@ const PRODUCT_ASSESSMENT_PATTERNS = [
   /\bhave\s+you\s+heard\b/i,
   /\bany\s+experience\s+with\b/i,
   /\bwhat\s+(?:is|are)\s+(?:the\s+)?(?:character|sound|signature|house sound)\b/i,
+  // "are the Ossuary Audio speakers any good?" — plural opinion form,
+  // mirrored in GEAR_INQUIRY_PATTERNS (routing battery, 2026-08-10).
+  //
+  // 2026-08-15: the singular was missing. "is the Well Tempered Lab
+  // turntable any good" matched no trigger, so extractProductCandidateName
+  // returned null, gate 0a never synthesized a subject, and the turn fell
+  // into gear_inquiry with nothing to ground — emitting generic
+  // component-character filler under the subject "your question". The
+  // plural form of the same question degraded honestly. Number is not a
+  // meaningful distinction here; one pattern now covers both.
+  /\b(?:is|are)\s+.+\s+any\s+good\b/i,
 ];
+
+// ── Unknown-product candidate detection (P1 fix, 2026-05-18) ─────────
+//
+// Pre-fix: a prompt like "thoughts on the Buchardt A700" where the
+// product is not in the catalog produced subjectMatches = [], failing
+// the PRODUCT_ASSESSMENT gate's subject guard (then
+// `hasProductSubject || hasBrandSubject`, now `hasProductSubject`).
+// With an active saved system attached, the prompt then fell
+// through to system_assessment / diagnosis — diagnosing the saved
+// system instead of addressing the named product.
+//
+// This helper detects when the user has clearly named a SPECIFIC noun
+// (Capitalized brand word, e.g. "Buchardt", or alphanumeric model
+// identifier, e.g. "A700", "CS600X") AFTER a product-assessment
+// trigger phrase. When that's true the prompt should route to
+// product_assessment regardless of whether the subject is catalogued
+// — the downstream handler at page.tsx:2473 already produces a hedged
+// clarification message when buildProductAssessment returns null.
+//
+// Generic pronouns and filler words (this, that, it, anything,
+// something, the system, etc.) are explicitly excluded so phrases
+// like "thoughts on this" do not trigger product_assessment.
+
+const PRODUCT_CANDIDATE_STOPWORDS = new Set([
+  'this', 'that', 'it', 'them', 'these', 'those',
+  'anything', 'something', 'everything', 'nothing',
+  'system', 'systems', 'setup', 'setups', 'rig', 'rigs', 'chain', 'chains',
+  'gear', 'equipment', 'kit', 'stuff',
+  'the', 'a', 'an', 'some', 'any', 'all',
+  'my', 'your', 'our', 'their', 'his', 'her', 'its',
+]);
+
+/**
+ * Returns true when, after a product-assessment trigger phrase, the
+ * message contains either a Capitalized brand-like word or an
+ * alphanumeric model identifier (digit-containing token).
+ *
+ * Used to relax the gate-0 PRODUCT_ASSESSMENT routing condition so
+ * unknown products still route to product_assessment (and surface the
+ * hedged-clarification fallback) rather than collapsing into
+ * system_assessment / diagnosis.
+ */
+function looksLikeProductCandidate(message: string): boolean {
+  return extractProductCandidateName(message) !== null;
+}
+
+/**
+ * Extract the candidate product name from a message that matched a
+ * PRODUCT_ASSESSMENT_PATTERN trigger. Returns the trailing noun phrase
+ * trimmed of stopword leading articles, or null when no candidate is
+ * recognizable.
+ *
+ * Examples:
+ *   "thoughts on the Buchardt A700"          → "Buchardt A700"
+ *   "what do you think of the Cube Audio F8" → "Cube Audio F8"
+ *   "tell me about Sonus Faber"              → "Sonus Faber"
+ *   "thoughts on this"                       → null  (filler-only)
+ *   "thoughts on the system"                 → null  (stopword)
+ */
+// Trigger-phrase words that frequently surround the actual product
+// candidate; stripped before token extraction so they don't end up in
+// the synthesized subject name.
+const TRIGGER_NOISE_WORDS = new Set([
+  'thoughts', 'thought', 'opinion', 'opinions',
+  'think', 'thinking',
+  'tell', 'told',
+  'know', 'known',
+  'considering', 'consider',
+  'looking', 'eyeing', 'interested',
+  'curious',
+  'experience',
+  'heard', 'hear',
+  'getting', 'trying', 'switching',
+  'go', 'going', 'pick', 'picking',
+  'about', 'on', 'of', 'with', 'to', 'from', 'in', 'at', 'for',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'i', 'i\'m', 'im', 'you', 'me', 'we',
+  'do', 'does', 'did',
+  'what', 'which', 'who', 'how', 'why', 'when', 'where',
+  'good', 'bad', 'better', 'best', 'great',
+  'fit', 'work', 'works', 'match', 'matches', 'pair', 'pairs', 'sound', 'sounds',
+  'improve', 'improves', 'help', 'helps', 'behave', 'behaves', 'perform', 'performs',
+  'worth', 'worthwhile', 'upgrade', 'improvement', 'step', 'up', 'downgrade',
+  'should', 'would', 'could', 'will', 'shall', 'may', 'might',
+  'have', 'has', 'had',
+  'really', 'actually', 'usually', 'typically',
+  'or', 'and', 'but', 'so', 'than',
+  'any', 'some', 'much', 'many',
+]);
+
+function extractProductCandidateName(message: string): string | null {
+  // Confirm a product-assessment trigger phrase matches (otherwise we
+  // shouldn't try to extract a product candidate at all).
+  const triggered = PRODUCT_ASSESSMENT_PATTERNS.some((p) => p.test(message));
+  if (!triggered) return null;
+
+  // Tokenize the whole message and collect the longest contiguous run
+  // of tokens that contains at least one meaningful product-candidate
+  // token (Capitalized brand word or alphanumeric model identifier),
+  // skipping over trigger noise words and stopwords. This handles
+  // both trigger shapes — leading ("thoughts on X") and wrapping
+  // ("is the X a good fit"). For wrapping shapes the meaningful tokens
+  // are interior to the regex match, so the strip-trigger approach is
+  // insufficient; whole-message scanning is.
+  const cleaned = message.replace(/[?!.,;:()/]+/g, ' ');
+  const tokens = cleaned.split(/\s+/).filter(Boolean);
+
+  let bestRun: string[] = [];
+  let bestRunHasMeaningful = false;
+  let currentRun: string[] = [];
+  let currentHasMeaningful = false;
+
+  const flush = () => {
+    if (currentHasMeaningful && currentRun.length > bestRun.length) {
+      bestRun = currentRun;
+      bestRunHasMeaningful = true;
+    }
+    currentRun = [];
+    currentHasMeaningful = false;
+  };
+
+  for (const raw of tokens) {
+    const token = raw.replace(/^["'`]+|["'`]+$/g, '');
+    if (!token) continue;
+    const lower = token.toLowerCase();
+
+    // Hard breakers: noise/trigger words flush the run.
+    if (TRIGGER_NOISE_WORDS.has(lower)) {
+      flush();
+      continue;
+    }
+
+    // Stopwords (articles, generic pronouns/objects) are kept inside
+    // a run but never start one; they're not meaningful tokens.
+    if (PRODUCT_CANDIDATE_STOPWORDS.has(lower)) {
+      if (currentRun.length > 0) currentRun.push(token);
+      continue;
+    }
+
+    // Meaningful token: alphanumeric model id or proper-noun brand word.
+    // Brand-word shape requires Capital followed by lowercase letter so
+    // category acronyms (DAC, USB, FPGA, AMP) are excluded. All-caps
+    // brand names (KEF, JBL) are caught by the catalogue subject matcher
+    // upstream, not this candidate fallback.
+    const isModelId = /^[A-Za-z]*\d[A-Za-z\d-]*$/.test(token);
+    const isProperNoun = /^[A-Z][a-z][a-zA-Z'-]*$/.test(token) && token.length >= 2;
+    if (isModelId || isProperNoun) {
+      currentRun.push(token);
+      currentHasMeaningful = true;
+    } else {
+      // Lowercase non-stopword non-trigger word (e.g., "great", "new") — flush.
+      flush();
+    }
+  }
+  flush();
+
+  // Second chance — lowercase brand before a category noun (routing
+  // battery, 2026-08-10). "what do you think of blorptronix amps?" names
+  // a brand the capitalization heuristic above cannot see (users often
+  // type brand names lowercase). An unrecognized word immediately before
+  // a category noun is a brand candidate — PROVIDED it isn't a known
+  // descriptor: sonic qualities ("warm amps" → resolveQuality),
+  // topology/build words ("tube amps"), or price/vintage adjectives
+  // ("cheap dacs"). Those describe a CLASS of gear, and class questions
+  // belong to the knowledge/shopping lanes, not the unknown-product
+  // clarification.
+  if (!bestRunHasMeaningful) {
+    for (let i = 1; i < tokens.length; i++) {
+      const noun = tokens[i].toLowerCase();
+      if (!CATEGORY_NOUN_RE.test(noun)) continue;
+      const prev = tokens[i - 1].replace(/^["'`]+|["'`]+$/g, '');
+      const prevLower = prev.toLowerCase();
+      // Sonic-quality adjectives block the candidate in comparative form
+      // too — "a smoother amp" is a remedy hypothesis, not a brand (Gate A,
+      // 2026-08-11). Same explicit-suffix normalization as the engine's
+      // CORRECTIONS comparative map (8e741ca): -ier → -y, -er → base.
+      const qualityForms = [prevLower, prevLower.replace(/ier$/, 'y'), prevLower.replace(/er$/, '')];
+      if (
+        /^[a-z][a-z'-]{2,}$/.test(prevLower)
+        && !TRIGGER_NOISE_WORDS.has(prevLower)
+        && !PRODUCT_CANDIDATE_STOPWORDS.has(prevLower)
+        && !GEAR_CLASS_DESCRIPTORS.has(prevLower)
+        && qualityForms.every((f) => resolveQuality(f) === null)
+      ) {
+        return `${prev} ${tokens[i]}`;
+      }
+    }
+    return null;
+  }
+
+  // Trim trailing stopwords from the kept run
+  while (bestRun.length > 0 && PRODUCT_CANDIDATE_STOPWORDS.has(bestRun[bestRun.length - 1].toLowerCase())) {
+    bestRun.pop();
+  }
+  return bestRun.length > 0 ? bestRun.join(' ').trim() : null;
+}
+
+/** Category nouns a brand candidate can precede — "blorptronix amps". */
+const CATEGORY_NOUN_RE = /^(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|monitors?|headphones?|iems?|streamers?|turntables?|preamps?|receivers?|subwoofers?|cartridges?|tonearms?)$/;
+
+/**
+ * Adjectives that describe a class of gear rather than name a brand.
+ * "tube amps", "cheap dacs", "vintage receivers" are class questions —
+ * they must not synthesize an unknown-product candidate. Sonic-quality
+ * adjectives ("warm", "bright") are excluded via resolveQuality instead.
+ */
+const GEAR_CLASS_DESCRIPTORS = new Set([
+  // topology / build
+  'tube', 'valve', 'solid', 'hybrid', 'class', 'digital', 'analog', 'analogue',
+  'active', 'passive', 'powered', 'integrated', 'balanced', 'discrete',
+  'r2r', 'ladder', 'delta-sigma', 'transistor', 'mosfet', 'fet',
+  // form factor / placement
+  'bookshelf', 'floorstanding', 'standmount', 'desktop', 'portable',
+  'wireless', 'bluetooth', 'open-back', 'closed-back', 'in-ear', 'over-ear',
+  'small', 'big', 'large', 'compact', 'mini', 'little',
+  // price / age / provenance
+  'cheap', 'expensive', 'budget', 'affordable', 'entry-level', 'high-end',
+  'flagship', 'premium', 'used', 'vintage', 'old', 'older', 'modern', 'new',
+  'newer', 'chinese', 'japanese', 'british', 'american', 'german', 'chifi',
+  'chi-fi',
+  // evaluative
+  'decent', 'nice', 'solid', 'reliable', 'popular', 'recommended', 'quality',
+  'powerful', 'quiet', 'fast', 'musical', 'accurate', 'neutral',
+]);
 
 // ── System assessment patterns ────────────────────────
 // These signal a system-level evaluation request, distinct from diagnosis.
 // Requires ownership language + assessment intent; no listening complaint.
 
+// Shared phrase for the most common assessment frame:
+//   determiner  : my | the | this
+//   qualifier   : 0–3 intermediate word tokens (e.g. "current", "living
+//                 room", "currently selected", "current living room")
+//   system noun : system | setup | rig | chain
+//
+// The qualifier window was originally a single optional `current` slot,
+// which silently fell through to the line-1755 diagnosis default on
+// natural phrasings like "assess my living room system" or "evaluate the
+// currently selected system". Widening it to a bounded {0,3} window
+// covers natural English without inviting run-on matches across unrelated
+// clauses. Used by the `assess` and `evaluate` patterns below; the
+// remaining patterns keep their original narrower forms intentionally.
+const SYS_NOUN_PHRASE_FRAG = String.raw`(?:my|the|this)\s+(?:\w+\s+){0,3}(?:system|setup|rig|chain)`;
+
 const SYSTEM_ASSESSMENT_PATTERNS = [
-  /\bassess(?:ment)?\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
-  /\bevaluat(?:e|ion)\s+(?:of\s+)?(?:my|the|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  new RegExp(String.raw`\bassess(?:ment)?\s+(?:of\s+)?` + SYS_NOUN_PHRASE_FRAG + String.raw`\b`, 'i'),
+  new RegExp(String.raw`\bevaluat(?:e|ion)\s+(?:of\s+)?` + SYS_NOUN_PHRASE_FRAG + String.raw`\b`, 'i'),
   /\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bwhat\s+do\s+you\s+think\b/i,  // Broad — requires ownership + subjects gate in detectIntent
+  // "what do you make of it/this/my system" — same judgment request in
+  // different words, same ownership+subjects gating (Mission 3, 2026-08-10:
+  // the prose form "my system is X into Y driving Z — what do you make of
+  // it?" fell to diagnosis triage and asked for the components it was
+  // already given).
+  /\bwhat\s+do\s+you\s+make\s+of\b/i,
   /\bthoughts\s+on\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
   /\bhow\s+(?:does|is)\s+(?:my|this|the)\s+(?:system|setup|rig|chain)\s*(?:look|seem|stack\s+up|sound)?\b/i,
   /\breview\s+(?:of\s+)?(?:my|this)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
@@ -415,6 +736,17 @@ const SYSTEM_ASSESSMENT_PATTERNS = [
   // "is X + Y + Z a good setup?" — trailing quality+system word after component list
   /(?:a\s+)?(?:good|solid|decent|balanced|coherent)\s+(?:system|setup|rig|chain|combo|combination)\s*\??\s*$/i,
   /\brate\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
+  // Beta observation 2026-08-03 (founder, production): "review: Job
+  // integrated · WLM Diva monitor · Eversolo DMP-A6 · Chord Hugo"
+  // routed to gear comparison. A message-leading evaluation verb
+  // followed by a colon and content is the colon-list entry form —
+  // the same shape as the canonical "Assess my system: …". Anchored
+  // to the start so mid-sentence "review:" can't overtrigger; the
+  // multi-subject gates downstream still decide system vs product.
+  /^\s*(?:review|assess(?:ment)?|evaluate|rate)\s*[:\-–—]\s*\S/i,
+  // "system check please: X, Y, Z. all good?" (saturation cohort,
+  // 2026-08-11) — the check-request entry form, same colon-list shape.
+  /^\s*(?:system\s+)?check(?:up)?(?:\s+please)?\s*[:\-–—]\s*\S/i,
 ];
 
 // Bare evaluation-intent phrasings that presume an already-known system.
@@ -463,6 +795,10 @@ const SYSTEM_GUIDANCE_PATTERNS = [
  *  self-referential: "should I change anything" implies it's their system. */
 const RESTRAINT_PATTERNS = [
   /\bcase\s+for\s+(?:doing\s+)?nothing\b/i,
+  // "give me the do-nothing case" (saturation cohort, 2026-08-11) — the
+  // hyphenated noun form fell to the knowledge lane, which answered with
+  // a literal essay about "the do-nothing case in audio".
+  /\bdo[- ]nothing\s+case\b/i,
   /\bshould\s+i\s+(?:just\s+)?(?:wait|hold|stay|keep)\b/i,
   /\bmaybe\s+i\s+should(?:n'?t)?\s+change\b/i,
   /\breason\s+not\s+to\s+(?:change|upgrade)\b/i,
@@ -517,10 +853,144 @@ const OWNERSHIP_PATTERNS = [
   /\bhere'?s?\s+(?:my|the|a)\s+(?:current\s+)?(?:system|setup|rig|chain)\b/i,
 ];
 
+// ── System-directed evaluation ───────────────────────
+//
+// Beta observation 2026-08-10 (founder, production): "What do you think
+// of Goldmund amps?" returned a full assessment of the saved FRANCE
+// system instead of an opinion on Goldmund.
+//
+// Cause: the saved-system evaluation shortcut in detectIntent (§1b)
+// treats ANY evaluation phrasing as a request to assess the active
+// system. Several of the phrasings it reads carry no system referent of
+// their own — the broad `what do you think` / `what do you make of`
+// entries in SYSTEM_ASSESSMENT_PATTERNS (whose own comment promises an
+// "ownership + subjects gate in detectIntent" that the shortcut never
+// applied) and the bare `assess` / `evaluate` stems in
+// BARE_EVALUATION_PATTERNS. With a saved system attached, every message
+// containing one of them was claimed by system_assessment — including
+// every brand and product question phrased as "what do you think of X".
+//
+// The missing rule: a judgment phrase whose object is a NAMED brand or
+// product is a question about that brand or product. Owning a system
+// does not convert it into a question about the system.
+
+/**
+ * An evaluation phrase together with the head noun of its object, if any:
+ * "what do you think of |the Goldmund|", "assess |the Job integrated|",
+ * "thoughts on |it|". Determiners are consumed so the capture is the noun.
+ * No match at all means the judgment is objectless — "what do you think?",
+ * "tell me what you think", "evaluate".
+ */
+const JUDGMENT_OBJECT_RE = new RegExp(
+  String.raw`\b(?:what\s+do\s+you\s+(?:think|make)\s+(?:of|about)`
+  + String.raw`|thoughts\s+on|opinions?\s+on|tell\s+me\s+about`
+  // "how good is X" must consume the verb, or "is" itself is captured as
+  // the object and "how good is this" reads as concrete (Gate A, 2026-08-11).
+  + String.raw`|how\s+good\s+(?:is|are)|how\s+(?:is|are)`
+  + String.raw`|assess(?:ment\s+of)?|evaluat(?:e|ion\s+of)|review|rate)\s+`
+  + String.raw`(?:(?:the|a|an|my|your|our|their|this|these|those|some|any)\s+)*([\w][\w.&'’/-]*)`,
+  'i',
+);
+
+/**
+ * Object nouns that refer back to the user's system rather than naming
+ * gear — "what do you make of it", "how is everything sounding".
+ */
+const GENERIC_JUDGMENT_OBJECTS = new Set([
+  'it', 'this', 'that', 'these', 'those', 'them', 'they',
+  'everything', 'anything', 'something', 'all', 'both',
+  'system', 'systems', 'setup', 'setups', 'rig', 'rigs', 'chain', 'chains',
+  'gear', 'equipment', 'kit', 'stuff', 'thing', 'things', 'current', 'above',
+]);
+
+/**
+ * Does the evaluation phrase name an object of its own — a brand, a model,
+ * a category — rather than pointing back at the user's system?
+ *
+ * Unresolvable nouns count. "what do you think of blorptronix amps?" is a
+ * question about blorptronix whether or not the catalog knows the name;
+ * the unknown-gear clarification is the honest answer, and an assessment
+ * of the saved system is not.
+ */
+function hasConcreteJudgmentObject(message: string): boolean {
+  const m = JUDGMENT_OBJECT_RE.exec(message);
+  if (!m) return false;
+  return !GENERIC_JUDGMENT_OBJECTS.has(m[1].toLowerCase());
+}
+
+/** Explicit system nouns — "assess my system", "how's this rig". */
+const SYSTEM_REFERENT_RE = /\b(?:system|setup|rig|chain)\b/i;
+
+/** Chain notation — an arrow / plus / interpunct list IS a system. */
+const CHAIN_NOTATION_RE = /(?:→|-{1,3}>|={1,2}>|>{2,3})|\w\s*[+·•]\s*\w/;
+
+/** "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain. */
+const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
+
+/**
+ * Is an evaluation-style request directed at the user's own system, or at
+ * gear the message names?
+ *
+ * True — the request refers to a system:
+ *   • an explicit system noun ("assess my system", "how's this rig")
+ *   • ownership language ("I have X, Y and Z — what do you think?")
+ *   • chain notation ("review: Job integrated · WLM Diva · Eversolo")
+ *   • the judgment has no object, or a generic one ("what do you think?",
+ *     "what do you make of it?") — nothing else it could be about
+ *
+ * False — the judgment names an object of its own and nothing systemic
+ * ("What do you think of Goldmund amps?", "assess the Job integrated").
+ * Those belong to the brand / product lanes, which reach the curated
+ * brand profile and the catalog entry respectively — or, for gear the
+ * catalog does not carry, the unknown-gear clarification.
+ *
+ * Subject resolution is deliberately NOT consulted: whether the catalog
+ * recognises the name must not change what the question is about.
+ */
+function isSystemDirectedEvaluation(message: string): boolean {
+  if (SYSTEM_REFERENT_RE.test(message)) return true;
+  if (OWNERSHIP_PATTERNS.some((p) => p.test(message))) return true;
+  if (CHAIN_NOTATION_RE.test(message)) return true;
+  if ((message.match(ROLE_LABEL_RE) || []).length >= 2) return true;
+  return !hasConcreteJudgmentObject(message);
+}
+
+/**
+ * Preference-reflection patterns — user is asking what their own
+ * listening preferences are (not asking what to buy, not reporting
+ * a symptom). These prompts must NOT fall to the diagnosis default
+ * or the shopping pipeline; they want self-reflection support.
+ *
+ * Homepage promise (2026-05-19): "Audio XX helps you understand
+ * your listening preferences." The four canonical phrasings —
+ *   • "help me understand my listening preferences"
+ *   • "I don't know what kind of sound I like"
+ *   • "What do I seem to value based on my system?"
+ *   • "what do I actually value in a system?"
+ * — plus close variants must route here. Kept narrow on purpose:
+ * the rule fires on meta-questions about preferences, not on
+ * descriptive sonic phrasing like "I prefer warm" (which the
+ * listener-preferences phrase-rules already handle).
+ */
+const PREFERENCE_REFLECTION_PATTERNS = [
+  /\b(?:help\s+me\s+)?(?:understand|identify|figure\s+out|reflect\s+on|articulate|describe)\s+(?:my|what\s+(?:i|my))\s+(?:listening\s+|sonic\s+|sound\s+)?(?:preferences?|tastes?|profile)\b/i,
+  /\b(?:i\s+)?don'?t\s+know\s+what\s+(?:kind\s+of\s+)?sound\s+i\s+like\b/i,
+  /\b(?:i'?m\s+)?not\s+sure\s+what\s+(?:kind\s+of\s+)?sound\s+i\s+like\b/i,
+  /\bwhat\s+do\s+i\s+(?:seem\s+to|actually|really|tend\s+to)\s+value\b/i,
+  /\bwhat\s+do\s+i\s+value\s+(?:in|about)\s+(?:a|my|this|the)\s+(?:system|setup|sound|rig|chain)\b/i,
+  /\bwhat\s+are\s+my\s+(?:listening\s+)?preferences\b/i,
+  /\bwhat(?:'?s|\s+is)\s+my\s+(?:listening\s+)?(?:profile|taste|preferences?)\b/i,
+];
+
 // ── Diagnosis patterns ───────────────────────────────
 // These signal a listening problem or system symptom.
 
 const DIAGNOSIS_PATTERNS = [
+  // Causal-hypothesis form (M5-F8, 2026-08-11): "could my amp be causing
+  // the brightness?" — the user proposes a component as the cause of a
+  // named symptom. Mid-shopping this must pivot to diagnosis; it was
+  // read as a concept question and re-rendered shopping cards.
+  /\b(?:could|might|can)\s+(?:my|the)\s+[\w\s-]{2,24}?\bbe\s+(?:causing|behind|responsible\s+for)\s+(?:the\s+|my\s+|this\s+)?(?:bright|harsh|boom|sibilan|glare|fatigue|mudd|thin|edge|grain|dull|hard)/i,
   /\bmy\s+system\s+sounds?\b/i,
   /\bmy\s+setup\s+(?:sounds?|is|feels?)\b/i,
   /\bsounds?\s+(?:too\s+)?(?:bright|thin|harsh|fatiguing|muddy|dull|veiled|grainy|flat|boring|lifeless|congested|sibilant|dry|sterile|clinical|analytical|cold|hard|brittle|forward|strident|sharp|lean|aggressive)\b/i,
@@ -646,15 +1116,28 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
   // Then check brand names, skip if already matched as product.
   // Also detect parenthetical clarifications like "Job (Goldmund)" —
   // the parenthesized brand is a manufacturer note, not a separate component.
+  //
+  // Plural tolerance (M5-F3b, 2026-08-11): hobbyists pluralize brands —
+  // "the wharfedales", "my dynaudios", "the kefs". A trailing 's' after
+  // the brand counts as a boundary UNLESS the pluralized form is a common
+  // English word (missions, arcs, quads, echoes) — those never match.
+  const AMBIGUOUS_PLURAL_BRANDS = new Set(['mission', 'quad', 'echo', 'arc', 'spring', 'focal']);
   for (const name of BRAND_NAMES) {
     const idx = lower.indexOf(name);
     if (idx === -1) continue;
     if (found.some((f) => f.name === name)) continue;
 
     // Skip brands whose span is already claimed by a product match
-    const end = idx + name.length;
+    let end = idx + name.length;
     if (isSpanClaimed(idx, end)) continue;
-    if (!isWordBoundary(idx, end)) continue;
+    if (!isWordBoundary(idx, end)) {
+      const pluralOk = !AMBIGUOUS_PLURAL_BRANDS.has(name)
+        && lower[end] === 's'
+        && isWordBoundary(idx, end + 1)
+        && !isSpanClaimed(idx, end + 1);
+      if (!pluralOk) continue;
+      end = end + 1;
+    }
 
     // Detect parenthetical context: "(goldmund)" after another brand/product
     const beforeParen = lower.lastIndexOf('(', idx);
@@ -669,7 +1152,38 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     found.push({ name, kind: 'brand', index: idx });
     claimedRanges.push([idx, end]);
   }
-  return found;
+
+  // ── Accessory field-label suppression (field-aware prior) ──
+  // An explicit accessory label — "speaker cables:", "interconnects:",
+  // "power cord:", "USB cable:", "cables:" — asserts that what follows is a
+  // wire/accessory, not a signal-path component. Product/brand tokens inside
+  // that labelled segment must not be promoted to components. The classic
+  // failure is "speaker cables: Canare 4S11G Star Quad", where the token
+  // "Quad" matches the Quad loudspeaker/electronics brand and fabricates a
+  // phantom component. Field labels carry the highest classification prior,
+  // so we drop any match whose position falls inside an accessory segment.
+  // The segment runs from the label to the next chain separator, the next
+  // signal-path field label, or the end of the message. This is deliberately
+  // scoped to *labelled* accessories — unlabelled accessory detection would
+  // need catalog cable knowledge and is out of scope for this fix.
+  const ACCESSORY_LABEL =
+    /\b(?:speaker\s*cables?|spk\s*cables?|interconnects?|power\s*(?:cables?|cords?|leads?)|usb\s*cables?|ethernet\s*cables?|lan\s*cables?|hdmi\s*cables?|digital\s*cables?|coax(?:ial)?\s*cables?|rca\s*cables?|xlr\s*cables?|jumpers?|cabling|cables?)\s*:/gi;
+  const NEXT_BOUNDARY =
+    /(?:→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|,|\s+-\s+|\/|\n|\r|\b(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:)/gi;
+  const accessorySpans: Array<[number, number]> = [];
+  let lm: RegExpExecArray | null;
+  while ((lm = ACCESSORY_LABEL.exec(lower)) !== null) {
+    const spanStart = lm.index + lm[0].length;
+    NEXT_BOUNDARY.lastIndex = spanStart;
+    const nb = NEXT_BOUNDARY.exec(lower);
+    const spanEnd = nb ? nb.index : lower.length;
+    accessorySpans.push([spanStart, spanEnd]);
+  }
+  if (accessorySpans.length === 0) return found;
+  return found.filter((f) => {
+    if (typeof f.index !== 'number') return true;
+    return !accessorySpans.some(([s, e]) => (f.index as number) >= s && (f.index as number) < e);
+  });
 }
 
 function extractSubjects(text: string): string[] {
@@ -1070,6 +1584,51 @@ export function detectIntent(
   const subjects = subjectMatches.map((m) => m.name);
   const desires = extractDesires(currentMessage);
 
+  // 0-pre. Lifestyle-speaker guard (GTM Bug 1, 2026-07-05). Bluetooth /
+  //   portable / smart speaker questions are consumer-product questions
+  //   the component catalog cannot answer — the shopping lane declines
+  //   them (see LIFESTYLE_SPEAKER_PATTERN in shopping-intent.ts) and the
+  //   knowledge lane answers naturally instead of recommending passive
+  //   hi-fi floorstanders. Must fire before every shopping gate below.
+  /*
+   * 0-pre-c. EXPLICIT LIST ASSESSMENT IS AUTHORITATIVE (campaign,
+   * 2026-08-29). "Assess my system: Technics SL-1200MK2 turntable, Schiit
+   * Mani phono stage, …" was being claimed mid-pipeline by topical lanes
+   * (audio_knowledge on the phono/vintage vocabulary; consultation on
+   * zero recognised subjects for all-obscure gear). An assessment verb
+   * applied to a system-noun colon-list IS a system assessment regardless
+   * of which words happen to appear inside the list or whether any brand
+   * is recognised — the graph's unresolved roster and corroboration exist
+   * for exactly the unrecognised case.
+   */
+  if (/\b(?:assess|evaluate|review|rate)\b[^.?!]{0,60}\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage)
+    && /,|\band\b|→|-{1,3}>/i.test(currentMessage)) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
+  if (LIFESTYLE_SPEAKER_PATTERN.test(currentMessage)) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
+  // 0-pre-b. Concept/power/symptom questions (launch gate 2026-07-19).
+  //   These are questions with a KNOWN answer, not shopping or comparison
+  //   requests — and the deterministic lanes were answering them with
+  //   product cards or brand blurbs (MVP review Ds: SM-01/02, TS-01/03,
+  //   UP-07/08). The knowledge lane answers them directly and well:
+  //   - power-match: "can my Nait 50 drive LS3/5a", "is XA25 enough for LRS+"
+  //   - symptom physics: "why is my bass weak", "sounds bright and harsh"
+  //   - upgrade concepts: "is a streamer upgrade audible", "sub or speakers?"
+  //   Scope note: symptom complaints ("my system sounds harsh") stay with
+  //   the diagnosis lane — its complaint map handles bright/harsh with
+  //   named components properly. This gate takes only questions whose
+  //   answer is conceptual, not diagnostic.
+  const CONCEPT_QUESTION_PATTERN =
+    /\bcan\s+(?:my|the|an?)\s+.{0,40}\b(?:drive|power)\b|\benough\s+(?:power\s+)?for\b|\bpower(?:ful)?\s+enough\b|\bwill\s+.{0,30}\bdrive\s+(?:my|the)\b|\bwhy\s+is\s+my\b.{0,40}\b(?:bass|treble)\s+(?:so\s+)?(?:weak|thin|boomy|muddy)\b|\bupgrade\s+(?:be\s+)?(?:audible|noticeable|worth\s+it)\b|\bis\s+an?\s+.{0,30}\bupgrade\s+audible\b|\bshould\s+i\s+(?:add|get)\s+a\s+sub(?:woofer)?\s+or\b|\bis\s+(?:my|the)\s+.{0,40}\b(?:limiting|holding\s+back|bottleneck(?:ing)?)\b/i;
+  if (CONCEPT_QUESTION_PATTERN.test(currentMessage)) {
+    return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
+  }
+
+
   // 0. Priority gate — when a known product is named and the user uses
   //    assessment language ("thoughts on", "what do you think of", "how is",
   //    etc.), force product_assessment BEFORE any other intent can intercept.
@@ -1095,8 +1654,70 @@ export function detectIntent(
   const isLikelyShopping = earlyBudgetSignal && earlyCategorySignal;
   // Comparison escape hatch: "what about X vs Y" is a comparison, not an assessment.
   const isLikelyComparison = /\bvs\.?\b/i.test(currentMessage) && subjectMatches.length >= 2;
-  if (hasProductAssessmentPattern && (hasProductSubject || hasBrandSubject) && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
+  // A product assessment requires a PRODUCT. `hasBrandSubject` used to satisfy
+  // this gate on its own, so "tell me about shindo" — a brand, with no model
+  // named — was assessed as though "the Shindo" were a device: a spec subtitle,
+  // and prose placing it "in that family". Worse, page.tsx blocks
+  // product_assessment from the consultation path, so claiming the turn here
+  // made the curated brand profile in `buildBrandConsultation` unreachable by
+  // construction. Bare brands fall through to the brand lane, which already
+  // handles them correctly.
+  //
+  // A brand match still counts when the message ALSO names a model — "thoughts
+  // on the pass labs int-25" is a product assessment even though the catalog
+  // carries Pass Labs but not the INT-25. Model designations mix letters and
+  // digits (INT-25, SIT-3, A700, H390); brand names do not. Model names that
+  // are words or roman numerals (Sabrina, Heresy IV) are already caught by the
+  // catalog product match above, so this only has to separate "brand + model"
+  // from "brand alone".
+  const namesSpecificModel = currentMessage
+    .replace(/\$\s?\d[\d,.]*k?/gi, '') // prices are not model designations
+    .split(/[\s,;()]+/)
+    .some((token) => /\d/.test(token) && /[a-z]/i.test(token));
+  const hasAssessableProduct = hasProductSubject || (hasBrandSubject && namesSpecificModel);
+  if (hasProductAssessmentPattern && hasAssessableProduct && !isLikelySystemEval && !isLikelyShopping && !isLikelyComparison) {
     return { intent: 'product_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 0a. Unknown-product assessment (P1 fix, 2026-05-18):
+  //     When the user uses an assessment trigger phrase ("thoughts on
+  //     X", "what do you think of X", "tell me about X", "is X a good
+  //     fit", etc.) AND a product-candidate noun follows (Capitalized
+  //     brand word or alphanumeric model identifier), route to
+  //     product_assessment EVEN IF the product is not in the catalog.
+  //
+  //     Why this matters: a saved-system context attached to the
+  //     session previously caused these prompts to fall through into
+  //     system_assessment / diagnosis, producing a generic diagnosis
+  //     of the saved system instead of addressing the named product.
+  //
+  //     A synthesized subjectMatch carrying the raw candidate name is
+  //     attached so the downstream safety-check at page.tsx:2473 can
+  //     emit the hedged "I don't have full catalog data on that
+  //     specific model yet" clarification grounded in the actual name
+  //     the user typed.
+  if (
+    hasProductAssessmentPattern
+    && !hasProductSubject
+    && !hasBrandSubject
+    && !isLikelySystemEval
+    && !isLikelyShopping
+    && !isLikelyComparison
+    && looksLikeProductCandidate(currentMessage)
+  ) {
+    const candidate = extractProductCandidateName(currentMessage);
+    if (candidate) {
+      const syntheticMatch: SubjectMatch = {
+        name: candidate,
+        kind: 'product',
+      };
+      return {
+        intent: 'product_assessment',
+        subjects: [candidate],
+        subjectMatches: [syntheticMatch],
+        desires,
+      };
+    }
   }
 
   // 0f. Refinement escape — short preference-shift messages like "make it warmer"
@@ -1110,6 +1731,18 @@ export function detectIntent(
   //     that case and let the message fall through to the diagnosis
   //     default — page.tsx will then route it to the active-system
   //     tuning handler (which uses the saved chain as context).
+  /*
+   * AUDITION IS SHOPPING VOCABULARY (Nathan beta, 2026-08-28). "What modern
+   * amplifier should I audition against the Butler?" classified as
+   * audio_knowledge and the conversation then triaged it as a FAULT report
+   * ("is it distorting, running hot…"). A request to audition, shortlist or
+   * hear candidates is a request to find products — the shopping lane, with
+   * the assessment as its reasoning context, is the designed home for it.
+   */
+  if (/\b(?:audition|shortlist|short-list)\b|\bcandidates?\s+to\s+(?:hear|try|consider)\b|\bdemo\b[^.?]{0,30}\bagainst\b/i.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
   const REFINEMENT_ESCAPE = /\b(?:(?:make\s+it\s+)?(?:warmer|brighter|smoother|punchier|cheaper)|more\s+(?:detail(?:ed)?|transparent|resolving|spacious|dynamic|relaxed|lush|forgiving|air(?:y|ier)?|body|warmth|clarity|impact|energy|punch|expensive)|less\s+(?:bright|harsh|aggressive|fatiguing|expensive)|richer|cleaner|higher\s+end|better\s+(?:for|with)\s+my\s+system|fit\s+my\s+system)\b/i;
   if (currentMessage.length < 60 && REFINEMENT_ESCAPE.test(currentMessage) && !options.hasActiveSavedSystem) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
@@ -1146,6 +1779,19 @@ export function detectIntent(
     return { intent: 'diagnosis', subjects, subjectMatches, desires };
   }
 
+  // 1a. Preference reflection — user asks a meta-question about their own
+  //     listening preferences ("help me understand my listening preferences",
+  //     "what do I actually value", "I don't know what kind of sound I like").
+  //     Fires after the explicit-diagnosis check so real symptom language
+  //     still wins, but before system_assessment / consultation_entry /
+  //     the diagnosis fallback default. Without this, the homepage promise
+  //     ("Audio XX helps you understand your listening preferences") had
+  //     no honest path — these phrasings fell to the diagnosis default and
+  //     produced "what's wrong with your sound?" framing.
+  if (PREFERENCE_REFLECTION_PATTERNS.some((p) => p.test(currentMessage))) {
+    return { intent: 'preference_reflection', subjects, subjectMatches, desires };
+  }
+
   // 1b. System assessment — user describes their system and asks for evaluation
   //     Requires explicit assessment language + ownership language + multiple subjects.
   //     This must fire before comparison to prevent "I have X, Y, and Z" from
@@ -1165,9 +1811,79 @@ export function detectIntent(
   // Without this, "assess my system" / "evaluate the saved system" /
   // "tell me what you think" fall through to consultation_entry and the
   // user gets asked to re-describe components they've already saved.
+  //
+  // Guarded by isSystemDirectedEvaluation (2026-08-10): owning a system
+  // must not convert a question about named gear into a question about
+  // the system. "What do you think of Goldmund amps?" carries evaluation
+  // phrasing but names a brand and nothing systemic — it falls through to
+  // the brand lane at §5 instead of being answered with an assessment of
+  // the saved system.
   if (
     options.hasActiveSavedSystem
     && (hasAssessmentLanguage || hasBareEvaluation)
+    && isSystemDirectedEvaluation(currentMessage)
+  ) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 1b-advice. Advice/capability questions that NAME ≥2 components must
+  // never become brand-vs-brand comparisons or bare intake. "Should I
+  // upgrade my DAC or my amplifier? I have X, Y, Z" names components,
+  // so the comparison gate below eats it and answers a question the
+  // user didn't ask (Launch QA UP-01–04, SM-01: the second-largest 🔴
+  // class). Allocation and power-match questions are system reasoning;
+  // route to system_assessment. "X vs Y" and "upgrade from X to Y"
+  // phrasings are genuine comparisons and don't match these patterns.
+  // Must fire before the bare upgrade-followup gate below, which is for
+  // subject-less follow-ups.
+  const ADVICE_QUESTION_PATTERNS = [
+    /\bshould\s+i\s+upgrade\s+(?:my|the)\b(?![^?]*\bfrom\b)/i,
+    /\bweakest\s+link\b/i,
+    /\bwhere\s+should\s+i\s+(?:spend|put|invest)\b/i,
+    /\bshould\s+i\s+(?:just\s+)?keep\s+what\s+i\s+have\b/i,
+    /\bcan\s+my\s+.{2,40}\b(?:drive|power)\b/i,
+    /\benough\s+power\s+(?:for|to\s+drive)\b/i,
+    /\bupgrade\s+(?:my\s+)?\w+\s+or\s+(?:my\s+)?\w+\s+first\b/i,
+  ];
+  if (
+    ADVICE_QUESTION_PATTERNS.some((p) => p.test(currentMessage))
+    && subjectMatches.length >= 2
+  ) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
+  // 1b-judgment. System-judgment phrasings WITH components present
+  // (Mission 4, 2026-08-10). "is my system balanced" / "does anything need
+  // changing" alongside ≥2 named components — typically a reunited
+  // pending-clarification answer ("amp is X, speakers are Y, source is Z.
+  // is my system balanced") — is an assessment request. Deliberately a
+  // standalone gate rather than SYSTEM_ASSESSMENT_PATTERNS: the shared
+  // hasAssessmentLanguage flag also feeds the consultation-entry gate (1c),
+  // and bare judgment prompts (no components) must keep falling through to
+  // the diagnosis path's "what components are in your system?" ask.
+  const SYSTEM_JUDGMENT_PATTERNS = [
+    /\bis\s+(?:my|this|the)\s+(?:current\s+)?(?:system|setup|rig|chain)\s+(?:balanced|coherent|well[\s-]?matched|well[\s-]?balanced)\b/i,
+    // "does" optional (D7, 2026-08-11): the elliptical "anything need
+    // changing?" after a component list missed this gate, fell to
+    // gear_inquiry, and was answered by a symptom-assuming builder —
+    // on exactly the shape where restraint should have spoken.
+    /\b(?:does\s+)?anything\s+need\s+(?:changing|upgrading|improving|fixing|replacing)\b/i,
+    // Synergy judgments (Mission 4B): "how does it hang together?",
+    // "do they work well together?", "are these a good match?"
+    /\bhow\s+(?:does|do)\s+(?:it|this|that|they|these|everything)\s+(?:all\s+)?(?:hang|work|fit|go|play)\s+together\b/i,
+    /\bdo\s+(?:they|these)\s+(?:all\s+)?(?:work|play|go|fit)\s+(?:well\s+|nicely\s+)?together\b/i,
+    /\bare\s+(?:they|these)\s+a\s+good\s+match\b/i,
+    // "…, all good?" / "is that a decent little system" (saturation
+    // cohort, 2026-08-11) — colloquial judgment closers after a
+    // component list; the subjects>=2 gate below keeps bare "all good?"
+    // out of assessment.
+    /\ball\s+good\s*\?/i,
+    /\bis\s+(?:that|this)\s+a\s+(?:good|solid|decent|sensible)\s+(?:\w+\s+){0,2}(?:system|setup|rig|chain|combo|pairing)\b/i,
+  ];
+  if (
+    SYSTEM_JUDGMENT_PATTERNS.some((p) => p.test(currentMessage))
+    && subjectMatches.length >= 2
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
   ) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
@@ -1180,22 +1896,104 @@ export function detectIntent(
   if (
     hasUpgradeFollowUp
     && (options.hasActiveSavedSystem || hasOwnership)
+    // M5-F7 (2026-08-11): a message that CARRIES the system alongside the
+    // upgrade question ("my system: X, Y, Z. what should I replace
+    // first?") must reach the assessment lane — consultation_entry's
+    // handler asked for the components the message just listed. Bare
+    // direction follow-ups (no inline components) keep this gate.
+    && subjectMatches.length < 2
   ) {
     return { intent: 'consultation_entry', subjects, subjectMatches, desires };
   }
-  const hasPlusChain = /\w\s*\+\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
-  // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels signal a system chain.
-  const ROLE_LABEL_RE = /\b(?:speakers?|amp(?:lifier)?|dac|streamer|turntable|preamp|pre-amp|source|headphones?|integrated)\s*:/ig;
+  if (hasUpgradeFollowUp && subjectMatches.length >= 2 && hasOwnership) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+  // Interpunct (·) and bullet (•) are list separators in pasted system
+  // descriptions (the saved-system chip renders components with " · ",
+  // so users naturally paste that form back — beta observation 2026-08-03).
+  const hasPlusChain = /\w\s*[+·•]\s*\w/.test(currentMessage) && subjectMatches.length >= 2;
+  // Prose chains (saturation cohort, 2026-08-11): "my rig is a bluesound
+  // node into a hegel h390 into kef r3" extracted all three components
+  // yet was answered with "What components are in your system?" — the
+  // signal-path connectors (into/driving/feeding/through) were not chain
+  // notation. Two connectors (a 3-stage chain) are required so a single
+  // incidental "into" ("I'm into jazz") never counts.
+  const hasProseChain = subjectMatches.length >= 2
+    && /\b(?:into|driving|feeding|through)\b[\s\S]{0,60}\b(?:into|driving|feeding|through)\b/i.test(currentMessage);
+  // Labeled-role format: "speaker: X - amp: Y - dac: Z" — 2+ role labels
+  // signal a system chain. ROLE_LABEL_RE is module-level so this and
+  // isSystemDirectedEvaluation cannot drift apart.
   const hasLabeledRoleChain = ((currentMessage.match(ROLE_LABEL_RE) || []).length >= 2);
-  const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain;
-  if (hasAssessmentLanguage && hasOwnership && subjectMatches.length >= 2) {
+  const hasChainSeparator = hasArrowChain || hasPlusChain || hasLabeledRoleChain || hasProseChain;
+  /*
+   * NATHAN BETA (2026-08-28): "Assess my dCS Rossini Apex, ARC Ref 5,
+   * Butler Monads and Acora QRC-2" — an assessment verb applied to an OWNED
+   * LIST of components — never matched SYSTEM_ASSESSMENT_PATTERNS because
+   * every assess-pattern requires the word system/setup/rig/chain. A listener
+   * who names the boxes instead of saying "system" is asking for exactly the
+   * same thing. The verb must govern the listener's own gear (ownership) and
+   * more than one component; "assess the JOB integrated" stays a product
+   * assessment, and comparisons were claimed earlier.
+   */
+  // Ownership patterns name category words ("my amp") and the word
+  // "system"; a possessive applied directly to a NAMED product ("my dCS
+  // Rossini Apex") is ownership of exactly the same kind.
+  const possessiveOnSubject = subjectMatches.some((m) =>
+    typeof m.index === 'number'
+    && /\b(?:my|our)\s+$/i.test(currentMessage.slice(Math.max(0, (m.index as number) - 6), m.index as number)));
+  const owns = hasOwnership || possessiveOnSubject;
+  const assessVerbOnOwnedList = /\b(?:assess|evaluate|review|rate|critique)\b/i.test(currentMessage)
+    && owns && subjectMatches.length >= 2;
+  if ((hasAssessmentLanguage || assessVerbOnOwnedList) && owns && subjectMatches.length >= 2) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
   // Assessment language + chain notation (+ or →) with 2+ components implies system
   // evaluation even without explicit ownership ("how's this system?" is sufficient).
-  if (hasAssessmentLanguage && hasChainSeparator && subjectMatches.length >= 2) {
+  //
+  // Component count uses chain SEGMENTS, not resolved subjects (Mission 4,
+  // 2026-08-10): "feliks audio envy + klipsch cornwall iv — what do you
+  // think of this system?" resolves only the brand "klipsch" (both models
+  // uncatalogued), so a resolved-subject count let the brand-consultation
+  // path claim the turn and answer with Klipsch's representative product —
+  // a confident Heresy IV essay for a user who asked about the Cornwall IV.
+  // The chain notation itself asserts how many components the user listed;
+  // buildSystemAssessment's validation handles the unresolved ones honestly
+  // (components ask → reunited answer → provisional assessment).
+  // (hasPlusChain itself requires ≥2 resolved subjects, so the segment
+  // count is computed from the raw chain punctuation instead.)
+  const hasChainPunct = /\w\s*[+·•]\s*\w/.test(currentMessage) || hasArrowChain;
+  const chainSegmentCount = hasChainPunct
+    ? currentMessage.split(/[+·•→]|-{1,3}>|={1,2}>|>{2,3}/).map((s) => s.trim()).filter((s) => /[a-z]/i.test(s)).length
+    : 0;
+  if (hasAssessmentLanguage && (hasChainSeparator || chainSegmentCount >= 2)
+    && (subjectMatches.length >= 2 || chainSegmentCount >= 2)) {
     return { intent: 'system_assessment', subjects, subjectMatches, desires };
   }
+  /*
+   * Comma lists after an explicit assessment request (convergence pass,
+   * 2026-08-26). "Assess my system: Zorblax ZX-1 streamer, Quuxamp 9
+   * amplifier, Blorp Minis speakers." carries no chain punctuation and
+   * resolves no subjects when every product is uncatalogued — so the
+   * explicit request fell through consultation_entry into the knowledge
+   * lane, which INVENTED reputations for products that do not exist
+   * ("the Zorblax ZX-1 is known for its highly resolving nature").
+   *
+   * The routing doctrine runs the other way: an explicit assessment request
+   * over a listed chain is a typed constraint on the turn. How little
+   * Audio XX knows about the listed components is the assessment lane's
+   * finding to report honestly — never a reason to change lanes into one
+   * that will guess. Same principle as the chain-segment count above: the
+   * LIST asserts how many components the user named, whether or not any
+   * of them resolves.
+   */
+  const listAfterColon = /(?:system|setup|rig|chain)\s*[:\-\u2013\u2014]\s*(.+)$/is.exec(currentMessage);
+  const commaSegments = listAfterColon
+    ? listAfterColon[1].split(/[,;]/).map((x) => x.trim()).filter((x) => /[a-z]/i.test(x) && x.length > 2)
+    : [];
+  if (hasAssessmentLanguage && hasOwnership && commaSegments.length >= 2) {
+    return { intent: 'system_assessment', subjects, subjectMatches, desires };
+  }
+
   // Ownership + chain separator + 2+ subjects implies system presentation.
   // "here's my system: dac: X - amp: Y - speakers: Z" — the act of presenting
   // a multi-component chain with ownership language is itself an assessment request,
@@ -1311,7 +2109,10 @@ export function detectIntent(
   //     This prevents vague-looking but actually decisive queries from being
   //     caught by the broader intake patterns below.
   const hasPurchaseVerb = /\b(?:buy|purchase|shop\s+for|shopping\s+for|pick\s+up|pick\s+out|recommend|suggest|interested\s+in|need\s+(?:a\s+)?(?:new|better|different|another|upgraded?))\b/i.test(currentMessage);
-  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
+  // IEMs / earphones / earbuds were missing here while "headphones" was
+  // present — the same product class, so a purchase verb aimed at them fell
+  // through to the knowledge lane (founder-reported, 2026-08-13).
+  const hasCategoryTarget = /\b(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
   if (hasPurchaseVerb && hasCategoryTarget) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
@@ -1344,6 +2145,25 @@ export function detectIntent(
   //     pipeline can ask for budget/preferences rather than diagnosing.
   const bareCategory = /^\s*(?:a\s+|an?\s+|the\s+|some\s+|new\s+)?(?:dac|d\/a|amp|amplifier|integrated|speakers?|headphones?|turntable|streamer|receiver|bookshelf|floorstander|subwoofer|preamp|power\s*amp|iems?|earphones?|earbuds?|cans|stereo|hi-?fi|hifi)\s*[?.!]?\s*$/i;
   if (bareCategory.test(currentMessage)) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
+  // 3c. Qualified category request — "cheap iems", "what about budget
+  //     headphones?", "any good speakers?". A price or quality adjective in
+  //     front of a category is still a category request, and CLAUDE.md's
+  //     invariant is explicit: a stated category overrides the previous
+  //     subject. Without this, "what about cheap iems?" after an assessment
+  //     was classified audio_knowledge and the knowledge lane simply carried
+  //     the previous subject forward — the user asked about IEMs and was
+  //     told "Still with DMP-A6" (founder-reported, 2026-08-13).
+  //
+  //     Deliberately narrow: the category must be a BARE class noun. A named
+  //     product ("what about the Chord Hugo?") or a possessive ("what about
+  //     my amp?") is a question about that thing, not a shopping request,
+  //     and must keep routing as before.
+  const qualifiedCategory =
+    /^\s*(?:(?:so\s+)?(?:what|how)\s+about\s+|any\s+|got\s+any\s+)?(?:some\s+|a\s+|an\s+)?(?:cheap|budget|affordable|inexpensive|entry[- ]?level|good|best|decent|nice|better|cheaper)\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|integrateds?|speakers?|headphones?|iems?|earphones?|earbuds?|in[- ]?ears?|turntables?|streamers?|receivers?|subwoofers?|preamps?|cans)(?:\s+(?:please|pls|plz|thanks|thanx|thx))?\s*[?.!]*\s*$/i;
+  if (qualifiedCategory.test(currentMessage)) {
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
@@ -1388,6 +2208,26 @@ export function detectIntent(
     if (hasComplaintAdjective && hasSoftComplaint) {
       return { intent: 'diagnosis', subjects, subjectMatches, desires };
     }
+  }
+
+  // 4d. Brand-exclusion turns are shopping refinements (M5-F3,
+  //   2026-08-11): "not the wharfedales, my brother has those" fell to
+  //   the knowledge lane (the pluralized brand missed subject
+  //   extraction) and "no klipsch please" reached the refinement path
+  //   as a positive brand subject — the rejection BOOSTED the rejected
+  //   brand. Rejecting a recommendation is a hard constraint on the
+  //   active shopping frame; extractBrandExclusions is the same
+  //   brand-aware detector the pipeline consumes, so routing and
+  //   filtering agree. Interrogative guard: "should I avoid harbeth?"
+  //   is a question about avoidance, not a directive — it stays with
+  //   the gear lanes. Fires before the gear-inquiry catch-all so
+  //   subject-bearing exclusions are not claimed as brand inquiries.
+  if (
+    extractBrandExclusions(currentMessage).length > 0
+    && !/\bshould\s+i\b|\bwhy\b|\bdo\s+i\s+(?:need|have)\b|\bworth\s+avoid/i.test(currentMessage)
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
   // 5. Gear inquiry — "what do you think of X?" or brand mention
@@ -1481,14 +2321,74 @@ export function detectIntent(
     return { intent: 'shopping', subjects, subjectMatches, desires };
   }
 
-  // 7. Default — treat as diagnostic / open-ended listening discussion
-  return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  // 6f. Category + parseable budget → shopping (Mission 3, 2026-08-10).
+  //     Colloquial price language ("speakers around 1.5k", "i can spend
+  //     2000 on speakers", "about 2500 for an integrated amp") carries
+  //     an unambiguous purchase frame even when no shopping keyword
+  //     matched above. Delegate money-recognition to parseBudgetAmount —
+  //     the single authority the shopping pipeline itself uses — instead
+  //     of duplicating its phrasing table here. Placed after every
+  //     diagnosis gate so complaints keep diagnosis priority.
+  const lateCategoryTarget = /\b(?:dacs?|d\/a|amps?|amplifiers?|integrated|speakers?|headphones?|turntables?|streamers?|receivers?|bookshelfs?|floorstanders?|subwoofers?|preamps?|power\s*amps?|iems?|stereo|hi-?fi|hifi|audio\s+system)\b/i.test(currentMessage);
+  if (
+    lateCategoryTarget
+    && !DIAGNOSIS_PATTERNS.some((p) => p.test(currentMessage))
+    && parseBudgetAmount(currentMessage) !== null
+  ) {
+    return { intent: 'shopping', subjects, subjectMatches, desires };
+  }
+
+  // 7. Default. Diagnosis is only the right default when the message
+  //    actually describes a listening problem, or when the user has an
+  //    active saved system (page.tsx routes the diagnosis default to the
+  //    active-system tuning handler — see the 0f guard above).
+  //
+  //    Everything else reaching this point is an unresolved general
+  //    question — beginner, philosophy, opinion, or vague natural asks.
+  //    Routing those to symptom triage was the benchmark's single
+  //    largest failure class (Launch QA 2026-07-02: 12 of 39 🔴,
+  //    "the diagnosis black hole" — 'Do cables actually matter?' was
+  //    answered with "does it sound thin, digital, fatiguing?").
+  //    Route them to the knowledge lane, which answers first.
+  const hasSymptomLanguage =
+    /\b(?:dry|bright|thin|harsh|lean|cold|sterile|clinical|hard|forward|fatiguing|fatigue|aggressive|muddy|dull|veiled|grainy|boring|lifeless|congested|sibilant|brittle|strident|hum(?:ming)?|buzz(?:ing)?|hiss(?:ing)?|distort\w*|crackl\w*|rattl\w*|drop\s*outs?|problem|issue|wrong|weird|broken|headaches?)\b/i.test(currentMessage)
+    || /\bsounds?\s+(?:bad|off|strange|worse)\b/i.test(currentMessage)
+    // "too <sonic adjective>" complaints — scoped to sonic vocabulary so
+    // "too big" / "too expensive" remain general questions.
+    || /\b(?:too|overly)\s+(?:warm|bright|dark|metallic|sharp|soft|smooth|thick|heavy|light|boomy|bassy|edgy|analytical|loud|quiet|muffled|hot|glassy|splashy|tizzy|honky|nasal|boxy|shouty|syrupy|relaxed|polite)\b/i.test(currentMessage)
+    || /\bnot\s+balanced\b/i.test(currentMessage)
+    || /\b(?:could|should)\s+sound\s+better\b/i.test(currentMessage);
+  if (hasSymptomLanguage || options.hasActiveSavedSystem) {
+    return { intent: 'diagnosis', subjects, subjectMatches, desires };
+  }
+  return { intent: 'audio_knowledge', subjects, subjectMatches, desires };
 }
 
 /**
  * Returns true if all subject matches are brand-level (no specific products).
  * Used to distinguish brand comparisons from product comparisons.
  */
+/**
+ * D12 (2026-08-11): should a gear-directed turn escape an active
+ * diagnosis lock? A QUESTION about named gear ("someone offered me a
+ * pass labs xa25, tempting?") is a topic change the lock must release;
+ * context-enrichment statements ("my dac is a topping") and bare
+ * component names answering the triage stay locked. Third application
+ * of explicit-subject-wins: saved-system §1b, the shopping lock (D9),
+ * the diagnosis lock (here).
+ */
+export function isGearQuestionEscape(
+  text: string,
+  intent: UserIntent,
+  subjectCount: number,
+): boolean {
+  return (intent === 'product_assessment' || intent === 'gear_inquiry')
+    && subjectCount > 0
+    && /\?/.test(text)
+    && text.trim().split(/\s+/).length > 2
+    && detectContextEnrichment(text) === null;
+}
+
 export function isBrandOnlyComparison(matches: SubjectMatch[]): boolean {
   return matches.length >= 2 && matches.every((m) => m.kind === 'brand');
 }
@@ -1509,6 +2409,19 @@ const COMPARISON_FOLLOWUP_PATTERNS = [
   /\bwith\s+(?:tubes?|solid[- ]state|low[- ]power|high[- ]power|a\s+\w+\s+amp)\b/i,
   /\bwhich\s+(?:one|is|has|would|should|do)\b/i,
   /\band\s+(?:what|how)\s+about\b/i,
+  // Trade-off / consequence / challenge follow-ups (D3, 2026-08-11):
+  // "what am I giving up with the harbeth?" during an active comparison
+  // was consumed as comparison INTAKE ("Got it — one down"). These
+  // phrasings question the established pair; they never name a new one.
+  // Safe breadth: this list is only consulted when an active comparison
+  // exists and the message introduces no new subjects.
+  /\bgiving\s+up\b/i,
+  /\bwhat\s+do\s+i\s+lose\b/i,
+  /\btrade[- ]?offs?\b/i,
+  /\bdownsides?\b/i,
+  /\bwhy\s+(?:that|this)\s+one\b/i,
+  /^\s*why\s*\??\s*$/i,
+  /\bare\s+you\s+sure\b/i,
 ];
 
 /**
@@ -1710,15 +2623,42 @@ export function isConsultationFollowUp(
     return true;
   }
 
+  // Pronoun fit question (D5, 2026-08-11): "would IT work with MY x?"
+  // names the active subject via the pronoun; gear after an ownership
+  // marker is the user's system context — exactly what
+  // buildConsultationFollowUp grounds fit answers in. Without this,
+  // "would it work with my harbeth p3esr?" after a Leben CS600 card was
+  // read as a topic change to the P3ESR: the pronoun's referent was
+  // dropped and the OWNED speaker was assessed as the candidate product.
+  // need/require/come-with added 2026-08-11 (saturation cohort): "does it
+  // need a separate phono stage?" after a Planar 3 card fell to the
+  // generic knowledge lane instead of answering for the Planar 3.
+  const PRONOUN_FIT_RE = /\b(?:would|will|does|do|can|could|how\s+(?:would|does|will))\s+(?:it|this|that|they|these)\s+(?:work|pair|fit|sound|match|play|drive|behave|perform|need|require|come\s+with|be\s+(?:overkill|too\s+much|enough|wasted|a\s+good\s+match))\b/i;
+  const isPronounFit = PRONOUN_FIT_RE.test(text);
+
   // Check if message introduces new, unrelated subjects
   const newMatches = extractSubjectMatches(text);
   if (newMatches.length > 0) {
     const activeNames = new Set(
       activeConsultation.subjects.map((s) => s.name.toLowerCase()),
     );
-    const hasNewSubject = newMatches.some((m) => !activeNames.has(m.name.toLowerCase()));
+    // A subject preceded by an ownership marker ("my …", "with my … ")
+    // is context the user supplied, not a new topic. Only meaningful in
+    // the pronoun-fit shape — a bare "my hegel h390?" question elsewhere
+    // still changes topic through the normal gate below.
+    const lower = text.toLowerCase();
+    const isOwnershipContext = (m: SubjectMatch): boolean => {
+      const idx = m.index ?? lower.indexOf(m.name.toLowerCase());
+      if (idx < 0) return false;
+      return /\bmy\s+[\w/-]*\s*$/.test(lower.slice(Math.max(0, idx - 24), idx));
+    };
+    const hasNewSubject = newMatches.some(
+      (m) => !activeNames.has(m.name.toLowerCase()) && !(isPronounFit && isOwnershipContext(m)),
+    );
     if (hasNewSubject) return false; // Topic changed
   }
+
+  if (isPronounFit) return true;
 
   // Check follow-up patterns
   if (CONSULTATION_FOLLOWUP_PATTERNS.some((p) => p.test(text))) {
@@ -1904,7 +2844,12 @@ export function extractShortlistBudget(text: string): number | null {
 // These are preference signals, not gear questions.
 
 const MUSIC_INPUT_PATTERNS: RegExp[] = [
-  /\bi\s+(?:listen\s+to|like|love|enjoy|play)\s+/i,
+  // Negative lookahead (M5-F1, 2026-08-11): the liked OBJECT must not be
+  // the user's gear — "I like my system but I wonder if I could do
+  // better" was read as music taste, arming the listening-path flow that
+  // then consumed the next turn's stated components with "headphones,
+  // speakers, or both?". Gear affection is not a genre.
+  /\bi\s+(?:listen\s+to|like|love|enjoy|play)\s+(?!(?:my|this|the)\s+(?:system|setup|rig|gear|sound|amp(?:lifier)?|dac|speakers?|headphones?|streamer|turntable)\b|it\b)/i,
   /\b(?:mostly|mainly|primarily)\s+(?:listen|into)\b/i,
   /\bmy\s+(?:music|listening)\s+is\s+(?:mostly|mainly|primarily)\b/i,
   /\bi(?:'m| am)\s+(?:into|a fan of|really into)\s+/i,
@@ -2001,6 +2946,14 @@ export function respondToListeningPath(path: ListeningPath, fromScratch?: boolea
   return 'No problem. Are you mostly using headphones, speakers, or a bit of both?';
 }
 
+/**
+ * The generic no-match response from respondToMusicInput. Exported so the
+ * dispatcher can detect that the music matcher recognised nothing — the
+ * signal that the message probably wasn't a music description at all and
+ * should fall through to the knowledge lane (GTM Phase 4 empty-turn guard).
+ */
+export const MUSIC_INPUT_FALLBACK = 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
+
 export function respondToMusicInput(message: string): string {
   const lower = message.toLowerCase();
 
@@ -2036,7 +2989,7 @@ export function respondToMusicInput(message: string): string {
   }
 
   // Fallback — we know it's music-related but can't classify further
-  return 'Got it — all kinds of music. Are you listening on headphones, speakers, or something else?';
+  return MUSIC_INPUT_FALLBACK;
 }
 
 // ── Onboarding query synthesis ─────────────────────────────────────────────────

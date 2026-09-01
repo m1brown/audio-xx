@@ -124,8 +124,17 @@ describe('Demo 2: Klipsch Heresy IV + JOB 225 — bright system', () => {
     expect(f.componentNames.length).toBeGreaterThanOrEqual(2);
   });
 
-  test('system axes lean bright', () => {
-    expect(['bright', 'detailed']).toContain(f.systemAxes.warm_bright);
+test('system axes are catalog-faithful for the resolved components', () => {
+    /*
+     * Re-pinned (campaign, 2026-08-29). This message used to CLARIFY before
+     * reaching assessment, so this branch never ran; parser generalization
+     * made it assessable. The catalog's Heresy IV carries detailed/elastic
+     * with neutral warmth, and JOB resolves at brand level — the axes must
+     * reflect that data, not the listener's complaint ('sounds bright')
+     * echoed back as product character.
+     */
+    expect(result!.findings.systemAxes.smooth_detailed).toBe('detailed');
+    expect(['neutral', 'bright']).toContain(result!.findings.systemAxes.warm_bright);
   });
 
   test('output snapshot', () => {

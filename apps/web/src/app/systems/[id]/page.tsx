@@ -1,222 +1,168 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+/**
+ * Saved system (M3) — one enduring collection entry, with its
+ * assessment history.
+ *
+ * The distinction this page keeps sharp: the SYSTEM is the user's
+ * lasting entry (name, chain, notes); each ASSESSMENT is a dated
+ * reading of it at a particular moment and engine version. The latest
+ * assessment leads; earlier assessments remain one quiet list below,
+ * each opening exactly as it was originally saved.
+ */
+import React from 'react';
 import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { getUserId } from '@/lib/session';
+import { getSavedSystem } from '@/product/save-system';
+import SystemMeta from './SystemMeta';
 
-interface Component {
-  id: string;
-  name: string;
-  brand: string;
-  category: string;
-  confidenceLevel: string;
-  isReference: boolean;
+export const dynamic = 'force-dynamic';
+
+const INK = '#1B1A18';
+const MUTED = '#6B6862';
+const FAINT = '#9E9A93';
+const HAIRLINE = 'rgba(27, 26, 24, 0.14)';
+const ACCENT = '#A8231B';
+
+const caps: React.CSSProperties = {
+  fontFamily: 'var(--face-grotesque)',
+  fontSize: '0.65rem',
+  fontWeight: 600,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: MUTED,
+};
+
+const quietLink: React.CSSProperties = {
+  ...caps,
+  color: MUTED,
+  borderBottom: `1px solid ${HAIRLINE}`,
+  paddingBottom: '1px',
+  textDecoration: 'none',
+};
+
+function longDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-interface SystemComponent {
-  id: string;
-  componentId: string;
-  roleOverride: string | null;
-  notes: string | null;
-  addedAt: string;
-  actionLog: string;
-  component: Component;
-}
+export default async function SavedSystemPage({ params }: { params: Promise<{ id: string }> }) {
+  const userId = await getUserId();
+  if (!userId) redirect('/auth/signin');
+  const { id } = await params;
 
-interface Snapshot {
-  id: string;
-  inputText: string;
-  createdAt: string;
-}
-
-interface SystemData {
-  id: string;
-  name: string;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  components: SystemComponent[];
-  snapshots: Snapshot[];
-}
-
-export default function SystemDetail() {
-  const params = useParams();
-  const router = useRouter();
-  const [system, setSystem] = useState<SystemData | null>(null);
-  const [showAddComponent, setShowAddComponent] = useState(false);
-  const [catalogComponents, setCatalogComponents] = useState<Component[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [manualMode, setManualMode] = useState(false);
-  const [manual, setManual] = useState({ name: '', brand: '', category: 'speakers' });
-
-  useEffect(() => { loadSystem(); }, [params.id]);
-
-  async function loadSystem() {
-    const res = await fetch(`/api/systems/${params.id}`);
-    if (res.ok) setSystem(await res.json());
-    else router.push('/systems');
+  let system;
+  try {
+    system = await getSavedSystem(prisma, userId, id);
+  } catch {
+    system = null;
   }
+  if (!system) notFound();
 
-  async function searchCatalog(q: string) {
-    setSearchQuery(q);
-    if (q.length < 2) { setCatalogComponents([]); return; }
-    const res = await fetch(`/api/components?q=${encodeURIComponent(q)}`);
-    if (res.ok) setCatalogComponents(await res.json());
-  }
-
-  async function addFromCatalog(componentId: string) {
-    await fetch(`/api/systems/${params.id}/components`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ componentId }),
-    });
-    setShowAddComponent(false);
-    setSearchQuery('');
-    loadSystem();
-  }
-
-  async function addManual() {
-    const compRes = await fetch('/api/components', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(manual),
-    });
-    if (!compRes.ok) return;
-    const comp = await compRes.json();
-    await fetch(`/api/systems/${params.id}/components`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ componentId: comp.id }),
-    });
-    setShowAddComponent(false);
-    setManualMode(false);
-    setManual({ name: '', brand: '', category: 'speakers' });
-    loadSystem();
-  }
-
-  async function removeComponent(systemComponentId: string) {
-    await fetch(`/api/systems/${params.id}/components`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ systemComponentId }),
-    });
-    loadSystem();
-  }
-
-  if (!system) return <p className="muted">Loading...</p>;
-
-  const categories = ['speakers', 'amplifier', 'dac', 'streamer', 'turntable', 'cartridge', 'phono_stage', 'cables'];
+  const latest = system.history[0] ?? null;
+  const earlier = system.history.slice(1);
+  const runTodayUrl = system.canonicalText
+    ? `/artifact?system=${encodeURIComponent(system.canonicalText)}`
+    : null;
 
   return (
-    <div>
-      <h1>{system.name}</h1>
-      {system.notes && <p className="small muted">{system.notes}</p>}
-      <p className="small muted mb-1">
-        Created {new Date(system.createdAt).toLocaleDateString()} · Updated {new Date(system.updatedAt).toLocaleDateString()}
+    <main style={{ maxWidth: '42rem', margin: '0 auto', padding: '3.5rem 1.25rem 6rem' }}>
+      <Link href="/systems" style={quietLink}>← My Systems</Link>
+
+      <div style={{ marginTop: '2.2rem' }}>
+        <SystemMeta id={system.id} name={system.name} notes={system.notes} />
+      </div>
+
+      {system.chain.length > 0 && (
+        <p style={{ fontFamily: 'var(--face-text)', fontSize: '1rem', color: MUTED, margin: '1.1rem 0 0', overflowWrap: 'anywhere' }}>
+          {system.chain.join(' · ')}
+        </p>
+      )}
+      <p style={{ ...caps, color: FAINT, marginTop: '0.8rem' }}>
+        In your collection since {longDate(system.createdAt)}
       </p>
 
-      <div className="flex gap-sm mb-2">
-        <Link href={`/evaluate?systemId=${system.id}`} className="btn btn-sm">Evaluate</Link>
-        <Link href={`/evaluate/candidate?systemId=${system.id}`} className="btn btn-sm">Evaluate candidate</Link>
-        <Link href={`/diagnose?systemId=${system.id}`} className="btn btn-sm">Diagnose</Link>
-      </div>
-
-      <hr />
-
-      <h2>Components</h2>
-      {system.components.length === 0 ? (
-        <p className="muted small">No components yet.</p>
-      ) : (
-        system.components.map((sc) => (
-          <div key={sc.id} className="item-row">
-            <div className="flex-between">
-              <div>
-                <span className="small muted">{sc.component.category.replace(/_/g, ' ')}</span>
-                {sc.component.isReference && <span className="small muted"> · reference</span>}
-                <br />
-                <strong>{sc.component.brand} {sc.component.name}</strong>
-                {sc.roleOverride && <span className="small muted"> ({sc.roleOverride})</span>}
-              </div>
-              <button onClick={() => removeComponent(sc.id)} className="btn btn-danger btn-sm">Remove</button>
-            </div>
-            {sc.notes && <p className="small muted">{sc.notes}</p>}
-            <details>
-              <summary>Change history</summary>
-              <div className="small mt-1">
-                {JSON.parse(sc.actionLog).map((entry: { action: string; timestamp: string }, i: number) => (
-                  <p key={i}>{entry.action} — {new Date(entry.timestamp).toLocaleString()}</p>
-                ))}
-              </div>
-            </details>
+      {/* ── Latest assessment — visual priority ── */}
+      {latest ? (
+        <section style={{ borderTop: `2px solid ${INK}`, marginTop: '2.6rem', paddingTop: '1.4rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
+            <span style={{ ...caps, color: ACCENT }}>Latest assessment</span>
+            <span style={{ ...caps, color: FAINT }}>
+              Saved on {longDate(latest.savedAt)} · engine {latest.engineVersion}
+            </span>
           </div>
-        ))
-      )}
-
-      <div className="mt-1 mb-2">
-        <button onClick={() => setShowAddComponent(!showAddComponent)} className="btn btn-sm">
-          {showAddComponent ? 'Cancel' : '+ Add component'}
-        </button>
-      </div>
-
-      {showAddComponent && (
-        <div className="section">
-          <div className="flex-between mb-1">
-            <h3>{manualMode ? 'Add manually' : 'Search catalog'}</h3>
-            <button onClick={() => setManualMode(!manualMode)} className="btn btn-sm">
-              {manualMode ? 'Search catalog' : 'Add manually'}
-            </button>
-          </div>
-
-          {manualMode ? (
-            <div>
-              <div className="field">
-                <label>Brand</label>
-                <input value={manual.brand} onChange={(e) => setManual({ ...manual, brand: e.target.value })} />
+          {latest.readable ? (
+            <>
+              <p style={{ fontFamily: 'var(--face-display, var(--face-text))', fontSize: '1.7rem', lineHeight: 1.25, color: INK, margin: '0.9rem 0 0' }}>
+                {latest.verdict}
+              </p>
+              <div style={{ display: 'flex', gap: '1.6rem', flexWrap: 'wrap', marginTop: '1.2rem' }}>
+                <Link href={`/systems/${system.id}/assessment`} style={{ ...quietLink, color: INK, borderBottomColor: INK }}>
+                  Read the full assessment
+                </Link>
+                {runTodayUrl && (
+                  <Link href={runTodayUrl} style={quietLink}>
+                    Run today&rsquo;s assessment
+                  </Link>
+                )}
               </div>
-              <div className="field">
-                <label>Name</label>
-                <input value={manual.name} onChange={(e) => setManual({ ...manual, name: e.target.value })} />
-              </div>
-              <div className="field">
-                <label>Category</label>
-                <select value={manual.category} onChange={(e) => setManual({ ...manual, category: e.target.value })}>
-                  {categories.map((c) => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
-                </select>
-              </div>
-              <button onClick={addManual} className="btn btn-primary btn-sm">Add</button>
-            </div>
+            </>
           ) : (
-            <div>
-              <div className="field">
-                <input placeholder="Search by name or brand..." value={searchQuery} onChange={(e) => searchCatalog(e.target.value)} />
-              </div>
-              {catalogComponents.map((c) => (
-                <div key={c.id} className="item-row flex-between">
-                  <span className="small">
-                    {c.brand} {c.name}
-                    <span className="muted"> · {c.category.replace(/_/g, ' ')}</span>
-                    {c.isReference && <span className="muted"> · reference</span>}
-                  </span>
-                  <button onClick={() => addFromCatalog(c.id)} className="btn btn-sm">Add</button>
-                </div>
-              ))}
-            </div>
+            <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', color: MUTED, margin: '0.9rem 0 0' }}>
+              This assessment can no longer be displayed.
+              {runTodayUrl && (
+                <> <Link href={runTodayUrl} style={{ color: INK }}>Run today&rsquo;s assessment →</Link></>
+              )}
+            </p>
           )}
-        </div>
+        </section>
+      ) : (
+        <section style={{ borderTop: `1px solid ${HAIRLINE}`, marginTop: '2.6rem', paddingTop: '1.4rem' }}>
+          <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', color: MUTED, margin: 0 }}>
+            This system predates assessment history — no saved assessments yet.
+            {runTodayUrl && (
+              <> <Link href={runTodayUrl} style={{ color: INK }}>Run its first assessment →</Link></>
+            )}
+          </p>
+        </section>
       )}
 
-      {system.snapshots.length > 0 && (
-        <>
-          <hr />
-          <h2>Recent evaluations</h2>
-          {system.snapshots.map((snap) => (
-            <div key={snap.id} className="item-row">
-              <p className="small">{snap.inputText.substring(0, 200)}{snap.inputText.length > 200 ? '...' : ''}</p>
-              <p className="small muted">{new Date(snap.createdAt).toLocaleString()}</p>
+      {/* ── Assessment history ── */}
+      {earlier.length > 0 && (
+        <section style={{ marginTop: '3rem' }}>
+          <div style={{ ...caps, marginBottom: '0.4rem' }}>
+            Assessment history · {system.history.length} assessments
+          </div>
+          {earlier.map((entry) => (
+            <div
+              key={entry.id}
+              style={{ borderTop: `1px solid ${HAIRLINE}`, padding: '1.1rem 0 1.2rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem', flexWrap: 'wrap' }}>
+                <span style={{ ...caps, color: FAINT }}>Earlier assessment</span>
+                <span style={{ ...caps, color: FAINT }}>
+                  Saved on {longDate(entry.savedAt)} · engine {entry.engineVersion}
+                </span>
+              </div>
+              {entry.readable ? (
+                <>
+                  <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', fontSize: '1.02rem', color: INK, margin: '0.55rem 0 0' }}>
+                    “{entry.verdict}”
+                  </p>
+                  <div style={{ marginTop: '0.7rem' }}>
+                    <Link href={`/systems/${system.id}/assessment?snap=${entry.id}`} style={quietLink}>
+                      Read this assessment
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontFamily: 'var(--face-text)', fontStyle: 'italic', fontSize: '0.95rem', color: FAINT, margin: '0.55rem 0 0' }}>
+                  This earlier assessment can no longer be displayed. The rest of the history is unaffected.
+                </p>
+              )}
             </div>
           ))}
-        </>
+        </section>
       )}
-    </div>
+    </main>
   );
 }

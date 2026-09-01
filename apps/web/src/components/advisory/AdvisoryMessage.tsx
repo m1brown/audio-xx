@@ -34,10 +34,22 @@ import AdvisorySection from './AdvisorySection';
 import AdvisoryProse from './AdvisoryProse';
 import AdvisoryProductCards, { ShoppingLinks } from './AdvisoryProductCard';
 import { DIRECTION_CONTENT } from '../../lib/upgrade-path-content';
-import { findProductByComponentName, findProductInProse, findBrandProfileByName } from '../../lib/consultation';
-import { getProductImage } from '../../lib/product-images';
-import AdvisoryLinks from './AdvisoryLinks';
+import { findProductByComponentName, findProductInProse, findBrandProfileByName, findProductsByBrandSlug } from '../../lib/catalog/lookups';
+import { getProductImage, getProductImageEntry, getGenericPlaceholder, resolveProductImageStrict } from '../../lib/product-images';
+import AdvisoryLinks, { hasDisplayableLinks } from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
+import BrandAuthorityPreview from './BrandAuthorityPreview';
+import SystemAssessmentArtifact from './SystemAssessmentArtifact';
+import ArtifactActionsInline from './ArtifactActionsInline';
+import ComponentDossiers from './ComponentDossiers';
+import SnapshotArtifact from '../../app/artifact/SnapshotArtifact';
+import { authoritativeAssessment } from '../../lib/assessment/from-result';
+import '../../app/artifact/artifact.css';
+import {
+  ASSESSMENT_ARTIFACT_V2_ENABLED,
+  BRAND_AUTHORITY_PREVIEW_ENABLED,
+  SYSTEM_ASSESSMENT_ARTIFACT_ENABLED,
+} from '../../lib/feature-flags';
 import { hasDisplayableSources } from '../../lib/evidence/source-whitelist';
 import AdvisoryDiagnostics from './AdvisoryDiagnostics';
 import AdvisoryComponentAssessments from './AdvisoryComponentAssessments';
@@ -46,7 +58,19 @@ import AdvisorySpiderChart from './AdvisorySpiderChart';
 import { ProductImageProvider, useProductImageClaim } from './ProductImageContext';
 import AdvisoryListenerProfile from './AdvisoryListenerProfile';
 import AdvisoryIntake from './AdvisoryIntake';
+import ResponseFooter from './ResponseFooter';
+import { buildResponseFooterData } from '../../lib/response-footer';
 import { renderText, renderTextWithProductLinks, type ProductUrlMap } from './render-text';
+import { track } from '@/product/analytics';
+
+/** Certification Gate 3 (G3-D1): composer-embedded assessments count as
+ * completed assessments. Rendered beside the embed; deduped per load. */
+function TrackAssessmentEmbed() {
+  React.useEffect(() => {
+    track('assessment_rendered', { source: 'composer' });
+  }, []);
+  return null;
+}
 
 /** Preference selections from the "Start here" quick-capture flow. */
 export interface PreferenceSelection {
@@ -78,12 +102,12 @@ const COLORS = {
   textSecondary: '#4A5568',
   textMuted: '#64748B',
   textLight: '#94A3B8',
-  accent: '#1F3A5F',
+  accent: '#1B1A18',
   accentLight: '#2D5C8A',
-  accentBg: '#EEF2F8',
-  border: '#E2E8F0',
+  accentBg: '#F6F1E4',
+  border: '#E2DACB',
   borderLight: '#EDF2F7',
-  sectionLabel: '#1F3A5F',
+  sectionLabel: '#1B1A18',
   green: '#5a7050',
   amber: '#8a6a50',
   white: '#fff',
@@ -91,11 +115,14 @@ const COLORS = {
 };
 
 const FONTS = {
-  bodySize: '1.02rem',
+  // Long-form assessment body only. Headings, component names, provenance
+  // badges, labels and controls carry their own tokens and are untouched, so
+  // the hierarchy is unchanged — this is density, not shrinkage.
+  bodySize: '0.92rem',
   smallSize: '0.92rem',
   labelSize: '0.82rem',
   sectionHeading: '1.38rem',  // was 1.3rem — slight bump for header dominance
-  lineHeight: 1.85,
+  lineHeight: 1.68,
   labelTracking: '0.08em',    // consistent tracking for uppercase section labels
   labelWeight: 700 as const,  // unified weight for labels (was mixed 600/700)
 };
@@ -165,7 +192,7 @@ const EXPANDED_REASONING_CAPTIONS: Record<FallbackReason, string> = {
   unknown_subject:
     'Using expanded reasoning for products outside the current curated catalog.',
   low_confidence_system:
-    'Using expanded reasoning because parts of this system are not fully recognized.',
+    'Using expanded reasoning because parts of this system sit outside Audio XX’s curated catalog.',
   brand_only:
     'Using expanded reasoning for a product not yet covered directly in the curated catalog.',
   open_ended_query:
@@ -238,10 +265,27 @@ function ResponseHeader({ advisory: a }: { advisory: AdvisoryResponse }) {
   const modeLabel = a.advisoryMode && a.advisoryMode !== 'general'
     ? MODE_LABELS[a.advisoryMode]
     : null;
-  const showReasoning = a.reasoningMode === 'expanded';
-  const showCaption = showReasoning && !!a.fallbackReason;
 
-  if (!modeLabel && !showReasoning) return null;
+  // EXPANDED REASONING IS NOT SHOWN TO THE READER (2026-08-24).
+  //
+  // "Expanded reasoning" names an internal EXECUTION MODE, and its caption —
+  // "Using expanded reasoning because parts of this system sit outside Audio
+  // XX's curated catalog" — told the listener something the assessment already
+  // says, less precisely and one beat earlier:
+  //
+  //   "Audio XX does not hold enough product-specific listening evidence for
+  //    most of this chain — ARC ref 5, Butler Monads, Acora QRC-2 — to make a
+  //    defensible system-wide tonal judgment."
+  //
+  // That sentence names the components, says what IS held, and says what
+  // cannot be concluded from it. The badge said only that a different code
+  // path ran. Two statements of one fact, and the weaker one came first.
+  //
+  // The signal is retained on the payload for observability; what changes is
+  // that implementation state stops being editorial furniture.
+  if (!modeLabel) return null;
+  const showReasoning = false;
+  const showCaption = false;
 
   return (
     <>
@@ -572,7 +616,7 @@ function RewrittenSystemReview({ advisory: a }: AdvisoryMessageProps) {
     const brand = product?.brand ?? componentName.split(/\s+/)[0];
     const name = product?.name ?? componentName;
     const imageUrl = product
-      ? product.imageUrl ?? getProductImage(product.brand, product.name)
+      ? resolveProductImageStrict(product.brand, product.name, product.imageUrl)
       : getProductImage(brand, name);
     if (!imageUrl) return null;
     if (!claimImage(brand, name)) return null;
@@ -1096,7 +1140,7 @@ function HearFollowUp({
   // Enrich with product images from the catalog when not already set.
   const anchors = DIRECTION_CONTENT.safe.options.slice(0, 3).map((o) => ({
     ...o,
-    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+    imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
   }));
 
   return (
@@ -1198,7 +1242,7 @@ function UpgradeOptionsFollowUp({
   // Enrich with product images from the catalog when not already set.
   const picked = options.slice(0, 4).map((o) => ({
     ...o,
-    imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+    imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
   }));
 
   return (
@@ -1335,7 +1379,7 @@ function ComparePathsFollowUp({
           // Enrich with product images from the catalog when not already set.
           const picked = content.options.slice(0, 2).map((o) => ({
             ...o,
-            imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+            imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
           }));
           return (
             <div
@@ -1409,7 +1453,7 @@ function ComponentKeepFollowUp({
   const brandName = product?.brand ?? name.trim().split(/\s+/)[0] ?? '';
   const brandProfile = findBrandProfileByName(brandName);
   const rawImageUrl = product
-    ? product.imageUrl ?? getProductImage(product.brand, product.name)
+    ? resolveProductImageStrict(product.brand, product.name, product.imageUrl)
     : undefined;
   // Card context — always show image when available (no dedup).
   const imageUrl = rawImageUrl ?? undefined;
@@ -1941,6 +1985,11 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
               fontWeight: 500,
             }}>
               {renderText(a.systemSignature)}
+              {a.qualification && (
+                <span style={{ display: 'block', marginTop: '0.6rem', color: COLORS.textMuted }}>
+                  {renderText(a.qualification)}
+                </span>
+              )}
             </p>
           </AdvisorySection>
           <SectionDivider />
@@ -2133,18 +2182,24 @@ function MemoFormat({ advisory: a, onFollowUpClick }: AdvisoryMessageProps) {
           have already rendered inside Component Contributions. Kept
           as a fallback for memo outputs that lack per-component
           assessments (legacy paths, edge cases). */}
-      {a.links && a.links.length > 0 && (!a.componentAssessments || a.componentAssessments.length === 0) && (
+      {hasDisplayableLinks(a.links) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
+          <AdvisoryLinks links={a.links ?? []} />
         </AdvisorySection>
       )}
 
       {/* ── Sources ────────────────────────────────
-          Stage PB1.2: suppressed when per-component Sources have
-          already rendered inside Component Contributions. Kept as a
-          fallback for memo outputs that lack per-component
-          assessments. */}
-      {hasDisplayableSources(a.sourceReferences) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
+          F4 reviewer-data exclusion (2026-05-19): the Sources panel
+          is suppressed at the call-site level because AdvisorySources
+          itself returns null under the F4 gate — without this static
+          `false &&` the wrapping AdvisorySection would still render
+          an empty "Sources" heading whenever sourceReferences was
+          populated. Restore the original guard if/when the F4 dormant
+          block in AdvisorySources is re-enabled post-beta.
+
+          Original guard: hasDisplayableSources(a.sourceReferences)
+            && (!a.componentAssessments || a.componentAssessments.length === 0) */}
+      {false && hasDisplayableSources(a.sourceReferences) && (!a.componentAssessments || a.componentAssessments.length === 0) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -2183,18 +2238,38 @@ function isEditorialFormat(a: AdvisoryResponse): boolean {
 // context, and archetype. When profile is incomplete, shows a
 // transparent note about what's missing.
 
-function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
+/**
+ * Does this turn actually solicit recommendations?
+ *
+ * Only a mode whose OUTPUT is a set of picks may ask the listener for the
+ * inputs that sharpen picks. A system review, a product assessment or a
+ * knowledge answer must not: the listener asked a question about equipment,
+ * not for a shortlist.
+ */
+function solicitsPicks(advisoryMode?: string): boolean {
+  return advisoryMode === 'gear_advice'
+    || advisoryMode === 'upgrade_suggestions'
+    || advisoryMode === 'gear_comparison';
+}
+
+function AudioPreferencesBlock({ profile, advisoryMode, namedProduct, coverageGap }: {
   profile: AudioProfile;
   advisoryMode?: string;
   /** True when the query targets a specific named product (even if not in catalog).
    *  False/undefined when only a brand name was mentioned. */
   namedProduct?: boolean;
+  /** Suppresses the shortlist preamble: a coverage-gap answer has no
+   *  suggestions to characterise, so "These suggestions represent different
+   *  design philosophies" would describe something that isn't there. */
+  coverageGap?: unknown;
 }) {
   const hasSystem = profile.systemChain && profile.systemChain.length > 0;
   const hasPriorities = profile.sonicPriorities && profile.sonicPriorities.length > 0;
   const hasAvoids = profile.sonicAvoids && profile.sonicAvoids.length > 0;
   const hasContext = profile.listeningContext && profile.listeningContext.length > 0;
   const hasAnything = hasSystem || hasPriorities || hasContext;
+
+  if (coverageGap) return null;
 
   if (!hasAnything) {
     // Determine the correct label based on advisory mode
@@ -2263,210 +2338,165 @@ function AudioPreferencesBlock({ profile, advisoryMode, namedProduct }: {
     );
   }
 
+  // Phase 3 — flowing editorial opening.
+  //
+  // Previously this block rendered "Audio Preferences" as a boxed
+  // header + four labeled sub-sections ("Your system", "You prefer",
+  // "You avoid", "Context"). Mike's ChatGPT reference opens with a
+  // single narrative paragraph — "Based on what I know about your
+  // system and preferences, I'd optimize for synergy…" — grounding
+  // the whole response before any picks appear.
+  //
+  // This rewrite keeps the same signals (system chain, priorities,
+  // avoids, listening context, archetype, budget) but composes them
+  // into short editorial lines with a small accent-rule kicker,
+  // matching the artifact route's opening treatment. The signals
+  // themselves are unchanged — only presentation.
+  const systemLine = hasSystem
+    ? `Your system: ${profile.systemChain!.join(' → ')}.`
+    : null;
+  const prioritiesFragment = hasPriorities
+    ? profile.sonicPriorities!.join(', ')
+    : null;
+  const avoidsFragment = hasAvoids
+    ? profile.sonicAvoids!.join(', ')
+    : null;
+  const preferencesLine = prioritiesFragment || avoidsFragment
+    ? [
+        prioritiesFragment
+          ? `You lean toward ${prioritiesFragment}`
+          : null,
+        avoidsFragment
+          ? `${prioritiesFragment ? 'and tend to' : 'You tend to'} avoid ${avoidsFragment}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(', ')
+        .replace(/^./, (c) => c.toUpperCase()) + '.'
+    : null;
+  const contextLine = hasContext
+    ? `Context: ${profile.listeningContext!.join(', ')}.`
+    : null;
+
   return (
-    <div
-      style={{
-        borderLeft: `3px solid ${COLORS.accent}`,
-        paddingLeft: '1rem',
-        marginBottom: '1.25rem',
-        background: COLORS.accentBg,
-        padding: '0.8rem 1rem',
-        borderRadius: '0 6px 6px 0',
-      }}
-    >
-      {/* Section heading */}
-      <div style={{
-        fontSize: FONTS.labelSize,
-        fontWeight: 600,
-        letterSpacing: '0.05em',
-        textTransform: 'uppercase' as const,
-        color: COLORS.accent,
-        marginBottom: '0.55rem',
-      }}>
-        Audio Preferences
-      </div>
+    <div style={{ marginBottom: '1.6rem' }}>
+      {/* "What I'm working with" removed 2026-08-24.
+        *
+        * It was a second heading for one line. The response already opens with
+        * its own mode label, and the line beneath begins "Your system:" — it
+        * says what it is. Two rules and two headings before a single sentence
+        * is furniture, and B4 asks that the chain be stated once. */}
 
-      {/* System chain */}
-      {hasSystem && (
-        <div style={{ marginBottom: '0.55rem' }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            Your system
-          </div>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            flexWrap: 'wrap',
-            fontSize: '0.91rem',
-            color: COLORS.text,
-          }}>
-            {profile.systemChain!.map((comp, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                {i > 0 && (
-                  <span style={{ color: COLORS.accentLight, fontSize: '0.82rem' }}>→</span>
-                )}
-                <span>{comp}</span>
-              </span>
-            ))}
-          </div>
-        </div>
+      {systemLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.text,
+        }}>
+          {systemLine}
+        </p>
       )}
 
-      {/* Sonic priorities — only rendered when populated by explicit user
-          input or saved-profile data. When empty, the surrounding block
-          shows a neutral "No preferences provided" placeholder so users
-          aren't told they prefer something they never stated. */}
-      {hasPriorities ? (
-        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            {profile.preferenceSource === 'default'
-              ? 'Starting point (default)'
-              : profile.preferenceSource === 'explicit'
-                ? 'You prefer'
-                : 'Leans toward'}
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.text,
-            lineHeight: 1.65,
-          }}>
-            {profile.sonicPriorities!.join(' · ')}
-          </div>
-          {profile.preferenceSource === 'default' && (
-            <>
-              <div style={{
-                fontSize: '0.86rem',
-                color: COLORS.textSecondary,
-                marginTop: '0.3rem',
-                lineHeight: 1.6,
-              }}>
-                This is a safe starting assumption — slightly warm and easy to listen to.
-              </div>
-              <div style={{
-                fontSize: '0.86rem',
-                color: COLORS.text,
-                marginTop: '0.25rem',
-                fontWeight: 500,
-                lineHeight: 1.6,
-              }}>
-                Do you want to keep that direction, or shift toward clarity and precision?
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <div style={{ marginBottom: hasAvoids || hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textMuted,
-            fontStyle: 'italic',
-          }}>
-            No preferences provided
-          </div>
-        </div>
+      {preferencesLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.text,
+        }}>
+          {preferencesLine}
+        </p>
       )}
 
-      {/* Sonic avoids */}
-      {hasAvoids && (
-        <div style={{ marginBottom: hasContext ? '0.45rem' : 0 }}>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            You avoid
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.textMuted,
-            lineHeight: 1.65,
-          }}>
-            {profile.sonicAvoids!.join(' · ')}
-          </div>
-        </div>
+      {contextLine && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: 1.65,
+          color: COLORS.textSecondary,
+        }}>
+          {contextLine}
+        </p>
       )}
 
-      {/* Listening context */}
-      {hasContext && (
-        <div>
-          <div style={{
-            fontSize: '0.82rem',
-            fontWeight: 600,
-            color: COLORS.textSecondary,
-            marginBottom: '0.2rem',
-          }}>
-            Context
-          </div>
-          <div style={{
-            fontSize: '0.91rem',
-            color: COLORS.text,
-            lineHeight: 1.65,
-          }}>
-            {profile.listeningContext!.join(' · ')}
-          </div>
-        </div>
+      {/* Default-preference nudge — retained as a small opt-in line
+       *  because the user has NOT told us their taste yet; the composed
+       *  paragraph above only mentions the priorities we're assuming. */}
+      {hasPriorities && profile.preferenceSource === 'default' && (
+        <p style={{
+          margin: '0 0 0.5rem 0',
+          fontSize: '0.86rem',
+          lineHeight: 1.6,
+          color: COLORS.textSecondary,
+          fontStyle: 'italic',
+        }}>
+          That's a safe starting assumption — slightly warm and easy to listen to.
+          Say the word if you'd rather I lean toward clarity and precision.
+        </p>
       )}
 
-      {/* Archetype badge + budget — inline */}
+      {/* Archetype badge + budget — small inline chips, not a section.
+       *  These sit under the paragraph as quiet metadata. */}
       {(profile.archetype || profile.budget) && (
         <div style={{
-          marginTop: '0.55rem',
+          marginTop: '0.6rem',
           display: 'flex',
-          gap: '0.6rem',
+          gap: '0.5rem',
           flexWrap: 'wrap',
           alignItems: 'center',
         }}>
           {profile.archetype && (
             <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
-              color: COLORS.accent,
-              background: '#f0ece3',
-              letterSpacing: '0.02em',
+              fontSize: '0.75rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase' as const,
+              color: COLORS.textMuted,
             }}>
               {profile.archetype}
             </span>
           )}
+          {profile.archetype && profile.budget && (
+            <span style={{ color: COLORS.textMuted, fontSize: '0.75rem' }}>·</span>
+          )}
           {profile.budget && (
             <span style={{
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '0.15rem 0.5rem',
-              borderRadius: '4px',
+              fontSize: '0.75rem',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase' as const,
               color: COLORS.textMuted,
-              background: '#f2f2f0',
-              letterSpacing: '0.02em',
             }}>
-              Budget: {profile.budget}
+              Budget {profile.budget}
             </span>
           )}
         </div>
       )}
 
-      {/* Missing dimensions note */}
-      {!profile.profileComplete && profile.missingDimensions && profile.missingDimensions.length > 0 && (
+      {/* Missing dimensions note — one italic invitation line.
+        *
+        * ONLY where the listener asked for picks. "For sharper picks, tell me
+        * about your sonic preferences and budget" appeared under a SYSTEM
+        * ASSESSMENT, where nobody asked to be sold anything: the listener
+        * asked what Audio XX makes of the system they already own, and was
+        * answered with a request for their budget.
+        *
+        * It rendered because the invitation was gated on the PROFILE being
+        * incomplete rather than on the listener wanting recommendations.
+        * Sparse evidence about a listener is not shopping intent — it is
+        * simply sparse evidence, and an assessment is entitled to say so
+        * without asking what they are willing to spend.
+        */}
+      {solicitsPicks(advisoryMode)
+        && !profile.profileComplete
+        && profile.missingDimensions && profile.missingDimensions.length > 0 && (
         <p style={{
-          margin: '0.5rem 0 0 0',
-          fontSize: '0.82rem',
+          margin: '0.75rem 0 0 0',
+          fontSize: '0.86rem',
           color: COLORS.textMuted,
           fontStyle: 'italic',
           lineHeight: 1.6,
         }}>
-          For sharper recommendations, tell me about your {profile.missingDimensions.join(' and ')}.
+          For sharper picks, tell me about your {profile.missingDimensions.join(' and ')}.
         </p>
       )}
     </div>
@@ -2766,7 +2796,7 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       <ResponseHeader advisory={a} />
 
       {/* ── Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} namedProduct={pa.catalogMatch || pa.candidateName.toLowerCase() !== pa.candidateBrand.toLowerCase()} coverageGap={a.coverageGap} />}
 
       {/* ── Hero product image ───────────────────────────
        *  Stage 6.2 consultation-validation pass: AssessmentFormat
@@ -2832,30 +2862,44 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
        *  in page.tsx tags brand-only product assessments with
        *  `reasoningMode: 'expanded'` so the unified caption renders. */}
 
-      {/* ── 1. What actually changes ─────────────────── */}
+      {/* ── Editorial prose block — Phase 1 rewrite (2026-07-01) ──
+       *
+       *  Previously each engine slot (whatChanges, systemBehavior,
+       *  goalAlignment, recommendation) was wrapped in an
+       *  `<AdvisorySection label="What this component brings" | "In
+       *  your system" | "Alignment with your priorities" |
+       *  "Recommendation">` — a form-fill treatment with static
+       *  section chrome on every response. Mike's July-1 QA note
+       *  called out that this reads as boxed scaffolding rather than
+       *  the flowing editorial voice used elsewhere in the product.
+       *
+       *  Phase 1: drop the section labels, let the slots flow as
+       *  paragraphs, and give the recommendation a lightweight
+       *  editorial marker (a small accent kicker + display size) so
+       *  it still reads as the conclusion without form-fill chrome.
+       *  Engine slots are unchanged — this is a template-only edit.
+       */}
+
       {pa.whatChanges.length > 0 && (
-        <AdvisorySection label={pa.currentComponentName ? `What changes vs ${pa.currentComponentName}` : 'What this component brings'}>
+        <div style={{ marginBottom: '1.4rem' }}>
           {pa.whatChanges.map((item, i) => (
             <p key={i} style={{
-              margin: '0 0 0.45rem 0',
+              margin: '0 0 0.75rem 0',
               fontSize: FONTS.bodySize,
               lineHeight: FONTS.lineHeight,
               color: COLORS.text,
-              paddingLeft: '0.8rem',
-              borderLeft: `2px solid ${COLORS.borderLight}`,
             }}>
               {item}
             </p>
           ))}
-        </AdvisorySection>
+        </div>
       )}
 
-      {/* ── 2. How it behaves in this system ──────────── */}
       {pa.systemBehavior.length > 0 && (
-        <AdvisorySection label="In your system">
+        <div style={{ marginBottom: '1.4rem' }}>
           {pa.systemBehavior.map((item, i) => (
             <p key={i} style={{
-              margin: '0 0 0.45rem 0',
+              margin: '0 0 0.75rem 0',
               fontSize: FONTS.bodySize,
               lineHeight: FONTS.lineHeight,
               color: COLORS.text,
@@ -2863,46 +2907,45 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
               {item}
             </p>
           ))}
-        </AdvisorySection>
+        </div>
       )}
 
-      {/* ── 3. Does this solve the real goal? ─────────── */}
-      <AdvisorySection label="Alignment with your priorities">
-        <p style={{
-          margin: 0,
-          fontSize: FONTS.bodySize,
-          lineHeight: FONTS.lineHeight,
-          color: COLORS.text,
-        }}>
-          {pa.goalAlignment}
-        </p>
-      </AdvisorySection>
-
-      {/* ── 4. Honest recommendation ─────────────────── */}
-      <div style={{
-        borderLeft: `3px solid ${COLORS.accent}`,
-        paddingLeft: '1rem',
-        marginTop: '1.25rem',
-        marginBottom: '1rem',
-        padding: '0.75rem 1rem',
-        borderRadius: '0 6px 6px 0',
-        background: COLORS.accentBg,
+      <p style={{
+        margin: '0 0 1.75rem 0',
+        fontSize: FONTS.bodySize,
+        lineHeight: FONTS.lineHeight,
+        color: COLORS.textSecondary,
+        fontStyle: 'italic',
       }}>
+        {pa.goalAlignment}
+      </p>
+
+      <div style={{ margin: '0 0 1rem 0' }}>
         <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
           fontSize: FONTS.labelSize,
           fontWeight: 600,
-          letterSpacing: '0.05em',
+          letterSpacing: '0.06em',
           textTransform: 'uppercase' as const,
-          color: COLORS.accent,
-          marginBottom: '0.35rem',
+          color: COLORS.textMuted,
+          marginBottom: '0.45rem',
         }}>
-          Recommendation
+          <span style={{
+            display: 'inline-block',
+            width: '1.5rem',
+            height: '2px',
+            background: COLORS.accent,
+          }} />
+          The recommendation
         </div>
         <p style={{
           margin: 0,
-          fontSize: FONTS.bodySize,
-          lineHeight: FONTS.lineHeight,
+          fontSize: '1.15rem',
+          lineHeight: 1.55,
           color: COLORS.text,
+          fontWeight: 500,
         }}>
           {pa.recommendation}
         </p>
@@ -2963,9 +3006,9 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
       {/* ── Learn more (links) ────────────────────────── */}
       {/* All outbound links render here — never above the follow-up. */}
       <div style={{ marginTop: '1.25rem' }}>
-        {a.links && a.links.length > 0 && (
+        {hasDisplayableLinks(a.links) && (
           <AdvisorySection label="Learn more">
-            <AdvisoryLinks links={a.links} />
+            <AdvisoryLinks links={a.links ?? []} />
           </AdvisorySection>
         )}
         <ShoppingLinks
@@ -2975,8 +3018,9 @@ function AssessmentFormat({ advisory: a }: AdvisoryMessageProps) {
         />
       </div>
 
-      {/* ── Sources (continued reading) ──────────────── */}
-      {hasDisplayableSources(a.sourceReferences) && (
+      {/* ── Sources (continued reading) ────────────────
+          F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3338,7 +3382,7 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
     <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
 
       {/* ── 0. Audio Preferences ────────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
       {/* ── 0b. Start Here — preference capture CTA ────── */}
       {a.lowPreferenceSignal && a.shoppingCategory && onPreferenceCapture && (
@@ -3768,18 +3812,15 @@ function EditorialFormat({ advisory: a, onPreferenceCapture }: AdvisoryMessagePr
 
       {/* ── 8. Learn more (links) ──────────────────────────── */}
       {/* Guard: any response-level links render here, after follow-up. */}
-      {a.links && a.links.length > 0 && (
+      {hasDisplayableLinks(a.links) && (
         <AdvisorySection label="Learn more">
-          <AdvisoryLinks links={a.links} />
+          <AdvisoryLinks links={a.links ?? []} />
         </AdvisorySection>
       )}
 
       {/* ── 9. Sources (Stage 14.1) ─────────────────────────
-         Attribution for reviewer/publication material referenced in
-         the editorial body. AdvisorySources handles two-tier filtering
-         and renders unlinked entries as plain text (Stage 6.2 — no
-         publication-homepage fallback). */}
-      {hasDisplayableSources(a.sourceReferences) && (
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -3820,7 +3861,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
     <div style={{ fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
       <ResponseHeader advisory={a} />
 
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
       <AdvisorySection label={kr.topic}>
         <p style={{ margin: '0 0 0.95rem 0', color: COLORS.text, lineHeight: FONTS.lineHeight }}>
@@ -3841,7 +3882,7 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -3873,10 +3914,8 @@ function KnowledgeFormat({ advisory: a }: AdvisoryMessageProps) {
       )}
 
       {/* ── Sources (Stage 14.1) ────────────────────────────
-         Knowledge claims need provenance most of all. AdvisorySources
-         handles two-tier filtering and renders unlinked entries as
-         plain text (Stage 6.2 — no publication-homepage fallback). */}
-      {hasDisplayableSources(a.sourceReferences) && (
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -4117,7 +4156,7 @@ function AssessmentHeroImage({ brand, name }: { brand?: string; name?: string })
   // brand+name overlay lookup so brand-only assessments can still
   // render an image when one is curated for that brand/name pair.
   const imageUrl = product
-    ? (product.imageUrl ?? getProductImage(product.brand, product.name))
+    ? (resolveProductImageStrict(product.brand, product.name, product.imageUrl))
     : getProductImage(brand, name);
   if (!imageUrl) return null;
   const displayName = product
@@ -4128,8 +4167,8 @@ function AssessmentHeroImage({ brand, name }: { brand?: string; name?: string })
       width: '100%',
       maxWidth: '420px',
       height: '200px',
-      background: '#FFFFFF',
-      border: '1px solid #E5E5E5',
+      background: '#FFFDF7',
+      border: '1px solid #E7E0D2',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -4167,15 +4206,123 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
   // distinctive name token are both mentioned. This surfaces the
   // discussed product's image without changing routing or subject
   // assignment in the consultation builders.
+  //
+  // ── Cross-brand leakage gate (2026-05-21) ─────────────────────────
+  // When the subject is itself a known BrandProfile (an authority /
+  // brand inquiry — "shindo", "leben", "harbeth"), the prose almost
+  // always contains the brand's curated `pairingNotes`, which mention
+  // partner brands by name. The pre-gate prose-scan fallback then
+  // matched the first cross-brand product whose brand + a 4+ char
+  // name token both appeared in the prose — surfacing e.g. a DeVore
+  // Orangutan card under a Shindo inquiry because Shindo's pairing
+  // prose says "Shindo + DeVore Orangutan". That breaks the rule that
+  // the primary Subject Card must represent the queried brand, not
+  // its paired brand.
+  //
+  // Fix: for brand-inquiry context, resolve same-brand-only via
+  // `findProductsByBrandSlug` and DO NOT fall through to the
+  // cross-brand prose scan. When no in-catalog product exists for the
+  // brand (Shindo, Leben, Accuphase, Goldmund — profiles without
+  // matching Product records), `product` stays undefined and the code
+  // falls through to the existing placeholder branch below.
   let product: ReturnType<typeof findProductByComponentName>;
   if (subject) {
     product = findProductByComponentName(subject);
   }
-  if (!product && prose) {
+  const subjectIsBrand = !product && !!subject && !!findBrandProfileByName(subject);
+  if (!product && subjectIsBrand && subject) {
+    const brandProducts = findProductsByBrandSlug(toSlug(subject));
+    product = brandProducts.find((p) => !!p.imageUrl) ?? brandProducts[0];
+  }
+  if (!product && prose && !subjectIsBrand) {
     product = findProductInProse(prose);
   }
-  if (!product) return null;
-  const imageUrl = product.imageUrl ?? getProductImage(product.brand, product.name);
+
+  // Unknown-product fallback (P1 follow-on, Option B, 2026-05-18,
+  // extended 2026-05-19):
+  //   When the user asks about a product we don't have in the catalog,
+  //   the lookups above return undefined. Render an image block keyed
+  //   to the subject name. Resolution order:
+  //     1. getProductImageEntry(undefined, subject) — EXACT identity
+  //        against the curated registry, through the admission
+  //        boundary. This catches first-party images for products that
+  //        exist as image entries but aren't full catalog Product
+  //        records (e.g. "Buchardt A700").
+  //     2. getGenericPlaceholder() — generic SVG silhouette fallback.
+  //   The F4 reviewer exclusion is now one clause of the admission
+  //   state rather than a check this path has to remember, so a wrong
+  //   variant, a prohibited host and an un-provenanced asset are all
+  //   withheld here too. Matching was SUBSTRING until 2026-08-23, which
+  //   is how `leben cs600` could answer for a CS600X.
+  //
+  //   Caption logic: the "Generic placeholder — actual product image
+  //   not in catalog" disclaimer ONLY renders when actually falling
+  //   back to the generic SVG. When a real manufacturer-hosted image
+  //   resolves, the caption is suppressed and the image renders at
+  //   full opacity — that IS the actual product photo.
+  if (!product) {
+    if (!subject) return null;
+    const resolved = getProductImageEntry(undefined, subject);
+    const isGenericPlaceholder = !resolved;
+    const imageUrl = resolved?.url ?? getGenericPlaceholder();
+    // Manufacturer attribution (policy 2026-05-19):
+    //   When a real manufacturer/dealer/retailer image resolves, the
+    //   UI must display "Image source: <site>" as visible attribution
+    //   beneath the image. Admissible sources only — the boundary in
+    //   getProductImageEntry withholds everything else.
+    const attributionSite = resolved?.source?.site;
+    return (
+      <div style={{ marginBottom: '0.85rem' }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '320px',
+          height: '160px',
+          background: '#FFFDF7',
+          border: '1px solid #E7E0D2',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0.75rem',
+          boxSizing: 'border-box',
+          marginBottom: '0.35rem',
+          opacity: isGenericPlaceholder ? 0.55 : 1,
+        }}>
+          <img
+            src={imageUrl}
+            alt={isGenericPlaceholder
+              ? `Generic product placeholder — no catalog image available for ${subject}`
+              : subject}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
+        </div>
+        <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#2a2a2a' }}>
+          {subject}
+        </div>
+        {/* The disclosure is right — a silhouette must not read as the product
+            — but "Generic placeholder — actual product image not in catalog"
+            is internal register and shipped in 6 of 26 sampled responses.
+            Same honesty, written for a reader. */}
+        {isGenericPlaceholder ? (
+          <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
+            No product image available
+          </div>
+        ) : attributionSite ? (
+          <div style={{ fontSize: '0.78rem', fontStyle: 'italic', color: '#999', marginTop: '0.15rem' }}>
+            Image source: {attributionSite}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  const imageUrl = resolveProductImageStrict(product.brand, product.name, product.imageUrl);
   if (!imageUrl) return null;
   // Stage 6.3 caption polish: strip internal variant-SKU suffixes like
   // " 12th-1" (Denafrips Pontus II 12th-1 catalog entry, where "12th-1"
@@ -4194,8 +4341,8 @@ function ConsultationSubjectContext({ subject, prose }: { subject?: string; pros
           width: '100%',
           maxWidth: '320px',
           height: '160px',
-          background: '#FFFFFF',
-          border: '1px solid #E5E5E5',
+          background: '#FFFDF7',
+          border: '1px solid #E7E0D2',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -4234,6 +4381,31 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
     return <EditorialFormat advisory={a} onPreferenceCapture={onPreferenceCapture} />;
   }
 
+  /*
+   * ── THE GOVERNED SHELL ──────────────────────────────────────────────
+   *
+   * When a composed SYSTEM REVIEW exists, it IS the assessment: thesis,
+   * synergy, engineering, recommendation, unknowns — every one of them
+   * licensed. This format's own body is the model-authored ancestor of that
+   * material, and gating it block-by-block is how holes keep appearing:
+   * `systemSignature` was gated, then `componentReadings`, then
+   * `systemContext` — and production still opened with "This combination
+   * suggests that the dynamic performance is likely well-managed", which is
+   * `systemInteraction`, the next block down a list of thirty.
+   *
+   * So the gate is structural, not enumerated: a governed assessment renders
+   * the header and nothing else here. The review, dossiers, evidence and
+   * follow-up all arrive through `artifactActions`, mounted after every
+   * format. Entry path may not change editorial generation.
+   */
+  if (a.systemReview && a.systemReview.length > 0) {
+    return (
+      <div style={{ lineHeight: FONTS.lineHeight, color: COLORS.text }}>
+        <ResponseHeader advisory={a} />
+      </div>
+    );
+  }
+
   const hasListenerPriorities = (a.listenerPriorities && a.listenerPriorities.length > 0)
     || (a.listenerAvoids && a.listenerAvoids.length > 0);
 
@@ -4263,6 +4435,24 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        *  reasoningMode === 'expanded', a quiet inline indicator and
        *  one-line italic caption replace it. */}
       <ResponseHeader advisory={a} />
+
+      {/* ── 0a-pre. Brand Authority Preview (Pass 18) ────────
+       *
+       * Dark by default — renders only when:
+       *   1. NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW=on at build/runtime, AND
+       *   2. The consultation builder populated `brandAuthorityPreview`
+       *      (eligibility gate already evaluated in
+       *      `eligibleForBrandAuthorityPreview` upstream).
+       *
+       * Surface guarantees (enforced upstream):
+       *   - same-brand local hero only (`/brand-heroes/`)
+       *   - no reviewer quotes, no F4-gated content
+       *   - additive sibling — the existing prose blocks below render
+       *     unchanged, conversational answer is preserved.
+       */}
+      {BRAND_AUTHORITY_PREVIEW_ENABLED && a.brandAuthorityPreview && (
+        <BrandAuthorityPreview preview={a.brandAuthorityPreview} />
+      )}
 
       {/* ── 0a. Diagnosis: system interpretation ────────── */}
       {a.diagnosisInterpretation && (
@@ -4314,7 +4504,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           ink: '#151515',
           inkMuted: '#3A3A3A',
           faint: '#8A8A8A',
-          rule: '#E5E5E5',
+          rule: '#E7E0D2',
           measure: '52rem',
         } as const;
 
@@ -4393,7 +4583,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
                       style={{
                         width: '100%',
                         height: '300px',
-                        background: '#FFFFFF',
+                        background: '#FFFDF7',
                         border: `1px solid ${E.rule}`,
                         display: 'flex',
                         alignItems: 'center',
@@ -4478,10 +4668,67 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       })()}
 
       {/* ── 2. Audio Preferences ────────────────────── */}
-      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} />}
+      {a.audioProfile && <AudioPreferencesBlock profile={a.audioProfile} advisoryMode={a.advisoryMode} coverageGap={a.coverageGap} />}
 
-      {/* ── System Assessment Block ── */}
-      {a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
+      {/* ── Engine verdict ──────────────────────────
+       *  `systemSignature` is the engine's own leading line — the verdict the
+       *  assessment hangs from, and now the home of any conclusion Audio XX
+       *  derived itself rather than asked the model for (a published power
+       *  figure at the listener's own load, for instance).
+       *
+       *  This format never read the field. MemoFormat did, StandardFormat did
+       *  not, and StandardFormat is what the live assessment path renders — so
+       *  a field the engine goes to the trouble of rebuilding when it comes
+       *  back empty ("the one field that may not simply vanish") was reaching
+       *  the renderer intact and being dropped on the floor. Verified in
+       *  production: the advisory object carried the sentence, the page did
+       *  not show it. */}
+      {/* ONE REVIEW, ONE BEGINNING.
+        *
+        * Suppressed when a composed review exists, because `systemSignature`
+        * is passed INTO that composer as `driveFinding` — the same sentence
+        * then appeared twice: once as a bare leading verdict, and again inside
+        * the review that reasons from it. The reader met a preliminary
+        * mini-review, a repeated chain and a closing question BEFORE the
+        * actual analysis started.
+        *
+        * The composed review leads with its own principal conclusion, derived
+        * from the same licensed relations as its body, so nothing is lost by
+        * removing the duplicate — and the version that survives is the one
+        * that cannot drift from the paragraphs beneath it.
+        *
+        * Where there is no composed review this is still the engine's leading
+        * line and still renders: a system Audio XX holds little about has
+        * nothing else to lead with. */}
+      {a.systemSignature && !(a.systemReview && a.systemReview.length > 0) && (
+        <p style={{
+          margin: '0 0 1.5rem 0',
+          fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight,
+          color: COLORS.text,
+          fontWeight: 500,
+        }}>
+          {a.systemSignature}
+          {/* The finding's material limitation, one register down. Inside the
+              same conditional as the finding it bounds: rendered as a sibling
+              it appeared once per signature block and printed twice. */}
+          {a.qualification && (
+            <span style={{ display: 'block', marginTop: '0.55rem', fontWeight: 400, color: COLORS.textMuted }}>
+              {a.qualification}
+            </span>
+          )}
+        </p>
+      )}
+
+      {/* ── System Assessment Block ──
+        * NEVER above a composed review. The Fail-pass PDF opened with "The
+        * dCS Rossini Apex serves as a smooth and controlled source..." — a
+        * model-authored component character sentence — ahead of the review's
+        * own thesis. When a governed SYSTEM REVIEW exists it IS the beginning;
+        * the model's per-component readings are the ungoverned ancestor of
+        * the dossier characterisations and stand down entirely. */}
+      {!(a.systemReview && a.systemReview.length > 0)
+        && a.componentReadings && a.componentReadings.length > 0 && a.systemContext && (
         <AdvisorySection label="System character">
           <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {a.systemContext}
@@ -4489,7 +4736,8 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       )}
 
-      {a.componentReadings && a.componentReadings.length > 0 && (
+      {!(a.systemReview && a.systemReview.length > 0)
+        && a.componentReadings && a.componentReadings.length > 0 && (
         <div style={{ marginBottom: '1.5rem' }}>
           {a.componentReadings.map((para, i) => (
             <p key={i} style={{ margin: '0 0 0.95rem 0', fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight, color: COLORS.text }}>
@@ -4528,8 +4776,10 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 3. System context (non-assessment) ── */}
+      {/* A coverage-gap answer is a statement about the catalogue, not about
+        * the reader's system — labelling it "Your system" misattributes it. */}
       {a.systemContext && !a.componentReadings && (
-        <AdvisorySection label="Your system">
+        <AdvisorySection label={a.coverageGap ? 'Coverage' : 'Your system'}>
           <p style={{ margin: 0, fontSize: FONTS.bodySize, lineHeight: FONTS.lineHeight }}>
             {a.systemContext}
           </p>
@@ -4589,6 +4839,35 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
           <BulletList items={a.limitations} color={COLORS.textMuted} />
         </AdvisorySection>
       )}
+
+      {/* ── System components ────────────────────────────────
+        * GOVERNING INVARIANT: a system is a collection of component
+        * identities. No surface may collapse them into a synthetic product.
+        *
+        * Before this, `subject` was the joined string "dCS Rossini Apex + ARC
+        * ref 5 + Butler Monads + Acora QRC-2", and the Subject Card consumed
+        * it as ONE product — so no image could match, the whole system fell
+        * back to a generic placeholder, and HiFiShark/eBay searched for a
+        * four-headed product. Each component now carries its own identity,
+        * role, evidence basis, image and marketplace links, and each resolves
+        * independently: a missing Acora image cannot suppress the dCS image.
+        *
+        * This replaces the detached "What this is based on" list — provenance
+        * belongs beside the component it qualifies, not in a separate block
+        * the reader has to correlate by hand.
+        */}
+      {/* The lightweight "Your system" card list was removed here (2026-08-25).
+        *
+        * It rendered name, role and the FIND ONE links for each component, and
+        * `ComponentDossiers` rendered the SAME four boxes below it under "The
+        * components" — two representations of one physical unit, with the
+        * commercial links attached to the thinner one. The artifact had been
+        * converged to SYSTEM REVIEW → YOUR SYSTEM → EVIDENCE; this surface had
+        * not, so the duplication survived exactly where most listeners meet it.
+        *
+        * `ComponentDossiers` is now "Your system" and carries the role and the
+        * resources itself. */}
+
 
       {/* ── 5. Core advisory body ────────────────── */}
       {(a.improvements && a.improvements.length > 0) ? (
@@ -4856,14 +5135,22 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 11b. Saved-system note ────────────────── */}
-      {a.savedSystemNote && (
+      {/* A SHOPPING NOTE NEVER RENDERS OVER AN ASSESSMENT.
+        *
+        * The intent guard upstream was supposed to keep this off assessment
+        * turns and production showed it can miss — the fragment rendered
+        * above a full SYSTEM REVIEW, promising "picks below" that do not
+        * exist. The renderer knows for certain whether this turn is an
+        * assessment: it is holding one. That knowledge, not the intent
+        * classifier, is the reliable gate. */}
+      {a.savedSystemNote && !(a.systemReview && a.systemReview.length > 0) && (
         <div
           style={{
             borderLeft: `3px solid ${COLORS.accent}`,
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -4888,11 +5175,11 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       {a.refinementPrompts && a.refinementPrompts.length > 0 && !a.lowPreferenceSignal && (
         <div
           style={{
-            borderLeft: '3px solid #7a9aaa',
+            borderLeft: '3px solid #8C877F',
             paddingLeft: '1rem',
             padding: '0.8rem 1rem',
             marginBottom: '1.5rem',
-            background: '#f6f9fa',
+            background: '#FBF7EC',
             borderRadius: '0 6px 6px 0',
           }}
         >
@@ -4902,7 +5189,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               fontWeight: 600,
               letterSpacing: '0.05em',
               textTransform: 'uppercase' as const,
-              color: '#7a9aaa',
+              color: '#8C877F',
               marginBottom: '0.45rem',
             }}
           >
@@ -4919,7 +5206,15 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
       )}
 
       {/* ── 13. Follow-up ─────────────────────────── */}
-      {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal && (
+      {/* THE QUESTION COMES AFTER THE ARGUMENT.
+        *
+        * Rendered here, the closing question arrived BEFORE the composed
+        * review had said anything — the reader was invited to respond to an
+        * analysis they had not yet read. Where a composed review exists the
+        * question moves below it; where there is none this is still the right
+        * place, because there is nothing for it to precede. */}
+      {a.followUp && !a.refinementPrompts?.length && !a.lowPreferenceSignal
+        && !(a.systemReview && a.systemReview.length > 0) && (
         onFollowUpClick ? (
           <button
             type="button"
@@ -4933,9 +5228,9 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
               fontSize: FONTS.bodySize,
               color: COLORS.textSecondary,
               lineHeight: 1.7,
-              background: '#f6f9fa',
+              background: '#FBF7EC',
               border: 'none',
-              borderLeft: '3px solid #7a9aaa',
+              borderLeft: '3px solid #8C877F',
               borderRadius: '0 6px 6px 0',
               cursor: 'pointer',
               fontFamily: 'inherit',
@@ -4948,7 +5243,7 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = COLORS.textSecondary;
-              e.currentTarget.style.borderLeftColor = '#7a9aaa';
+              e.currentTarget.style.borderLeftColor = '#8C877F';
             }}
           >
             {renderText(a.followUp)} →
@@ -4956,11 +5251,11 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         ) : (
           <div
             style={{
-              borderLeft: '3px solid #7a9aaa',
+              borderLeft: '3px solid #8C877F',
               paddingLeft: '1rem',
               padding: '0.7rem 1rem',
               marginBottom: '1.5rem',
-              background: '#f6f9fa',
+              background: '#FBF7EC',
               borderRadius: '0 6px 6px 0',
               fontSize: FONTS.bodySize,
               color: COLORS.textSecondary,
@@ -4981,7 +5276,32 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
        * leaving them as a free-floating text list. Silent collapse
        * when no image or no product match exists — falls back to the
        * existing flat link list. */}
-      {(a.links && a.links.length > 0) || (a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0))) ? (
+      {/* Same rule as the other three sites: a section announces itself only
+        * when it will render something. F4 empties review-kind links inside
+        * AdvisoryLinks, so `links.length > 0` opened a "Learn more" heading
+        * over nothing whenever a system's links were all reviews — which is
+        * exactly Nathan's case. */}
+      {/* A SECTION RENDERS ONLY IF IT HAS A CHILD.
+        *
+        * Each of the three children below is independently suppressed for a
+        * SYSTEM — the subject card would consume the joined subject as one
+        * product, the marketplace links would search for that same joined
+        * string, and F4 empties review-kind links. All correct. But the
+        * section's own condition did not check the same things, so on Nathan
+        * every child switched off and the "Learn more" heading rendered over
+        * nothing.
+        *
+        * The condition is now the disjunction of what actually renders, so the
+        * label cannot outlive its content. */}
+      {(() => {
+        const isSystem = !!(a.systemComponentViews && a.systemComponentViews.length > 0);
+        const hasConsultationBody = a.kind === 'consultation' && !a.componentReadings
+          && !!(a.tendencies || a.philosophy || a.productOrigin
+            || (a.improvements && a.improvements.length > 0));
+        const showsSubjectCard = !isSystem;
+        const showsShoppingLinks = hasConsultationBody && !isSystem;
+        return hasDisplayableLinks(a.links) || showsSubjectCard || showsShoppingLinks;
+      })() ? (
         <AdvisorySection label="Learn more">
           {/* Stage 6.2 consultation-validation pass: pass the whole
            *  advisory object (serialized) as the prose hint. The
@@ -4991,14 +5311,25 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
            *  Surfaces the discussed product's image even when subject
            *  dispatches as brand-only (e.g. "Chord" → "Chord Hugo"
            *  via the prose containing "Hugo"). */}
-          <ConsultationSubjectContext
-            subject={a.subject}
-            prose={JSON.stringify(a)}
-          />
-          {a.links && a.links.length > 0 && (
-            <AdvisoryLinks links={a.links} />
+          {/* A system renders its components individually above; the single
+            * Subject Card would otherwise consume the joined subject string as
+            * one product, which is the synthetic-product defect itself. */}
+          {!(a.systemComponentViews && a.systemComponentViews.length > 0) && (
+            <ConsultationSubjectContext
+              subject={a.subject}
+              prose={JSON.stringify(a)}
+            />
           )}
-          {a.kind === 'consultation' && !a.componentReadings && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
+          {hasDisplayableLinks(a.links) && (
+            <AdvisoryLinks links={a.links ?? []} />
+          )}
+          {/* A system already carries per-component marketplace links above.
+            * Emitting these too searched for the joined subject —
+            * "dCS Rossini Apex, ARC ref 5, Butler Monads, Acora QRC-2" — which
+            * is the synthetic-product defect on a second surface. */}
+          {a.kind === 'consultation' && !a.componentReadings
+            && !(a.systemComponentViews && a.systemComponentViews.length > 0)
+            && (a.tendencies || a.philosophy || a.productOrigin || (a.improvements && a.improvements.length > 0)) && (
             <ShoppingLinks
               name={a.subject}
               manufacturerUrl={a.links?.find((l) => l.kind === 'reference')?.url}
@@ -5007,8 +5338,9 @@ function StandardFormat({ advisory: a, onPreferenceCapture, onFollowUpClick }: A
         </AdvisorySection>
       ) : null}
 
-      {/* ── 15. Sources ──────────────────────────── */}
-      {hasDisplayableSources(a.sourceReferences) && (
+      {/* ── 15. Sources ────────────────────────────
+         F4 dormant — see AssessmentFormat Sources comment. */}
+      {false && hasDisplayableSources(a.sourceReferences) && (
         <AdvisorySection label="Sources">
           <AdvisorySources sources={a.sourceReferences} />
         </AdvisorySection>
@@ -5152,6 +5484,7 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
   // always show images when available — no dedup.
   // Narrative prose references use claimImage() for first-reference dedup.
   let content: React.ReactNode;
+  let renderedByEmbeddedArtifact = false;
 
   if (advisory.quickRecommendation) {
     content = <QuickRecFormat quickRec={advisory.quickRecommendation} />;
@@ -5164,7 +5497,61 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     // memo-predicate widening cannot silently re-route comparisons.
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   } else if (isMemoFormat(advisory)) {
-    content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+    // Dispatch precedence for memo-shaped advisories:
+    //   1. ASSESSMENT_ARTIFACT_V2_ENABLED + raw assessment carrier present
+    //      → render the v2 editorial /artifact in embedded mode.
+    //   2. else if SYSTEM_ASSESSMENT_ARTIFACT_ENABLED → legacy warm-editorial
+    //      SystemAssessmentArtifact (Pass 19).
+    //   3. else → legacy MemoFormat.
+    // Both flags default off; with both off, this site is byte-identical
+    // to the legacy MemoFormat path. v2 falls through to (2) / (3) when
+    // the raw carrier is missing (e.g. server-rendered fixture data, or
+    // tests that build advisories without going through the engine).
+    if (ASSESSMENT_ARTIFACT_V2_ENABLED && advisory.__rawAssessment) {
+      /*
+       * THE CONVERSATION RENDERS THE AUTHORITATIVE ASSESSMENT.
+       *
+       * It rendered `synthesizeArtifact(...).payload` directly, which is the
+       * TRAIT/AXIS lane — so this surface, the one nearly every listener
+       * actually reaches, was the one place the licensing gate never ran.
+       * Production proved the cost: Leben CS600X with Klipsch Cornwall IV
+       * published "Nothing here needs changing" and a two-paragraph listening
+       * narrative while Audio XX held ZERO manufacturer facts for the Leben.
+       *
+       * `authoritativeAssessment` is now the only route from an engine result
+       * to a rendered document, and it is the same route the shared artifact,
+       * the saved snapshot and the signed-in system page take. One assessment,
+       * many surfaces — and no surface can opt out of the licence.
+       */
+      const assessment = authoritativeAssessment(advisory.__rawAssessment, {
+        dossiers: advisory.componentDossiers,
+      });
+      // Funnel (certification Gate 3, G3-D1): the embedded assessment IS
+      // a completed assessment — tracked at the embed site so every
+      // branch of this dispatch counts. Deduped per page load.
+      content = assessment ? (
+        <>
+          <SnapshotArtifact snapshot={assessment} embedded />
+          <TrackAssessmentEmbed />
+        </>
+      ) : (
+        <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />
+      );
+      // The snapshot above IS the review, the dossiers and the evidence.
+      // Rendering artifactActions' copies beneath it printed the whole of
+      // YOUR SYSTEM twice — raw then designed — with EVIDENCE both times,
+      // which is exactly what the sideways PDF showed on pages 2\u20135.
+      renderedByEmbeddedArtifact = !!assessment;
+    } else if (SYSTEM_ASSESSMENT_ARTIFACT_ENABLED) {
+      content = (
+        <>
+          <SystemAssessmentArtifact advisory={advisory} />
+          <TrackAssessmentEmbed />
+        </>
+      );
+    } else {
+      content = <MemoFormat advisory={advisory} onFollowUpClick={onFollowUpClick} />;
+    }
   } else if (isAssessmentFormat(advisory)) {
     content = <AssessmentFormat advisory={advisory} />;
   } else if (isKnowledgeFormat(advisory)) {
@@ -5180,12 +5567,107 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
     content = <StandardFormat advisory={advisory} onPreferenceCapture={onPreferenceCapture} onFollowUpClick={onFollowUpClick} />;
   }
 
+  // ── Artifact actions ────────────────────────────────────────────────
+  // Mounted ONCE here rather than per format. The first attempt attached them
+  // to the artifact and memo branches, and Nathan renders through
+  // StandardFormat — so the snapshot was created, the token returned, and no
+  // action appeared. The token's presence is the only condition that matters;
+  // which renderer drew the assessment is not.
+  const artifactActions = (
+    <>
+      {/* SYSTEM REVIEW — the same composed analysis the artifact renders, from
+        * the same call. Composing separately per surface is how two renderings
+        * of one payload drift apart.
+        *
+        * NO heading of its own: the response already opens with the SYSTEM
+        * REVIEW mode label, and a second identical heading lower down read as
+        * two sections rather than one continuing. The paragraphs simply
+        * continue the assessment they belong to, and precede YOUR SYSTEM. */}
+      {!renderedByEmbeddedArtifact && advisory.systemReview && advisory.systemReview.length > 0 && (
+        <section style={{ marginTop: '1rem' }} aria-label="System review">
+          {advisory.systemReview.map((p, i) => (
+            <p key={i} style={{
+              margin: '0 0 0.85rem 0', fontSize: FONTS.bodySize,
+              lineHeight: FONTS.lineHeight,
+            }}>{p}</p>
+          ))}
+        </section>
+      )}
+      {/* The closing question closes the CONVERSATION, not the document.
+        * In chat it invites the next turn; in the durable Print/Save PDF it
+        * is conversational machinery trailing a finished assessment — the
+        * review now ends on its recommendation and unknowns, which is where
+        * an assessment should end. Hidden in print, kept on screen. */}
+      {advisory.followUp && advisory.systemReview && advisory.systemReview.length > 0 && (
+        <p data-print-hide style={{
+          margin: '0 0 1rem 0', fontSize: FONTS.bodySize,
+          lineHeight: FONTS.lineHeight, color: COLORS.textSecondary, fontStyle: 'italic',
+        }}>{advisory.followUp}</p>
+      )}
+
+      {/* Component-scoped: single-subject facts, outside the relational filter.
+        * Skipped when the embedded snapshot already rendered the dossiers. */}
+      {!renderedByEmbeddedArtifact && <ComponentDossiers dossiers={advisory.componentDossiers} />}
+      <ArtifactActionsInline viewToken={advisory.artifactViewToken} />
+    </>
+  );
+
+  // ── Trailing block: Continue Exploring, then Product Resources ──────
+  // Only on the four response types the editorial brief names — assessment,
+  // recommendation, comparison, purchase inquiry. Intake, quick-rec and the
+  // knowledge / assistant lanes are conversational turns rather than
+  // documents, and close without a related-reading section.
+  // Quick-rec turns carrying options are the exception (founder-reported,
+  // 2026-08-13): the compact card renders no per-product purchase links, and
+  // excluding it here suppressed the Product Resources block too — so a turn
+  // listing three products with prices offered no way to buy any of them.
+  // Affiliate fees are the income model, so that seam is a revenue defect.
+  // A quick-rec WITHOUT options stays conversational and is still excluded.
+  const isQuickRecWithOptions =
+    !!advisory.quickRecommendation && (advisory.options?.length ?? 0) > 0;
+
+  const isDocumentResponse =
+    (!advisory.quickRecommendation || isQuickRecWithOptions) &&
+    !isIntakeFormat(advisory) &&
+    (isComparisonFormat(advisory) || isMemoFormat(advisory) || (advisory.options?.length ?? 0) > 0);
+
+  // Product Resources is suppressed wherever per-product purchase links
+  // already render: AdvisoryProductCards on the recommendation and
+  // comparison cards, and the per-component Explore row in MemoFormat.
+  // The two assessment artifacts carry no commerce at all, so they are the
+  // one surface where this block adds links instead of repeating them.
+  // The comparison check mirrors the dispatch above, where a comparison
+  // wins over isMemoFormat even when both predicates match.
+  const rendersAssessmentArtifact =
+    !isComparisonFormat(advisory) &&
+    isMemoFormat(advisory) &&
+    ((ASSESSMENT_ARTIFACT_V2_ENABLED && !!advisory.__rawAssessment) || SYSTEM_ASSESSMENT_ARTIFACT_ENABLED);
+
+  // Resources render where per-product links do NOT already exist: the
+  // assessment artifacts, and now the compact quick-rec card.
+  const footer = isDocumentResponse
+    ? buildResponseFooterData(advisory, {
+        includeResources: rendersAssessmentArtifact || isQuickRecWithOptions,
+      })
+    : null;
+
   return (
     <ProductImageProvider
       comparisonImages={advisory.comparisonImages}
       options={advisory.options}
     >
       {content}
+      {artifactActions}
+      {/* CONTINUE EXPLORING and PRODUCT RESOURCES are conversation
+        * navigation, not part of the saved assessment. In the sideways print
+        * they trailed the document and left a near-blank final page — site
+        * chrome inside what should be a finished artifact. On screen they
+        * stay; the durable PDF ends with EVIDENCE. */}
+      {footer && (
+        <div data-print-hide>
+          <ResponseFooter groups={footer.groups} resources={footer.resources} />
+        </div>
+      )}
     </ProductImageProvider>
   );
 }

@@ -27,9 +27,34 @@ const SECURITY_HEADERS: Array<{ key: string; value: string }> = [
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@audio-xx/rules', '@audio-xx/data', '@audio-xx/signals'],
+  /* Sentry catch #1 (2026-08-04, first hour of production monitoring):
+   * POST /api/evaluate 500'd with ENOENT — engine.ts reads the rules and
+   * signals YAML from the monorepo at runtime via a dynamic path
+   * resolver, which Vercel's static file tracing cannot follow, so the
+   * files were never bundled into the lambdas. Latent since the routes
+   * shipped; invisible until monitoring went live. Explicitly include
+   * the YAML for the two engine-backed routes. */
+  outputFileTracingIncludes: {
+    '/api/evaluate': ['../../packages/rules/**', '../../packages/signals/**'],
+    '/api/diagnose': ['../../packages/rules/**', '../../packages/signals/**'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
+  /* D1 mobile QA — M2 (2026-05-18).
+   *
+   * The Next.js dev-mode build-status indicator renders as a small dark
+   * circle in the bottom-left of every page during `npm run dev`. In
+   * the D1 mobile screenshot pass it overlapped the affiliate-disclosure
+   * line in the page footer at 360–414w widths, where the disclosure
+   * is legal copy that must remain readable.
+   *
+   * The indicator is NOT application chrome — it does not render in
+   * production builds. Disabling it here is a dev-only cleanup that
+   * removes a false-positive from QA screenshots while leaving the
+   * production surface untouched. Production users never saw this
+   * overlap. */
+  devIndicators: false,
   serverExternalPackages: [
     '@prisma/client',
     '@libsql/client',

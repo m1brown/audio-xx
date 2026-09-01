@@ -62,7 +62,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
 
   describe('accepts (Sources heading should render)', () => {
     it('one Tier 1 publication', () => {
-      expect(hasDisplayableSources([{ source: '6moons' }])).toBe(true);
+      expect(hasDisplayableSources([{ source: 'Twittering Machines' }])).toBe(true);
     });
     it('one Tier 2 publication (fallback path)', () => {
       expect(hasDisplayableSources([{ source: 'Stereophile' }])).toBe(true);
@@ -81,7 +81,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
     const cases: Array<{ name: string; refs: { source: string }[] }> = [
       { name: 'empty', refs: [] },
       { name: 'only manufacturer', refs: [{ source: 'Manufacturer' }] },
-      { name: 'mixed tier 1 + junk', refs: [{ source: '6moons' }, { source: 'Junk' }] },
+      { name: 'mixed tier 1 + junk', refs: [{ source: 'Twittering Machines' }, { source: 'Junk' }] },
       { name: 'tier 2 only', refs: [{ source: 'Stereophile' }, { source: 'Hifi News' }] },
     ];
     it.each(cases)('$name: hasDisplayableSources matches filterSourcesForDisplay.length>0', ({ refs }) => {
@@ -91,7 +91,7 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
 
   describe('acts as a TypeScript type guard', () => {
     it('narrows undefined → T[] inside the conditional', () => {
-      const maybe: { source: string }[] | undefined = [{ source: '6moons' }];
+      const maybe: { source: string }[] | undefined = [{ source: 'Twittering Machines' }];
       if (hasDisplayableSources(maybe)) {
         // Inside this branch, maybe is narrowed to non-undefined.
         // The line below compiles only because of the type guard.
@@ -105,10 +105,14 @@ describe('hasDisplayableSources — universal Sources-section gate', () => {
   });
 });
 
-describe('comparison output never renders an empty Sources header', () => {
-  // Stage 14.1c bug: production reported `shindo vs hegel` showing
-  // a Sources heading with no rows beneath. Locks both orderings of
-  // every prior repro pair PLUS the failing new one.
+// F4 gate (private beta, 2026-05-18):
+//   The "displayable rows exist" assertion below was the inverse of
+//   today's contract. Under the F4 reviewer-data exclusion rule,
+//   buildBrandComparison must NOT populate sourceReferences — the
+//   field is now intentionally undefined for every brand-comparison
+//   pair. The block is converted to assert the F4 exclusion explicitly
+//   on the same fixture pairs.
+describe('F4 — comparison output emits no sourceReferences', () => {
   const PAIRS: Array<[string, string, string]> = [
     ['shindo vs hegel',          'Shindo',    'Hegel'],
     ['hegel vs shindo',          'Hegel',     'Shindo'],
@@ -118,18 +122,33 @@ describe('comparison output never renders an empty Sources header', () => {
     ['goldmund vs shindo',       'Goldmund',  'Shindo'],
   ];
 
-  it.each(PAIRS)('%s — render gate would pass (displayable rows exist)', (label, a, b) => {
+  it.each(PAIRS)('%s — comparison output carries no source references', (label, a, b) => {
     const profA = findBrandProfileByName(a);
     const profB = findBrandProfileByName(b);
     expect(profA, `missing fixture: ${a}`).toBeDefined();
     expect(profB, `missing fixture: ${b}`).toBeDefined();
 
     const response = buildBrandComparison(profA!, profB!, label);
-    // The actual rendering contract — pass through the same gate the
-    // AdvisoryMessage call sites use post-14.1c.
+    // F4 hard requirement: reviewer-derived sources must not surface
+    // in comparison output. sourceReferences must be undefined; the
+    // render-side gate then renders no Sources block.
+    expect(response.sourceReferences).toBeUndefined();
+    expect(hasDisplayableSources(response.sourceReferences)).toBe(false);
+  });
+});
+
+describe('6moons exclusion — founder directive 2026-07-31', () => {
+  // 6moons content may never be displayed, quoted, or linked. Dormant
+  // catalog references are tolerated ONLY because this whitelist filter
+  // blocks them at render time — so 6moons must never be whitelisted.
+  it('6moons is not a whitelisted source (any casing)', () => {
+    expect(hasDisplayableSources([{ source: '6moons' }])).toBe(false);
+    expect(hasDisplayableSources([{ source: '6Moons' }])).toBe(false);
+  });
+  it('filterSourcesForDisplay drops 6moons references', () => {
     expect(
-      hasDisplayableSources(response.sourceReferences),
-      `${label} produced no displayable sources — empty Sources header would render.`,
-    ).toBe(true);
+      filterSourcesForDisplay([{ source: '6moons' }, { source: 'Stereophile' }])
+        .map((r) => r.source),
+    ).toEqual(['Stereophile']);
   });
 });

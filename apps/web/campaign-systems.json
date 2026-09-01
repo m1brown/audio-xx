@@ -1,0 +1,159 @@
+[
+ {
+  "id": "A-conventional",
+  "msg": "Assess my system: Cambridge CXN V2 streamer, Rotel A11 Tribute integrated amp, Wharfedale Diamond 12.2 speakers",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "cxn": "streamer",
+    "rotel": "integrated|amplifier",
+    "wharfedale": "speaker"
+   }
+  }
+ },
+ {
+  "id": "B-separates",
+  "msg": "Assess my system: Auralic Aries G1 streamer into a Denafrips Ares II DAC, Schiit Freya+ preamp, Parasound A21+ power amp, Focal Aria 926 speakers",
+  "expect": {
+   "n": 5,
+   "roles": {
+    "denafrips": "dac",
+    "freya": "preamplifier|amplifier",
+    "parasound": "amplifier",
+    "focal": "speaker"
+   }
+  }
+ },
+ {
+  "id": "C-tube-highsens",
+  "msg": "Assess my system: PrimaLuna EVO 300 tube amp with Klipsch Cornwall IV speakers, source is a Bluesound Node",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "primaluna": "amplifier|integrated",
+    "klipsch": "speaker"
+   }
+  }
+ },
+ {
+  "id": "D-lowpower-difficult",
+  "msg": "Assess my system: First Watt SIT-3 amplifier driving Magnepan LRS speakers, Chord Qutest DAC",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "first": "amplifier",
+    "magnepan": "speaker"
+   }
+  }
+ },
+ {
+  "id": "E-overpowered-easy",
+  "msg": "Assess my system: McIntosh MC462 power amp, Klipsch RP-600M speakers, Topping D90 dac",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "mcintosh": "amplifier",
+    "klipsch": "speaker"
+   }
+  }
+ },
+ {
+  "id": "F-active",
+  "msg": "Assess my system: KEF LS50 Wireless II active speakers fed from a WiiM Ultra streamer",
+  "expect": {
+   "n": 2
+  }
+ },
+ {
+  "id": "G-dac-direct",
+  "msg": "Assess my system: Chord DAVE DAC running directly into a Benchmark AHB2 power amplifier, KEF LS50 Meta speakers",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "chord": "dac",
+    "benchmark": "amplifier",
+    "kef": "speaker"
+   }
+  }
+ },
+ {
+  "id": "H-integrated-dac",
+  "msg": "Assess my system: Hegel H190 with built-in DAC and streaming, KEF LS50 Meta speakers",
+  "expect": {
+   "n": 2,
+   "roles": {
+    "hegel": "integrated|amplifier",
+    "kef": "speaker"
+   }
+  }
+ },
+ {
+  "id": "I-redundant",
+  "msg": "Assess my system: Eversolo DMP-A6 streamer into a Hegel H190 integrated, Dynaudio Evoke 20 speakers",
+  "expect": {
+   "n": 3
+  }
+ },
+ {
+  "id": "J-vintage-modern",
+  "msg": "Assess my system: Technics SL-1200MK2 turntable, Schiit Mani phono stage, Sansui AU-717 vintage amp, JBL L100 Classic speakers",
+  "expect": {
+   "n": 4,
+   "roles": {
+    "technics": "turntable",
+    "sansui": "amplifier|integrated",
+    "jbl": "speaker"
+   }
+  }
+ },
+ {
+  "id": "K-reference",
+  "msg": "Assess my system: dCS Bartok streaming DAC, Pass Labs INT-250 integrated, Wilson Audio Sabrina X speakers",
+  "expect": {
+   "n": 3
+  }
+ },
+ {
+  "id": "L-modest-smart",
+  "msg": "Assess my system: WiiM Pro streamer, Schiit Modi Multibit DAC, NAD C 316BEE V2 amp, Q Acoustics 3020i speakers",
+  "expect": {
+   "n": 4
+  }
+ },
+ {
+  "id": "M-mismatch",
+  "msg": "Assess my system: Woo Audio WA5 300B SET amplifier driving B&W 802 D3 speakers, Denafrips Pontus II DAC",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "woo": "amplifier",
+    "802": "speaker"
+   }
+  }
+ },
+ {
+  "id": "N-obscure",
+  "msg": "Assess my system: 47 Labs 4706 Gaincard amplifier with Snell Type J speakers and a Micromega Stage 3 CD player",
+  "expect": {
+   "n": 3
+  }
+ },
+ {
+  "id": "O-ambiguous-gen",
+  "msg": "Assess my system: dCS Rossini, Pass X250, KEF LS50",
+  "expect": {
+   "n": 3
+  }
+ },
+ {
+  "id": "P-variant-risk",
+  "msg": "Assess my system: Leben CS300XS amplifier with DeVore Gibbon 88 speakers, Marantz CD5005 as source",
+  "expect": {
+   "n": 3,
+   "roles": {
+    "leben": "amplifier|integrated",
+    "devore": "speaker"
+   }
+  }
+ }
+]

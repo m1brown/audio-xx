@@ -1,0 +1,53 @@
+=== 1-reported — Chord Hugo / Job / WLM Diva (reported)
+INPUT: evaluate my system: Streamer Eversolo DMP-A6, Amplifier JOB Job integrated, Speakers WLM Diva monitor, Dac Chord Hugo
+VERDICT: Nothing here needs changing.
+STANDFIRST: Tonally balanced, detail-forward, elastically flowing, spatially open system emphasizing transient clarity.
+CREDIT: Eversolo DMP-A6 | Chord Hugo | JOB Integrated | WLM Diva Monitor
+  * Eversolo DMP-A6 and Chord Hugo and JOB Integrated resolve cleanly; WLM Diva Monitor keeps the result musical rather than analytical. None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.
+  * Why it hangs together: on ease vs. resolution, 3 of the 4 components lean the same way (detailed). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.
+  * The trade — wLM Diva Monitor has moderate placement sensitivity — Spatial precision improves significantly with careful positioning. Bass energy from the passive radiator can overwhelm small or untreated rooms.
+  * Each component is doing what it was chosen for, and nothing is asking it to do more.
+
+=== 2-mainstream — Balanced mainstream
+INPUT: evaluate my system: Bluesound Node, Hegel H190, KEF LS50 Meta
+VERDICT: The amplifier is steering the whole system.
+STANDFIRST: tonally balanced, rhythmically articulate system.
+CREDIT: Bluesound Node | Hegel H190 | KEF
+  * The Hegel H190 is reinforcing the system's lean toward tight damping and control — addressing it would open up the most room for improvement.
+  * You hear it as the system leaning hard in one direction — what should be a strength has become an excess the speaker can’t talk out of.
+
+=== 3-mismatch — Technically mismatched
+INPUT: evaluate my system: Chord Qutest, Naim SuperNait 3, Klipsch La Scala
+VERDICT: The DAC is holding the system back.
+STANDFIRST: Everything downstream inherits its limits.
+CREDIT: Chord Qutest | Naim SuperNait 3 | Klipsch
+  * The DAC is holding back the system — limited tonal density.
+  * You hear it as a thinner midrange, a glassy edge on transients and the body the recording deserves never quite arriving.
+
+=== 4-lowpower — Low-power amp + hard speaker
+INPUT: evaluate my system: Denafrips Ares II, Leben CS600X, Magnepan LRS+
+VERDICT: Nothing here needs changing.
+STANDFIRST: Tonally warm, detail-forward, intimate system emphasizing tonal richness.
+CREDIT: Ares Ii | Leben CS600X | Magnepan LRS+
+  * Ares Ii and Leben CS600X hand the speaker a tone-rich signal; Magnepan LRS+ carries it without thinning it out. None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.
+  * Why it hangs together: on warmth vs. clarity, 2 of the 3 components lean the same way (warm). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.
+  * What it gives up on purpose: transient edge and analytical detail. That's the deliberate cost — a coherent system can't pull in both directions at once, and this one has picked its direction.
+  * Each component is doing what it was chosen for, and nothing is asking it to do more.
+  * If you ever want more, if you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.
+
+=== 5-donothing — Little should change
+INPUT: evaluate my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus
+VERDICT: Nothing here needs changing.
+STANDFIRST: Tonally balanced, spatially open system.
+CREDIT: Chord Qutest | Naim SuperNait 3 | Harbeth Super HL5 Plus
+  * Chord Qutest and Naim SuperNait 3 resolve cleanly; Harbeth Super HL5 Plus keeps the result musical rather than analytical. None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.
+  * Why it hangs together: on ease vs. resolution, 2 of the 3 components lean the same way (detailed). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.
+  * Each component is doing what it was chosen for, and nothing is asking it to do more.
+
+=== 6-uncertain — Incomplete/uncertain
+INPUT: evaluate my system: some vintage receiver and a pair of bookshelf speakers I got used
+RESULT: null (low-confidence/clarification path)
+
+ ✓ apps/web/src/lib/__tests__/_gate5_review.test.ts (1 test) 80ms
+
+ Test Files  1 passed (1)

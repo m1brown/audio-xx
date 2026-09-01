@@ -45,6 +45,13 @@ apps/web/qa-conversation-state/
 apps/web/reviewer-benchmark/
 apps/web/consultation-validation/
 apps/web/test-results/
+/test-results/
+apps/web/saturday-share/
+# Time-stamped audit output directories at the repo root.
+# Already-tracked files in earlier audit-YYYY-MM-DD/ dirs (audit-2026-05-11,
+# audit-2026-05-12) are unaffected — git keeps tracked files even when an
+# ignore rule would match them. New audits should reference local-only.
+audit-*/
 
 node_modules/
 dist/
@@ -57,3 +64,6 @@ dist/
 .turbo
 *.tsbuildinfo
 .claude/
+.vercel
+/dist/
+.env*

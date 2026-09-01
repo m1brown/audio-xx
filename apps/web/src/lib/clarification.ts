@@ -30,6 +30,15 @@ export interface ClarificationResponse {
   context?: string;
   /** The clarifying question to ask. */
   question: string;
+  /**
+   * Components already recognized, for a compact visual confirmation
+   * ("✓ Rega · ✓ Wharfedale") shown before the question. Presentation only —
+   * these are display names the resolver already placed; setting this does not
+   * change graph resolution. Absent for clarifications with nothing to confirm.
+   */
+  recognized?: string[];
+  /** The component(s) still to pin down (already named in `question`). */
+  unresolved?: string[];
 }
 
 // ── Case 1: Interpretation Ambiguity ──────────────────
@@ -110,9 +119,51 @@ function checkInterpretationAmbiguity(
 
 // ── Case 2: Diagnostic Uncertainty ────────────────────
 
+/**
+ * Asks the user to describe what they are hearing, when there is too little
+ * information to reason from.
+ *
+ * The symptom question below presumes a symptom. That is right for "something
+ * sounds off" and wrong for "is my system balanced" — a request for a judgment,
+ * not a report of a problem. Verified on production, all three of
+ * "is my system balanced", "weakest link in my setup?" and "does anything need
+ * changing in my setup" were asked what "bothers or pleases" them about a
+ * problem they had never mentioned.
+ *
+ * What those turns are missing is not a symptom, it is the system. So they are
+ * asked for it directly.
+ *
+ * Note "should i upgrade my dac" is deliberately NOT handled here: it produces
+ * a valid churn signal and should take the early return in page.tsx. That it
+ * does not is a separate gating defect — see churn-control-pin.test.ts.
+ */
+/**
+ * Exported for page.tsx (Mission 4B, 2026-08-10): the component-aware
+ * troubleshooting clarification is consulted BEFORE this module's system
+ * ask, so a judgment request that happens to name component categories
+ * ("my system: <dac>, <amp>, <speakers> — how does it hang together?")
+ * was hijacked into "let's figure out what's going on with your DAC" —
+ * an invented problem. Judgment requests must skip the troubleshooting
+ * map and fall through to the system ask.
+ */
+export const SYSTEM_JUDGMENT_REQUEST =
+  /\b(?:my|the)\s+(?:system|setup|chain|rig)\b|\bweakest\s+link\b/i;
+
+/**
+ * The system-components ask, exported so page.tsx can recognise it at the
+ * dispatch site and arm the pending-clarification state (Mission 4,
+ * 2026-08-10). When this question is asked, the NEXT user turn is an
+ * answer to it — it must be reunited with the original request instead of
+ * re-entering the pipeline cold (which produced troubleshooting interviews
+ * about problems the user never reported).
+ */
+export const SYSTEM_COMPONENTS_QUESTION =
+  'What components are in your system? The source, amplifier and speakers would be enough for me to answer this properly.';
+
 function checkDiagnosticUncertainty(
   signals: ExtractedSignals,
   result: EvaluationResult,
+  currentMessage: string,
 ): string | null {
   const isFallbackOnly =
     result.fired_rules.length === 1 &&
@@ -122,6 +173,12 @@ function checkDiagnosticUncertainty(
   const isHighUncertainty = signals.uncertainty_level >= 2;
 
   if (isFallbackOnly || isLowInformation || isHighUncertainty) {
+    // A judgment about the system cannot be made, or usefully asked about,
+    // until the system is known. Asking about symptoms here invents a
+    // complaint the user did not make.
+    if (SYSTEM_JUDGMENT_REQUEST.test(currentMessage) && signals.symptoms.length === 0) {
+      return SYSTEM_COMPONENTS_QUESTION;
+    }
     return 'Could you describe what specifically bothers or pleases you — is it about how things sound (tone, brightness, warmth), where instruments seem to be (space, width), or how the music moves (timing, rhythm, energy)?';
   }
 
@@ -215,7 +272,10 @@ function generateAcknowledge(
     if (phrases.length >= 2) return 'That paints a clearer picture.';
     if (phrases.length === 1) return 'Got it, that helps.';
     if (lower.includes('budget') || lower.includes('$')) return 'Good to know the budget range.';
-    if (lower.includes('my system') || lower.includes('my setup')) return 'Helpful to know the system context.';
+    // The follow-up twin of the first-turn rule removed below: returning
+    // "Helpful to know the system context." because the message contained the
+    // words "my system". Same unsupported claim, same reason for removal —
+    // these fall through to the neutral line.
     return 'Noted — thanks for that.';
   }
 
@@ -284,10 +344,20 @@ function generateAcknowledge(
     return `That\'s a good observation about ${term} — it helps clarify what you\'re hearing.`;
   }
 
-  // System description without clear problem
-  if (lower.includes('my system') || lower.includes('my setup') || lower.includes('i have')) {
-    return 'Good to know the system context — that shapes what would make sense.';
-  }
+  // NOTE: there was a rule here returning "Good to know the system context —
+  // that shapes what would make sense." whenever the message contained the
+  // phrase "my system", "my setup" or "i have".
+  //
+  // Mentioning "my system" is not evidence that the system has been described.
+  // "is my system balanced", "weakest link in my setup?" and "does anything
+  // need changing in my setup" all matched, so all three received the identical
+  // line thanking the user for context they had never supplied.
+  //
+  // It is not gated on a signal instead, because there is no honest signal to
+  // gate on: `ExtractedSignals` carries traits, symptoms and phrases, but no
+  // component or system field. A claim that cannot be verified here must not be
+  // made here. These messages fall through to the neutral acknowledgement below,
+  // and the follow-up question asks for the components (see buildClarification).
 
   // True fallback — still warm, not robotic
   return 'That\'s a good starting point.';
@@ -394,7 +464,7 @@ export function getClarificationQuestion(
     };
   }
 
-  const uncertaintyQ = checkDiagnosticUncertainty(signals, result);
+  const uncertaintyQ = checkDiagnosticUncertainty(signals, result, currentMessage);
   if (uncertaintyQ) {
     return {
       acknowledge: generateAcknowledge(signals, currentMessage, turnCount, category),

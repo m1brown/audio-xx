@@ -22,7 +22,8 @@
  *   - Search-based Amazon links are never generated — only direct catalog links
  */
 
-import { shouldShowAmazonLink } from './amazon-links';
+import { shouldShowAmazonLink, getAmazonSearchUrl } from './amazon-links';
+import { getEbaySearchUrl } from './ebay-links';
 
 // ── Types ────────────────────────────────────────────
 
@@ -76,7 +77,11 @@ function hifiSharkUrl(brand: string | undefined, name: string): string {
 
 function ebayUrl(brand: string | undefined, name: string): string {
   const query = [brand, name].filter(Boolean).join(' ');
-  return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_sacat=293&LH_All=1`;
+  // Host + EPN tagging come from ebay-links → affiliate-config
+  // (env-driven). _sacat=293 (Consumer Electronics) and LH_All=1
+  // (all listings, including completed) are preserved as caller-
+  // controlled scope filters that this consumer relies on.
+  return getEbaySearchUrl(query, { extraParams: { _sacat: '293', LH_All: '1' } });
 }
 
 // ── Detection helpers ────────────────────────────────
@@ -106,6 +111,32 @@ function isDealerLink(label: string, url: string): boolean {
   if (dealerPatterns.some(p => lower.includes(p))) return true;
   if (lower.includes('dealer') || lower.includes('buy')) return true;
   return false;
+}
+
+/**
+ * Marketplaces and used-gear aggregators — never a manufacturer's own page.
+ *
+ * The manufacturer link is derived below as "the first retailer link that is
+ * neither Amazon nor a known dealer". That definition is open at the bottom:
+ * anything unrecognised is treated as the brand's own site. For 6 of the 158
+ * catalogued products the first retailer link is a HiFi Shark search, so the
+ * cards rendered "Product page → JOB" pointing at a used-listings query —
+ * asserting both that the page is the maker's and that it belongs to the
+ * named brand. Neither is true.
+ *
+ * Excluding these hosts closes the classification rather than widening the
+ * dealer allowlist, because the failure is "we do not know the manufacturer
+ * page", and the honest result is to show no Product page row at all.
+ */
+const AGGREGATOR_HOSTS = [
+  'hifishark.com', 'ebay.', 'audiogon.com', 'usaudiomart.com',
+  'canuckaudiomart.com', 'reverb.com', 'etsy.com', 'aliexpress.',
+];
+
+/** True if the URL is a marketplace/aggregator rather than a maker's site. */
+export function isAggregatorLink(url: string): boolean {
+  const u = (url ?? '').toLowerCase();
+  return AGGREGATOR_HOSTS.some((host) => u.includes(host));
 }
 
 /** True if the label indicates a review or reference link. */
@@ -141,7 +172,13 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   const hasVerifiedAmazon = !!(amazonEntry && isVerifiedAmazonLink(amazonEntry.url));
 
   // ── Should we show Amazon at all? ──
-  const amazonEligible = hasVerifiedAmazon && shouldShowAmazonLink({
+  // Affiliate activation fix (2026-08-04): eligibility no longer requires
+  // a stored verified ASIN link — the B1 remediation removed every ASIN
+  // (all 8 had rotted), which silently made this gate always-false and
+  // no Amazon link could ever render. Brand/market eligibility alone
+  // decides; the URL below prefers a verified stored entry when one
+  // exists and otherwise uses the documented search-based link.
+  const amazonEligible = shouldShowAmazonLink({
     brand: input.brand,
     availability: input.availability,
     typicalMarket: input.typicalMarket,
@@ -166,9 +203,16 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
       }
     }
 
-    // Priority 2: Amazon direct link (only if verified ASIN exists)
-    if (amazonEligible && amazonEntry) {
-      addIfNew(newLinks, 'Amazon', amazonEntry.url);
+    // Priority 2: Amazon — a verified stored entry wins; otherwise the
+    // search-based link (ASIN-rot-proof, carries the affiliate tag when
+    // configured). Search-based is the documented policy since the
+    // 2026-07-31 ASIN purge.
+    if (amazonEligible) {
+      if (hasVerifiedAmazon && amazonEntry) {
+        addIfNew(newLinks, 'Amazon', amazonEntry.url);
+      } else {
+        addIfNew(newLinks, 'Amazon', getAmazonSearchUrl(input.name, input.brand));
+      }
     }
 
   }
@@ -179,14 +223,16 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   const manufacturerLinks: ResolvedLink[] = [];
 
   {
-    // First try: non-Amazon, non-dealer retailer link (typically the brand's own site)
+    // First try: non-Amazon, non-dealer, non-aggregator retailer link
+    // (typically the brand's own site)
     const manufacturerEntry = allRetailer.find(l =>
-      !isAmazonLink(l.label, l.url) && !isDealerLink(l.label, l.url),
+      !isAmazonLink(l.label, l.url) && !isDealerLink(l.label, l.url) && !isAggregatorLink(l.url),
     );
     if (manufacturerEntry) {
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', manufacturerEntry.url);
-    } else if (input.manufacturerUrl) {
-      // Fallback: pre-computed manufacturerUrl (retailer_links[0].url)
+    } else if (input.manufacturerUrl && !isAggregatorLink(input.manufacturerUrl)) {
+      // Fallback: pre-computed manufacturerUrl (retailer_links[0].url), which
+      // is just as likely to be an aggregator — guard it the same way.
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', input.manufacturerUrl);
     }
   }
@@ -225,7 +271,12 @@ export function buildProductLinks(input: ProductLinkInput): ProductLinks {
   // If both "Buy new" and "Product page" are empty and product is current,
   // ensure at least a manufacturer link exists so the card isn't link-less.
   if (!isUsedOnly && newLinks.length === 0 && manufacturerLinks.length === 0) {
-    const fallbackUrl = input.manufacturerUrl ?? allRetailer[0]?.url;
+    // Same guard as above: this net must not re-admit an aggregator under the
+    // "Product page" label. A card with no Product page row is correct when
+    // the manufacturer page is genuinely unknown — the Buy used links, which
+    // are always generated, keep the card from being link-less.
+    const fallbackUrl = [input.manufacturerUrl, allRetailer[0]?.url]
+      .find((u): u is string => !!u && !isAggregatorLink(u));
     if (fallbackUrl) {
       addIfNew(manufacturerLinks, input.brand ?? 'Manufacturer', fallbackUrl);
     }

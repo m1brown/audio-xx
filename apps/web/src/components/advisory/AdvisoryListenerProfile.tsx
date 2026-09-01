@@ -68,7 +68,7 @@ export default function AdvisoryListenerProfile({ profile, keyObservation }: Lis
             fontWeight: 700,
             letterSpacing: '0.06em',
             textTransform: 'uppercase' as const,
-            color: '#1F3A5F',
+            color: '#1B1A18',
             marginBottom: '0.4rem',
           }}>
             Primary traits

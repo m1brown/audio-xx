@@ -1,5 +1,10 @@
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'About',
+  description: 'What Audio XX is, and the thinking behind an advisor that reasons about your whole system.',
+};
+
 export default function About() {
   return (
     <div style={{ maxWidth: 600 }}>

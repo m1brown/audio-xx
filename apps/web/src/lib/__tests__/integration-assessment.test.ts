@@ -622,8 +622,11 @@ describe('Case-variant duplicate dedup', () => {
     );
     const prose = result.response.systemContext ?? '';
     // "Job Integrated and Chord Hugo and JOB Integrated" — the bug.
-    expect(/Job Integrated.*?and.*?JOB Integrated/i.test(prose)).toBe(false);
-    expect(/JOB Integrated.*?and.*?Job Integrated/i.test(prose)).toBe(false);
+    // Scoped to a single sentence ([^.]*): the component may legitimately
+    // appear in more than one sentence (e.g. thesis + pairing evidence);
+    // the dedup bug is the same name twice within ONE enumeration.
+    expect(/Job Integrated[^.]*\band\b[^.]*JOB Integrated/i.test(prose)).toBe(false);
+    expect(/JOB Integrated[^.]*\band\b[^.]*Job Integrated/i.test(prose)).toBe(false);
   });
 
   it('Component Contributions assessments are unique per product', () => {

@@ -12,6 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { detectIntent } from '../intent';
 import { buildProductAssessment, findAssessmentProduct } from '../product-assessment';
+import { buildConsultationResponse } from '../consultation';
 import type { AssessmentContext } from '../product-assessment';
 
 describe('Product assessment routing: priority gate', () => {
@@ -48,7 +49,24 @@ describe('Product assessment routing: priority gate', () => {
     });
   }
 
-  // ── Brand-only queries also route to product_assessment ──
+  // ── Brand-only queries do NOT route to product_assessment ──
+  //
+  // These previously asserted product_assessment. That predated the brand
+  // consultation lane, and in production it produced a brand rendered as a
+  // device: "tell me about shindo" returned a spec subtitle and prose placing
+  // "the Shindo" in a family, as though Shindo were a model. The cause is
+  // structural, not cosmetic — page.tsx blocks product_assessment from the
+  // consultation path, so claiming the turn here made the curated BrandProfile
+  // and its authority card unreachable no matter what they contained.
+  //
+  // Routing these to gear_inquiry reaches `buildConsultationResponse` →
+  // `hasBrandOnlySubject` → `buildBrandConsultation`, which returns the
+  // authored profile (founder, country, design philosophy, tendencies) and
+  // populates `brandAuthorityPreview` where a hero image exists.
+  //
+  // The assertion is deliberately negative plus a reachability check rather
+  // than pinning one lane: what matters is that a brand-only turn is not
+  // claimed by a lane that requires a product and cannot reach brand content.
   const BRAND_ASSESSMENT_QUERIES = [
     'tell me about denafrips',
     'thoughts on shindo',
@@ -56,9 +74,22 @@ describe('Product assessment routing: priority gate', () => {
   ];
 
   for (const q of BRAND_ASSESSMENT_QUERIES) {
-    it(`routes "${q}" to product_assessment (brand-level)`, () => {
+    it(`routes "${q}" away from product_assessment (brand-level)`, () => {
       const result = detectIntent(q);
-      expect(result.intent).toBe('product_assessment');
+      expect(result.intent).not.toBe('product_assessment');
+      // Must land somewhere the consultation path can reach — page.tsx blocks
+      // both product_assessment and system_assessment from it.
+      expect(result.intent).not.toBe('system_assessment');
+      expect(result.subjectMatches.some((m) => m.kind === 'brand')).toBe(true);
+    });
+  }
+
+  for (const q of BRAND_ASSESSMENT_QUERIES) {
+    it(`reaches the curated brand profile for "${q}"`, () => {
+      const result = detectIntent(q);
+      const consult = buildConsultationResponse(q, result.subjectMatches);
+      expect(consult, 'a bare brand must produce a consultation').not.toBeNull();
+      expect((consult as { source?: string } | null)?.source).toBe('brand_profile');
     });
   }
 });

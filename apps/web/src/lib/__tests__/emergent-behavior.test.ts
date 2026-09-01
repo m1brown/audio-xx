@@ -544,8 +544,10 @@ describe('My System calibration — Eversolo → Hugo → JOB → WLM Diva', () 
     expect(out).toMatch(/Hugo's timing precision/i);
     expect(out).toMatch(/JOB's low-friction output/i);
     expect(out).toMatch(/high-efficiency driver/i);
-    // Quality clause: microdynamics stay lively/quick/sweet — not "merely lean"
-    expect(out).toMatch(/microdynamics stay lively, quick, and sweet instead of merely lean/);
+    // Quality clause: small dynamic steps stay differentiated — not flattened.
+    // Reworded in the 2026-08-04 editorial pass; "sweet" was vague-emotional
+    // register, and the clause now names what is actually audible.
+    expect(out).toMatch(/small dynamic steps stay quick and clearly differentiated rather than flattened toward one level/);
     // Old compensation language must NOT appear in the emergent paragraph
     expect(out).not.toMatch(/supplying all of the warmth/i);
     expect(out).not.toMatch(/prevents thinness/i);
@@ -694,7 +696,9 @@ describe('synergyDescriptor — phrase for the SYSTEM READ override', () => {
     expect(synergyDescriptor(['flow_continuity'])).toBe('musical flow');
   });
 
-  it('empty array → defensive default "deliberate synergy"', () => {
-    expect(synergyDescriptor([])).toBe('deliberate synergy');
+  // "deliberate synergy" claimed an intent the engine cannot observe, and
+  // fit any competent system. The default now states only what is visible.
+  it('empty array → defensive default "consistent voicing across the chain"', () => {
+    expect(synergyDescriptor([])).toBe('consistent voicing across the chain');
   });
 });

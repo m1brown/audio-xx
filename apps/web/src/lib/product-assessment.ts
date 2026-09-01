@@ -200,7 +200,7 @@ function describeTraitDelta(
   const changes: string[] = [];
   const TRAIT_LABELS: Record<string, string> = {
     flow: 'musical flow',
-    tonal_density: 'tonal density',
+    tonal_density: 'tonal weight and body',
     clarity: 'clarity and resolution',
     dynamics: 'dynamic energy',
     fatigue_risk: 'fatigue risk',
@@ -238,7 +238,7 @@ function describeCharacter(product: Product): string[] {
   const t = product.traits;
 
   if ((t.flow ?? 0) >= 0.7) lines.push('Prioritizes musical flow and engagement');
-  if ((t.tonal_density ?? 0) >= 0.7) lines.push('Strong tonal density and harmonic richness');
+  if ((t.tonal_density ?? 0) >= 0.7) lines.push('Rich, full-bodied tone');
   if ((t.clarity ?? 0) >= 0.7) lines.push('High clarity and resolution');
   if ((t.dynamics ?? 0) >= 0.7) lines.push('Dynamic and energetic presentation');
   if ((t.texture ?? 0) >= 0.7) lines.push('Rich textural detail');
@@ -282,6 +282,76 @@ function toDisplayName(raw: string): string {
 
 // ── Assessment builder ──────────────────────────────
 
+/** Conversational framing stripped before looking for a model token. */
+const MODEL_QUERY_FILLER = new RegExp(
+  '\\b(tell me about|what do you (think|know) (of|about)|how (is|about)|'
+  + 'is the|are the|whats|what is|what are|thoughts on|opinion on|review of|'
+  + 'assess|review|rate|evaluate|any good|good|the|a|an|your|my|please|'
+  + 'specs? of|specifications? of)\\b',
+  'gi',
+);
+
+/** Residues that mean "the brand in general", not a specific model. */
+const BRAND_GENERAL_RESIDUE = new Set([
+  'sound', 'house sound', 'gear', 'products', 'product', 'brand', 'stuff',
+  'kit', 'range', 'lineup', 'components', 'amps', 'amplifiers', 'speakers',
+  'dacs', 'dac', 'streamers', 'electronics', 'sonics', 'philosophy',
+]);
+
+/**
+ * Does the model the user typed actually name the product we resolved?
+ *
+ * The catalog matcher is deliberately lenient — it was built to rescue
+ * shortened display names ("DeVore Orangutan O/96" arriving as "DeVore O/96").
+ * The cost is that it silently answers about a neighbour: "Denafrips Pontus IV"
+ * (which does not exist) returned a confident assessment of the Pontus II
+ * 12th-1, and "Schiit Modi+" returned the Modius E. The user cannot tell.
+ *
+ * Comparison is token-prefix, not substring: "pontus ii" satisfies
+ * "Pontus II 12th-1" (a fuller name for the same product), while "pontus iv"
+ * does not — and "modi" does not satisfy "Modius E", which substring matching
+ * would wrongly accept.
+ */
+export function requestedModelMatches(requested: string, resolvedName: string): boolean {
+  const tokens = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/i).filter(Boolean);
+  const req = tokens(requested);
+  const res = tokens(resolvedName);
+  if (req.length === 0) return true; // nothing specific was asked for
+  if (req.length > res.length) return false;
+  return req.every((t, i) => t === res[i]);
+}
+
+/**
+ * Recover the model designation a user typed when the catalog matched
+ * only the brand. Returns undefined for bare-brand queries ("tell me
+ * about the Chord sound") so those keep their existing behaviour.
+ */
+export function extractUnmatchedModel(
+  currentMessage: string,
+  brandName: string,
+): string | undefined {
+  if (!currentMessage) return undefined;
+  let rest = currentMessage;
+  // Remove the brand token(s) — longest form first ("Cambridge Audio"
+  // before "Cambridge") so the residue is the model, not a brand word.
+  const brandWords = brandName.trim().split(/\s+/);
+  for (let take = brandWords.length; take >= 1; take--) {
+    const frag = brandWords.slice(0, take).join('\\s+');
+    rest = rest.replace(new RegExp(frag, 'gi'), ' ');
+  }
+  rest = rest
+    .replace(MODEL_QUERY_FILLER, ' ')
+    .replace(/[?!.,;:]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (rest.length < 2) return undefined;
+  if (BRAND_GENERAL_RESIDUE.has(rest.toLowerCase())) return undefined;
+  // Guard against swallowing a whole sentence: a model designation is
+  // short. Anything longer is conversational text, not a model name.
+  if (rest.split(/\s+/).length > 4) return undefined;
+  return rest;
+}
+
 export interface AssessmentContext {
   subjectMatches: SubjectMatch[];
   activeSystem?: ActiveSystemContext | null;
@@ -308,6 +378,29 @@ export function buildProductAssessment(
   // Extract brand name even if no product match
   const brandSubject = subjectMatches.find((m) => m.kind === 'brand');
   const productSubject = subjectMatches.find((m) => m.kind === 'product');
+  /* D-011 (pre-beta audit, 2026-08-04): when a user names a model the
+   * catalog doesn't carry but whose BRAND is recognized, the matcher
+   * yields a brand match only. Without this, the code treated the query
+   * as a bare-brand question: it never echoed the model, never hedged,
+   * and asserted the brand's typical spec string ("Class AB, 80W/ch")
+   * as though it described the named product — which for a streamer
+   * like the MXN10 is a fabricated specification. Recover what the user
+   * actually typed so the response can name it and hedge honestly. */
+  const unmatchedModel = (!candidate && !productSubject && brandSubject)
+    ? extractUnmatchedModel(currentMessage, brandSubject.name)
+    : undefined;
+  /* Silent substitution (review 2026-08-05): the matcher can resolve a model
+   * the user did not name — "Pontus IV" → Pontus II, "Modi+" → Modius E — and
+   * the response then reads as confident, specific and wrong. Recover what was
+   * typed and, when it does not name the product we resolved, disclose the
+   * substitution before any analysis rather than quietly answering about
+   * something else. */
+  const requestedModel = candidate
+    ? extractUnmatchedModel(currentMessage, candidate.brand)
+    : undefined;
+  const substitutedModel = !!(
+    requestedModel && !requestedModelMatches(requestedModel, candidate!.name)
+  );
   // When falling through to raw subject text (no catalog match), recover
   // display casing so the rendered output doesn't show lowercase brand
   // names like "chord" instead of "Chord" (QA residual R2).
@@ -315,9 +408,12 @@ export function buildProductAssessment(
     ? `${candidate.brand} ${candidate.name}`
     : productSubject?.name
       ? toDisplayName(productSubject.name)
-      : brandSubject?.name
-        ? toDisplayName(brandSubject.name)
-        : 'Unknown product';
+      // D-011: name what the user actually asked about, not just the brand.
+      : unmatchedModel && brandSubject?.name
+        ? `${toDisplayName(brandSubject.name)} ${unmatchedModel}`
+        : brandSubject?.name
+          ? toDisplayName(brandSubject.name)
+          : 'Unknown product';
 
   if (!candidate && !brandSubject && !productSubject) {
     return null; // Can't identify what they're asking about
@@ -326,9 +422,26 @@ export function buildProductAssessment(
   // ── Brand sibling data for no-catalog fallback ────
   const productKey = productSubject?.name?.toLowerCase();
   const productNote = productKey ? KNOWN_PRODUCT_NOTES[productKey] : undefined;
+  /* D-7 (Wave-2 cold repro, 2026-08-29): "Leben CS600 instead of the
+   * PrimaLuna" carries two brands. The product subject ("leben cs600") is
+   * the assessment SUBJECT; the brand subject ("primaluna") names the
+   * component being replaced. Binding brandName to any brand match in the
+   * sentence grafted PrimaLuna's topology and house sound onto the Leben —
+   * a false attribution. A brand match may only supply the brand when the
+   * product subject's own tokens contain it (word-boundary, cf.
+   * brand-substring-boundary); otherwise the brand must come from the
+   * subject name itself or stay unresolved. */
+  const brandTokenInSubject = (subject: string, brand: string): boolean =>
+    new RegExp(
+      `(^|[^a-z0-9])${brand.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z0-9]|$)`,
+    ).test(subject.toLowerCase());
+  const brandSubjectBelongsToSubject = !!brandSubject?.name && (
+    !productSubject
+    || brandTokenInSubject(productSubject.name, brandSubject.name)
+  );
   const brandName = candidate?.brand
     ?? productNote?.brand
-    ?? (brandSubject?.name ? toDisplayName(brandSubject.name) : undefined)
+    ?? (brandSubjectBelongsToSubject ? toDisplayName(brandSubject!.name) : undefined)
     ?? (productSubject ? findBrandForProduct(productSubject.name) : undefined);
   const siblings = brandName ? findBrandSiblings(brandName) : [];
   const brandProfile = siblings.length > 0 ? describeBrandCharacter(siblings) : null;
@@ -343,7 +456,12 @@ export function buildProductAssessment(
   // real identity content instead of falling through to "I don't have
   // catalog data on the X." This is additive and only fires when
   // brandProfile is null.
-  const pilotCap: PilotCapsule | null = brandProfile ? null : getPilotCapsule(brandName);
+  // D-7 companion: when no brand could be bound from the sentence's brand
+  // matches, derive it from the product subject's own tokens — getPilotCapsule
+  // already falls back to the first word ("leben cs600" → Leben capsule).
+  const pilotCap: PilotCapsule | null = brandProfile
+    ? null
+    : getPilotCapsule(brandName ?? productSubject?.name);
 
   // ── Identify current component in same category ────
   let currentComponent: Product | null = null;
@@ -392,7 +510,10 @@ export function buildProductAssessment(
         whatChanges.push(`Architecture: ${productNote.architecture}`);
       }
     } else {
-      if (brandProfile.architecture) {
+      // D-011: brandProfile.architecture carries brand-TYPICAL specs
+      // ("Class AB, 80W/ch"). Never attribute it to a model we could not
+      // identify — it may not even be the same class of component.
+      if (brandProfile.architecture && !unmatchedModel) {
         whatChanges.push(
           `${brandName} designs around ${brandProfile.architecture} topology`,
         );
@@ -403,7 +524,7 @@ export function buildProductAssessment(
         // if we know the brand's house sound, we can assert that siblings share it.
         const STRENGTH_LABELS: Record<string, string> = {
           flow: 'musical flow',
-          tonal_density: 'tonal density',
+          tonal_density: 'tonal weight and body',
           clarity: 'clarity',
           dynamics: 'dynamic energy',
           texture: 'textural richness',
@@ -460,11 +581,11 @@ export function buildProductAssessment(
       });
       if (systemHasDensity) {
         systemBehavior.push(
-          'Your system already has components with strong tonal density — adding more may push the balance toward warmth',
+          'Your system already has richly-voiced components — adding more may push the balance toward warmth',
         );
       } else {
         systemBehavior.push(
-          'Would add tonal density and harmonic richness to your chain',
+          'Would add tonal weight and harmonic richness to your chain',
         );
       }
     }
@@ -574,6 +695,11 @@ export function buildProductAssessment(
     shortAnswer = `${candidateName} is a ${candidate.architecture} design priced at ~$${candidate.price.toLocaleString()}. ${candidate.description.split('.')[0]}.`;
   } else if (productNote && siblingProduct) {
     shortAnswer = `The ${candidateName} is a ${productNote.relationship} of the ${siblingProduct.brand} ${siblingProduct.name} (${productNote.architecture ?? brandProfile?.architecture ?? 'unknown architecture'}). ${productNote.notes.split('.')[0]}.`;
+  } else if (brandProfile && unmatchedModel) {
+    // D-011: user named a model we don't carry. Say so first, describe
+    // only what we legitimately know (brand character — NOT the brand's
+    // typical specs), and ask the one question that unblocks real advice.
+    shortAnswer = `I don't have the ${candidateName} in my catalog, so I can't confirm its specifications or measured behaviour. What I can tell you is that ${brandName} generally designs for ${brandProfile.strengths.slice(0, 2).join(' and ')}. Tell me what it is — amplifier, streamer, DAC, speakers — and what it's paired with, and I can reason about the system properly.`;
   } else if (brandProfile && !productSubject) {
     // Brand-only query (e.g. "Tell me about the Chord sound") — the brand
     // IS in the catalog (we have siblings). Don't say "isn't in my catalog".
@@ -591,6 +717,17 @@ export function buildProductAssessment(
       : `${pilotCap.brand}: ${pilotCap.mechanism} Listeners typically describe the result as ${charSummary}.`;
   } else {
     shortAnswer = `I don't have catalog data on the ${candidateName}. If you can share the brand or model details, I can offer a more specific assessment.`;
+  }
+
+  /* Disclose a substituted model BEFORE any analysis. The assessment below is
+   * of the product we actually hold; without this line the reader has no way
+   * to tell it is not the one they named. */
+  if (substitutedModel && candidate && requestedModel) {
+    shortAnswer =
+      `I don't have a ${candidate.brand} ${requestedModel} in my catalog. `
+      + `The closest I hold is the ${candidate.brand} ${candidate.name}, and what follows describes that — `
+      + `tell me if you meant something else. `
+      + shortAnswer;
   }
 
   // ── Build "recommendation" ─────────────────────────
@@ -631,7 +768,13 @@ export function buildProductAssessment(
   return {
     candidateName,
     candidateBrand: candidate?.brand ?? brandName ?? pilotCap?.brand ?? 'Unknown',
-    candidateArchitecture: candidate?.architecture ?? productNote?.architecture ?? brandProfile?.architecture,
+    /* D-011: this field renders as the subject-card subtitle next to the
+     * product name. Falling back to brandProfile.architecture printed
+     * "Cambridge Audio MXN10 · Class AB, 80W/ch" for a streamer. When the
+     * model is unidentified we have no architecture to state — omit it. */
+    candidateArchitecture: unmatchedModel
+      ? (candidate?.architecture ?? productNote?.architecture)
+      : (candidate?.architecture ?? productNote?.architecture ?? brandProfile?.architecture),
     candidateDescription:
       candidate?.description
         ?? productNote?.notes

@@ -1,0 +1,6 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+── Test gate ──
+passed: 3848 · failing (in baseline): 20 · baseline entries now passing: 0
+
+Gate PASSED — no regressions vs trusted baseline.

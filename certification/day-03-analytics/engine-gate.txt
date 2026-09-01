@@ -1,0 +1,2 @@
+
+Gate PASSED — no regressions vs trusted baseline.

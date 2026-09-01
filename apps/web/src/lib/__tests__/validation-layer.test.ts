@@ -291,6 +291,33 @@ describe('detectUserAppliedRole', () => {
     const role = detectUserAppliedRole('my DAC is the Chord Hugo', 'Chord Hugo');
     expect(role).toBe('dac');
   });
+
+  // Regression: Mike's France-system intake on prod was looping on a
+  // role-label clarification for the amplifier. Input "Amplifier: Job
+  // integrated DAC / Streamer: Eversolo DMP-A6 Source: TIDAL". Before
+  // the SEP fix, the segment for "Job integrated" spanned the whole
+  // message and the first COLON pattern that matched was the trailing
+  // "streamer:" (near Eversolo). The user-applied role for Job
+  // integrated came back as 'streamer', conflicting with the catalog
+  // 'integrated', and the clarification fired on every turn.
+  describe('SEP segmentation — compound labels separated by "/" and role-colons', () => {
+    const input = 'Speakers: WLM Diva monitor Amplifier: Job integrated DAC / Streamer: Eversolo DMP-A6 Source: TIDAL';
+
+    it('respects "Amplifier:" label for the amplifier component', () => {
+      const role = detectUserAppliedRole(input, 'Job integrated');
+      expect(role).toBe('amplifier');
+    });
+
+    it('respects "Speakers:" label for the speaker component', () => {
+      const role = detectUserAppliedRole(input, 'WLM Diva monitor');
+      expect(role).toBe('speaker');
+    });
+
+    it('respects "Streamer:" label for the streamer component', () => {
+      const role = detectUserAppliedRole(input, 'Eversolo DMP-A6');
+      expect(role).toBe('streamer');
+    });
+  });
 });
 
 describe('rolesConflict', () => {

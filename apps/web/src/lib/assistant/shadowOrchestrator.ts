@@ -76,10 +76,13 @@ function productExampleToCandidate(p: ProductExample): CandidateProduct {
     summary: p.character ?? p.fitNote,
     tradeoffs: p.caution,
     bestFor: p.fitNote,
-    furtherReading: p.sourceReferences?.map((r) => ({
-      source: r.source,
-      url: r.url,
-    })),
+    // F4 gate (private beta, 2026-05-18):
+    //   Reviewer-derived sources must not be passed into LLM context.
+    //   `furtherReading` previously forwarded catalog sourceReferences
+    //   (publication names + review URLs) into the orchestrator's
+    //   CandidateProduct payload, exposing reviewer-derived material
+    //   to the LLM prompt. Set to undefined under the F4 exclusion rule.
+    furtherReading: undefined,
   };
 }
 

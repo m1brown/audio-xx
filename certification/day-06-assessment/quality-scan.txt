@@ -1,0 +1,40 @@
+FLAG  budget-1 (budget) :: verdict="Nothing here needs changing." credit="WiiM Pro | Wharfedale"
+      - DROPPED: 2 rendered vs 3 input components
+FLAG  budget-2 (budget) :: verdict="Nothing here needs changing." credit="Bluesound Node | Cambridge audio"
+      - DROPPED: 2 rendered vs 3 input components
+ok    mid-1 (mid) :: "The amplifier is steering the whole system." | Bluesound Node | Hegel H190 | KEF
+ok    mid-2 (mid) :: "Nothing here needs changing." | Chord Qutest | Naim SuperNait 3 | Harbeth Super HL5 Plus
+FLAG  mid-3 (mid) :: verdict="The DAC is steering the whole system." credit="Denafrips Ares II | Ares Ii | Spendor"
+      - CONTRADICTION: Component name corrupted in engine output: names[0]="Rega" carries a foreign brand token ("rega"); rendered from input "Denafrips Ares II". ~ R3: no category-specific heard-consequence line for "tonal_imbalance"; using default.
+ok    high-1 (high) :: "Nothing here needs changing." | Chord DAVE | First Watt | DeVore Orangutan O/96
+ok    high-2 (high) :: "The amplifier is steering the whole system." | dCS Bartok | Luxman | Focal Kanta No. 2
+FLAG  vintage-1 (vintage) :: verdict="Nothing here needs changing." credit="Technics | Marantz 2270 | Klipsch Heresy IV"
+      - CONTRADICTION: Component name corrupted in engine output: names[1]="Klipsch Heresy IV" carries a foreign brand token ("klipsch"); rendered from input "Marantz 2270". ~ Component name corrupted in engine output: names[2]="Marantz SL-1200" carries a foreign brand token ("marantz"); rendered from input "Klipsch Heresy IV".
+FLAG  vintage-2 (vintage) :: verdict="Nothing here needs changing." credit="Rega Planar 3 | Sugden A21"
+      - CONTRADICTION: Component name corrupted in engine output: names[1]="Spendor" carries a foreign brand token ("spendor"); rendered from input "Sugden A21".
+      - DROPPED: 2 rendered vs 3 input components
+ok    active-1 (active) :: "Nothing here needs changing." | Bluesound Node | KEF LS60 Wireless
+NULL  active-2 (active) — evaluate my system: WiiM Pro, Genelec 8030C
+ok    headphone-1 (headphone) :: "The DAC is holding the system back." | Chord Mojo | Sennheiser
+NULL  headphone-2 (headphone) — evaluate my system: iFi Zen DAC, Focal Clear, Feliks Euforia
+ok    aio-1 (all-in-one) :: "Nothing here needs changing." | Naim | Proac
+NULL  aio-2 (all-in-one) — evaluate my system: Cambridge Audio Evo 150, Bowers Wilkins 606 S3
+ok    mixed-1 (mixed-brand) :: "Nothing here needs changing." | Eversolo DMP-A6 | Chord Hugo | JOB Integrated | WLM Diva Monitor
+NULL  mixed-2 (mixed-brand) — evaluate my system: Topping E70, SMSL SH-9, Aurender N100, Buchardt S400
+NULL  same-1 (same-brand) — evaluate my system: Naim ND5 XS2, Naim SuperNait 3, Neat Iota
+NULL  same-2 (same-brand) — evaluate my system: Audio Note CD 2.1x, Audio Note OTO SE, Audio Note AN-K
+NULL  imbal-1 (imbalanced) — evaluate my system: Topping D10, McIntosh MC275, Wilson Audio Sasha
+FLAG  imbal-2 (imbalanced) :: verdict="The DAC is holding the system back." credit="Chord DAVE | Magnepan .7"
+      - DROPPED: 2 rendered vs 3 input components
+ok    lowpower-1 (low-power) :: "Nothing here needs changing." | Ares Ii | Leben CS600X | Magnepan LRS+
+ok    lowpower-2 (low-power) :: "The DAC is holding the system back." | Chord Qutest | Decware SE84UFO | Klipsch
+ok    prestige-1 (prestige) :: "Nothing here needs changing." | Emt | Shindo | DeVore Orangutan O/96
+NULL  prestige-2 (prestige) — evaluate my system: Auditorium 23 Hommage T1, Shindo Aurieges, Living Voice OBX
+FLAG  prestige-3 (prestige) :: verdict="The amplifier is steering the whole system." credit="dCS | Boulder 866 | Wilson | Wilson audio"
+      - CONTRADICTION: Component name corrupted in engine output: names[3]="Wilson audio" carries a foreign brand token ("wilson"); rendered from input "Wilson audio".
+ok    warm-1 (warm) :: "Nothing here needs changing." | Denafrips Pontus II 12th-1 | Leben CS600X | Harbeth P3ESR
+ok    bright-1 (bright) :: "The DAC is holding the system back." | Topping D90SE | Benchmark AHB2 | Focal
+NULL  streamer-amp (streamer-int) — evaluate my system: Cambridge Audio CXN, Rega Brio, Bowers Wilkins 607
+FLAG  planar-2 (planar) :: verdict="The DAC is holding the system back." credit="Chord Qutest | Magnepan 1.7i | Parasound"
+      - CONTRADICTION: Component name corrupted in engine output: names[2]="Parasound" carries a foreign brand token ("parasound"); rendered from input "Parasound".
+SUMMARY: 13/30 clean · 9 null · 8 flagged

@@ -1,11 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   findBrandProfileBySlug,
   findProductsByBrandSlug,
 } from '@/lib/consultation';
+import { findTechnologyProfileBySlug } from '@/lib/technology-profiles';
+import { toSlug } from '@/lib/route-slug';
 import type { Product } from '@/lib/products/dacs';
 import type { AdvisoryOption } from '@/lib/advisory-response';
 import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
+import { resolveProductImageStrict } from '@/lib/product-images';
 
 /**
  * Audio XX — Brand authority page.
@@ -29,34 +33,12 @@ import AdvisoryProductCards from '@/components/advisory/AdvisoryProductCard';
  */
 
 // ── Design tokens ───────────────────────────────────────
+// COLOR, sectionHeadingStyle, and proseStyle are imported from the
+// shared editorial-tokens module (single source of truth for all
+// warm-editorial artifact surfaces). Values are byte-identical to
+// what was previously inlined here.
 
-const COLOR = {
-  textPrimary: '#1F1D1B',
-  textSecondary: '#5C5852',
-  textMuted: '#8C877F',
-  accent: '#B08D57',
-  border: '#D8D2C5',
-  borderLight: '#E8E3D7',
-  cardBg: '#FFFEFA',
-} as const;
-
-// Reusable section heading style
-const sectionHeadingStyle: React.CSSProperties = {
-  fontSize: '0.8rem',
-  fontWeight: 700,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase',
-  color: COLOR.accent,
-  marginBottom: '0.55rem',
-  marginTop: 0,
-};
-
-const proseStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: '0.96rem',
-  lineHeight: 1.75,
-  color: COLOR.textSecondary,
-};
+import { COLOR, proseStyle } from '@/lib/editorial-tokens';
 
 // ── Adapter: catalog Product → AdvisoryOption ───────────
 
@@ -82,7 +64,16 @@ function productToAdvisoryOption(p: Product): AdvisoryOption {
     price: p.price,
     priceCurrency: p.priceCurrency,
     fitNote: '',
-    imageUrl: p.imageUrl,
+    // Image resolution: catalog imageUrl if present, else the curated
+    // overlay in product-images.ts. Prior to 2026-07-02 the brand page
+    // set `imageUrl: p.imageUrl` directly, which meant products with
+    // no catalog imageUrl but a valid overlay entry rendered as a
+    // category placeholder icon (e.g. Shindo, DeVore, Holo) instead of
+    // a real photo. Shopping-response cards were already using
+    // `resolveProductImageStrict` at advisory-response.ts — reusing
+    // the same helper here brings the brand-page render path onto the
+    // same resolver rather than adding a second implementation.
+    imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
     productType: CATEGORY_TO_PRODUCT_TYPE[p.category] ?? p.category,
     catalogTopology: p.topology,
     catalogCountry: p.country,
@@ -108,12 +99,28 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const profile = findBrandProfileBySlug(slug);
+  const name = profile?.displayName
+    ?? slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const description = profile?.tagline || `${name} — design philosophy, house sound, and system pairing on Audio XX.`;
+  return { title: name, description, openGraph: { title: `${name} — Audio XX`, description, type: 'article' } };
+}
+
 export default async function BrandPage({ params }: PageProps) {
   const { slug } = await params;
   const profile = findBrandProfileBySlug(slug);
   const products = findProductsByBrandSlug(slug);
 
-  const displayName = products[0]?.brand ?? humanizeFromSlug(slug);
+  // Display-name precedence (Pass 19 — 2026-06-08):
+  //   1. profile.displayName — explicit canonical form (acronyms, mixed-case)
+  //   2. products[0]?.brand — recovered from a catalog product's brand string
+  //   3. humanizeFromSlug(slug) — last-resort title-cased slug
+  // The profile.displayName tier was added to handle acronym brands
+  // (EMT, SPEC) and mixed-case brands without catalog products. Existing
+  // brands that recover correctly through tiers 2 and 3 are unaffected.
+  const displayName = profile?.displayName ?? products[0]?.brand ?? humanizeFromSlug(slug);
 
   // Metadata line
   const metaParts: string[] = [];
@@ -133,14 +140,41 @@ export default async function BrandPage({ params }: PageProps) {
   const hasPhilosophy = !!profile?.philosophy;
   const hasPhilosophy2 = !!profile?.philosophyExtended;
   const hasLeadership = !!profile?.leadershipOrigin;
-  const hasQuotes = profile?.reviewerQuotes && profile.reviewerQuotes.length > 0;
+  // F4 gate (private beta, 2026-05-18):
+  //   Reviewer quotes must not surface on brand pages under the F4
+  //   reviewer-data exclusion rule. `hasQuotes` is pinned false so
+  //   the "What Reviewers Say" section is never rendered, regardless
+  //   of what `profile.reviewerQuotes` contains.
+  const hasQuotes = false as const;
+  void profile?.reviewerQuotes;
   const hasTendencies = !!profile?.tendencies;
   const hasStrengths = profile?.strengths && profile.strengths.length > 0;
   const hasTradeoffs = profile?.tradeoffs && profile.tradeoffs.length > 0;
   const hasSystemContext = !!profile?.systemContext;
   const hasPairingNotes = !!profile?.pairingNotes;
   const hasDesignFamilies = profile?.designFamilies && profile.designFamilies.length > 0;
-  const hasLinks = profile?.links && profile.links.length > 0;
+  // F4 gate (private beta, 2026-05-18):
+  //   Brand-profile links of kind 'review' must not surface under the
+  //   F4 reviewer-data exclusion rule. Filter to manufacturer / dealer /
+  //   reference / undefined-kind only before deriving `hasLinks` and
+  //   passing into render.
+  const safeLinks = (profile?.links ?? []).filter((l) => l.kind !== 'review');
+  const hasLinks = safeLinks.length > 0;
+
+  // Related Technologies (Workstream #5A — Obj 3). Resolve each
+  // authored slug to its TechnologyProfile; silently drop any that
+  // do not resolve so an out-of-date slug can never render a dead
+  // card. Each resolved entry carries the page's canonical slug
+  // (names[0]) for the href and displayName/tagline for the card.
+  const relatedTech = (profile?.relatedTechnologySlugs ?? [])
+    .map((s) => findTechnologyProfileBySlug(s))
+    .filter((tp): tp is NonNullable<typeof tp> => Boolean(tp))
+    .map((tp) => ({
+      slug: toSlug(tp.names[0]),
+      displayName: tp.displayName,
+      tagline: tp.tagline,
+    }));
+  const hasRelatedTech = relatedTech.length > 0;
 
   // Media
   const mediaImages = profile?.media?.images ?? [];
@@ -209,6 +243,7 @@ export default async function BrandPage({ params }: PageProps) {
                       src={img.src}
                       alt={img.alt}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', display: 'block' }}
                     />
                   </div>
@@ -303,7 +338,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasPhilosophy && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Philosophy</h2>
+          <h2 className="axx-kicker">Philosophy</h2>
           <p style={proseStyle}>{profile!.philosophy}</p>
           {hasPhilosophy2 && (
             <p style={{ ...proseStyle, marginTop: '0.65rem' }}>
@@ -330,6 +365,7 @@ export default async function BrandPage({ params }: PageProps) {
               src={postPhiloImage.url}
               alt={postPhiloImage.caption ?? `${displayName} — detail`}
               loading="lazy"
+              referrerPolicy="no-referrer"
               style={{ maxWidth: '100%', maxHeight: '260px', objectFit: 'contain', display: 'block' }}
             />
           </div>
@@ -363,7 +399,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasLeadership && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Leadership &amp; Origin</h2>
+          <h2 className="axx-kicker">Leadership &amp; Origin</h2>
           <p style={proseStyle}>{profile!.leadershipOrigin}</p>
         </section>
       )}
@@ -373,7 +409,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasQuotes && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>What Reviewers Say</h2>
+          <h2 className="axx-kicker">What Reviewers Say</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {profile!.reviewerQuotes!.map((q, i) => (
               <blockquote
@@ -429,7 +465,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasTendencies && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Sonic Character</h2>
+          <h2 className="axx-kicker">Sonic Character</h2>
           <p style={proseStyle}>{profile!.tendencies}</p>
         </section>
       )}
@@ -439,7 +475,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasVideos && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Listen / Watch</h2>
+          <h2 className="axx-kicker">Listen / Watch</h2>
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
@@ -475,6 +511,7 @@ export default async function BrandPage({ params }: PageProps) {
                       src={vid.thumbnailUrl}
                       alt={vid.title}
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       style={{ width: '100%', maxHeight: '160px', objectFit: 'cover', display: 'block' }}
                     />
                   </div>
@@ -525,7 +562,7 @@ export default async function BrandPage({ params }: PageProps) {
         }}>
           {hasStrengths && (
             <div>
-              <h2 style={sectionHeadingStyle}>Strengths</h2>
+              <h2 className="axx-kicker">Strengths</h2>
               <ul style={{
                 margin: 0, paddingLeft: '1.1rem', listStyle: 'disc',
                 fontSize: '0.94rem', lineHeight: 1.65, color: COLOR.textSecondary,
@@ -540,7 +577,7 @@ export default async function BrandPage({ params }: PageProps) {
           )}
           {hasTradeoffs && (
             <div>
-              <h2 style={sectionHeadingStyle}>Trade-offs</h2>
+              <h2 className="axx-kicker">Trade-offs</h2>
               <ul style={{
                 margin: 0, paddingLeft: '1.1rem', listStyle: 'disc',
                 fontSize: '0.94rem', lineHeight: 1.65, color: COLOR.textSecondary,
@@ -561,7 +598,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {(hasPairingNotes || hasSystemContext) && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Pairing Guidance</h2>
+          <h2 className="axx-kicker">Pairing Guidance</h2>
           {hasSystemContext && <p style={proseStyle}>{profile!.systemContext}</p>}
           {hasPairingNotes && (
             <p style={{ ...proseStyle, marginTop: hasSystemContext ? '0.5rem' : 0 }}>
@@ -576,7 +613,7 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasDesignFamilies && (
         <section style={{ marginBottom: '1.5rem' }}>
-          <h2 style={sectionHeadingStyle}>Design Families</h2>
+          <h2 className="axx-kicker">Design Families</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {profile!.designFamilies!.map((fam) => (
               <div
@@ -616,9 +653,9 @@ export default async function BrandPage({ params }: PageProps) {
          ══════════════════════════════════════════════════ */}
       {hasLinks && (
         <section style={{ marginBottom: '1.75rem' }}>
-          <h2 style={sectionHeadingStyle}>Links</h2>
+          <h2 className="axx-kicker">Links</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
-            {profile!.links!.map((link) => (
+            {safeLinks.map((link) => (
               <a
                 key={link.url}
                 href={link.url}
@@ -639,6 +676,49 @@ export default async function BrandPage({ params }: PageProps) {
       )}
 
       {/* ══════════════════════════════════════════════════
+          11b. RELATED TECHNOLOGIES (Workstream #5A — Obj 3)
+          Brand → Technology Page backlinks. Closes the gap where
+          Technology Pages linked to brands but brands were leaf
+          nodes. Cards link into the editorial corpus.
+         ══════════════════════════════════════════════════ */}
+      {hasRelatedTech && (
+        <section style={{ marginBottom: '1.75rem' }}>
+          <h2 className="axx-kicker">The Ideas Behind {displayName}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {relatedTech.map((t) => (
+              <Link
+                key={t.slug}
+                href={`/tech/${t.slug}`}
+                style={{
+                  display: 'block',
+                  textDecoration: 'none',
+                  padding: '0.7rem 0.9rem',
+                  background: COLOR.cardBg,
+                  border: `1px solid ${COLOR.borderLight}`,
+                  borderRadius: '6px',
+                }}
+              >
+                <div style={{
+                  fontSize: '0.95rem', fontWeight: 600,
+                  color: COLOR.accent, marginBottom: t.tagline ? '0.15rem' : 0,
+                }}>
+                  {t.displayName} &rarr;
+                </div>
+                {t.tagline && (
+                  <div style={{
+                    fontSize: '0.85rem', lineHeight: 1.5,
+                    color: COLOR.textMuted,
+                  }}>
+                    {t.tagline}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════
           12. REPRESENTATIVE MODELS (was "Catalog")
          ══════════════════════════════════════════════════ */}
       {!profile && products.length > 0 && (
@@ -652,11 +732,7 @@ export default async function BrandPage({ params }: PageProps) {
 
       {options.length > 0 ? (
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={{
-            ...sectionHeadingStyle,
-            marginBottom: '1rem',
-            color: COLOR.textMuted,
-          }}>
+          <h2 className="axx-kicker" style={{ marginBottom: '1rem' }}>
             Representative models &mdash; {options.length} {options.length === 1 ? 'product' : 'products'}
           </h2>
           <AdvisoryProductCards options={options} hideMakerInsight />

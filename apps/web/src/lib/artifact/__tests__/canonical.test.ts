@@ -1,0 +1,206 @@
+/**
+ * Canonical Assessment Model — adapter + One True Thing invariant.
+ * Pins: section presence, canonical order, identity consistency with the engine
+ * payload, and the OTT rule (observation only — no justification, one sentence).
+ */
+import { describe, it, expect } from 'vitest';
+import type { ArtifactPayload } from '@/lib/artifact/types';
+import { extractSubjectMatches, detectIntent } from '@/lib/intent';
+import { buildSystemAssessment } from '@/lib/consultation';
+import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import {
+  toCanonicalAssessment,
+  validateDominantCharacter,
+  EVIDENCE_STATEMENT,
+} from '@/lib/artifact/canonical';
+
+const FRANCE = 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, WLM Diva Monitor';
+
+function franceCanonical() {
+  const subs = extractSubjectMatches(FRANCE);
+  const { desires } = detectIntent(FRANCE);
+  const raw: any = buildSystemAssessment(FRANCE, subs, null, desires);
+  const { payload } = synthesizeArtifact(raw) as any;
+  return { cam: toCanonicalAssessment(payload, raw), payload, raw };
+}
+
+describe('CAM adapter — France reference', () => {
+  it('carries every required section', () => {
+    const { cam } = franceCanonical();
+    expect(cam.subject.components.length).toBe(4);
+    expect(cam.identity.verdict).toBeTruthy();
+    expect(cam.identity.recognition).toBeTruthy();
+    expect(cam.identity.tonalSignature?.length).toBe(3);
+    expect(cam.identity.tonalSignature?.map((a) => a.axis)).not.toContain('airy_closed');
+    expect(cam.guidance.recommendation).toBeTruthy();
+    expect(cam.reading.engineering.length).toBeGreaterThan(0);
+    // Listening Session removed 2026-08-24: it was generated from catalog
+    // axes, and a sensory claim needs listening evidence. Same reason
+    // dominantCharacter went, a fortnight earlier.
+    expect(cam.reading.listeningSession).toEqual([]);
+    // dominantCharacter is intentionally absent (removed 2026-08-13; returns
+    // post-beta naming the responsible component).
+    expect(cam.reading.dominantCharacter).toBeUndefined();
+    expect(cam.reading.operatingCondition).toBeTruthy();
+    expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
+  });
+
+  it('identity is consistent with the engine payload (no re-derivation)', () => {
+    const { cam, payload } = franceCanonical();
+    expect(cam.identity.verdict).toBe(payload.verdict);
+    expect(cam.identity.signature).toBe(payload.standfirst);
+    expect(cam.identity.recognition).toBe(payload.recognition);
+    // tonal signature commits to the detailed pole — matches the engine axes
+    const sd = cam.identity.tonalSignature!.find((a) => a.axis === 'smooth_detailed')!;
+    expect(sd.pole).toBe('right'); // Detailed
+  });
+
+  it('operating condition is separated out of the engineering paragraphs', () => {
+    const { cam } = franceCanonical();
+    expect(cam.reading.operatingCondition!.toLowerCase()).toMatch(/placement|passive radiator/);
+    expect(cam.reading.engineering.join(' ').toLowerCase()).not.toMatch(/moderate placement sensitivity/);
+  });
+
+  it('Dominant Character is not composed (removed 2026-08-13; rebuild specced)', () => {
+    // The four-template composer read the categorical systemAxes and could
+    // contradict the Tonal Signature and standfirst on the same page. The
+    // validator is retained for the rebuild that names the component
+    // responsible for the character — docs/backlog/machine-voice-editorial.md.
+    const { cam } = franceCanonical();
+    expect(cam.reading.dominantCharacter).toBeUndefined();
+    expect(validateDominantCharacter('The WLM Diva monitor sets the system\'s warmth.')).toEqual([]);
+    expect(validateDominantCharacter('It is designed to sound warm.')).toContain('teleology');
+  });
+
+  it('payload alone KEEPS the tonal signature — axes travel in the payload (Stabilization Gate 1)', () => {
+    // The old behavior (payload alone → no graph) was the production
+    // regression: chat embeds and saved snapshots silently lost the
+    // three-axis Tonal Signature. The payload now carries systemAxes.
+    const { payload } = franceCanonical();
+    const cam = toCanonicalAssessment(payload);
+    expect(cam.identity.tonalSignature).toBeDefined();
+    expect(cam.identity.tonalSignature).toHaveLength(3);
+    expect(cam.identity.verdict).toBe(payload.verdict);
+    expect(cam.evidence.statement).toBe(EVIDENCE_STATEMENT);
+  });
+
+  it('degrades gracefully only when axes are genuinely absent (no raw, no payload axes)', () => {
+    const { payload } = franceCanonical();
+    // "Genuinely absent" means BOTH the categorical axes and the shared
+    // numeric averages (tonal-signature unification) are missing.
+    const { systemAxes: _dropped, systemAxisNumeric: _droppedN, ...bare } =
+      payload as ArtifactPayload & { systemAxes?: unknown; systemAxisNumeric?: unknown };
+    const cam = toCanonicalAssessment(bare as ArtifactPayload);
+    expect(cam.identity.tonalSignature).toBeUndefined();
+    expect(cam.identity.verdict).toBe(payload.verdict);
+  });
+
+  it('legacy payloads (categorical axes, no numeric) still render the graph', () => {
+    const { payload } = franceCanonical();
+    const { systemAxisNumeric: _droppedN, ...legacy } =
+      payload as ArtifactPayload & { systemAxisNumeric?: unknown };
+    const cam = toCanonicalAssessment(legacy as ArtifactPayload);
+    expect(cam.identity.tonalSignature).toBeDefined();
+    expect(cam.identity.tonalSignature!.length).toBe(3);
+    // Legacy mapping: fixed three-position slots.
+    for (const r of cam.identity.tonalSignature!) {
+      expect([24, 50, 78]).toContain(r.position);
+    }
+  });
+});
+
+describe('Educational layer (France) — primary-sourced, identity-preserving', () => {
+  it('attaches a primary-sourced origin clause to each France component', () => {
+    const { cam } = franceCanonical();
+    for (const c of cam.subject.components) {
+      expect(c.origin, `${c.name} origin`).toBeTruthy();
+      expect(c.source?.url, `${c.name} source`).toMatch(/^https?:\/\//);
+    }
+    // JOB is minimally sourced: no Goldmund / Swiss claim (not primary-sourced).
+    const job = cam.subject.components.find((c) => /job/i.test(c.name))!;
+    expect(job.origin!.toLowerCase()).not.toMatch(/goldmund|swiss|switzerland/);
+  });
+
+  it('lists primary sources only — no reviewers, retailers, forums, or wikis', () => {
+    const { cam } = franceCanonical();
+    const urls = (cam.evidence.primarySources ?? []).map((s) => s.url).join(' ');
+    expect(cam.evidence.primarySources?.length).toBeGreaterThanOrEqual(3);
+    expect(urls).not.toMatch(/reddit|head-fi|audiogon|reverb|stereophile|6moons|whathifi|wikipedia|forum|audiomart/i);
+    expect(urls).toMatch(/eversolo\.com|chordelectronics|wiener-lautsprecher|jobsys/);
+  });
+
+  it('teaches the reinforce/oppose in Engineering without altering identity', () => {
+    const { cam, payload } = franceCanonical();
+    expect(cam.reading.engineering.join(' ')).toMatch(/pull in different directions|resolution against ease/i);
+    // Immutable identity is untouched by the educational layer.
+    expect(cam.identity.verdict).toBe(payload.verdict);
+    expect(cam.identity.signature).toBe(payload.standfirst);
+    expect(cam.identity.recognition).toBe(payload.recognition);
+    // smooth_detailed still commits to Detailed (identity classification unchanged).
+    expect(cam.identity.tonalSignature!.find((a) => a.axis === 'smooth_detailed')!.pole).toBe('right');
+  });
+
+  it('does not propagate the unverified "passive radiator" catalog claim', () => {
+    const { cam } = franceCanonical();
+    expect(cam.reading.operatingCondition?.toLowerCase()).not.toContain('passive radiator');
+  });
+});
+
+describe('Editorial provenance ledger (internal — not rendered)', () => {
+  const CLASSES = ['manufacturer-fact', 'designer-statement', 'audio-xx-interpretation'];
+
+  it('classifies every educational fragment into one of the three classes', () => {
+    const { cam } = franceCanonical();
+    expect(cam.editorial?.length).toBeGreaterThan(0);
+    for (const f of cam.editorial!) {
+      expect(CLASSES).toContain(f.editorialClass);
+      expect(f.text).toBeTruthy();
+    }
+  });
+
+  it('carries manufacturer fact, designer statement, and Audio XX interpretation', () => {
+    const { cam } = franceCanonical();
+    const byClass = (c: string) => cam.editorial!.filter((f) => f.editorialClass === c);
+    expect(byClass('manufacturer-fact').length).toBeGreaterThan(0);
+    expect(byClass('designer-statement').length).toBeGreaterThan(0); // Rob Watts / Chord
+    expect(byClass('audio-xx-interpretation').length).toBeGreaterThan(0);
+    // The reinforce/oppose synthesis is classed as interpretation.
+    expect(cam.editorial!.some((f) => /read together/i.test(f.text) && f.editorialClass === 'audio-xx-interpretation')).toBe(true);
+  });
+
+  it('JOB carries only manufacturer fact (no interpretation or designer claim)', () => {
+    const { cam } = franceCanonical();
+    const job = cam.editorial!.filter((f) => /job/i.test(f.component ?? ''));
+    expect(job.length).toBeGreaterThan(0);
+    expect(job.every((f) => f.editorialClass === 'manufacturer-fact')).toBe(true);
+  });
+
+  it('interpretation is worded as philosophy/likelihood, not a bare assertion', () => {
+    const { cam } = franceCanonical();
+    const interp = cam.editorial!.filter((f) => f.editorialClass === 'audio-xx-interpretation').map((f) => f.text).join(' ');
+    expect(interp).toMatch(/appears? to|should|philosophy|idea|read together|tradition/i);
+  });
+});
+
+describe('validateDominantCharacter', () => {
+  it('accepts a grounded, descriptive characteristic', () => {
+    expect(validateDominantCharacter("Warmth enters at the final stage, without obscuring the system's resolution.")).toEqual([]);
+    expect(validateDominantCharacter('Resolution leads, and the rest of the system keeps it clean.')).toEqual([]);
+  });
+  it('rejects teleology — unverified designer/listener intent', () => {
+    expect(validateDominantCharacter("The only warm voice is the one you're meant to hear.")).toContain('teleology');
+    expect(validateDominantCharacter('A tuning intended to flatter vocals.')).toContain('teleology');
+    expect(validateDominantCharacter('Designed to disappear into the room.')).toContain('teleology');
+  });
+  it('rejects causal justification', () => {
+    expect(validateDominantCharacter('A detail rig, because the warmth sits at the speaker.')).toContain('justifies');
+    expect(validateDominantCharacter('It resolves, therefore it satisfies.')).toContain('justifies');
+  });
+  it('rejects a second sentence (one characteristic, then stop)', () => {
+    expect(validateDominantCharacter('It is detailed. It is also warm.')).toContain('multi-sentence');
+  });
+  it('rejects empty', () => {
+    expect(validateDominantCharacter('')).toContain('empty');
+    expect(validateDominantCharacter(undefined)).toContain('empty');
+  });
+});

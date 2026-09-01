@@ -49,8 +49,18 @@ function comp(displayName: string, role: string, opts?: {
   };
 }
 
-/** Build a minimal axis profile for testing. */
-function axisProfile(name: string, axes: Partial<PrimaryAxisLeanings>, source: 'product' | 'brand' | 'inferred' = 'inferred') {
+/**
+ * Build a minimal axis profile for testing.
+ *
+ * The default is `'product'` because that is what every caller here models: a
+ * component whose axes Audio XX actually holds. It previously defaulted to
+ * `'inferred'`, which was harmless while `source` was decorative and became
+ * wrong once it started meaning "no evidence" — `classifyComponentAxes` only
+ * ever emits `'inferred'` together with four neutral axes, so an inferred
+ * profile carrying `warm_bright: 'bright'` describes a state the engine cannot
+ * produce. Pass `'inferred'` explicitly to model an unresolved component.
+ */
+function axisProfile(name: string, axes: Partial<PrimaryAxisLeanings>, source: 'product' | 'brand' | 'inferred' = 'product') {
   return {
     name,
     axes: {

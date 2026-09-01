@@ -23,7 +23,7 @@
 
 import type { AdvisoryResponse, AdvisoryOption, SourceReference } from '../advisory-response';
 import type { ProductExample } from '../shopping-intent';
-import { getProductImage } from '../product-images';
+import { resolveProductImageStrict } from '../product-images';
 import type {
   OrchestratorOutput,
   ShoppingDecisionOutput,
@@ -155,7 +155,7 @@ function recommendationToOption(
 
     // Step 10: Enhanced catalog fields (from original product)
     // Catalog imageUrl wins; fall back to the seeded product-image mapping.
-    imageUrl: original?.imageUrl ?? getProductImage(original?.brand ?? rec.productName.split(' ')[0], original?.name ?? rec.productName),
+    imageUrl: resolveProductImageStrict(original?.brand ?? rec.productName.split(' ')[0], original?.name ?? rec.productName, original?.imageUrl),
     typicalMarket: original?.typicalMarket,
     buyingContext: original?.buyingContext,
   };
@@ -236,7 +236,14 @@ export function orchestratorToAdvisory(ctx: AdapterContext): AdvisoryResponse {
   }
 
   // ── Source references from matched products ──
-  const sourceRefs = collectSourceReferences(recommendations, productExamples);
+  // F4 gate (private beta, 2026-05-18):
+  //   Reviewer-derived sourceReferences must not appear in advisory
+  //   output under the F4 reviewer-data exclusion rule. The collector
+  //   is left in place but its output is discarded; the advisory below
+  //   sets `sourceReferences: undefined` regardless.
+  void collectSourceReferences;
+  void productExamples;
+  const sourceRefs: SourceReference[] = [];
 
   // ── Build advisory ──
   const advisory: AdvisoryResponse = {
@@ -264,8 +271,10 @@ export function orchestratorToAdvisory(ctx: AdapterContext): AdvisoryResponse {
       ? overallGuidance.slice(0, 200).replace(/\s+\S*$/, '') + '…'
       : overallGuidance,
 
-    // Source references
-    sourceReferences: sourceRefs.length > 0 ? sourceRefs : undefined,
+    // Source references — F4 gate: always undefined under reviewer-
+    // data exclusion rule. `sourceRefs` retained above only to keep
+    // the function-flow shape stable.
+    sourceReferences: undefined,
 
     // Not provisional — LLM had full context
     provisional: false,

@@ -1,0 +1,68 @@
+{
+  "probes": [
+    {
+      "name": "B GET A system (my-systems list is self-scoped)",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B PATCH rename A system",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B PATCH notes on A system",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B GET A system detail (/api/systems/[id])",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B DELETE A system",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B set A system as active profile",
+      "status": 400,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    },
+    {
+      "name": "B checkout-return sync with bogus session id",
+      "status": 404,
+      "denied": true,
+      "leaked": false,
+      "pass": true
+    }
+  ],
+  "setup": {
+    "saveStatus": 201,
+    "aSystemId": "captured",
+    "aCount": 1
+  },
+  "integrityAfter": {
+    "stillExists": true,
+    "nameIntact": true,
+    "notesIntact": true
+  },
+  "summary": {
+    "totalProbes": 7,
+    "allDenied": true,
+    "anyLeak": false
+  }
+}

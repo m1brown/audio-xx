@@ -4,7 +4,7 @@ import {
   DIRECTION_CONTENT,
   type DirectionKey,
 } from '@/lib/upgrade-path-content';
-import { getProductImage } from '@/lib/product-images';
+import { resolveProductImageStrict } from '@/lib/product-images';
 
 /**
  * Audio XX — Upgrade direction.
@@ -133,7 +133,7 @@ export default async function UpgradeDirectionPage({ params }: PageProps) {
             </p>
             <AdvisoryProductCards options={content.options.map((o) => ({
               ...o,
-              imageUrl: o.imageUrl ?? getProductImage(o.brand, o.name),
+              imageUrl: resolveProductImageStrict(o.brand, o.name, o.imageUrl),
             }))} />
           </section>
         </>

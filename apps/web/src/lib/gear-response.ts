@@ -54,6 +54,11 @@ import {
 } from './design-archetypes';
 import { detectChurnSignal, buildChurnNote, type ChurnSignal } from './churn-avoidance';
 import { buildTasteDecisionFrame } from './consultation';
+import {
+  buildListenerFraming,
+  type FramingContext,
+  type ListenerProfile as ListenerPreferenceProfile,
+} from './listener-preferences';
 
 // ── Product lookup ───────────────────────────────────
 
@@ -73,6 +78,25 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIF
  */
 /** Normalize for matching: treat hyphens and spaces as equivalent, strip trailing "+". */
 const normMatch = (s: string): string => s.replace(/[-\s]/g, ' ').replace(/\+$/, '').trim();
+
+/**
+ * Drop brand subjects that are the manufacturer of a product subject in
+ * the same list (D4, 2026-08-11). "harbeth p3esr vs kef ls50 meta"
+ * extracts [p3esr(product), harbeth(brand), kef(brand)]; positional
+ * pairing then compared the P3ESR against its own brand. A brand that
+ * owns a listed product adds no comparison target — it is part of that
+ * product's identity.
+ */
+export function dedupeComparisonSubjects(matches: import('./intent').SubjectMatch[]): import('./intent').SubjectMatch[] {
+  const productBrands = new Set<string>();
+  for (const match of matches) {
+    if (match.kind !== 'product') continue;
+    const resolved = findProducts([match.name]);
+    if (resolved.length > 0) productBrands.add(resolved[0].brand.toLowerCase());
+  }
+  if (productBrands.size === 0) return matches;
+  return matches.filter((match) => !(match.kind === 'brand' && productBrands.has(match.name.toLowerCase())));
+}
 
 function findProducts(subjects: string[]): Product[] {
   if (subjects.length === 0) return [];
@@ -537,7 +561,7 @@ const TRAIT_DOMAIN_DESCRIPTIONS: Record<string, Record<string, string>> = {
     speed_emphasized: 'fast and articulate — leading edges arrive with precision',
     speed_present: 'good transient speed — responsive without being aggressive',
     speed_less: 'relaxed timing — favors flow over attack',
-    elasticity_emphasized: 'elastic and rhythmically alive — music breathes and bounces',
+    elasticity_emphasized: 'elastic timing — rhythmic figures spring rather than land metronomically',
     elasticity_present: 'moderate rhythmic flexibility',
     flow_emphasized: 'strong musical flow — events connect seamlessly',
     flow_present: 'good continuity between musical events',
@@ -549,7 +573,7 @@ const TRAIT_DOMAIN_DESCRIPTIONS: Record<string, Record<string, string>> = {
     spatial_precision_emphasized: 'precise imaging and well-defined soundstage — instruments are placed with specificity',
     spatial_precision_present: 'decent spatial presentation — reasonable depth and width',
     spatial_precision_less: 'less emphasis on imaging specificity — more about tone than space',
-    openness_emphasized: 'open and expansive presentation — the soundstage breathes',
+    openness_emphasized: 'open and expansive presentation — image space extends beyond the speakers',
     openness_present: 'reasonable openness',
     openness_less: 'more intimate staging — focused rather than expansive',
   },
@@ -1812,7 +1836,7 @@ function buildUpgradeAnalysis(
 
 // ── Public API ───────────────────────────────────────
 
-export function buildGearResponse(
+function buildGearResponseCore(
   intent: UserIntent,
   subjects: string[],
   currentMessage: string,
@@ -2467,4 +2491,40 @@ function buildInquiryDirection(product: Product, userPref?: { primary: SonicArch
   parts.push('How well it works depends on the rest of the chain and what you prioritize in your listening.');
 
   return parts.join(' ');
+}
+
+// ── Stage PB2.4 — public wrapper with listener-aware framing ──────────
+//
+// The internal builder (`buildGearResponseCore`) has nine return paths.
+// Rather than thread the framing through each, we wrap the result on the
+// way out and prepend a single hedged sentence to the `anchor` field.
+// The framing helper returns '' for weak/absent profiles, in which case
+// the wrapper is a pass-through — guaranteeing legacy parity.
+//
+// No scoring, ranking, or product selection runs here. This layer reads
+// the profile once and prepends prose.
+export function buildGearResponse(
+  intent: UserIntent,
+  subjects: string[],
+  currentMessage: string,
+  desires: DesireSignal[] = [],
+  tasteProfile?: TasteProfile,
+  activeSystem?: ActiveSystemContext | null,
+  listenerProfile?: ListenerPreferenceProfile | null,
+): GearResponse | null {
+  const result = buildGearResponseCore(
+    intent, subjects, currentMessage, desires, tasteProfile, activeSystem,
+  );
+  if (!result) return null;
+
+  const framingContext: FramingContext = intent === 'comparison'
+    ? 'comparison'
+    : 'upgrade';
+  const framing = buildListenerFraming(listenerProfile, framingContext);
+  if (!framing) return result;
+
+  return {
+    ...result,
+    anchor: `${framing} ${result.anchor}`.trim(),
+  };
 }

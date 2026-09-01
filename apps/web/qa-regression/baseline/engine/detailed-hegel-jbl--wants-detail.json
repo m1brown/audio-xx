@@ -1,0 +1,78 @@
+{
+  "id": "detailed-hegel-jbl--wants-detail",
+  "label": "Detailed system · wants detail",
+  "category": "intent_aligned",
+  "systemText": "Assess my system: Topping D90SE, Hegel H190, JBL L100 Classic",
+  "desires": [
+    {
+      "quality": "detail",
+      "direction": "more"
+    }
+  ],
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "bright",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "neutral"
+  },
+  "bottleneck": {
+    "category": "stacked_bias",
+    "component": "Hegel H190"
+  },
+  "signature": "Tonally balanced, detail-forward, intimate system.",
+  "strengths": [
+    "Complementary tonal balance — precision and warmth offset each other across the system",
+    "The system is likely to sustain engagement across long sessions",
+    "Hegel H190 adds composure under complex passages"
+  ],
+  "limitations": [
+    "The system's resolution is consistent — the detail you want. The trade-off is that it can feel analytical or fatiguing on lesser recordings",
+    "JBL L100 Classic has moderate placement sensitivity — Bass-reflex design benefits from corner placement for reinforcement. Responds well to room acoustics treatment."
+  ],
+  "upgradeDirection": "If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.",
+  "upgradePaths": [
+    {
+      "rank": 1,
+      "label": "Amplifier Upgrade",
+      "impact": "Optional Direction",
+      "strategyLabel": "Build on the character you want",
+      "rationale": "The amplifier is part of what gives this system its detail — the quality you said you're after — so it isn't the liability the system's structure makes it look like. It does cap musical flow, but chasing that would trade away the detail you want. If you ever go further here, look for a higher-tier amplifier that deepens detail rather than a change in the system's direction."
+    },
+    {
+      "rank": 2,
+      "label": "Speakers Upgrade",
+      "impact": "Moderate Impact",
+      "strategyLabel": "Deepen tonal richness",
+      "rationale": "The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving. A stronger speaker would tighten the overall presentation."
+    },
+    {
+      "rank": 3,
+      "label": "DAC Upgrade",
+      "impact": "Refinement",
+      "strategyLabel": "Enhance detail and precision",
+      "rationale": "Room for refinement in the dac — source-level transparency may expose recording flaws and dynamic elasticity may be suppressed. Upgrading here would improve the system without changing its direction."
+    }
+  ],
+  "keepRecommendations": [],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "**Amplifier Upgrade** — The amplifier is part of what gives this system its detail — the quality you said you're after — so it isn't the liability the system's structure makes it look like."
+    },
+    {
+      "step": 2,
+      "action": "**Speakers Upgrade** — The JBL has some room to grow here — tonal density may lean thin and lesser recordings may sound unforgiving."
+    },
+    {
+      "step": 3,
+      "action": "**DAC Upgrade** — Room for refinement in the dac — source-level transparency may expose recording flaws and dynamic elasticity may be suppressed."
+    },
+    {
+      "step": 4,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your taste pattern points toward equipment emphasising **precision and analytical control**. Components in this system (Topping D90SE, Hegel H190, JBL L100 Classic) share this design approach. You also values detail — future upgrades should preserve the underlying philosophy while addressing that specific axis."
+}

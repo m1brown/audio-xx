@@ -32,7 +32,7 @@ import type { PreferenceProtectionResult } from './preference-protection';
 import type { CounterfactualAssessment } from './counterfactual-assessment';
 import type { DecisionFrame } from './decision-frame';
 import { detectSystemPhono, buildPhonoCaveat } from './products/turntables';
-import { getProductImage, resolveProductImage, resolveProductImageStrict, getBrandImage, getGenericPlaceholder } from './product-images';
+import { getProductImage, resolveProductImage, resolveProductImageStrict, getGenericPlaceholder } from './product-images';
 import { getLegacyMapping } from './products/legacy-models';
 
 // ── Country code to name ──────────────────────────────
@@ -48,6 +48,21 @@ const COUNTRY_NAMES: Record<string, string> = {
   SE: 'Sweden', SG: 'Singapore', TW: 'Taiwan', UA: 'Ukraine',
   US: 'United States', VN: 'Vietnam',
 };
+
+
+/**
+ * Name system components without silent omission (Product Quality Phase 2).
+ * Lists up to `max` components; anything beyond is elided TRANSPARENTLY
+ * ("…and one more component"), never dropped as if the system were smaller.
+ */
+function nameSystem(components: string[], max: number): string {
+  if (components.length <= max) {
+    return components.length === 2 ? components.join(' and ') : components.join(', ');
+  }
+  const shown = components.slice(0, max).join(', ');
+  const rest = components.length - max;
+  return `${shown}, and ${rest === 1 ? 'one more component' : `${rest} more components`}`;
+}
 
 function countryName(code?: string): string | undefined {
   if (!code) return undefined;
@@ -134,6 +149,9 @@ export interface QuickRecommendation {
 export interface AdvisoryOption {
   name: string;
   brand?: string;
+  /** Form-factor / feature tag ("IEM", "over-ear, wireless"), rendered as a
+   *  chip beside the name rather than concatenated into it. */
+  formFactorLabel?: string;
   price?: number;
   priceCurrency?: string;
   /** Brief sonic character description — what this component sounds like. */
@@ -469,6 +487,12 @@ export interface SystemChain {
   roles: string[];
   /** Ordered component names matching the role positions. */
   names: string[];
+  /**
+   * Names the post-parse validator withheld because they name only a category
+   * ("integrated amplifier"), not a product. Carried so the response can ask
+   * about them — a withheld component must never disappear silently.
+   */
+  unverifiedComponents?: string[];
 }
 
 /**
@@ -671,11 +695,46 @@ export interface AdvisoryResponse {
   unknownComponents?: string[];
 
   /**
+   * **Presentation-only carrier.** Opaque raw engine result that the v2
+   * Assessment Artifact renderer (`apps/web/src/app/artifact`) consumes
+   * via `synthesizeArtifact()`. Attached at the system-assessment seam
+   * in `page.tsx` only when `ASSESSMENT_ARTIFACT_V2_ENABLED` is on.
+   *
+   * - Off path: this field is `undefined`; no consumer reads it; the
+   *   AdvisoryResponse shape is byte-identical to today.
+   * - On path: chat-side dispatch reads it to render the v2 artifact in
+   *   embedded mode. Treated as opaque `unknown`: not serialized in
+   *   save-system payloads, not consulted by intent / clarification /
+   *   comparison / save flows.
+   *
+   * The double-underscore prefix marks this as presentation infrastructure;
+   * do not extend it with display fields, do not read it from non-artifact
+   * surfaces. Engine semantics live in the engine; this is a transport
+   * lane for the v2 dispatch only.
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __rawAssessment?: unknown;
+
+  /**
    * Reasoning mode that produced this response. Optional — omitted = 'core'.
    * Only 'expanded' triggers a visible UI indicator + caption; 'hybrid' is
    * internal observability only. See {@link ReasoningMode} for semantics.
    */
   reasoningMode?: ReasoningMode;
+  /**
+   * Per-component evidence tier. The Expanded Reasoning caption states that
+   * SOME of the answer is model-derived; this states WHICH parts, so a
+   * mixed-evidence system does not present curated and model knowledge as
+   * one undifferentiated voice.
+   */
+  componentProvenance?: Array<{ name: string; basis: 'catalog' | 'brand' | 'model' | 'user' }>;
+  /**
+   * The system's components as they reach the screen — one identity per graph
+   * node. This exists so no surface can consume a joined subject string as if
+   * it were a product: image, provenance, HiFiShark and eBay all resolve per
+   * component, and each degrades alone.
+   */
+  systemComponentViews?: import('./system-component-view').SystemComponentView[];
   /**
    * Reason the response landed in 'expanded' reasoning mode. Mapped to a
    * one-line caption by the renderer. Only consulted when
@@ -684,6 +743,27 @@ export interface AdvisoryResponse {
   fallbackReason?: FallbackReason;
   /** System signature — one-sentence characterization of the system's sonic identity. */
   systemSignature?: string;
+  /**
+   * Capability for the frozen artifact of THIS assessment.
+   *
+   * Private: View, Print and Save PDF read it. Absent until the snapshot is
+   * stored, and absent for good if storage was unavailable — the actions
+   * simply do not appear, because offering an artifact that cannot be opened
+   * is worse than offering none.
+   */
+  /** A material limitation on the principal finding. Rendered subordinate. */
+  qualification?: string;
+  artifactViewToken?: string;
+  /** Public capability, present only after an explicit Share. */
+  artifactShareToken?: string;
+  /**
+   * Component-scoped product knowledge. Rendered outside the relational
+   * publication boundary — every line has one subject, so D-12 was never its
+   * business.
+   */
+  componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
+  /** The system-level analysis, composed once and read by every surface. */
+  systemReview?: string[];
 
   // ── 0. Audio Profile ──────────────────────────────────
   /** Structured listener profile — system, sonic priorities, context. */
@@ -698,6 +778,11 @@ export interface AdvisoryResponse {
   // ── 2. System / Use-Case Context ────────────────────
   /** Current system and listening context (prose). */
   systemContext?: string;
+  /** Set when the catalogue has nothing inside the stated budget for a
+   *  servable category. The response is one honest sentence; renderers
+   *  must suppress shortlist scaffolding rather than frame an absent
+   *  shortlist as if it existed. */
+  coverageGap?: { category: string; budget: number; catalogueFloor?: number };
   /** Inferred system tendencies (prose summary). */
   systemTendencies?: string;
 
@@ -996,6 +1081,16 @@ export interface AdvisoryResponse {
     symptoms: string[];
     traits: Record<string, 'up' | 'down'>;
   };
+
+  // ── 14. Brand Authority Preview (Pass 18 — dark behind feature flag) ──
+  /**
+   * Compact authority tile populated for bare-brand consultations only.
+   * Passed through from ConsultationResponse; the renderer gates display
+   * on NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW (default off).
+   *
+   * See `BrandAuthorityPreview` in `./consultation` for shape + invariants.
+   */
+  brandAuthorityPreview?: import('./consultation').BrandAuthorityPreview;
 }
 
 // ── Content Enrichment ───────────────────────────────
@@ -1117,7 +1212,7 @@ function buildDirectedEditorialIntro(
   const budgetClause = budget ? ` at ~${budget}` : '';
 
   const systemClause = systemComponents && systemComponents.length > 0
-    ? `, working with your ${systemComponents.slice(0, 2).join(' and ')}`
+    ? `, working with your ${nameSystem(systemComponents, 2)}`
     : '';
 
   // Replacement framing — same logic as buildEditorialIntro. When a component
@@ -1270,7 +1365,7 @@ const CATEGORY_FRAMING: Record<string, { headline: string; points: string[] }> =
     headline: 'What actually matters when choosing a tube amplifier',
     points: [
       'Output topology is the single biggest variable — SET is dense and intimate, push-pull is more controlled, OTL is fast but speaker-picky.',
-      'Speaker sensitivity and impedance curve decide whether a tube amp sings or wheezes.',
+      'Speaker sensitivity and impedance curve decide whether a tube amp drives the load with headroom to spare or runs out before the music does.',
       'Transformer quality and output tubes together shape tone more than any marketing spec.',
     ],
   },
@@ -1435,7 +1530,7 @@ function buildSystemInterpretation(
   // ── Layer 1: System acknowledgment ──
   // Tendency detail is in systemContextPreamble — keep this brief.
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
-    const systemList = ctx.systemComponents.slice(0, 3).join(', ');
+    const systemList = nameSystem(ctx.systemComponents, 3);
     parts.push(`With ${systemList} in your system:`);
   }
 
@@ -2067,6 +2162,15 @@ export function consultationToAdvisory(
     spiderChartData: isComparison ? undefined : c.spiderChartData,
     sourceReferences: c.sourceReferences,
     systemSignature: isComparison ? undefined : c.systemSignature,
+    qualification: isComparison ? undefined : c.qualification,
+    componentDossiers: isComparison ? undefined : c.componentDossiers,
+
+    // Pass 18: Brand Authority Preview — pass through unchanged for
+    // non-comparison responses. Comparison flows never populate this
+    // field, but suppress here defensively so a future builder change
+    // can't accidentally surface a brand tile inside a comparison
+    // artifact.
+    brandAuthorityPreview: isComparison ? undefined : c.brandAuthorityPreview,
 
     // Saved-system personalization: secondary note, never main framing.
     // Only for non-assessment, non-comparison responses where savedSystemNote exists.
@@ -2923,6 +3027,7 @@ export function shoppingToAdvisory(
     catalogCountry: p.catalogCountry,
     catalogBrandScale: p.catalogBrandScale,
     isCurrentComponent: p.isCurrentComponent,
+    formFactorLabel: (p as { formFactorLabel?: string }).formFactorLabel,
     // Buying and role metadata (from deterministic pipeline)
     pickRole: p.pickRole,
     roleLabel: p.roleLabel,
@@ -3126,6 +3231,7 @@ export function shoppingToAdvisory(
     listenerPriorities,
     whyFitsYou: a.whyFitsYou,
     systemContext: a.systemNote,
+    coverageGap: a.coverageGap,
 
     recommendedDirection: a.bestFitDirection,
     // Suppress passive content when preference is weak — StartHereBlock is the primary CTA
@@ -3439,7 +3545,7 @@ function buildDiagnosisInterpretation(
 
   // System character from components
   if (ctx?.systemComponents && ctx.systemComponents.length > 0) {
-    const names = ctx.systemComponents.slice(0, 3).join(', ');
+    const names = nameSystem(ctx.systemComponents, 3);
     if (ctx.systemTendencies) {
       parts.push(`Your system (${names}) has a ${ctx.systemTendencies.toLowerCase()} character.`);
     } else {

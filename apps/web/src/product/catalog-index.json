@@ -1,0 +1,1154 @@
+[
+ {
+  "id": "7hz-salnotes-zero",
+  "brand": "7Hz",
+  "name": "Salnotes Zero",
+  "category": "iem"
+ },
+ {
+  "id": "accuphase-e-280",
+  "brand": "Accuphase",
+  "name": "E-280",
+  "category": "amplifier"
+ },
+ {
+  "id": "accuphase-e-4000",
+  "brand": "Accuphase",
+  "name": "E-4000",
+  "category": "amplifier"
+ },
+ {
+  "id": "agd-productions-vivace",
+  "brand": "AGD Productions",
+  "name": "Vivace",
+  "category": "amplifier"
+ },
+ {
+  "id": "altec-model-19",
+  "brand": "Altec",
+  "name": "Model 19",
+  "category": "speaker"
+ },
+ {
+  "id": "amphion-argon3s",
+  "brand": "Amphion",
+  "name": "Argon3S",
+  "category": "speaker"
+ },
+ {
+  "id": "ampsandsound-stereo-17",
+  "brand": "ampsandsound",
+  "name": "Stereo 17",
+  "category": "amplifier"
+ },
+ {
+  "id": "apple-airpods-pro-2",
+  "brand": "Apple",
+  "name": "AirPods Pro 2",
+  "category": "iem"
+ },
+ {
+  "id": "audalytic-dr70",
+  "brand": "Audalytic",
+  "name": "DR70",
+  "category": "dac"
+ },
+ {
+  "id": "audeze-lcd-x",
+  "brand": "Audeze",
+  "name": "LCD-X",
+  "category": "headphone"
+ },
+ {
+  "id": "audio-technica-m50xbt2",
+  "brand": "Audio-Technica",
+  "name": "ATH-M50xBT2",
+  "category": "headphone"
+ },
+ {
+  "id": "audiolab-6000a",
+  "brand": "Audiolab",
+  "name": "6000A",
+  "category": "amplifier"
+ },
+ {
+  "id": "aune-ar5000",
+  "brand": "Aune",
+  "name": "AR5000",
+  "category": "headphone"
+ },
+ {
+  "id": "auralic-vega",
+  "brand": "Auralic",
+  "name": "Vega",
+  "category": "dac"
+ },
+ {
+  "id": "aurorasound-hfsa-01",
+  "brand": "Aurorasound",
+  "name": "HFSA-01",
+  "category": "amplifier"
+ },
+ {
+  "id": "ayre-vx-5-twenty",
+  "brand": "Ayre",
+  "name": "VX-5 Twenty",
+  "category": "amplifier"
+ },
+ {
+  "id": "benchmark-ahb2",
+  "brand": "Benchmark",
+  "name": "AHB2",
+  "category": "amplifier"
+ },
+ {
+  "id": "bluesound-node",
+  "brand": "Bluesound",
+  "name": "Node",
+  "category": "streamer"
+ },
+ {
+  "id": "bluesound-node-x",
+  "brand": "Bluesound",
+  "name": "NODE X",
+  "category": "dac"
+ },
+ {
+  "id": "boenicke-w5",
+  "brand": "Boenicke",
+  "name": "W5",
+  "category": "speaker"
+ },
+ {
+  "id": "boenicke-w8",
+  "brand": "Boenicke",
+  "name": "W8",
+  "category": "speaker"
+ },
+ {
+  "id": "bottlehead-crack",
+  "brand": "Bottlehead",
+  "name": "Crack",
+  "category": "amplifier"
+ },
+ {
+  "id": "boulder-866",
+  "brand": "Boulder",
+  "name": "866",
+  "category": "amplifier"
+ },
+ {
+  "id": "cambridge-audio-cxa81",
+  "brand": "Cambridge Audio",
+  "name": "CXA81",
+  "category": "amplifier"
+ },
+ {
+  "id": "campfire-audio-andromeda",
+  "brand": "Campfire Audio",
+  "name": "Andromeda",
+  "category": "iem"
+ },
+ {
+  "id": "campfire-audio-honeydew",
+  "brand": "Campfire Audio",
+  "name": "Honeydew",
+  "category": "iem"
+ },
+ {
+  "id": "campfire-audio-solaris",
+  "brand": "Campfire Audio",
+  "name": "Solaris",
+  "category": "iem"
+ },
+ {
+  "id": "cayin-a88t-mk2",
+  "brand": "Cayin",
+  "name": "A-88T MK2",
+  "category": "amplifier"
+ },
+ {
+  "id": "cengrand-dsdac-1-0-deluxe",
+  "brand": "Cen.Grand",
+  "name": "DSDAC 1.0 Deluxe",
+  "category": "dac"
+ },
+ {
+  "id": "chord-dave",
+  "brand": "Chord",
+  "name": "DAVE",
+  "category": "dac"
+ },
+ {
+  "id": "chord-hugo",
+  "brand": "Chord",
+  "name": "Hugo",
+  "category": "dac"
+ },
+ {
+  "id": "chord-hugo-tt2",
+  "brand": "Chord",
+  "name": "Hugo TT2",
+  "category": "dac"
+ },
+ {
+  "id": "chord-qutest",
+  "brand": "Chord",
+  "name": "Qutest",
+  "category": "dac"
+ },
+ {
+  "id": "crayon-cia-1t",
+  "brand": "Crayon Audio",
+  "name": "CIA-1T",
+  "category": "amplifier"
+ },
+ {
+  "id": "cube-audio-nendo",
+  "brand": "Cube Audio",
+  "name": "Nenuphar Mini (Nendo)",
+  "category": "speaker"
+ },
+ {
+  "id": "dan-clark-stealth",
+  "brand": "Dan Clark Audio",
+  "name": "Stealth",
+  "category": "headphone"
+ },
+ {
+  "id": "dartzeel-cth-8550",
+  "brand": "darTZeel",
+  "name": "CTH-8550",
+  "category": "amplifier"
+ },
+ {
+  "id": "dcs-bartok",
+  "brand": "dCS",
+  "name": "Bartók",
+  "category": "dac"
+ },
+ {
+  "id": "decware-se84ufo",
+  "brand": "Decware",
+  "name": "SE84UFO",
+  "category": "amplifier"
+ },
+ {
+  "id": "denafrips-ares-15th",
+  "brand": "Denafrips",
+  "name": "Ares 15th",
+  "category": "dac"
+ },
+ {
+  "id": "denafrips-enyo-15th",
+  "brand": "Denafrips",
+  "name": "Enyo 15th",
+  "category": "dac"
+ },
+ {
+  "id": "denafrips-pontus-ii-12th-1",
+  "brand": "Denafrips",
+  "name": "Pontus II 12th-1",
+  "category": "dac"
+ },
+ {
+  "id": "denafrips-terminator-ii",
+  "brand": "Denafrips",
+  "name": "Terminator II",
+  "category": "dac"
+ },
+ {
+  "id": "denafrips-venus-ii",
+  "brand": "Denafrips",
+  "name": "Venus II",
+  "category": "dac"
+ },
+ {
+  "id": "devore-gibbon-3xl",
+  "brand": "DeVore Fidelity",
+  "name": "Gibbon 3XL",
+  "category": "speaker"
+ },
+ {
+  "id": "devore-orangutan-o92",
+  "brand": "DeVore Fidelity",
+  "name": "Orangutan O/92",
+  "category": "speaker"
+ },
+ {
+  "id": "devore-orangutan-o93",
+  "brand": "DeVore Fidelity",
+  "name": "Orangutan O/93",
+  "category": "speaker"
+ },
+ {
+  "id": "devore-orangutan-obaby",
+  "brand": "DeVore Fidelity",
+  "name": "Orangutan O/Baby",
+  "category": "speaker"
+ },
+ {
+  "id": "devore-orangutan-o96",
+  "brand": "DeVore",
+  "name": "Orangutan O/96",
+  "category": "speaker"
+ },
+ {
+  "id": "electrocompaniet-eci-6",
+  "brand": "Electrocompaniet",
+  "name": "ECI 6",
+  "category": "amplifier"
+ },
+ {
+  "id": "enleum-amp-23r",
+  "brand": "Enleum",
+  "name": "AMP-23R",
+  "category": "amplifier"
+ },
+ {
+  "id": "etymotic-er2xr",
+  "brand": "Etymotic",
+  "name": "ER2XR",
+  "category": "iem"
+ },
+ {
+  "id": "eversolo-dac-z8",
+  "brand": "Eversolo",
+  "name": "DAC-Z8",
+  "category": "dac"
+ },
+ {
+  "id": "eversolo-dmp-a6",
+  "brand": "Eversolo",
+  "name": "DMP-A6",
+  "category": "streamer"
+ },
+ {
+  "id": "falcon-ls3-5a",
+  "brand": "Falcon",
+  "name": "LS3/5a",
+  "category": "speaker"
+ },
+ {
+  "id": "fiio-k11-r2r",
+  "brand": "FiiO",
+  "name": "K11 R2R",
+  "category": "dac"
+ },
+ {
+  "id": "fiio-k9-pro",
+  "brand": "FiiO",
+  "name": "K9 Pro",
+  "category": "dac"
+ },
+ {
+  "id": "first-watt-sit-3",
+  "brand": "First Watt",
+  "name": "SIT-3",
+  "category": "amplifier"
+ },
+ {
+  "id": "focal-aria-906",
+  "brand": "Focal",
+  "name": "Aria 906",
+  "category": "speaker"
+ },
+ {
+  "id": "focal-clear-mg",
+  "brand": "Focal",
+  "name": "Clear Mg",
+  "category": "headphone"
+ },
+ {
+  "id": "focal-kanta-no2",
+  "brand": "Focal",
+  "name": "Kanta No. 2",
+  "category": "speaker"
+ },
+ {
+  "id": "goldmund-job-225",
+  "brand": "Goldmund / JOB",
+  "name": "225",
+  "category": "amplifier"
+ },
+ {
+  "id": "goldmund-srda",
+  "brand": "Goldmund",
+  "name": "SRDA DAC",
+  "category": "dac"
+ },
+ {
+  "id": "goldmund-telos-390",
+  "brand": "Goldmund",
+  "name": "Telos 390",
+  "category": "amplifier"
+ },
+ {
+  "id": "goldmund-telos-590",
+  "brand": "Goldmund",
+  "name": "Telos 590 NextGen II",
+  "category": "amplifier"
+ },
+ {
+  "id": "goldmund-telos-690",
+  "brand": "Goldmund",
+  "name": "Telos 690",
+  "category": "amplifier"
+ },
+ {
+  "id": "grado-rs2x",
+  "brand": "Grado",
+  "name": "RS2x",
+  "category": "headphone"
+ },
+ {
+  "id": "grado-sr80x",
+  "brand": "Grado",
+  "name": "SR80x",
+  "category": "headphone"
+ },
+ {
+  "id": "grandinote-shinai",
+  "brand": "Grandinote",
+  "name": "Shinai",
+  "category": "amplifier"
+ },
+ {
+  "id": "gustard-r26",
+  "brand": "Gustard",
+  "name": "R26",
+  "category": "dac"
+ },
+ {
+  "id": "gustard-x16",
+  "brand": "Gustard",
+  "name": "X16",
+  "category": "dac"
+ },
+ {
+  "id": "gustard-x26-pro",
+  "brand": "Gustard",
+  "name": "X26 Pro",
+  "category": "dac"
+ },
+ {
+  "id": "harbeth-p3esr",
+  "brand": "Harbeth",
+  "name": "P3ESR",
+  "category": "speaker"
+ },
+ {
+  "id": "harbeth-shl5-plus",
+  "brand": "Harbeth",
+  "name": "Super HL5 Plus",
+  "category": "speaker"
+ },
+ {
+  "id": "hegel-h190",
+  "brand": "Hegel",
+  "name": "H190",
+  "category": "amplifier"
+ },
+ {
+  "id": "hegel-h390",
+  "brand": "Hegel",
+  "name": "H390",
+  "category": "amplifier"
+ },
+ {
+  "id": "hegel-rost",
+  "brand": "Hegel",
+  "name": "Rost",
+  "category": "amplifier"
+ },
+ {
+  "id": "hifiman-arya-organic",
+  "brand": "HiFiMAN",
+  "name": "Arya Organic",
+  "category": "headphone"
+ },
+ {
+  "id": "hifiman-ef400",
+  "brand": "HiFiMAN",
+  "name": "EF400",
+  "category": "dac"
+ },
+ {
+  "id": "hifiman-susvara",
+  "brand": "HiFiMAN",
+  "name": "Susvara",
+  "category": "headphone"
+ },
+ {
+  "id": "holo-cyan-2",
+  "brand": "Holo Audio",
+  "name": "Cyan 2",
+  "category": "dac"
+ },
+ {
+  "id": "holo-may-kte",
+  "brand": "Holo Audio",
+  "name": "May (KTE)",
+  "category": "dac"
+ },
+ {
+  "id": "holo-spring-3",
+  "brand": "Holo Audio",
+  "name": "Spring 3",
+  "category": "dac"
+ },
+ {
+  "id": "hornshoppe-horns",
+  "brand": "Hornshoppe",
+  "name": "Horns",
+  "category": "speaker"
+ },
+ {
+  "id": "ifi-zen-dac-v2",
+  "brand": "iFi",
+  "name": "Zen DAC V2",
+  "category": "dac"
+ },
+ {
+  "id": "innuos-pulse-mini",
+  "brand": "Innuos",
+  "name": "Pulse Mini",
+  "category": "streamer"
+ },
+ {
+  "id": "innuos-zen-mk3",
+  "brand": "Innuos",
+  "name": "Zen Mk3",
+  "category": "streamer"
+ },
+ {
+  "id": "jbl-l100-classic",
+  "brand": "JBL",
+  "name": "L100 Classic",
+  "category": "speaker"
+ },
+ {
+  "id": "job-integrated",
+  "brand": "JOB",
+  "name": "Integrated",
+  "category": "amplifier"
+ },
+ {
+  "id": "kef-ls60-wireless",
+  "brand": "KEF",
+  "name": "LS60 Wireless",
+  "category": "speaker"
+ },
+ {
+  "id": "kef-lsx-ii",
+  "brand": "KEF",
+  "name": "LSX II",
+  "category": "speaker"
+ },
+ {
+  "id": "kef-r3",
+  "brand": "KEF",
+  "name": "R3",
+  "category": "speaker"
+ },
+ {
+  "id": "kinki-studio-dazzle",
+  "brand": "Kinki Studio",
+  "name": "Dazzle",
+  "category": "amplifier"
+ },
+ {
+  "id": "kinki-studio-ex-m1",
+  "brand": "Kinki Studio",
+  "name": "EX-M1",
+  "category": "amplifier"
+ },
+ {
+  "id": "kinki-studio-ex-m1-plus",
+  "brand": "Kinki Studio",
+  "name": "EX-M1+",
+  "category": "amplifier"
+ },
+ {
+  "id": "kiwi-ears-cadenza",
+  "brand": "Kiwi Ears",
+  "name": "Cadenza",
+  "category": "iem"
+ },
+ {
+  "id": "klipsch-cornwall-iv",
+  "brand": "Klipsch",
+  "name": "Cornwall IV",
+  "category": "speaker"
+ },
+ {
+  "id": "klipsch-heresy-iv",
+  "brand": "Klipsch",
+  "name": "Heresy IV",
+  "category": "speaker"
+ },
+ {
+  "id": "laiv-harmony",
+  "brand": "LAiV",
+  "name": "Harmony",
+  "category": "dac"
+ },
+ {
+  "id": "laiv-harmony-dac",
+  "brand": "LAiV",
+  "name": "Harmony DAC",
+  "category": "dac"
+ },
+ {
+  "id": "lampizator-baltic-5",
+  "brand": "Lampizator",
+  "name": "Baltic 5",
+  "category": "dac"
+ },
+ {
+  "id": "leben-cs300",
+  "brand": "Leben",
+  "name": "CS300",
+  "category": "amplifier"
+ },
+ {
+  "id": "leben-cs600x",
+  "brand": "Leben",
+  "name": "CS600X",
+  "category": "amplifier"
+ },
+ {
+  "id": "line-magnetic-lm211ia",
+  "brand": "Line Magnetic",
+  "name": "LM-211IA",
+  "category": "amplifier"
+ },
+ {
+  "id": "linear-tube-audio-z10",
+  "brand": "Linear Tube Audio",
+  "name": "Z10",
+  "category": "amplifier"
+ },
+ {
+  "id": "linear-tube-audio-z40-plus",
+  "brand": "Linear Tube Audio",
+  "name": "Z40+",
+  "category": "amplifier"
+ },
+ {
+  "id": "linn-lp12-majik",
+  "brand": "Linn",
+  "name": "LP12 Majik",
+  "category": "turntable"
+ },
+ {
+  "id": "linnenberg-liszt",
+  "brand": "LinnenberG",
+  "name": "Liszt",
+  "category": "amplifier"
+ },
+ {
+  "id": "magico-a3",
+  "brand": "Magico",
+  "name": "A3",
+  "category": "speaker"
+ },
+ {
+  "id": "magnepan-point-7",
+  "brand": "Magnepan",
+  "name": ".7",
+  "category": "speaker"
+ },
+ {
+  "id": "magnepan-1-7i",
+  "brand": "Magnepan",
+  "name": "1.7i",
+  "category": "speaker"
+ },
+ {
+  "id": "magnepan-lrs-plus",
+  "brand": "Magnepan",
+  "name": "LRS+",
+  "category": "speaker"
+ },
+ {
+  "id": "marantz-2220b",
+  "brand": "Marantz",
+  "name": "2220B",
+  "category": "amplifier"
+ },
+ {
+  "id": "mcintosh-ma12000",
+  "brand": "McIntosh",
+  "name": "MA12000",
+  "category": "amplifier"
+ },
+ {
+  "id": "mcintosh-ma252",
+  "brand": "McIntosh",
+  "name": "MA252",
+  "category": "amplifier"
+ },
+ {
+  "id": "merason-frerot",
+  "brand": "Merason",
+  "name": "Frérot",
+  "category": "dac"
+ },
+ {
+  "id": "meze-empyrean-ii",
+  "brand": "Meze",
+  "name": "Empyrean II",
+  "category": "headphone"
+ },
+ {
+  "id": "mhdt-orchid",
+  "brand": "MHDT",
+  "name": "Orchid",
+  "category": "dac"
+ },
+ {
+  "id": "mission-770",
+  "brand": "Mission",
+  "name": "770",
+  "category": "speaker"
+ },
+ {
+  "id": "mission-ms-50-8vet",
+  "brand": "Mission",
+  "name": "MS 50 8VET",
+  "category": "speaker"
+ },
+ {
+  "id": "mission-ms-50",
+  "brand": "Mission",
+  "name": "MS-50",
+  "category": "speaker"
+ },
+ {
+  "id": "mola-mola-tambaqui",
+  "brand": "Mola Mola",
+  "name": "Tambaqui",
+  "category": "dac"
+ },
+ {
+  "id": "moondrop-aria-2",
+  "brand": "Moondrop",
+  "name": "Aria 2",
+  "category": "iem"
+ },
+ {
+  "id": "moondrop-blessing-3",
+  "brand": "Moondrop",
+  "name": "Blessing 3",
+  "category": "iem"
+ },
+ {
+  "id": "moondrop-chu-ii",
+  "brand": "Moondrop",
+  "name": "Chu II",
+  "category": "iem"
+ },
+ {
+  "id": "moondrop-quarks",
+  "brand": "Moondrop",
+  "name": "Quarks",
+  "category": "iem"
+ },
+ {
+  "id": "musical-fidelity-v90-dac",
+  "brand": "Musical Fidelity",
+  "name": "V90-DAC",
+  "category": "dac"
+ },
+ {
+  "id": "nad-c-3050",
+  "brand": "NAD",
+  "name": "C 3050",
+  "category": "amplifier"
+ },
+ {
+  "id": "nad-c-316bee-v2",
+  "brand": "NAD",
+  "name": "C 316BEE V2",
+  "category": "amplifier"
+ },
+ {
+  "id": "naim-nait-xs-3",
+  "brand": "Naim",
+  "name": "Nait XS 3",
+  "category": "amplifier"
+ },
+ {
+  "id": "naim-supernait-3",
+  "brand": "Naim",
+  "name": "SuperNait 3",
+  "category": "amplifier"
+ },
+ {
+  "id": "ocellia-calliope",
+  "brand": "Ocellia",
+  "name": "Calliope .21",
+  "category": "speaker"
+ },
+ {
+  "id": "oppo-opdv971h",
+  "brand": "Oppo",
+  "name": "OPDV971H",
+  "category": "dac"
+ },
+ {
+  "id": "primaluna-evo-300",
+  "brand": "PrimaLuna",
+  "name": "EVO 300 Integrated",
+  "category": "amplifier"
+ },
+ {
+  "id": "primare-i35",
+  "brand": "Primare",
+  "name": "i35",
+  "category": "amplifier"
+ },
+ {
+  "id": "pro-ject-debut-pro",
+  "brand": "Pro-Ject",
+  "name": "Debut PRO",
+  "category": "turntable"
+ },
+ {
+  "id": "quad-va-one-plus",
+  "brand": "Quad",
+  "name": "VA-One+",
+  "category": "amplifier"
+ },
+ {
+  "id": "qualio-iq",
+  "brand": "Qualio Audio",
+  "name": "IQ",
+  "category": "speaker"
+ },
+ {
+  "id": "raal-requisite-1995-immanis",
+  "brand": "Raal-Requisite",
+  "name": "1995 Immanis",
+  "category": "headphone"
+ },
+ {
+  "id": "rega-planar-3",
+  "brand": "Rega",
+  "name": "Planar 3",
+  "category": "turntable"
+ },
+ {
+  "id": "rme-adi-2-dac-fs",
+  "brand": "RME",
+  "name": "ADI-2 DAC FS",
+  "category": "dac"
+ },
+ {
+  "id": "rockna-wavelight",
+  "brand": "Rockna",
+  "name": "Wavelight",
+  "category": "dac"
+ },
+ {
+  "id": "rogue-audio-cronus-magnum-iii",
+  "brand": "Rogue Audio",
+  "name": "Cronus Magnum III",
+  "category": "amplifier"
+ },
+ {
+  "id": "rotel-a11-tribute",
+  "brand": "Rotel",
+  "name": "A11 Tribute",
+  "category": "amplifier"
+ },
+ {
+  "id": "schiit-aegir",
+  "brand": "Schiit",
+  "name": "Aegir",
+  "category": "amplifier"
+ },
+ {
+  "id": "schiit-bifrost-2-64",
+  "brand": "Schiit",
+  "name": "Bifrost 2/64",
+  "category": "dac"
+ },
+ {
+  "id": "schiit-modi-multibit",
+  "brand": "Schiit",
+  "name": "Modi Multibit",
+  "category": "dac"
+ },
+ {
+  "id": "schiit-modius-e",
+  "brand": "Schiit",
+  "name": "Modius E",
+  "category": "dac"
+ },
+ {
+  "id": "scott-222b",
+  "brand": "Scott",
+  "name": "222B / 222C",
+  "category": "amplifier"
+ },
+ {
+  "id": "sennheiser-hd600",
+  "brand": "Sennheiser",
+  "name": "HD 600",
+  "category": "headphone"
+ },
+ {
+  "id": "sennheiser-hd800s",
+  "brand": "Sennheiser",
+  "name": "HD 800 S",
+  "category": "headphone"
+ },
+ {
+  "id": "sennheiser-momentum-4",
+  "brand": "Sennheiser",
+  "name": "Momentum 4 Wireless",
+  "category": "headphone"
+ },
+ {
+  "id": "shindo-cortese",
+  "brand": "Shindo",
+  "name": "Cortese",
+  "category": "amplifier"
+ },
+ {
+  "id": "shure-aonic-3",
+  "brand": "Shure",
+  "name": "AONIC 3",
+  "category": "iem"
+ },
+ {
+  "id": "simgot-ea500lm",
+  "brand": "Simgot",
+  "name": "EA500LM",
+  "category": "iem"
+ },
+ {
+  "id": "singxer-sa-90",
+  "brand": "Singxer",
+  "name": "SA-90",
+  "category": "amplifier"
+ },
+ {
+  "id": "smsl-do300",
+  "brand": "SMSL",
+  "name": "DO300",
+  "category": "dac"
+ },
+ {
+  "id": "smsl-su-9",
+  "brand": "SMSL",
+  "name": "SU-9",
+  "category": "dac"
+ },
+ {
+  "id": "sonnet-morpheus",
+  "brand": "Sonnet Digital Audio",
+  "name": "Morpheus",
+  "category": "dac"
+ },
+ {
+  "id": "sonnet-pasithea",
+  "brand": "Sonnet",
+  "name": "Pasithea",
+  "category": "dac"
+ },
+ {
+  "id": "sony-ier-m7",
+  "brand": "Sony",
+  "name": "IER-M7",
+  "category": "iem"
+ },
+ {
+  "id": "sony-wh-1000xm5",
+  "brand": "Sony",
+  "name": "WH-1000XM5",
+  "category": "headphone"
+ },
+ {
+  "id": "soulution-330",
+  "brand": "Soulution",
+  "name": "330",
+  "category": "amplifier"
+ },
+ {
+  "id": "soundkaos-vox-3a",
+  "brand": "sound|kaos",
+  "name": "Vox 3a",
+  "category": "speaker"
+ },
+ {
+  "id": "spendor-a1",
+  "brand": "Spendor",
+  "name": "A1",
+  "category": "speaker"
+ },
+ {
+  "id": "tangzu-waner-sg",
+  "brand": "Tangzu",
+  "name": "Wan'er S.G.",
+  "category": "iem"
+ },
+ {
+  "id": "technics-sl-1500c",
+  "brand": "Technics",
+  "name": "SL-1500C",
+  "category": "turntable"
+ },
+ {
+  "id": "thorens-td-1600",
+  "brand": "Thorens",
+  "name": "TD 1600",
+  "category": "turntable"
+ },
+ {
+  "id": "topping-d70-pro-sabre",
+  "brand": "Topping",
+  "name": "D70 Pro SABRE",
+  "category": "dac"
+ },
+ {
+  "id": "topping-d90",
+  "brand": "Topping",
+  "name": "D90",
+  "category": "dac"
+ },
+ {
+  "id": "topping-d90se",
+  "brand": "Topping",
+  "name": "D90SE",
+  "category": "dac"
+ },
+ {
+  "id": "totaldac-d1-twelve-mk2",
+  "brand": "TotalDAC",
+  "name": "d1-twelve MK2",
+  "category": "dac"
+ },
+ {
+  "id": "totaldac-d1-unity",
+  "brand": "TotalDAC",
+  "name": "d1-unity",
+  "category": "dac"
+ },
+ {
+  "id": "totem-model-1-signature",
+  "brand": "Totem Acoustic",
+  "name": "Model 1 Signature",
+  "category": "speaker"
+ },
+ {
+  "id": "trends-ta-10",
+  "brand": "Trends Audio",
+  "name": "TA-10",
+  "category": "amplifier"
+ },
+ {
+  "id": "truthear-gate",
+  "brand": "Truthear",
+  "name": "GATE",
+  "category": "iem"
+ },
+ {
+  "id": "truthear-hola",
+  "brand": "Truthear",
+  "name": "Hola",
+  "category": "iem"
+ },
+ {
+  "id": "truthear-zero-red",
+  "brand": "Truthear",
+  "name": "Zero: Red",
+  "category": "iem"
+ },
+ {
+  "id": "vinnie-rossi-l2i-se",
+  "brand": "Vinnie Rossi",
+  "name": "L2i-SE",
+  "category": "amplifier"
+ },
+ {
+  "id": "vpi-cliffwood",
+  "brand": "VPI",
+  "name": "Cliffwood",
+  "category": "turntable"
+ },
+ {
+  "id": "weiss-dac204",
+  "brand": "Weiss",
+  "name": "DAC204",
+  "category": "dac"
+ },
+ {
+  "id": "wharfedale-linton",
+  "brand": "Wharfedale",
+  "name": "Linton Heritage",
+  "category": "speaker"
+ },
+ {
+  "id": "wiim-amp",
+  "brand": "WiiM",
+  "name": "AMP",
+  "category": "amplifier"
+ },
+ {
+  "id": "wiim-amp-ultra",
+  "brand": "WiiM",
+  "name": "AMP Ultra",
+  "category": "amplifier"
+ },
+ {
+  "id": "wiim-pro",
+  "brand": "WiiM",
+  "name": "Pro",
+  "category": "streamer"
+ },
+ {
+  "id": "wiim-ultra",
+  "brand": "WiiM",
+  "name": "Ultra",
+  "category": "streamer"
+ },
+ {
+  "id": "wilson-audio-sabrina-x",
+  "brand": "Wilson Audio",
+  "name": "Sabrina X",
+  "category": "speaker"
+ },
+ {
+  "id": "wlm-diva-monitor",
+  "brand": "WLM",
+  "name": "Diva Monitor",
+  "category": "speaker"
+ },
+ {
+  "id": "xsa-vanguard",
+  "brand": "XSA",
+  "name": "Vanguard",
+  "category": "speaker"
+ },
+ {
+  "id": "yamamoto-a-08s",
+  "brand": "Yamamoto",
+  "name": "A-08S",
+  "category": "amplifier"
+ },
+ {
+  "id": "zmf-verite-closed",
+  "brand": "ZMF",
+  "name": "Verite Closed",
+  "category": "headphone"
+ },
+ {
+  "id": "zu-dirty-weekend",
+  "brand": "Zu",
+  "name": "Dirty Weekend",
+  "category": "speaker"
+ }
+]

@@ -3,41 +3,18 @@
  *
  * Source hierarchy (per product policy):
  *   Primary curated:
- *     - 6moons (Srajan Ebaen)         — golden in tube-amp and DAC domains
  *     - Darko.Audio (John Darko)      — trusted across digital front-ends
  *     - Twittering Machines (M. Lavorgna) — trusted across DAC/streamer
  *   Secondary:
  *     - Stereophile, The Absolute Sound, HiFi Pig
  *   Supplementary:
  *     - Selected YouTube reviewers (e.g. A British Audiophile)
- *
- * Srajan is domain-scoped golden: authoritative on SET/tube designs and
- * boutique R2R DACs, but only `trusted` on mainstream solid-state.
- * This reflects where his ear has been consistently load-bearing.
  */
 
 import type { Reviewer } from './types';
 
 export const REVIEWERS: Reviewer[] = [
   // ── Primary curated ────────────────────────────────
-  {
-    id: 'srajan-ebaen',
-    displayName: 'Srajan Ebaen',
-    publication: '6moons',
-    tier: 'trusted',
-    domainTiers: {
-      'tube-amp': 'golden',
-      'dac': 'golden',
-      'speaker': 'trusted',
-      'solid-state-amp': 'trusted',
-    },
-    areasOfAuthority: ['tube-amp', 'dac', 'speaker'],
-    homepageUrl: 'https://6moons.com/',
-    notes: 'Domain-scoped golden source. Decades of SET, tube, and R2R '
-      + 'reviewing with a coherent listening framework. Authoritative on '
-      + 'boutique and non-mainstream designs; weighted as trusted (not '
-      + 'golden) on mass-market solid-state.',
-  },
   {
     id: 'john-darko',
     displayName: 'John Darko',
@@ -54,17 +31,16 @@ export const REVIEWERS: Reviewer[] = [
     publication: 'Twittering Machines',
     tier: 'trusted',
     domainTiers: {
-      // Co-primary with Srajan Ebaen in the DAC domain. Lavorgna\u2019s
-      // long-form, system-aware DAC listening notes carry equal authority
-      // to 6moons for this category and should never be collapsed into a
-      // single "house view" \u2014 divergent interpretations stay visible.
+      // Golden in the DAC domain. Lavorgna\u2019s long-form, system-aware
+      // DAC listening notes are load-bearing for this category and should
+      // never be collapsed into a single "house view" \u2014 divergent
+      // interpretations stay visible.
       'dac': 'golden',
     },
     areasOfAuthority: ['dac', 'streamer', 'tube-amp'],
     homepageUrl: 'https://twitteringmachines.com/',
     notes: 'Primary curated source. Long-form, system-aware listening notes. '
-      + 'Co-primary (golden) with 6moons in the DAC domain; trusted in '
-      + 'streamer and tube-amp domains.',
+      + 'Golden in the DAC domain; trusted in streamer and tube-amp domains.',
   },
 
   // ── Secondary ──────────────────────────────────────

@@ -1,0 +1,265 @@
+/*
+ * The Assessment document.
+ *
+ * Editorial, not dashboard. One semantic tree, two surfaces: screen and print
+ * share the hierarchy and differ only in scale and in what is chrome.
+ *
+ * The defect this corrects, from the founder's production PDF: the principal
+ * finding read at the same weight as the prose around it, while section labels
+ * and application furniture took the eye. The finding is the reason the
+ * document exists and is now the loudest thing after the title.
+ */
+
+.axx-doc {
+  --ink: #1B1A18;
+  --muted: #6B6862;
+  --faint: #A9A49C;
+  --rule: rgba(27, 26, 24, 0.14);
+  --accent: #A8231B;
+
+  max-width: 40rem;              /* ~68 characters at 13px serif */
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+/* ── Masthead ───────────────────────────────────────────── */
+.axx-home {
+  display: inline-block;
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.62rem; font-weight: 700; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted);
+  text-decoration: none; margin-bottom: 2.4rem;
+}
+.axx-home:hover { color: var(--accent); }
+
+.axx-doc header { margin-bottom: 2rem; }
+.axx-kicker {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--ink); margin: 0 0 0.2rem;
+}
+.axx-date { font-size: 0.74rem; color: var(--muted); margin: 0; }
+
+.axx-credit {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 1.5rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── The principal finding — the loudest element ────────── */
+.axx-verdict {
+  font-size: 1.6rem; line-height: 1.28; font-weight: 500;
+  letter-spacing: -0.012em; margin: 0 0 0.75rem;
+  text-wrap: balance;
+}
+/* The finding's material limitation: one register down, still substantive. */
+.axx-qualification {
+  font-size: 1.02rem; line-height: 1.45; color: var(--muted);
+  margin: 0 0 0.9rem; max-width: 34rem;
+}
+/* Subordinate to the finding, and clearly its qualification. */
+.axx-standfirst {
+  font-size: 0.95rem; line-height: 1.5; font-style: italic;
+  color: var(--muted); margin: 0 0 2.2rem; max-width: 32rem;
+}
+.axx-doc > section:first-of-type { margin-bottom: 2.2rem; }
+
+/* ── Sections ───────────────────────────────────────────── */
+.axx-doc section { margin-bottom: 1.9rem; }
+.axx-section {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.63rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted);
+  margin: 0 0 0.55rem; padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--rule);
+}
+.axx-doc p { margin: 0 0 0.7rem; }
+.axx-doc p:last-child { margin-bottom: 0; }
+
+/* ── Tonal signature ────────────────────────────────────── */
+.axx-axis {
+  display: grid;
+  grid-template-columns: 4.6rem 1fr 4.6rem 5rem;
+  align-items: center; gap: 0.6rem; margin-bottom: 0.45rem;
+  font-family: var(--face-grotesque, sans-serif); font-size: 0.66rem;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+}
+.axx-axis-right { text-align: right; }
+.axx-axis-track {
+  position: relative; height: 1px; background: var(--rule); display: block;
+}
+.axx-axis-mark {
+  position: absolute; top: -3px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--accent); transform: translateX(-50%);
+}
+.axx-axis-pole { color: var(--ink); font-weight: 700; text-align: right; }
+
+/* ── Components ─────────────────────────────────────────── */
+.axx-component {
+  margin-bottom: 1.25rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.axx-component:last-child { border-bottom: none; padding-bottom: 0; }
+.axx-cname {
+  font-size: 0.98rem; font-weight: 600; letter-spacing: -0.006em;
+  margin: 0 0 0.5rem;
+}
+.axx-fact {
+  display: grid; grid-template-columns: 8.5rem 1fr;
+  gap: 0.9rem; margin-bottom: 0.28rem; align-items: baseline;
+}
+.axx-fact-label {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--faint); padding-top: 0.12rem;
+}
+/* The value column ran flush to the container's right edge — zero padding —
+   so a long line like "Measured performance was beyond reproach, with wide
+   input sampling range, very low" touched the boundary and read as clipped in
+   the PDF. A measure this wide is also hard to read: the dCS review lines are
+   the longest values in the document and were the widest-set text on the page.
+   A right inset both fixes the collision and brings the measure back. */
+.axx-fact-value {
+  font-size: 0.83rem; line-height: 1.5;
+  padding-right: 1.25rem;
+}
+.axx-tag {
+  display: inline-block; margin-left: 0.4rem;
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--faint); border: 1px solid var(--rule);
+  padding: 0.03rem 0.28rem; border-radius: 2px; vertical-align: 1px;
+}
+.axx-fact-muted {
+  font-size: 0.8rem; color: var(--muted); margin: 0.4rem 0 0;
+}
+.axx-component-detail { margin-top: 0.28rem; }
+.axx-footnote {
+  font-size: 0.7rem; color: var(--faint); margin: 0.5rem 0 0; font-style: italic;
+}
+
+/* ── Question and evidence ──────────────────────────────── */
+.axx-question p { font-size: 0.95rem; font-style: italic; }
+.axx-doc footer { margin-top: 2.2rem; }
+.axx-doc footer p, .axx-doc footer li { font-size: 0.76rem; color: var(--muted); }
+.axx-doc footer ul { list-style: none; margin: 0.3rem 0 0; padding: 0; }
+.axx-provenance { color: var(--faint); }
+
+/* ── Print — the artifact is the canonical printable surface ── */
+@media print {
+  @page { margin: 16mm 15mm; }
+  body { background: #fff; }
+  /* Application chrome never prints. Navigation, actions and the return path
+     are screen affordances; a printed assessment has no controls. */
+  nav, header nav, .axx-home, .axx-actions, .audioxx-global-startover,
+  footer.site-footer { display: none !important; }
+
+  .axx-doc {
+    max-width: none; margin: 0; padding: 0;
+    font-size: 10pt; line-height: 1.5; color: #000;
+  }
+  .axx-verdict { font-size: 17pt; line-height: 1.24; }
+  .axx-qualification { font-size: 11pt; }
+  .axx-standfirst { font-size: 10.5pt; margin-bottom: 14pt; }
+  .axx-section { font-size: 7.5pt; }
+  .axx-cname { font-size: 11pt; }
+  .axx-fact-value { font-size: 9.5pt; }
+  .axx-fact-label, .axx-tag { font-size: 7pt; }
+  .axx-footnote, .axx-fact-muted { font-size: 8.5pt; }
+
+  /* A component card, and the finding, must not be cut in half. */
+  .axx-component, .axx-fact, .axx-axis { break-inside: avoid; page-break-inside: avoid; }
+  .axx-doc > section:first-of-type { break-inside: avoid; page-break-inside: avoid; }
+  /* A heading must never sit alone at the foot of a page. */
+  .axx-section, .axx-cname { break-after: avoid; page-break-after: avoid; }
+  .axx-doc section { break-inside: auto; }
+}
+
+/* ── Component photograph ────────────────────────────────
+   Recognition, not evidence. Sized to be identifiable at a glance and to stay
+   subordinate to the assessment: the finding is the document, a photograph is
+   how a reader confirms which box it is about.
+
+   There is deliberately NO empty-state rule. A dossier without an admitted
+   image renders no <figure> at all, so nothing reserves space and a card with
+   no photograph is finished rather than pending. Mixed coverage across a
+   system is expected and must read as intentional. */
+.axx-cimage { margin: 0 0 0.75rem; }
+.axx-cimage img {
+  display: block; max-width: 190px; width: 100%; height: auto;
+  object-fit: contain; border-radius: 2px;
+}
+.axx-cimage figcaption {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--faint); margin-top: 0.25rem;
+}
+
+@media print {
+  /* Keep the photograph with the product it identifies. A picture that breaks
+     away from its name identifies nothing. */
+  .axx-cimage { break-inside: avoid; page-break-inside: avoid; }
+  .axx-cimage img { max-width: 150px; }
+}
+
+/* Evidence ledger — one line per source, scope stated. */
+.axx-ledger { list-style: none; margin: 0.35rem 0 0; padding: 0; }
+.axx-ledger li { margin-bottom: 0.2rem; }
+
+/* Closing colophon — the document ends rather than stopping. */
+.axx-colophon {
+  margin-top: 1.1rem; padding-top: 0.55rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* SYSTEM REVIEW — the document's centre of gravity. */
+.axx-review p { margin-bottom: 0.85rem; }
+.axx-review p:last-child { margin-bottom: 0; }
+
+/* Component role, under the name it belongs to. */
+.axx-crole {
+  font-family: var(--face-grotesque, sans-serif);
+  font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--faint); margin: -0.3rem 0 0.5rem;
+}
+
+/* Resources — subordinate to the evidence above them. */
+.axx-cresources {
+  margin: 0.5rem 0 0; font-size: 0.72rem; color: var(--faint);
+}
+.axx-cresources a { color: var(--faint); margin-left: 0.5rem; }
+
+/* Component-scoped prose, with the component it describes. */
+.axx-ccharacter { margin: 0 0 0.7rem; font-size: 0.86rem; line-height: 1.55; }
+
+
+/* Semantic slots inside SYSTEM REVIEW.
+   Quieter than the section rule above them — they organise one section rather
+   than opening a new one, so they read as signposts, not as headings competing
+   with SYSTEM REVIEW / YOUR SYSTEM / EVIDENCE. */
+.axx-review-slot {
+  font-family: var(--face-grotesque, system-ui, sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(27, 26, 24, 0.42);
+  margin: 2rem 0 0.6rem;
+}
+.axx-review-slot:first-child { margin-top: 0; }
+
+@media print {
+  .axx-review-slot { font-size: 7pt; margin: 16pt 0 5pt; break-after: avoid; page-break-after: avoid; }
+}
+
+
+/* The closing question, inside its slot. */
+.axx-question-line { font-style: italic; }

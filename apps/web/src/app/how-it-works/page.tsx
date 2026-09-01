@@ -1,5 +1,11 @@
 import Link from 'next/link';
 
+export const metadata = {
+  title: 'How It Works',
+  description:
+    'How Audio XX reads your hi-fi system — the reasoning behind each assessment, from components to system character to what (if anything) to change.',
+};
+
 /* ── Inline SVG diagrams ─────────────────────────────── */
 
 function AxesDiagram() {
@@ -161,7 +167,8 @@ export default function HowItWorks() {
         Audio&thinsp;XX Methodology
       </p>
       <p className="muted small" style={{ marginBottom: '2rem', fontStyle: 'italic' }}>
-        A long-term listening advisor — not a scoring engine, not a review summarizer.
+        A conversational advisor for long-term listening — focused on system synergy,
+        listener priorities, and the trade-offs of any change.
       </p>
 
       {/* ── 1. The Problem ──────────────────────────────── */}
@@ -209,11 +216,20 @@ export default function HowItWorks() {
             some prioritize raw emotional impact. None of these is more correct than
             the others.
           </p>
+          <p style={{ marginBottom: '0.65rem' }}>
+            What reads as too bright for one listener can be exactly what another
+            listener has been chasing. What sounds slow and thick to one ear sounds
+            relaxed and natural to another. The same component, in the same room,
+            with the same recording, can be the right answer or the wrong one
+            depending on whose preferences are in the chair. That variance isn&rsquo;t
+            noise to be averaged out — it&rsquo;s the signal the advisor reads.
+          </p>
           <p>
             Audio&thinsp;XX doesn&rsquo;t pretend to know what sounds best. It helps
             you understand what you respond to, and matches that to equipment that
             supports it. The goal is a system that keeps you listening — not one that
-            wins a spec sheet competition.
+            wins a spec sheet competition. Sometimes the right answer is to change
+            nothing, and the advisor will say so.
           </p>
         </div>
       </section>
@@ -237,22 +253,22 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      {/* ── Reviewing vs Advisory (Stage PB1.1) ────────── */}
+      {/* ── The Advisory Model (Stage PB1.1, F3 positioning sweep) ────────── */}
       <section style={sectionStyle}>
-        <h2 style={headingStyle}>Reviewing vs. Advisory</h2>
+        <h2 style={headingStyle}>The Advisory Model</h2>
         <div style={bodyStyle}>
           <p style={{ marginBottom: '0.65rem' }}>
-            Reviewers evaluate components. Audio&thinsp;XX interprets
-            interaction — how a system, a room, your preferences, and the
-            trade-offs of any change actually behave together. The two roles
-            are complementary, not competing.
+            Audio&thinsp;XX interprets interaction — how a system, a room,
+            your preferences, and the trade-offs of any change behave together.
+            The reasoning starts from what you value as a listener and works
+            outward to whether a contemplated change actually moves the system
+            in that direction.
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
-            Reviewers give you the perspectives, the listening, the careful
-            description of what a piece of gear does. Audio&thinsp;XX helps
-            you interpret those perspectives inside <em>your</em> system and
-            against <em>your</em> preferences — so a strong review and a wrong
-            fit are no longer the same outcome.
+            The job is to help you read your own system against your own
+            priorities — so a well-regarded component and a wrong fit are no
+            longer the same outcome. Auditioning remains the final test; the
+            advisor narrows the field and names what is actually being traded.
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
             Three consequences of this framing shape the product:
@@ -275,16 +291,17 @@ export default function HowItWorks() {
               effect.
             </li>
             <li>
-              <strong>Reviewer and manufacturer material are attributed
-              context, not hidden source material.</strong>{' '}
-              When the advisor leans on a review, the review is named and
-              linked. When it doesn&rsquo;t, the reasoning is presented as
-              Audio&thinsp;XX&rsquo;s own interpretation of your system.
+              <strong>Recommendations are confidence-calibrated.</strong>{' '}
+              Product characterizations come from design topology, engineering
+              principles, and the long-term listening record. When confidence
+              is limited, the advisor says so.
             </li>
           </ul>
           <p>
-            The product is meant to support long-term listening satisfaction
-            — not to win an evaluation cycle.
+            The website is meant to support long-term listening satisfaction
+            and reduce churn. Audio&thinsp;XX is intended to sit alongside
+            the work of professional reviewers and audio publications; it is
+            not a substitute for that work.
           </p>
         </div>
       </section>
@@ -371,9 +388,9 @@ export default function HowItWorks() {
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
             Each product also carries detailed tendency notes across five
-            domains — tonality, timing, spatial, dynamics, and texture — curated
-            from professional reviews and listening reports. These provide the
-            nuance that the four axes frame.
+            domains — tonality, timing, spatial, dynamics, and texture — derived
+            from design topology, manufacturer specifications, and the long-term
+            listening record. These provide the nuance that the four axes frame.
           </p>
           <p>
             Crucially, components are not evaluated in isolation. A warm amplifier
@@ -484,10 +501,11 @@ export default function HowItWorks() {
 
           <div style={subheadStyle}>Built without AI</div>
           <p style={{ marginBottom: '0.65rem' }}>
-            The product catalog, including every sonic tendency, interaction note,
-            and trade-off description, is researched and curated by hand from
-            professional reviews, listening reports, and established community
-            knowledge. Nothing is scraped or summarized in real time.
+            The product catalog — sonic tendencies, interaction notes, and
+            trade-off descriptions — is curated editorially from design topology,
+            engineering principles, manufacturer specifications, and the
+            long-term listening record. The catalog is maintained by hand, not
+            assembled in real time.
           </p>
           <p style={{ marginBottom: '0.65rem' }}>
             The matching engine — how your preferences map to products, how
@@ -517,20 +535,27 @@ export default function HowItWorks() {
             than curated catalog entries.
           </p>
 
-          <div style={subheadStyle}>How sources are attributed</div>
+          <div style={subheadStyle}>About the underlying models</div>
           <p style={{ marginBottom: '0.65rem' }}>
-            Reviewer, manufacturer, and publication material informs the
-            catalog as attributed source context — not as raw text to be
-            reproduced. When a specific review or article is known, Audio&thinsp;XX
-            shows the link so you can read the original. When a deep link
-            isn&rsquo;t available, the publication is still named plainly rather
-            than hidden — so attribution is never disguised as our own analysis.
+            The site does not pull from professional reviewers and audio
+            publications as part of its analysis. However, the OpenAI model
+            powering the LLM layer was trained on broad internet text, which
+            likely includes audio publications, manufacturer pages, and forum
+            discussions.
+          </p>
+
+          <div style={subheadStyle}>Where our knowledge comes from</div>
+          <p style={{ marginBottom: '0.65rem' }}>
+            Product characterizations are grounded in design topology and
+            engineering principles (R-2R vs delta-sigma, Class A vs Class D,
+            sealed vs ported), manufacturer specifications, and the long-term
+            listening record of the broader audio community. Characterizations
+            are written editorially, in our own words.
           </p>
           <p>
-            The intent is to support discovery and system-level reasoning, not
-            to replace the original reviewing. If you find a quote or claim
-            here that draws on a piece you wrote, please get in touch — we&rsquo;d
-            rather link directly to the source than paraphrase around it.
+            When our confidence in a characterization is limited, we say so.
+            Transparency about what we know and what we&rsquo;re inferring is
+            part of the method.
           </p>
         </div>
       </section>

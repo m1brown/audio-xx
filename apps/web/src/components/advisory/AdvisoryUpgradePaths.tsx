@@ -11,7 +11,11 @@
 
 'use client';
 
-import { useState } from 'react';
+// React imported explicitly for vitest node-env JSX classic transform.
+// Inert under Next.js automatic JSX runtime (production / dev); required
+// only when this component is rendered via `react-dom/server` inside a
+// vitest node-environment test. Same pattern as BrandAuthorityPreview.tsx.
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { UpgradePath, UpgradePathOption } from '../../lib/advisory-response';
 import { buildProductLinks } from '../../lib/product-links';
@@ -89,6 +93,43 @@ function isDirectionalPath(path: UpgradePath): boolean {
 }
 
 /**
+ * Normalize a character phrase for safe interpolation into the bridge
+ * template. Prevents two visible defects:
+ *
+ *   1. Doubled punctuation — when the upstream input already ends with
+ *      `.` (e.g. "warm tube-led source-first chain with coherent voicing."),
+ *      the template's trailing `.` produces "voicing..". Strip terminal
+ *      sentence punctuation before interpolation.
+ *
+ *   2. Mid-sentence capitalization — when the upstream input starts with
+ *      a sentence-case capital (e.g. "A warm tube-led..."), interpolating
+ *      after "leans " produces "Your system leans A warm tube-led..."
+ *      reading as a proper noun mid-sentence. Lowercase the first letter
+ *      ONLY when it's a single capital followed by a lowercase letter
+ *      (the normal sentence-start shape), preserving acronyms (BBC,
+ *      AVR) and single-letter capitalizations (Class A).
+ *
+ * Returns the empty string when the input collapses under normalization.
+ * Callers should fall back to no-character branch if so.
+ */
+function normalizeCharacterPhrase(input: string): string {
+  let s = input.trim();
+  s = s.replace(/[.!?,;:]+$/, '').trim();
+  // Lowercase the first letter ONLY when the second character is not
+  // another uppercase letter. This catches:
+  //   - sentence-case starts ("Warm and..." → "warm and...")
+  //   - leading articles ("A warm..." → "a warm...")
+  //   - leading single-letter capitals followed by space
+  // …while preserving:
+  //   - acronyms ("BBC thin-wall" → unchanged because B-B is uppercase pair)
+  //   - all-caps phrases
+  if (s.length >= 2 && /^[A-Z]/.test(s) && !/^[A-Z][A-Z]/.test(s)) {
+    s = s[0].toLowerCase() + s.slice(1);
+  }
+  return s;
+}
+
+/**
  * Build system-specific bridge text from stacked traits and character summary.
  * Falls back to generic text when no system data is available.
  */
@@ -99,9 +140,14 @@ function buildBridgeText(
 ): string {
   // Build a readable character descriptor
   const trait = stackedTraits?.[0];
-  const character = trait
+  const rawCharacter = trait
     ? trait.label.replace(/_/g, ' ')
     : systemCharacterSummary ?? null;
+  // Normalize for safe interpolation (strips trailing punctuation,
+  // lowercases sentence-case starts). Empty result → treat as no
+  // character so the no-character branch handles framing.
+  const normalized = rawCharacter ? normalizeCharacterPhrase(rawCharacter) : '';
+  const character = normalized.length > 0 ? normalized : null;
 
   if (hasDirectional && character) {
     return `Your system leans ${character}. Some options below refine that character; others shift it in a new direction\u2009—\u2009trading what you have in surplus for qualities your system currently underserves. Choose based on what you want more of.`;
@@ -289,10 +335,10 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 className="audioxx-upgrade-card"
                 style={{
                   padding: '0.75rem 0.95rem',
-                  border: isDir ? '1px solid #CBD5E1' : '1px solid #E2E8F0',
-                  borderLeft: isDir ? '3px solid #1F3A5F' : '1px solid #E2E8F0',
+                  border: isDir ? '1px solid #CBD5E1' : '1px solid #E2DACB',
+                  borderLeft: isDir ? '3px solid #1B1A18' : '1px solid #E2DACB',
                   borderRadius: '8px',
-                  background: isDir ? '#EEF2F8' : '#FFFFFF',
+                  background: isDir ? '#F6F1E4' : '#FFFDF7',
                   boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
                   transition: 'transform 0.15s, box-shadow 0.15s',
                 }}
@@ -636,7 +682,11 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                 <MakerContextBlock brand={opt.brand} context={opt.makerContext} />
 
                 {/* Further reading ��� curated review links */}
-                {opt.sources && opt.sources.length > 0 && (
+                {/* F4 hotfix (private beta, 2026-05-18): "Further
+                    reading" surfaced reviewer publication, year, and
+                    review URL per upgrade option. Gated to `false &&`
+                    under the F4 reviewer-data exclusion rule. */}
+                {false && opt.sources && opt.sources!.length > 0 && (
                   <div style={{ marginTop: '0.55rem' }}>
                     <div style={{
                       fontSize: '0.72rem', fontWeight: 700, color: '#7A756D',
@@ -645,7 +695,7 @@ function PathBlock({ path, isDirectional }: { path: UpgradePath; isDirectional?:
                       Further reading
                     </div>
                     <ul style={{ margin: 0, paddingLeft: '1.1rem' }}>
-                      {opt.sources.slice(0, 2).map((s) => (
+                      {opt.sources!.slice(0, 2).map((s) => (
                         <li key={s.id} style={{
                           fontSize: '0.82rem',
                           lineHeight: 1.55,

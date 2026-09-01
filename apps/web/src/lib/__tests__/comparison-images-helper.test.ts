@@ -4,8 +4,10 @@
  * Locks the products-based comparison-image generation contract:
  *   - returns undefined when fewer than two products are supplied
  *   - returns the FIRST two products in input order (no reorder)
- *   - resolves imageUrl through resolveProductImage (catalog override
- *     wins, full 4-step chain falls through to placeholder otherwise)
+ *   - resolves imageUrl through the ADMISSION BOUNDARY. A catalog
+ *     `imageUrl` no longer wins outright: it is tested for exact identity
+ *     and first-party provenance like any other asset, and falls through
+ *     to the curated registry when it fails.
  *   - preserves brand and name verbatim on each entry
  *
  * Brand-name based comparison-image generation
@@ -93,18 +95,27 @@ describe('buildComparisonImagesFromProducts — products-based comparison images
 
   it('resolves catalog imageUrl through the full chain when product carries it', () => {
     const result = buildComparisonImagesFromProducts([CHORD_QUTEST, DENAFRIPS_PONTUS]);
-    expect(result![0].imageUrl).toBeTruthy();
-    expect(result![1].imageUrl).toBeTruthy();
-    // Catalog override should propagate (the chain prefers the catalog imageUrl)
-    expect(result![0].imageUrl).toBe('https://example.test/qutest-catalog.jpg');
-    expect(result![1].imageUrl).toBe('https://example.test/pontus-catalog.jpg');
+    // REVERSED 2026-08-23. This previously asserted that the catalog URL
+    // propagates verbatim — "the chain prefers the catalog imageUrl". That
+    // preference WAS the defect: `catalogImageUrl ?? getProductImage(...)`
+    // exempted catalog URLs from the exact-identity and provenance rules that
+    // every curated asset faces, so the catalog was a second trust boundary
+    // with looser rules. `example.test` is not first-party to Chord or
+    // Denafrips and carries no recorded provenance, so it is withheld and the
+    // governed registry answers instead.
+    expect(result![0].imageUrl).not.toBe('https://example.test/qutest-catalog.jpg');
+    expect(result![0].imageUrl).toBe('/images/products/chord-qutest.jpg');
+    // Denafrips has no curated entry, so nothing survives and the field is
+    // undefined — the graceful degradation this helper is built around.
+    expect(result![1].imageUrl).toBeUndefined();
   });
 
   it('still returns entries when a product has no imageUrl (graceful — chain may yield undefined)', () => {
     const result = buildComparisonImagesFromProducts([CHORD_QUTEST, PRODUCT_NO_IMAGE]);
     expect(result).toBeDefined();
     expect(result!.length).toBe(2);
-    // First entry has a catalog override, must resolve
+    // First entry resolves from the governed registry, not from its
+    // un-provenanced catalog override.
     expect(result![0].imageUrl).toBeTruthy();
     // Second entry has no override; imageUrl is whatever resolveProductImage
     // returns for an unknown product — we don't assert truthiness, only that

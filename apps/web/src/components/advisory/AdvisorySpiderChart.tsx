@@ -14,6 +14,12 @@
  * Colors: #a89870 accent palette — matches Audio XX visual identity.
  */
 
+// React imported explicitly for vitest node-env JSX classic transform.
+// Inert under Next.js automatic JSX runtime (production / dev); required
+// only when this component is rendered via `react-dom/server` inside a
+// vitest node-environment test. Same pattern as BrandAuthorityPreview.tsx.
+import React from 'react';
+
 interface SpiderChartProps {
   data: Array<{ trait: string; value: number; fullMark: number }>;
 }
@@ -95,7 +101,7 @@ export default function AdvisorySpiderChart({ data }: SpiderChartProps) {
         <polygon
           points={dataToPolygon(data)}
           fill="rgba(31, 58, 95, 0.12)"
-          stroke="#1F3A5F"
+          stroke="#1B1A18"
           strokeWidth={1.8}
           strokeLinejoin="round"
         />
@@ -110,7 +116,7 @@ export default function AdvisorySpiderChart({ data }: SpiderChartProps) {
               cx={pt.x}
               cy={pt.y}
               r={3.5}
-              fill="#1F3A5F"
+              fill="#1B1A18"
               stroke="#fff"
               strokeWidth={1.5}
             />

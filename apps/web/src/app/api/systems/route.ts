@@ -115,6 +115,15 @@ export async function POST(req: NextRequest) {
             userSubmitted: true,
           },
         });
+      } else if (component.category === 'other' && comp.category && comp.category !== 'other') {
+        // A reused shared record that knows nothing ('other') gains the
+        // listener's stated category — strictly information-gaining. A
+        // record with a DIFFERENT specific category is left alone; the
+        // listener's statement still travels on the link's roleOverride.
+        component = await prisma.component.update({
+          where: { id: component.id },
+          data: { category: comp.category },
+        });
       }
 
       // Link to system

@@ -165,8 +165,11 @@ describe('detectIntent — pivot phrasings route to shopping', () => {
   it('"considering speakers" → shopping', () => {
     expect(detectIntent('considering speakers').intent).toBe('shopping');
   });
-  it('"interested in a phono preamp" → shopping', () => {
-    expect(detectIntent('interested in a phono preamp').intent).toBe('shopping');
+  it('"interested in a phono preamp" → audio_knowledge (no phono catalog)', () => {
+    // Launch gate 2026-07-19 (MVP review BY-02): the catalog has no phono
+    // stages — shopping answered this with integrated amps. The knowledge
+    // lane answers honestly until a phono category exists.
+    expect(detectIntent('interested in a phono preamp').intent).toBe('audio_knowledge');
   });
   it('"looking at DACs" → shopping', () => {
     expect(detectIntent('looking at DACs').intent).toBe('shopping');

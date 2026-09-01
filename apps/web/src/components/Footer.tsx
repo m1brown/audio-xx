@@ -1,13 +1,19 @@
 import Link from 'next/link';
+import { getAmazonAffiliateTag, getEbayCampaignId } from '@/lib/affiliate-config';
 
 export default function Footer() {
+  // B2 (GTM commerce conditions): the disclosure derives from the SAME config
+  // that monetizes links, so footer and reality cannot diverge. With no
+  // affiliate credentials configured, the honest sentence renders; setting
+  // the credentials flips both the links and this sentence together.
+  const affiliateActive = !!(getAmazonAffiliateTag() || getEbayCampaignId());
   return (
     <footer
       style={{
         borderTop: '1px solid #eae8e4',
         padding: '1.25rem 1.5rem',
         marginTop: '3rem',
-        background: '#fafaf8',
+        background: '#FCF8EE',
       }}
     >
       <div
@@ -29,28 +35,46 @@ export default function Footer() {
             marginBottom: '0.6rem',
           }}
         >
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          {/* D1 mobile QA — M4 (2026-05-18).
+            * `whiteSpace: 'nowrap'` on each link prevents phrases like
+            * "Privacy Policy", "Affiliate Disclosure", and "Report issue"
+            * from breaking mid-word at narrow mobile viewports (360–414w).
+            * The outer flex row already has `flexWrap: 'wrap'` so the row
+            * can break between links — just not within them. */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
             <Link
               href="/privacy"
-              style={{ color: '#888', fontSize: '12.5px' }}
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
             >
               Privacy Policy
             </Link>
             <Link
+              href="/terms"
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
+            >
+              Terms
+            </Link>
+            <Link
               href="/affiliate-disclosure"
-              style={{ color: '#888', fontSize: '12.5px' }}
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
             >
               Affiliate Disclosure
             </Link>
             <Link
               href="/about"
-              style={{ color: '#888', fontSize: '12.5px' }}
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
             >
               About
             </Link>
+            <Link
+              href="/publishers-reviewers"
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
+            >
+              Publishers &amp; Reviewers
+            </Link>
             <a
               href="mailto:hello@audio-xx.com?subject=Audio%20XX%20issue%20report&body=What%20were%20you%20trying%20to%20do%3F%0A%0AWhat%20went%20wrong%3F%0A%0AWhat%20did%20you%20expect%3F%0A%0APage%20or%20query%20used%3A%0A%0AScreenshot%20attached%3F"
-              style={{ color: '#888', fontSize: '12.5px' }}
+              style={{ color: '#888', fontSize: '12.5px', whiteSpace: 'nowrap' }}
             >
               Report issue
             </a>
@@ -58,8 +82,19 @@ export default function Footer() {
         </div>
 
         <p style={{ margin: 0, color: '#aaa' }}>
-          Audio&thinsp;XX may earn commissions from qualifying purchases as an
-          Amazon Associate. This does not affect our recommendations.
+          {affiliateActive ? (
+            <>
+              Audio&thinsp;XX may earn commissions from qualifying purchases
+              through affiliate links. This does not affect our
+              recommendations.
+            </>
+          ) : (
+            <>
+              Audio&thinsp;XX currently earns no commission from any link on
+              this site. Recommendations are never influenced by commercial
+              considerations.
+            </>
+          )}
         </p>
       </div>
     </footer>

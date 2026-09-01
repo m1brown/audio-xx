@@ -1,0 +1,231 @@
+<style>
+/* ============================================================
+   AUDIO XX — SYSTEM ASSESSMENT · France reference (prototype v3)
+   Governing metaphor: a bespoke System Assessment — this document exists
+   because THIS system exists. Not a magazine, not a certificate.
+   No masthead, no seam, no issue/volume/edition. Verdict is the centre of
+   gravity. Metadata = date only. Warm cream paper. Built to be kept even if
+   the website is gone.
+   ============================================================ */
+
+:root{
+  --ground:#FBF7EE; --ground-2:#F4EEE1; --panel:#F1EBDC;
+  --ink:#423E37; --ink-muted:#66605C; --ink-faint:#948C86;
+  --accent:#990F3D; --accent-ink:#990F3D;
+  --hairline:#CCC1B7;
+  --face-display:'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
+  --face-text:'Iowan Old Style',Palatino,Georgia,'Times New Roman',serif;
+  --face-grotesque:ui-sans-serif,-apple-system,'Helvetica Neue','Segoe UI',Arial,sans-serif;
+  --face-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --leaf-w:min(48vw,520px);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --ground:#262A33; --ground-2:#22252D; --panel:#2B2F38;
+    --ink:#F3EADF; --ink-muted:#B9B2A8; --ink-faint:#8A857D;
+    --accent:#E8628B; --accent-ink:#E8628B; --hairline:#3A3D45; }
+}
+:root[data-theme="light"]{ --ground:#FBF7EE; --ground-2:#F4EEE1; --panel:#F1EBDC;
+  --ink:#423E37; --ink-muted:#66605C; --ink-faint:#948C86;
+  --accent:#990F3D; --accent-ink:#990F3D; --hairline:#CCC1B7; }
+:root[data-theme="dark"]{ --ground:#262A33; --ground-2:#22252D; --panel:#2B2F38;
+  --ink:#F3EADF; --ink-muted:#B9B2A8; --ink-faint:#8A857D;
+  --accent:#E8628B; --accent-ink:#E8628B; --hairline:#3A3D45; }
+
+*{box-sizing:border-box}
+.axx-root{ background:var(--ground-2); color:var(--ink); font-family:var(--face-text);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  padding:clamp(16px,4vw,52px) clamp(12px,3vw,40px) 64px; min-height:100%; }
+
+/* two document pages, side by side with real space between — NOT a spread */
+.axx-doc{display:flex;gap:clamp(16px,3vw,40px);align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.axx-leaf{ position:relative;background:var(--ground);width:var(--leaf-w);
+  padding:44px 40px 34px; min-height:calc(var(--leaf-w) * 1.414);
+  display:grid;grid-template-columns:2.35fr 0.8fr;column-gap:22px; }
+.axx-main{min-width:0}
+.axx-rail{display:flex;flex-direction:column;gap:15px;padding-top:2px}
+
+/* ---- issuing authority (small; not a masthead) ---- */
+.axx-ident{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:baseline;
+  border-bottom:1px solid var(--hairline);padding-bottom:8px;margin-bottom:26px}
+.axx-ident .who{font-family:var(--face-grotesque);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted)}
+.axx-ident .who b{color:var(--ink);font-weight:700;letter-spacing:.2em;margin-right:9px}
+.axx-ident .when{font-family:var(--face-grotesque);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+
+/* ---- kicker + subject ---- */
+.axx-kicker{font-family:var(--face-grotesque);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 9px}
+.axx-systemline{font-family:var(--face-display);font-size:18px;line-height:1.3;margin:0 0 16px;text-wrap:balance;letter-spacing:-.01em}
+.axx-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 8px}
+.axx-plate{display:flex;flex-direction:column;gap:5px}
+.axx-plate .img{aspect-ratio:4/3;border:1px solid var(--hairline);background:var(--panel);border-radius:2px;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.axx-plate .img img{width:60%;height:60%;object-fit:contain;opacity:.5}
+.axx-plate .cap{font-family:var(--face-grotesque);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.axx-plate .nm{font-family:var(--face-display);font-size:10.5px;line-height:1.1}
+
+/* ---- VERDICT — the centre of gravity ---- */
+.axx-verdictwrap{margin:40px 0 8px}
+.axx-rule{display:block;width:38px;height:2.5px;background:var(--accent);margin-bottom:16px}
+.axx-verdict{font-family:var(--face-display);font-weight:600;font-size:clamp(30px,4.1vw,44px);
+  line-height:1.02;letter-spacing:-.02em;margin:0 0 14px;text-wrap:balance}
+.axx-standfirst{font-family:var(--face-display);font-style:italic;font-size:17px;line-height:1.44;color:var(--ink-muted);margin:0;text-wrap:pretty}
+
+/* ---- tonal signature ---- */
+.axx-sig{margin:26px 0 6px;border-top:1px solid var(--hairline);padding-top:15px}
+.axx-sig .cap{font-family:var(--face-grotesque);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:12px}
+.axx-axis{display:grid;grid-template-columns:54px 1fr 54px;align-items:center;gap:8px;margin:7px 0}
+.axx-axis span{font-family:var(--face-grotesque);font-size:9px;color:var(--ink-faint)}
+.axx-axis .r{text-align:right}
+.axx-axis .r.on,.axx-axis .l.on{color:var(--ink);font-weight:600}
+.axx-track{position:relative;height:1.5px;background:var(--hairline)}
+.axx-track i{position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--accent);transform:translate(-50%,-50%);box-shadow:0 0 0 3px var(--ground)}
+.axx-track i.neu{background:var(--ink-faint)}
+
+/* ---- sections ---- */
+.axx-section{margin-top:24px}
+.axx-label{font-family:var(--face-grotesque);font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-muted);margin:0 0 7px;display:flex;align-items:center;gap:8px}
+.axx-label::before{content:"";width:13px;height:1.5px;background:var(--accent);display:inline-block}
+.axx-p{font-size:14px;line-height:1.66;margin:0 0 11px;color:var(--ink);hyphens:auto}
+.axx-p:last-child{margin-bottom:0}
+.axx-reco{font-family:var(--face-display);font-size:16.5px;line-height:1.3;margin:0}
+.axx-cost{font-size:13px;line-height:1.55;color:var(--ink-muted);font-style:italic;margin:6px 0 0}
+
+/* ---- references (superscript + simplified margin note) ---- */
+.axx-ref{font-family:var(--face-grotesque);font-size:.62em;font-weight:700;color:var(--accent-ink);vertical-align:super;line-height:0;padding-left:1px}
+.axx-note{font-family:var(--face-grotesque);font-size:10px;line-height:1.5;color:var(--ink-muted)}
+.axx-note b{color:var(--accent-ink);font-weight:700;margin-right:4px}
+.axx-railhead{font-family:var(--face-grotesque);font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);border-bottom:1px solid var(--hairline);padding-bottom:5px;margin-bottom:3px}
+
+/* ---- one true thing ---- */
+.axx-otts{margin:26px 0;padding:18px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--hairline)}
+.axx-otts .k{font-family:var(--face-grotesque);font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:10px}
+.axx-otts blockquote{margin:0;font-family:var(--face-display);font-size:20px;line-height:1.28;letter-spacing:-.01em;text-wrap:balance}
+
+/* ---- operating condition ---- */
+.axx-cond{background:var(--panel);border:1px solid var(--hairline);border-radius:2px;padding:13px 14px;margin-top:6px}
+.axx-cond .axx-p{font-size:13px;margin:0}
+
+/* ---- evidence statement + colophon (foot of page 2) ---- */
+.axx-evidence{grid-column:1 / -1;margin-top:34px;border-top:1px solid var(--hairline);padding-top:12px;
+  font-family:var(--face-text);font-style:italic;font-size:12.5px;line-height:1.5;color:var(--ink-muted);text-wrap:pretty}
+.axx-colophon{grid-column:1 / -1;margin-top:14px;font-family:var(--face-grotesque);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint)}
+
+.axx-footnotes{display:none}
+
+/* ---- responsive ---- */
+@media (max-width:900px){
+  :root{--leaf-w:min(94vw,540px)}
+  .axx-leaf{min-height:0;grid-template-columns:1fr}
+  .axx-rail{order:2;border-top:1px solid var(--hairline);padding-top:12px;margin-top:8px}
+  .axx-ident,.axx-evidence,.axx-colophon{grid-column:auto}
+}
+
+/* ---- PRINT: each page independent, portrait, A4 + Letter ---- */
+@media print{
+  :root{--ground:#fff;--ground-2:#fff;--panel:#faf7f0;--ink:#000;--ink-muted:#333;--ink-faint:#666;--hairline:#c9c0ae}
+  @page{size:portrait;margin:15mm}
+  .axx-root{padding:0;background:#fff}
+  .axx-screenonly{display:none!important}
+  .axx-doc{display:block}
+  .axx-leaf{width:100%;min-height:0;box-shadow:none;padding:0;display:block;break-after:page;page-break-after:always}
+  .axx-leaf:last-of-type{break-after:auto;page-break-after:auto}
+  .axx-leaf .axx-rail{display:none}
+  .axx-footnotes{display:block;margin-top:16px;border-top:1px solid var(--hairline);padding-top:10px}
+  .axx-footnotes .axx-note{margin-bottom:6px}
+}
+</style>
+
+<div class="axx-root">
+  <div class="axx-doc">
+
+    <!-- ============ PAGE 1 · THE ASSESSMENT ============ -->
+    <section class="axx-leaf">
+      <div class="axx-ident">
+        <span class="who"><b>Audio XX</b> System Assessment</span>
+        <span class="when">29 July 2026</span>
+      </div>
+
+      <div class="axx-main">
+        <p class="axx-kicker">The system assessed</p>
+        <h1 class="axx-systemline">Eversolo DMP-A6 &middot; Chord Hugo &middot; JOB INTegrated &middot; WLM Diva Monitor</h1>
+        <div class="axx-strip">
+          <div class="axx-plate"><div class="img"><img alt="Eversolo DMP-A6" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='2' y='6' width='44' height='20' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='38' cy='16' r='3' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Cline x1='8' y1='16' x2='22' y2='16' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Streamer · DAC · Pre</span><span class="nm">Eversolo DMP-A6</span></div>
+          <div class="axx-plate"><div class="img"><img alt="Chord Hugo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='6' y='8' width='36' height='16' rx='3' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='30' cy='16' r='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">DAC · Headphone amp</span><span class="nm">Chord Hugo</span></div>
+          <div class="axx-plate"><div class="img"><img alt="JOB INTegrated" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='2' y='6' width='44' height='20' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='16' r='3.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='36' cy='16' r='3.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Integrated amp</span><span class="nm">JOB INTegrated</span></div>
+          <div class="axx-plate"><div class="img"><img alt="WLM Diva Monitor" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 32'%3E%3Crect x='16' y='2' width='16' height='28' rx='2' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='24' cy='11' r='4.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3Ccircle cx='24' cy='23' r='2.5' fill='none' stroke='%23948C86' stroke-width='1.5'/%3E%3C/svg%3E"></div><span class="cap">Loudspeaker</span><span class="nm">WLM Diva Monitor</span></div>
+        </div>
+
+        <div class="axx-verdictwrap">
+          <span class="axx-rule"></span>
+          <h2 class="axx-verdict">Nothing here needs changing.</h2>
+          <p class="axx-standfirst">Tonally balanced, detail-forward, elastically flowing, spatially open &mdash; a system emphasizing transient clarity.</p>
+        </div>
+
+        <div class="axx-sig">
+          <p class="cap">Tonal signature</p>
+          <div class="axx-axis"><span class="l">Warm</span><div class="axx-track"><i class="neu" style="left:50%"></i></div><span class="r">Bright</span></div>
+          <div class="axx-axis"><span class="l">Smooth</span><div class="axx-track"><i style="left:78%"></i></div><span class="r on">Detailed</span></div>
+          <div class="axx-axis"><span class="l on">Elastic</span><div class="axx-track"><i style="left:24%"></i></div><span class="r">Controlled</span></div>
+          <div class="axx-axis"><span class="l on">Airy</span><div class="axx-track"><i style="left:26%"></i></div><span class="r">Closed</span></div>
+        </div>
+
+        <div class="axx-section">
+          <p class="axx-label">Recognition</p>
+          <p class="axx-p">This system is built for resolution and detail, with composure left to the speaker. The intent is legible in every choice: a clean, resolving front end, and one warm voice at the end to keep it human.</p>
+        </div>
+
+        <div class="axx-section">
+          <p class="axx-label">Recommendation</p>
+          <p class="axx-reco">This system is already well&nbsp;balanced.</p>
+          <p class="axx-cost">If you want more of something, name the quality you&rsquo;re looking for &mdash; and accept what it trades. Nothing here is asking to be fixed.</p>
+        </div>
+      </div>
+
+      <aside class="axx-rail axx-screenonly"></aside>
+    </section>
+
+    <!-- ============ PAGE 2 · WHY IT SOUNDS THIS WAY ============ -->
+    <section class="axx-leaf">
+      <div class="axx-main">
+        <p class="axx-kicker">Why it sounds this way</p>
+
+        <div class="axx-section" style="margin-top:0">
+          <p class="axx-label">Engineering</p>
+          <p class="axx-p">Feed the JOB INTegrated a resolved, transient-clean signal and it passes momentum along without editorialising; the Chord Hugo<a class="axx-ref">1</a> and Eversolo DMP-A6 do exactly that, handing the amplifier timing and low-level detail intact.</p>
+          <p class="axx-p">The WLM Diva Monitor is the one voiced component, and the system is built to let it be heard: its warmth rounds the leading edges the electronics deliver, so resolution arrives as presence rather than as edge. Nothing upstream fights what the speaker is trying to do.</p>
+          <p class="axx-p">The deal is honest. Ultimate ease is left to the speaker, and the Diva asks for careful placement<a class="axx-ref">2</a> to give back the spatial precision the front end resolves.</p>
+        </div>
+
+        <div class="axx-section">
+          <p class="axx-label">Listening session</p>
+          <p class="axx-p">Put on something with air and inner detail &mdash; a close-mic&rsquo;d voice, a small acoustic ensemble &mdash; and the system&rsquo;s priorities show at once. Leading edges are clean and quick; the stage opens wide and unforced; nothing is pushed at you. The Diva&rsquo;s warmth is what keeps the resolution musical rather than clinical.</p>
+          <p class="axx-p">Over a long evening the character holds. Because the detail is offered, not asserted, the system stays easy to live with at volume and after hours &mdash; the reward of leaving composure to the speaker.</p>
+        </div>
+
+        <div class="axx-otts">
+          <p class="k">One true thing</p>
+          <blockquote>The only warm voice in this system is the one you&rsquo;re meant to hear.</blockquote>
+        </div>
+
+        <div class="axx-section">
+          <p class="axx-label">Operating condition</p>
+          <div class="axx-cond"><p class="axx-p">The Diva Monitor has moderate placement sensitivity. Spatial precision improves significantly with careful positioning, and bass energy from the passive radiator can overwhelm small or untreated rooms. This is an operating condition to meet &mdash; not a fault to fix.</p></div>
+        </div>
+
+        <div class="axx-footnotes">
+          <p class="axx-note"><b>1</b>Chord Hugo uses FPGA-based conversion rather than an off-the-shelf DAC chip &mdash; a design associated with timing precision and low-level resolution.</p>
+          <p class="axx-note"><b>2</b>Placement sensitivity and passive-radiator bass loading in small or untreated rooms.</p>
+        </div>
+      </div>
+
+      <aside class="axx-rail axx-screenonly">
+        <div class="axx-railhead">Evidence</div>
+        <p class="axx-note"><b>1</b>Chord Hugo uses FPGA-based conversion rather than an off-the-shelf DAC chip &mdash; a design associated with timing precision and low-level resolution.</p>
+        <p class="axx-note"><b>2</b>Placement sensitivity and passive-radiator bass loading in small or untreated rooms.</p>
+      </aside>
+
+      <p class="axx-evidence">Assessment based on manufacturer documentation, designer statements, and Audio XX analysis.</p>
+      <p class="axx-colophon">Audio XX &middot; System Assessment &middot; 29 July 2026</p>
+    </section>
+
+  </div>
+</div>

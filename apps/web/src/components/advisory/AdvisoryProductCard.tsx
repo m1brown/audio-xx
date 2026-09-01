@@ -20,7 +20,7 @@ import { renderText } from './render-text';
 import { CardViewTracker, TrackedAnchor } from './CardTelemetry';
 import { shouldShowAmazonLink, getAmazonSearchUrl } from '../../lib/amazon-links';
 import { buildProductLinks } from '../../lib/product-links';
-import { findBrandProfileByName } from '../../lib/consultation';
+import { findBrandProfileByName } from '../../lib/catalog/lookups';
 import { toSlug } from '../../lib/route-slug';
 import { ProductImage } from './ProductImage';
 
@@ -370,14 +370,14 @@ const COLORS = {
   text: '#111827',          // page COLOR.textPrimary
   textSecondary: '#4A5568', // page COLOR.textSecondary
   textMuted: '#64748B',     // page COLOR.textMuted
-  accent: '#1F3A5F',        // page COLOR.accent — single accent across UI
-  accentBg: '#EEF2F8',      // page COLOR.accentBg — verdict block fill
-  border: '#E2E8F0',        // page COLOR.border
+  accent: '#1B1A18',        // page COLOR.accent — single accent across UI
+  accentBg: '#F6F1E4',      // page COLOR.accentBg — verdict block fill
+  border: '#E2DACB',        // page COLOR.border
   borderLight: '#EDF2F7',   // page COLOR.borderLight
   green: '#4F6645',
   white: '#fff',
-  cardBg: '#FFFFFF',        // page COLOR.cardBg — lifts off page bg
-  sectionBg: '#EEF2F8',
+  cardBg: '#FFFDF7',        // page COLOR.cardBg — lifts off page bg
+  sectionBg: '#F6F1E4',
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -900,6 +900,26 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
           >
             {opt.name}
           </span>
+          {/* Form factor as a chip. It used to be appended to the product
+            * name ("Aria 2 [IEM]"), which read as machine output and broke
+            * catalog lookups that matched on the name. */}
+          {opt.formFactorLabel && (
+            <span style={{
+              marginLeft: '0.55rem',
+              fontSize: '0.68rem',
+              fontWeight: 700,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              padding: '0.16rem 0.5rem',
+              borderRadius: 2,
+              border: `1px solid ${COLORS.border}`,
+              color: COLORS.textMuted,
+              whiteSpace: 'nowrap',
+              verticalAlign: 'middle',
+            }}>
+              {opt.formFactorLabel}
+            </span>
+          )}
           {opt.isCurrentComponent && (
             <span style={{
               marginLeft: '0.6rem',
@@ -1057,22 +1077,38 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
         const whyFits = isPhantomSystem ? undefined : whyFitsRaw;
         const whyThisOne = whyFits ?? chooseRaw ?? whyFitsRaw ?? opt.bestFor;
 
-        // ── Block 3: "Trade-off" ──
-        // Consequence-based phrasing, not "avoid if" directives. ≤ 20 words.
-        // Priority: systemDelta.tradeOffs[0] (chain-specific) → caution →
-        // avoidIf (stripped of directive prefix) → lessIdealIf.
-        const tradeRaw = opt.systemDelta?.tradeOffs?.[0]?.trim();
-        const cautionRaw = opt.caution?.trim();
-        const avoidStripped = opt.avoidIf
-          ?.replace(/^Avoid if\s+(you\s+)?(want|need|prefer|can't|cannot|don't)\s*/i, '')
-          .trim();
-        const lessIdealStripped = opt.lessIdealIf
-          ?.replace(/^Less ideal if\s+(you\s+)?(want|need|prefer)\s*/i, '')
-          .trim();
-        const tradeoffRaw = tradeRaw ?? cautionRaw ?? avoidStripped ?? lessIdealStripped;
-        const tradeoff = tradeoffRaw
-          ? truncateToWords(tradeoffRaw, 20)
-          : undefined;
+        // ── Block 3: "What you're accepting" (trade-offs) ──
+        //
+        // 2026-07-01: Mike's note on transparency — "you should have a
+        // strong rationale about why you recommend those dacs, and be
+        // transparent about it." Previously we showed only
+        // tradeOffs[0] and capped it at 20 words; the engine emits a
+        // list, and honest trade-off disclosure reads better as a full
+        // list than a truncated single line.
+        //
+        // Prefer the full systemDelta.tradeOffs array (chain-specific,
+        // grounded in the actual system). Fall back to caution / avoidIf
+        // / lessIdealIf as individual lines only when the array is empty.
+        // No word-cap — full sentences let the reasoning stand.
+        const rawTradeoffList: string[] = [];
+        const arrTradeoffs = (opt.systemDelta?.tradeOffs ?? [])
+          .map((t) => t?.trim())
+          .filter((t): t is string => !!t && t.length > 0);
+        if (arrTradeoffs.length > 0) {
+          rawTradeoffList.push(...arrTradeoffs);
+        } else {
+          const cautionRaw = opt.caution?.trim();
+          const avoidStripped = opt.avoidIf
+            ?.replace(/^Avoid if\s+(you\s+)?(want|need|prefer|can't|cannot|don't)\s*/i, '')
+            .trim();
+          const lessIdealStripped = opt.lessIdealIf
+            ?.replace(/^Less ideal if\s+(you\s+)?(want|need|prefer)\s*/i, '')
+            .trim();
+          for (const t of [cautionRaw, avoidStripped, lessIdealStripped]) {
+            if (t) rawTradeoffList.push(t);
+          }
+        }
+        const tradeoffs = rawTradeoffList;
 
         const makerInsight = composeMakerInsight(opt);
 
@@ -1094,47 +1130,80 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
 
         return (
           <>
-            {/* 1. SOUNDS LIKE — sonic identity in one sentence */}
+            {/* 1. HOW IT SOUNDS — the sensory description of the pick */}
             {soundsLike && (
               <div style={sectionStyle}>
-                <SectionLabel>Sounds like</SectionLabel>
+                <SectionLabel>How it sounds</SectionLabel>
                 <p style={textStyle}>{renderText(soundsLike)}</p>
               </div>
             )}
 
-            {/* 2. WHY THIS ONE — system-specific reason to choose this card */}
-            {whyThisOne && (
+            {/* 2. WHY IT FITS YOUR SYSTEM — the transparent rationale.
+              *
+              * Phase 4 (2026-07-01): Mike's note — "you should have a
+              * strong rationale about why you recommend those dacs, and
+              * be transparent about it." Previously we showed a single
+              * summary sentence in "Why this one" and hid the deeper
+              * reasoning in a dimmed (opacity 0.82) "Technical
+              * rationale" bullet list underneath.
+              *
+              * The engine already emits the technical bullets — this
+              * pass promotes them alongside the summary as the primary
+              * rationale block. Summary line first (grounded in the
+              * user's system when systemDelta.whyFitsSystem is
+              * populated); technical bullets follow at full weight, no
+              * dimming, no "de-emphasized" framing.
+              */}
+            {(whyThisOne || (opt.technicalRationale && opt.technicalRationale.length > 0)) && (
               <div style={sectionStyle}>
-                <SectionLabel>Why this one</SectionLabel>
-                <p style={textStyle}>{renderText(whyThisOne)}</p>
+                <SectionLabel>Why it fits your system</SectionLabel>
+                {whyThisOne && (
+                  <p style={{ ...textStyle, marginBottom: opt.technicalRationale && opt.technicalRationale.length > 0 ? '0.35rem' : 0 }}>
+                    {renderText(whyThisOne)}
+                  </p>
+                )}
+                {opt.technicalRationale && opt.technicalRationale.length > 0 && (
+                  <ul style={bulletStyle}>
+                    {opt.technicalRationale.slice(0, 4).map((t, i) => (
+                      <li key={i} style={{ marginBottom: '0.2rem' }}>
+                        {renderText(t)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
-            {/* 3. TRADE-OFF — what you give up or risk */}
-            {tradeoff && (
+            {/* 3. WHAT YOU'RE ACCEPTING — trade-offs, in full.
+              *
+              * The engine emits a list of trade-offs specific to how the
+              * product interacts with the user's chain. Previously
+              * capped at 20 words and only the first item shown. Now
+              * rendered as bullets when there's more than one, or as a
+              * single line when there's just one — either way, the full
+              * sentence(s) stand without truncation. Reads as honest
+              * disclosure of what the pick costs, not hedge text.
+              */}
+            {tradeoffs.length > 0 && (
               <div style={sectionStyle}>
-                <SectionLabel>Trade-off</SectionLabel>
-                <p style={{ ...textStyle, color: COLORS.textSecondary }}>
-                  {renderText(tradeoff)}
-                </p>
+                <SectionLabel>What you&apos;re accepting</SectionLabel>
+                {tradeoffs.length === 1 ? (
+                  <p style={{ ...textStyle, color: COLORS.textSecondary }}>
+                    {renderText(tradeoffs[0])}
+                  </p>
+                ) : (
+                  <ul style={{ ...bulletStyle, color: COLORS.textSecondary }}>
+                    {tradeoffs.slice(0, 4).map((t, i) => (
+                      <li key={i} style={{ marginBottom: '0.2rem' }}>
+                        {renderText(t)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
             {/* ── De-emphasized depth layers ── */}
-
-            {/* TECHNICAL RATIONALE — design → audible outcome */}
-            {opt.technicalRationale && opt.technicalRationale.length > 0 && (
-              <div style={{ ...sectionStyle, opacity: 0.82 }}>
-                <SectionLabel>Technical rationale</SectionLabel>
-                <ul style={{ ...bulletStyle, fontSize: '0.88rem', color: COLORS.textSecondary }}>
-                  {opt.technicalRationale.slice(0, 3).map((t, i) => (
-                    <li key={i} style={{ marginBottom: '0.2rem', fontSize: '0.88rem' }}>
-                      {renderText(t)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             {/* MAKER INSIGHT — structured manufacturer block.
               *
@@ -1198,14 +1267,20 @@ function EditorialProductSection({ opt, hideMakerInsight }: { opt: AdvisoryOptio
              * year + link appear, which is exactly the "supportive, not
              * dominant" role the spec calls for.
              */}
-            {opt.sources && opt.sources.length > 0 && (
+            {/* F4 hotfix (private beta, 2026-05-18):
+                "Further reading" surfaced reviewer publication + short
+                quote + review URL on every product card. Suppressed
+                under the F4 reviewer-data exclusion rule. The block
+                is gated to `false &&` so the render is dead while the
+                shape stays diff-readable for the post-beta data pass. */}
+            {false && opt.sources && opt.sources!.length > 0 && (
               <div style={{ margin: '0 0 0.5rem' }}>
                 <SectionLabel>Further reading</SectionLabel>
                 <ul style={{
                   margin: 0,
                   paddingLeft: '1.1rem',
                 }}>
-                  {opt.sources.slice(0, 2).map((s) => (
+                  {opt.sources!.slice(0, 2).map((s) => (
                     <li key={s.id} style={{
                       fontSize: '0.82rem',
                       lineHeight: 1.55,
@@ -1279,6 +1354,12 @@ const SURFACED_FLOOR = 2;
 /** Target product count when preferImage is active. */
 const SURFACED_TARGET = 3;
 
+// `trackOutboundCommerceClick` moved to CardTelemetry.tsx ('use client').
+// It was a local function here, passed down as an `onClick` prop to
+// TrackedAnchor — a function crossing the server→client boundary, which
+// threw "Event handlers cannot be passed to Client Component props" and
+// 500'd every /brand/[slug] page. TrackedAnchor now calls it internally.
+
 export default function AdvisoryProductCards({ options, hideMakerInsight, preferImage }: AdvisoryProductCardProps) {
   // ── Soft image-preference selection ──
   // When preferImage is set, image-backed products sort first. If fewer
@@ -1346,9 +1427,18 @@ export function ShoppingLinks({ brand, name, manufacturerUrl, availability }: St
     <div style={{ marginTop: '0.6rem', lineHeight: 1.8 }}>
       {links.map((link, i) => (
         <span key={i}>
-          <a href={link.url} target="_blank" rel="noopener noreferrer" style={LINK_STYLE}>
+          <TrackedAnchor
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={LINK_STYLE}
+            product={[brand, name].filter(Boolean).join(' ')}
+            role={undefined}
+            kind={link.label === 'eBay' ? 'buy_used' : link.label === 'HiFiShark' ? 'buy_used' : 'manufacturer'}
+            label={link.label}
+          >
             {link.label}
-          </a>
+          </TrackedAnchor>
           {i < links.length - 1 && <span style={LINK_SEP_STYLE}>&middot;</span>}
         </span>
       ))}

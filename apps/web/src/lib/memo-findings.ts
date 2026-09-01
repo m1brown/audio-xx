@@ -62,9 +62,11 @@ export const LISTENER_PRIORITY_LABELS: Record<ListenerPriority, string> = {
 };
 
 /**
- * Deliberateness signal tags — closed set.
- * Detected by assessSystemDeliberateness() when the component
- * choices suggest an intentional, coherent build.
+ * Voicing-coherence signal tags — closed set.
+ * Detected by assessSystemDeliberateness() when the components are voiced in
+ * a consistent direction. The name is historical; what these record is an
+ * observation about the components, never an inference about why the listener
+ * chose them.
  */
 export type DeliberatenessSignal =
   | 'consistent_axis_alignment'
@@ -73,6 +75,11 @@ export type DeliberatenessSignal =
   | 'price_tier_consistency'
   | 'design_philosophy_match'
   | 'specialist_brands_present'
+  /**
+   * @deprecated No longer emitted. This asserted market position from a
+   * price-tier count — a rank claim resting on evidence collected for a
+   * different purpose. Retained so stored findings still type-check.
+   */
   | 'punches_above_tier';
 
 /**
@@ -300,7 +307,21 @@ export interface ActiveDACInference {
  * When data is missing for either side, compatibility is 'unknown'
  * and the assessment is invisible in the narrative.
  */
+/**
+ * Which evidence supplied each figure.
+ *
+ * Recorded because "we could not check" and "we checked using the maker's
+ * published rating" are different epistemic states that used to look
+ * identical from the outside, and because the precedence rule is only
+ * auditable if the selection is visible.
+ */
+export type PhysicalFactSource = 'catalog' | 'manufacturer' | 'listener' | 'none';
+
 export interface PowerMatchAssessment {
+  /** Where the amplifier's power figure came from. */
+  powerSource?: PhysicalFactSource;
+  /** Where the loudspeaker's sensitivity figure came from. */
+  sensitivitySource?: PhysicalFactSource;
   /** Display name of the amplifier, or null if no amp found. */
   ampName: string | null;
   /** Display name of the speaker, or null if no speaker found. */
@@ -355,6 +376,10 @@ export interface MemoFindings {
   // ── Axes ──
   /** System-level synthesised axis positions. */
   systemAxes: PrimaryAxisLeanings;
+  /** Role-weighted numeric axis averages — the single aggregation the
+   *  signature prose and the Tonal Signature graph both consume
+   *  (unification, 2026-08-13). Optional for findings created before it. */
+  systemAxisNumeric?: import('./axis-types').SystemAxisNumeric;
   /** Per-component axis classifications. */
   perComponentAxes: {
     name: string;
@@ -387,7 +412,7 @@ export interface MemoFindings {
   recommendedSequence: RecommendedStepFinding[];
 
   // ── System-level signals (controlled tags only) ──
-  /** Whether the system appears deliberately assembled. */
+  /** Whether the components are voiced in a consistent direction. */
   isDeliberate: boolean;
   /**
    * Whether components share aligned voicing from specialist/boutique brands.
@@ -425,4 +450,40 @@ export interface MemoFindings {
   // ── Sources ──
   /** References from catalogued products. */
   sourceReferences: SourceReferenceFinding[];
+  /**
+   * Present when the listener STATED a substitution this turn ("X instead
+   * of Y") and the graph assessed the counterfactual. The renderer frames
+   * the review as an evaluation of the proposed system; the saved system
+   * is never mutated by a hypothetical.
+   */
+  statedSubstitution?: { incumbent: string; candidate: string };
+
+  // ── Knowledge evidence (Phase 2A — knowledge utilisation) ──
+  /**
+   * Product-specific engineering descriptor per component, distilled from
+   * catalog architecture + character prose. Used by the narrative composer
+   * in place of generic axis vocabulary. Only present for components with
+   * catalog entries.
+   */
+  componentEngineering?: { name: string; note: string }[];
+  /**
+   * Documented interaction evidence matched against the ACTUAL components
+   * in this chain — named-partner pairings and condition-matched catalog
+   * interaction notes. Each entry is a display-ready sentence. Ordered by
+   * strength (named > condition), positives before cautions.
+   */
+  pairingEvidence?: { components: string[]; sentence: string; valence: 'positive' | 'caution' }[];
+  /**
+   * Component names whose catalog entry explicitly declares a
+   * transparency/zero-contribution design goal. Downstream reasoning must
+   * not nominate these as tonal constraints without stronger evidence.
+   */
+  transparencyDeclared?: string[];
+  /**
+   * Room/placement sensitivity of the system's speaker, when the catalog
+   * declares it (Phase 2B). Used as the memorable-insight slot when no
+   * pairing evidence carries the insight — "the room matters more than
+   * the electronics" is often the single most useful thing to say.
+   */
+  roomSensitivityNote?: { component: string; note: string; level: string };
 }

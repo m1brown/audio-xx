@@ -73,12 +73,28 @@ describe('System diagnosis response format', () => {
     expect(result!.comparisonSummary!.length).toBeLessThan(1500);
   });
 
-  test('follow-up asks about source for dry/sterile/clinical complaints', () => {
+  test('follow-up does not re-ask for a source the user already named', () => {
+    // Mission 4 (2026-08-10): this input names the source — "my denafrips
+    // dac" — and the old expectation locked in the "What source are you
+    // using?" follow-up anyway, the exact asks-for-given-information
+    // defect measured live (a Chord Qutest owner asked what source they
+    // use). When the source is known, the follow-up moves to the
+    // listening-habits question instead.
     const input = 'my denafrips dac and kef speakers sound a bit sterile';
     const subjects = extractSubjectMatches(input);
     const result = buildSystemDiagnosis(input, subjects);
 
     expect(result).not.toBeNull();
-    expect(result!.followUp).toMatch(/source|DAC|streamer/i);
+    expect(result!.followUp).not.toMatch(/what source are you using/i);
+    expect(result!.followUp).toMatch(/listening habits/i);
+  });
+
+  test('follow-up still asks about the source when none was named', () => {
+    const input = 'my kef speakers sound a bit sterile';
+    const subjects = extractSubjectMatches(input);
+    const result = buildSystemDiagnosis(input, subjects);
+
+    expect(result).not.toBeNull();
+    expect(result!.followUp).toMatch(/what source are you using/i);
   });
 });

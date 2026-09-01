@@ -15,23 +15,51 @@ import { useSession } from 'next-auth/react';
 import { useAudioSession } from '@/lib/audio-session-context';
 import { inferTendenciesFromComponents } from '@/lib/system-bridge';
 import type { ProductCategory } from '@/lib/catalog-taxonomy';
-import type { DraftSystemComponent, DraftSystem } from '@/lib/system-types';
+import type {
+  DraftSystemComponent, DraftSystem, SystemComponentRole,
+} from '@/lib/system-types';
 
 // ── Category options for the dropdown ─────────────────
 
-const CATEGORY_OPTIONS: { value: ProductCategory; label: string }[] = [
-  { value: 'speaker', label: 'Speaker' },
-  { value: 'amplifier', label: 'Amplifier' },
-  { value: 'integrated', label: 'Integrated amp' },
-  { value: 'dac', label: 'DAC' },
-  { value: 'streamer', label: 'Streamer' },
-  { value: 'turntable', label: 'Turntable' },
-  { value: 'cartridge', label: 'Cartridge' },
-  { value: 'phono', label: 'Phono stage' },
-  { value: 'headphone', label: 'Headphone' },
-  { value: 'iem', label: 'IEM' },
-  { value: 'cable', label: 'Cable' },
-  { value: 'other', label: 'Other' },
+/*
+ * The amplifier family is THREE choices, not one.
+ *
+ * A single "Amplifier" option could not express a separate preamplifier and
+ * power amplifier, so a chain like ARC Reference 5 → Butler Monads arrived
+ * with both boxes carrying the same role. The interface layer takes the first
+ * match as the amplification stage, so Audio XX reasoned about the
+ * PREAMPLIFIER driving the loudspeakers and ignored the amplifier that
+ * actually does — losing the strongest relationship it holds.
+ *
+ * `SystemComponentRole` already carried `preamp` and `power_amp`; only the
+ * dropdown never set it. The option value encodes both fields, so the
+ * distinction reaches the reasoning layer instead of stopping at the form.
+ *
+ * Plain "Amplifier" is kept, and deliberately: it means "amplification stage,
+ * unspecified", which is the honest reading of every row saved before this and
+ * of a listener who does not think of their integrated-or-power amp as either.
+ */
+const CATEGORY_OPTIONS: {
+  value: string; label: string; category: ProductCategory; role: SystemComponentRole;
+}[] = [
+  { value: 'speaker', label: 'Speaker', category: 'speaker', role: null },
+  { value: 'preamp', label: 'Pre-amplifier', category: 'amplifier', role: 'preamp' },
+  { value: 'power_amp', label: 'Power amplifier', category: 'amplifier', role: 'power_amp' },
+  { value: 'amplifier', label: 'Amplifier', category: 'amplifier', role: null },
+  { value: 'integrated', label: 'Integrated amp', category: 'integrated', role: null },
+  { value: 'dac', label: 'DAC', category: 'dac', role: null },
+  { value: 'streamer', label: 'Streamer', category: 'streamer', role: null },
+  // Most network players convert as well as stream. Forcing that box to be
+  // "Streamer" OR "DAC" made the listener guess, and made Audio XX look for an
+  // interface between two halves of one chassis.
+  { value: 'streamer_dac', label: 'Streamer / DAC', category: 'streamer_dac', role: null },
+  { value: 'turntable', label: 'Turntable', category: 'turntable', role: null },
+  { value: 'cartridge', label: 'Cartridge', category: 'cartridge', role: null },
+  { value: 'phono', label: 'Phono stage', category: 'phono', role: null },
+  { value: 'headphone', label: 'Headphone', category: 'headphone', role: null },
+  { value: 'iem', label: 'IEM', category: 'iem', role: null },
+  { value: 'cable', label: 'Cable', category: 'cable', role: null },
+  { value: 'other', label: 'Other', category: 'other', role: null },
 ];
 
 // ── Empty component template ──────────────────────────
@@ -119,7 +147,16 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
               name: c.name.trim(),
               brand: c.brand.trim(),
               category: c.category,
-              roleOverride: c.role,
+              /*
+               * The link's roleOverride carries the listener's SELECTED
+               * identity for every row — not only the preamp/power-amp
+               * split. The shared Component row is global state another
+               * flow may have created with a different (or 'other')
+               * category, and the save endpoint reuses it by brand+name;
+               * without the role on the link, the listener's explicit
+               * "Speaker" silently became that stale record's category.
+               */
+              roleOverride: c.role ?? c.category,
             })),
           }),
         });
@@ -291,8 +328,16 @@ export default function SystemEditor({ initial, onClose, onSaved }: SystemEditor
                 style={{ ...inputStyle, flex: 1.5 }}
               />
               <select
-                value={comp.category}
-                onChange={(e) => updateComponent(i, { category: e.target.value as ProductCategory })}
+                // The selected option is the category/role PAIR, so a row
+                // saved as an amplifier with no role still selects "Amplifier"
+                // rather than silently reading as one of the specific two.
+                value={CATEGORY_OPTIONS.find(
+                  (o) => o.category === comp.category && o.role === comp.role,
+                )?.value ?? comp.category}
+                onChange={(e) => {
+                  const opt = CATEGORY_OPTIONS.find((o) => o.value === e.target.value);
+                  if (opt) updateComponent(i, { category: opt.category, role: opt.role });
+                }}
                 style={{ ...inputStyle, flex: 1.2, minWidth: '7.5rem', padding: '0.4rem 0.3rem' }}
               >
                 {CATEGORY_OPTIONS.map((opt) => (

@@ -4,7 +4,9 @@ import { getUserId } from '@/lib/session';
 import { evaluateText } from '@/lib/engine';
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  // Malformed / non-object JSON must fail as 400, never 500 (Gate 7 G2).
+  const parsed = await req.json().catch(() => null);
+  const body = parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : {};
   const { systemId, inputText, text, mode } = body;
 
   // Support both {inputText} and {text} for homepage compatibility

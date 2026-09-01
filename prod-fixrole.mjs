@@ -1,0 +1,25 @@
+import { chromium } from 'playwright';
+const OUT = '/private/tmp/claude-501/-Users-mikebrown-audio-xx/4b31ef88-a78c-4b6b-a49b-9a695d816a5f/scratchpad/vis';
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1280, height: 1400 } });
+await p.goto('https://audio-xx.com/auth/signin', { waitUntil: 'domcontentloaded', timeout: 180000 });
+await p.waitForTimeout(3000);
+await p.locator('input[type="email"]').first().fill('diag@example.com');
+await p.locator('input[type="password"]').first().fill('testpass123');
+await p.locator('button[type="submit"]').first().click();
+await p.waitForTimeout(5000);
+await p.goto('https://audio-xx.com/systems', { waitUntil: 'networkidle', timeout: 120000 });
+await p.waitForTimeout(3000);
+await p.locator('text=RENAME').first();
+// Open the edit dialog — try RENAME (may open full editor) or an Edit control
+const edit = p.locator('button:has-text("Rename"), a:has-text("Rename")').first();
+await edit.click();
+await p.waitForTimeout(2500);
+const t = await p.evaluate(() => document.body.innerText);
+console.log('dialog:', t.slice(t.indexOf('Edit'), t.indexOf('Edit') + 250).replace(/\n+/g, ' | '));
+const selects = p.locator('select:visible');
+const n = await selects.count();
+console.log('selects:', n);
+for (let i = 0; i < n; i++) console.log(i, JSON.stringify(await selects.nth(i).locator('option').allInnerTexts()));
+await p.screenshot({ path: `${OUT}/edit-dialog.png` });
+await b.close(); console.log('DONE');

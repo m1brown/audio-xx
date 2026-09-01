@@ -53,6 +53,7 @@ function productRole(p: Product): 'amp' | 'dac' | 'speaker' | 'headphone' | null
       return 'amp';
     case 'dac':
     case 'streamer':
+    case 'streamer_dac':
       return 'dac'; // streamers act as the digital source slot
     case 'speaker':
       return 'speaker';

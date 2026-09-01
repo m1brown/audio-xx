@@ -84,6 +84,8 @@ CONSTRAINTS:
 - Keep the total response to 200–400 words. No bullet points unless the question specifically asks to list things.
 - Do not use markdown formatting (no **bold**, no # headers, no bullet lists). Write in natural prose.
 - If you are uncertain about something, say so rather than guessing.
+- Present hypotheses as hypotheses: use "likely", "tends to", "may", "depending on the room and system" for claims that vary with context. State plainly only what is genuinely robust.
+- Leave the reader with one memorable insight — a single observation they could repeat to a friend that reframes how they think about the question. Work it into the prose naturally; never label it.
 
 FORMAT:
 Return a JSON object with two fields:
@@ -94,17 +96,21 @@ Return a JSON object with two fields:
 
   const userPrompt = `Question: ${ctx.currentMessage}${systemNote ? `\n\nUser's system context: ${systemNote}` : ''}`;
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
+  /* The abort timer must cover the BODY read, not just the headers. It was
+   * cleared as soon as `fetch` resolved, so a response whose headers arrived
+   * but whose body stalled had no timeout at all and hung forever. Harmless
+   * while the caller tore its loading state down immediately; a genuine hang
+   * once the caller waits on this promise. Cleared in `finally` instead. */
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LANE_LLM_TIMEOUT_MS);
 
+  try {
     const response = await fetch('/api/memo-overlay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemPrompt, userPrompt }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!response.ok) {
       console.warn('[knowledge-lane] LLM call failed:', response.status);
@@ -132,6 +138,8 @@ Return a JSON object with two fields:
       console.warn('[knowledge-lane] Failed:', err);
     }
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -213,9 +221,17 @@ Return a JSON object:
  * Prefers recognized product/brand names; falls back to the full question.
  */
 function extractTopic(message: string, subjectMatches: SubjectMatch[]): string {
-  // If we have recognized subjects, use them as the topic
+  // If we have recognized subjects, use them as the topic.
+  //
+  // "vs" is only true when the user is actually comparing. The old
+  // unconditional join rendered "is my amplifier powerful enough? i have a
+  // leben cs300 and harbeth p3esr" under the heading
+  // "LEBEN CS300 VS P3ESR VS HARBETH" — the user's own system presented as a
+  // three-way shoot-out. Ownership and system questions join with "+", the
+  // same chain framing used elsewhere.
   if (subjectMatches.length > 0) {
-    return subjectMatches.map((m) => m.name).join(' vs ');
+    const comparing = /\bvs\.?\b|\bversus\b|\bcompare|\bor\b.*\bbetter\b|\bdifference\s+between\b/i.test(message);
+    return subjectMatches.map((m) => m.name).join(comparing ? ' vs ' : ' + ');
   }
 
   // Try to extract a clean topic from common question patterns

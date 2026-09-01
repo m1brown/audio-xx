@@ -1,0 +1,9 @@
+== grep: destructive calls in billing.ts ==
+0
+0 matches (no user-content deletes)
+
+== dev server ==
+200
+== stripe listener process ==
+25263 /bin/zsh -c source /Users/mikebrown/.claude/shell-snapshots/snapshot-zsh-1784885003739-zkmjri.sh 2>/dev/null || true && setopt NO_EXTENDED_GLOB NO_BARE_GLOB_QUAL 2>/dev/null || true && eval 'KEY=$(grep '"'"'^STRIPE_SECRET_KEY='"'"' .env.local | cut -d= -f2 | tr -d '"'"'"'"'"') && stripe listen --forward-to localhost:3000/api/billing/webhook --api-key "$KEY" > /private/tmp/claude-501/-Users-mikebrown-audio-xx--claude-worktrees-happy-bardeen-08e537/5560ad29-8b75-45bd-a3be-c9ccbf0a1c46/scratchpad/stripe-listen.log 2>&1' < /dev/null && pwd -P >| /tmp/claude-053f-cwd
+25270 stripe listen --forward-to localhost:3000/api/billing/webhook --api-key sk_test_[REDACTED]

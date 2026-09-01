@@ -1,0 +1,15 @@
+{
+ "grace": {
+  "state": "past_due",
+  "canManage": true
+ },
+ "blocked": {
+  "state": "past_due",
+  "canManage": true
+ },
+ "restored": {
+  "status": "active",
+  "cancelAtPeriodEnd": true,
+  "currentPeriodEnd": "2026-08-24T14:27:51.000Z"
+ }
+}

@@ -12,6 +12,13 @@
  *   3. Shopping recommends immediately when intent is complete.
  */
 
+// Single money authority (D2, 2026-08-11): the clarify_budget answer path
+// must accept everything the shopping pipeline itself accepts ("3k",
+// "make it 3k", "two grand"), or the budget question loops. First module
+// import here by design — money recognition must not be duplicated.
+import { parseBudgetAmount } from './shopping-intent';
+import { TURN_SEPARATOR } from './labelled-components';
+
 // ── Types ──────────────────────────────────────────────
 
 export type ConvMode =
@@ -76,6 +83,19 @@ export interface ConvFacts {
   systemComponents?: string[];
   /** All user text collected during system_assessment (for re-running assessment). */
   systemAssessmentText?: string;
+  /**
+   * Armed for exactly one turn: the first follow-up after an assessment
+   * that asks for upgrade direction ("what would I upgrade first?",
+   * "weakest link?"). The orchestrator consumes it and answers from the
+   * existing assessment instead of re-asking for the system.
+   */
+  assessmentFollowUpTurn?: boolean;
+  /** The standing system review's paragraphs, for follow-up answers. Written
+   *  where the review is composed; read by the follow-up net. Lives here —
+   *  not in a module store — because this ref provably survives every turn. */
+  lastSystemReview?: string[];
+  /** Set once the single continuity turn has been used. */
+  assessmentContinuityUsed?: boolean;
   /**
    * Temporary / hypothetical chain named by the user in the current thread.
    * Takes precedence over the saved system for shopping, fit, and
@@ -169,6 +189,14 @@ const BUDGET_PATTERN = /(?:under\s+)?\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\b|\bunder\
 const PLAIN_BUDGET_PATTERN = /(?:around|about|roughly|maybe|approximately)?\s*\$?\s?(\d[\d,]{2,})/i;
 
 function extractBudget(text: string): string | undefined {
+  // Single money authority first (D2 residual, 2026-08-11): the entry
+  // pattern below misses revision phrasings ("actually make it 3k"), so
+  // a budget change on a shopping re-entry turn re-asked the budget the
+  // user had just stated. The anchored pattern remains as fallback for
+  // range shapes parseBudgetAmount rejects.
+  const parsed = parseBudgetAmount(text);
+  if (parsed !== null) return `$${parsed}`;
+
   const match = text.match(BUDGET_PATTERN);
   if (!match) return undefined;
   // Normalize: strip "budget of/around/is" prefix, keep just the amount
@@ -365,6 +393,12 @@ const DIAGNOSIS_SIGNAL_PATTERNS = [
   /\bnot\s+(?:enough|happy|satisfied)\b/i,
   /\bsomething\s+(?:(?:is|sounds?|feels?)\s+)?(?:off|wrong|missing)\b/i,
   /\b(?:problem|issue)\s+with\b/i,
+  // Causal-hypothesis pivot (M5-F8, 2026-08-11): "could my amp be
+  // causing the brightness?" mid-shopping must release the shopping
+  // state — without this signal, isIntentMismatch never fired and the
+  // done-stage refinement classifier consumed the pivot as a
+  // preference delta, re-rendering shopping cards.
+  /\b(?:could|might|can)\s+(?:my|the)\s+[\w\s-]{2,24}?\bbe\s+(?:causing|behind|responsible\s+for)\b/i,
 ];
 
 /**
@@ -381,6 +415,45 @@ function hasSymptomKeyword(text: string): boolean {
 
 function hasExplicitDiagnosisSignal(text: string): boolean {
   return DIAGNOSIS_SIGNAL_PATTERNS.some((p) => p.test(text));
+}
+
+/**
+ * Conservative purchase-intent check used to gate continuation-state
+ * exits out of diagnosis (and, by future symmetry, other modes) into
+ * shopping. The detector layer (`detectIntent`) treats short refinement
+ * phrases like "warmer" as shopping intent without any awareness of
+ * conversation context — that is correct for stateless detection but
+ * wrong when the user is mid-diagnosis and the message is a remedy
+ * hypothesis ("what about a warmer source?").
+ *
+ * Returning true here requires an explicit purchase, search, budget, or
+ * "best <category>" signal in the text. Quality-only refinement vocabulary
+ * (warmer / brighter / more body / etc.) is deliberately NOT a signal.
+ *
+ * This helper is intentionally narrow: false negatives keep the user in
+ * the current mode (safe — diagnosis follow-up still routes correctly);
+ * false positives would exit diagnosis on a remedy hypothesis (the bug
+ * this guards against).
+ */
+const PURCHASE_INTENT_PATTERNS: RegExp[] = [
+  // Explicit purchase verbs
+  /\b(?:buy|buying|bought|purchase|purchasing)\b/i,
+  // Active search framings
+  /\bshop(?:ping)?\s+for\b/i,
+  /\blooking\s+for\b/i,
+  // Recommendation / suggestion requests
+  /\brecommend(?:ation)?s?\b/i,
+  /\bsuggest(?:ion)?s?\b/i,
+  // Budget signals
+  /\bbudget\b/i,
+  /\bunder\s+\$?\d/i,
+  /\$\s?\d/,
+  // "best <category>" framing
+  /\bbest\s+(?:dac|amp(?:lifier)?|speakers?|headphones?|turntables?|streamers?|integrated|preamp)\b/i,
+];
+
+function hasExplicitPurchaseIntent(text: string): boolean {
+  return PURCHASE_INTENT_PATTERNS.some((p) => p.test(text));
 }
 
 // ── Symptom interpretation ──────────────────────────────
@@ -467,6 +540,104 @@ function hasComponentDescription(text: string): boolean {
   return COMPONENT_DESCRIPTION_PATTERNS.some((p) => p.test(text));
 }
 
+// Direction-seeking follow-up after an assessment: asks WHICH move to make
+// without naming a replacement product. Kept narrow — explicit buying
+// intent ("I want to buy a new DAC") must still exit to shopping.
+// Verdict challenges (Mission 4B, 2026-08-10): "are you sure?" after a
+// no-change assessment routed to the knowledge lane and answered with a
+// generic meta-essay about how the advisor works, never re-engaging the
+// verdict or the system's evidence. A challenge to the verdict is an
+// assessment follow-up — it must be answered FROM the assessment.
+const ASSESSMENT_VERDICT_CHALLENGE =
+  /\bare\s+you\s+sure\b|\bhow\s+do\s+you\s+know\b|\bwhat\s+makes\s+you\s+say\b|\bwhy\s+do\s+you\s+say\b|\bconvince\s+me\b|\bjustify\b|\bprove\s+it\b|^\s*(?:why|really)\s*\??\s*$/i;
+
+/**
+ * Opinion questions about NAMED gear — "what do you think of Goldmund
+ * amps?", "thoughts on the Boenicke W8", "tell me about Shindo".
+ *
+ * Beta observation 2026-08-10 (founder, production): asked mid-assessment,
+ * these were absorbed by the `ready_to_assess` accumulate-and-re-assess
+ * branch below — the question text was appended to the stored system
+ * description and the turn was answered with another assessment of the
+ * saved system. A question about a brand the user does not own is a topic
+ * change, not a component clarification.
+ *
+ * Deliberately narrower than intent.ts's PRODUCT_ASSESSMENT_PATTERNS:
+ * only unambiguous opinion phrasings break the assessment out. Shapes
+ * like "what about the …" stay with accumulation, where they usually are
+ * a clarification of the system under review. Kept local so this module
+ * stays free of imports — see intent.ts `isSystemDirectedEvaluation` for
+ * the same rule applied at the intent layer.
+ */
+const GEAR_OPINION_QUESTION = /\bwhat\s+do\s+you\s+think\s+(?:of|about)\b|\bthoughts\s+on\b|\bopinions?\s+on\b|\btell\s+me\s+about\b|\bknow\s+anything\s+about\b|\bany\s+experience\s+with\b|\bhave\s+you\s+heard\s+(?:of|about)\b|\bwhat\s+do\s+you\s+(?:know|have)\s+(?:about|on)\b/i;
+
+/** System referents — when present the question is about the system. */
+const SYSTEM_REFERENT = /\b(?:system|setup|rig|chain)\b|\bwhat\s+do\s+you\s+think\s+(?:of|about)\s+(?:it|this|that|these|them)\b/i;
+
+/**
+ * Substitution / counterfactual markers. A proposed component change
+ * ("What about a Leben CS600 instead of the Butler?", "…H590 instead?")
+ * is a question about the ACTIVE system — a counterfactual version of it —
+ * never a topic change, even though detectIntent reads the product name
+ * and returns a strong product_assessment. Trailing bare "instead" counts:
+ * its referent is the component the standing assessment is discussing.
+ */
+const SUBSTITUTION_REFERENT = /\binstead\b|\bin\s+place\s+of\b|\brather\s+than\b|\breplac(?:e|ing)\b[^.?!]{0,60}\bwith\b|\bswap(?:ping|ped)?\b/i;
+
+/**
+ * Is this turn a counterfactual mutation of the system under assessment —
+ * a substitution proposal or a revert of one? Such turns are OWNED by the
+ * assessment flow: the orchestrator must keep them on the assessment path
+ * even when detectIntent reads the product name and classifies them as a
+ * product inquiry.
+ */
+export function isCounterfactualTurn(text: string): boolean {
+  return SUBSTITUTION_REFERENT.test(text)
+    || /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text)
+    // "what if I went solid state?" — a hypothetical about the system.
+    || /\bwhat\s+if\b/i.test(text);
+}
+
+/**
+ * Is this turn DIRECTED AT the system under assessment? Counterfactual
+ * turns are; so is a judgment question whose referent is deictic ("Would
+ * a modern amplifier improve THIS?", "would THAT be worse?", "Would I
+ * lose bass control?") or a fit question ("Would a 300B SET be a better
+ * match?" — a match is always a match FOR the system under review).
+ * Definitional questions with no system referent ("what is damping
+ * factor?") are not, and keep their knowledge-lane routing.
+ */
+export function isSystemDirectedAssessmentTurn(text: string): boolean {
+  if (isCounterfactualTurn(text)) return true;
+  if (/\b(?:better|good|worse)\s+match\b|\bmatch\s+for\s+(?:this|it|my)\b/i.test(text)) return true;
+  // "Compare the Leben CS600 and the Hegel H590." mid-assessment is a
+  // comparison WITHIN the system conversation — product-token comparisons
+  // stay with the assessment rather than resetting to the cold comparison
+  // intake (preview battery, C7-T3).
+  if (/\bcompar/i.test(text) && /\b[a-z]+[a-z-]*\s*[a-z]*\d/i.test(text)) return true;
+  const deictic = /\b(?:this|that|it|those|mine|my\s+(?:system|setup|chain)|the\s+(?:system|setup|chain)|the\s+(?:two|three|four|first|second|third))\b|\bwould\s+i\b/i;
+  const judgment = /\b(?:improve|upgrad\w*|better|worse|help|change|match|fit|worth|lose|gain|compar\w*|choose|choice|assume)\b|\bhold\w*\s+back\b/i;
+  if (deictic.test(text) && judgment.test(text)) return true;
+  /*
+   * A terse fragment question mid-assessment ("too much amp?", "worth
+   * it?") elides its referent BECAUSE the system under review is the
+   * obvious one. Definitional fragments ("what is THD?") and purchase
+   * fragments keep their own lanes.
+   */
+  const t = text.trim();
+  const tokens = t.split(/\s+/).filter(Boolean);
+  return /\?\s*$/.test(t)
+    && tokens.length <= 4
+    && !/^what(?:'s|\s+is|\s+does|\s+are)\b/i.test(t)
+    && !/\b(?:buy|budget|recommend|price|best)\b/i.test(t);
+}
+
+const ASSESSMENT_DIRECTION_FOLLOWUP = new RegExp(
+  /\b(?:what|which|where)\b[^.?!]{0,60}\b(?:upgrade|improve|change|replace|swap\s+out|spend)\b|\bupgrade\s+(?:just\s+)?(?:one\s+thing|first|next|anything)\b|\b(?:change|improve)\s+(?:just\s+)?one\s+thing\b|\bweak(?:est)?\s+(?:link|point|spot)\b|\bholding\s+(?:it|things|everything|(?:my|the|this|our)\s+system|(?:the\s+)?\w+(?:\s+\w+)?)\s+back\b|\bbiggest\s+(?:improvement|impact|difference)\b|\bfirst\s+upgrade\b|\bupgrade\s+path\b|\bshould\s+i\s+(?:upgrade|replace|change)\s+(?:first|next|anything)\b/.source
+  + '|' + ASSESSMENT_VERDICT_CHALLENGE.source,
+  'i',
+);
+
 /**
  * Counts major system roles mentioned in text.
  * Returns the number of distinct roles (source, amplification, output).
@@ -514,6 +685,30 @@ function isIntentMismatch(mode: ConvMode, detectedIntent: string, text?: string)
   if (detectedIntent === 'diagnosis') {
     if (!text || !hasExplicitDiagnosisSignal(text)) return false;
     return !compatible.has('diagnosis');
+  }
+
+  // Counterfactual-substitution guard (Wave 2, 2026-08-29): mid-assessment,
+  // "What about a Leben CS600 instead of the Butler?" detects as
+  // product_assessment — strong, and absent from system_assessment's
+  // compatible set — so this reset destroyed the assessment context and the
+  // turn was answered as an isolated product inquiry. A substitution
+  // proposal belongs to the assessment; the ready_to_assess case owns the
+  // finer discrimination (accumulate-and-reassess vs the named-gear exit)
+  // and must not be short-circuited here.
+  if (mode === 'system_assessment' && text && isSystemDirectedAssessmentTurn(text)) {
+    return false;
+  }
+
+  // Continuation-state guard: when the user is mid-diagnosis and
+  // `detectIntent` flags a single refinement token ("warmer", "more body")
+  // as shopping intent, that is NOT a mode pivot — it's a remedy
+  // hypothesis. Require explicit purchase / search / budget evidence in
+  // the text before treating shopping as a real mismatch. Without this
+  // gate, the upstream reset at the top of transition() short-circuits
+  // before the in-case diagnosis→shopping exit branch can apply the
+  // same check.
+  if (mode === 'diagnosis' && detectedIntent === 'shopping') {
+    if (!text || !hasExplicitPurchaseIntent(text)) return false;
   }
 
   if (!STRONG_INTENTS.has(detectedIntent)) return false;
@@ -668,6 +863,21 @@ export function transition(
       };
     }
 
+    // Synthesize from category + budget (D2 residual, 2026-08-11) — a
+    // bare proceed hands the pipeline the user's raw final reply (e.g.
+    // "1500"), dropping the facts the intake just collected. Mirrors the
+    // clarify_budget synthesis in the shopping case.
+    if (facts.category && facts.budget) {
+      const budgetPart = facts.budget.replace(/^under\s*/i, '');
+      return {
+        state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+        response: {
+          kind: 'proceed',
+          synthesizedQuery: `Looking for a ${facts.category} under ${budgetPart}.`,
+        },
+      };
+    }
+
     return {
       state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
       response: { kind: 'proceed' },
@@ -799,10 +1009,28 @@ export function transition(
       // Relaxed budget extraction: when we've already asked for budget,
       // accept plain numbers like "5000", "around 2000" as budget figures.
       // Must run BEFORE isReadyToRecommend so synthesizedQuery generation fires.
+      // Delegates to parseBudgetAmount (D2, 2026-08-11) — the local
+      // PLAIN_BUDGET_PATTERN required 3+ digits, so "3k" (the canonical
+      // budget answer) parsed null and the question looped. The single
+      // money authority accepts every phrasing the pipeline accepts;
+      // the plain pattern remains as fallback for shapes it rejects.
       if (current.stage === 'clarify_budget' && !facts.budget) {
-        const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
-        if (plainMatch) {
-          facts.budget = `$${plainMatch[1]}`;
+        const parsed = parseBudgetAmount(text);
+        if (parsed !== null) {
+          facts.budget = `$${parsed}`;
+        } else {
+          // Stage-licensed loose scan (M5-F2, 2026-08-11): the budget
+          // question was JUST asked, so the stage context is the anchor —
+          // "maybe 2k? honestly not sure I even want to spend it" is a
+          // budget answer, hedges and all. Any k-token or bare 3-6 digit
+          // number in the reply counts here and ONLY here.
+          const looseK = text.match(/\b(\d{1,4}(?:\.\d{1,2})?)\s*k\b/i);
+          const plainMatch = text.match(PLAIN_BUDGET_PATTERN);
+          if (looseK) {
+            facts.budget = `$${Math.round(parseFloat(looseK[1]) * 1000)}`;
+          } else if (plainMatch) {
+            facts.budget = `$${plainMatch[1]}`;
+          }
         }
       }
 
@@ -820,6 +1048,24 @@ export function transition(
           return {
             state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
             response: { kind: 'proceed', synthesizedQuery: synthesized },
+          };
+        }
+        // Facts gathered through the machine's own questions must reach the
+        // shopping pipeline. A bare proceed hands the pipeline the user's raw
+        // final reply — verified on production: after "which component?" →
+        // "the dac" → "what's your budget?" → "1500", the pipeline re-routed
+        // the literal text "1500" to the knowledge lane and answered "without
+        // a specific question or component type mentioned…", dropping the
+        // category and budget the intake had just collected. Synthesize the
+        // query from facts, exactly as the music path above already does.
+        if (facts.category && facts.budget) {
+          const budgetPart = facts.budget.replace(/^under\s*/i, '');
+          return {
+            state: { mode: 'shopping', stage: 'ready_to_recommend', facts },
+            response: {
+              kind: 'proceed',
+              synthesizedQuery: `Looking for a ${facts.category} under ${budgetPart}.`,
+            },
           };
         }
         return {
@@ -840,8 +1086,16 @@ export function transition(
             },
           };
         }
-        // Have category — now need budget
-        const budgetQuestion = facts.fromScratch
+        // Have category — now need budget.
+        //
+        // Never ask about an existing system the advisor already knows.
+        // Verified on production: a user whose three-component system had
+        // been assessed, echoed and check-marked earlier in the same
+        // conversation was asked "do you have an existing system these need
+        // to work with?" — the canonical not-listening failure. The caller
+        // already passes context.hasSystem (active/saved/injected system);
+        // it simply was not consulted here.
+        const budgetQuestion = facts.fromScratch || context.hasSystem
           ? "What's your budget?"
           : "What's your budget? And do you have an existing system these need to work with?";
         return {
@@ -900,7 +1154,14 @@ export function transition(
       // ── Explicit shopping exit (any stage) ──
       // When the user clearly switches to shopping ("best DAC under $1000"),
       // exit diagnosis cleanly rather than staying stuck.
-      if (context.detectedIntent === 'shopping') {
+      //
+      // Continuation-state guard: `detectedIntent === 'shopping'` alone is
+      // not enough. `detectIntent` returns 'shopping' for short refinement
+      // phrases like "warmer" / "more body" — those are remedy hypotheses
+      // when the user is mid-diagnosis, not buying intent. Require an
+      // explicit purchase/search/budget signal in the text before exiting.
+      // See `hasExplicitPurchaseIntent` above for the vocabulary.
+      if (context.detectedIntent === 'shopping' && hasExplicitPurchaseIntent(text)) {
         const shoppingFacts: ConvFacts = { category: newCategory, budget: newBudget, preference: newPreference };
         if (isReadyToRecommend(shoppingFacts)) {
           return { state: { mode: 'shopping', stage: 'ready_to_recommend', facts: shoppingFacts }, response: { kind: 'proceed' } };
@@ -1047,6 +1308,23 @@ export function transition(
 
     // ── COMPARISON ─────────────────────────────────────
     case 'comparison': {
+      // Questions ABOUT the comparison are follow-ups, never comparands
+      // (D3, 2026-08-11): "what am I giving up with the harbeth?" during
+      // an active pair was consumed as intake ("Got it — one down") —
+      // forgetting the established comparison and misreading a
+      // consequence question as a component name. Proceed so the
+      // pipeline's comparison-continuation answers from the active pair.
+      const COMPARISON_QUESTION_NOT_COMPARAND = /\bgiving\s+up\b|\bwhat\s+do\s+i\s+lose\b|\btrade[- ]?offs?\b|\bdownsides?\b|\bwhy\b|\bare\s+you\s+sure\b|\bwhich\s+(?:one|would|should)\b/i;
+      if (
+        current.stage === 'ready_to_compare'
+        && COMPARISON_QUESTION_NOT_COMPARAND.test(text)
+      ) {
+        return {
+          state: { mode: 'comparison', stage: 'ready_to_compare', facts },
+          response: { kind: 'proceed' },
+        };
+      }
+
       // Track detected subjects as comparison targets
       if (context.subjectCount >= 2) {
         facts.comparisonTargets = ['detected', 'detected']; // Placeholder — actual names come from turnCtx
@@ -1223,14 +1501,21 @@ export function transition(
           };
         }
 
-        // No evaluation intent and no components — ask what they want to do
+        // Advice-first (Product Doctrine v1.0, WS28): rather than asking
+        // the user what they want to improve BEFORE offering any opinion,
+        // attempt a provisional system assessment from what they've given.
+        // buildSystemAssessment forms the observation / interpretation /
+        // trade-off / recommendation and appends its own refining
+        // follow-up; it falls back to a clarification question only when
+        // it genuinely cannot read a system (handled in page.tsx via
+        // assessmentResult.kind === 'clarification' | 'low_confidence').
+        // This makes the upgrade / change / keep decision prompts return
+        // advice on turn one instead of a bare clarifying question.
+        facts.systemComponents = [text];
+        facts.systemAssessmentText = text;
         return {
-          state: { mode: 'system_assessment', stage: 'clarify_preference', facts },
-          response: {
-            kind: 'question',
-            acknowledge: 'Got it — that\'s your system.',
-            question: 'What are you trying to improve or change about it?',
-          },
+          state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+          response: { kind: 'proceed' },
         };
       }
 
@@ -1239,7 +1524,11 @@ export function transition(
         // Accumulate new component text
         const priorComponents = facts.systemComponents ?? [];
         facts.systemComponents = [...priorComponents, text];
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+        // not a turn boundary — one turn contains several — so the parser could not
+        // tell where a turn ended and ran a component name into the next turn's
+        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
         facts.hasSystem = true;
 
         // Check if user explicitly asked for evaluation now
@@ -1275,14 +1564,117 @@ export function transition(
 
       // ── Ready to assess: user adds more components or clarifies ──
       if (current.stage === 'ready_to_assess') {
+        // ── Launch continuity (2026-07-19): first follow-up direction question ──
+        // "What would I upgrade first?" / "weakest link?" right after an
+        // assessment is answered FROM that assessment, not met with
+        // "what component are you looking to change?". Scope is one turn:
+        // the flag arms once, the orchestrator consumes it, and later
+        // direction questions take the normal clarify path. Questions
+        // naming a specific product (subjectCount > 0) keep the existing
+        // accumulate-and-reassess behaviour. Checked before accumulation
+        // so the question text never pollutes the stored system text.
+        /*
+         * OWN-COMPONENT SUBSTITUTION QUESTIONS STAY IN THE ASSESSMENT
+         * (sparse-evidence pass, 2026-08-27). "Would replacing the Eversolo
+         * with a much better external DAC be a worthwhile upgrade?" names a
+         * product — the system's OWN product — so subjectCount > 0 pushed it
+         * out of continuity and the shopping lane answered a reasoning
+         * question with a budget intake. A substitution question about a
+         * component of the system just assessed is a direction question
+         * about that assessment. A question naming NEW gear keeps the
+         * existing compare/shopping behaviour.
+         */
+        const assessedText = (facts.systemAssessmentText ?? '').toLowerCase();
+        // Generic audio vocabulary can overlap any two audio sentences;
+        // only a token that names the assessed system's own gear counts.
+        const GENERIC = new Set(['system', 'assess', 'assessment', 'amplifier', 'amp',
+          'amps', 'speaker', 'speakers', 'streamer', 'preamp', 'monitor', 'monitors',
+          'integrated', 'external', 'better', 'would', 'replacing', 'replace',
+          'upgrade', 'worthwhile', 'with', 'much', 'that', 'this', 'from', 'into',
+          'dac', 'source', 'change', 'swap', 'what', 'the', 'and', 'out']);
+        const qTokens = text.toLowerCase().split(/[^a-z0-9+/.-]+/)
+          .filter((w) => w.length >= 3 && !GENERIC.has(w));
+        const ownTokens = qTokens.filter((w) => assessedText.includes(w));
+        // A model-ish token (carries a digit, or a brand-like word of 4+
+        // letters the assessed text does not contain, adjacent to a swap
+        // verb's object) that names gear OUTSIDE the system keeps the
+        // existing compare/accumulate behaviour — proposing new gear is not
+        // a direction question about the standing assessment.
+        const proposesNamedReplacement = qTokens.some((w) =>
+          !assessedText.includes(w) && /\d/.test(w));
+        const namesOwnComponentOnly = context.subjectCount > 0 && assessedText.length > 0
+          && (/\b(?:replac|swap|upgrad|substitut|instead of)\w*\b/i.test(text)
+            || ASSESSMENT_DIRECTION_FOLLOWUP.test(text))
+          && ownTokens.length >= 1
+          && !proposesNamedReplacement;
+
+        /*
+         * A REVERT rider disqualifies the one-shot continuity composer
+         * (Wave 2, 2026-08-29): "Keep the Butler. What would you change
+         * next?" is a state mutation first and a direction question second.
+         * Answering it compactly from findings computed on the superseded
+         * counterfactual graph recommended a $700 DAC into a dCS system,
+         * contradicting the review above it. The turn must accumulate so
+         * the engine applies the revert, then the restored assessment's own
+         * recommendation paragraphs ARE the direction answer.
+         */
+        const revertRider = /\bkeep\s+(?:the|my)\b|\bgo(?:ing)?\s+back\b|\brevert\b|\bstick\s+with\b/i.test(text);
+        if (
+          !facts.assessmentContinuityUsed
+          && !revertRider
+          && (context.subjectCount === 0 || namesOwnComponentOnly)
+          && (ASSESSMENT_DIRECTION_FOLLOWUP.test(text)
+            || (namesOwnComponentOnly && /\bupgrade|worthwhile|worth it|improve\b/i.test(text)))
+        ) {
+          facts.assessmentContinuityUsed = true;
+          facts.assessmentFollowUpTurn = true;
+          return {
+            state: { mode: 'system_assessment', stage: 'ready_to_assess', facts },
+            response: { kind: 'proceed' },
+          };
+        }
+
+        // ── Named-gear opinion question → leave assessment mode ──
+        // "What do you think of Goldmund amps?" after an assessment is a
+        // new topic, not a component clarification. Without this the
+        // question text was accumulated into `systemAssessmentText` and
+        // answered with a re-assessment of the same system. Reset to idle
+        // and let the normal pipeline route it (intent.ts §5 brand lane) —
+        // the same shape the intent-mismatch escape at the top of
+        // transition() uses.
+        if (
+          context.subjectCount > 0
+          && GEAR_OPINION_QUESTION.test(text)
+          && !SYSTEM_REFERENT.test(text)
+        ) {
+          return { state: INITIAL_CONV_STATE, response: null };
+        }
+
         // User is adding/clarifying components after assessment already ran.
         // Accumulate and re-assess.
         const priorComponents = facts.systemComponents ?? [];
         facts.systemComponents = [...priorComponents, text];
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + '\n' : '') + text;
+        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+        // not a turn boundary — one turn contains several — so the parser could not
+        // tell where a turn ended and ran a component name into the next turn's
+        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
 
-        // Check for explicit mode changes
-        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text);
+        // Check for explicit mode changes.
+        //
+        // A JUDGMENT QUESTION about a hypothetical change is not purchase
+        // intent (Wave 2 battery, 2026-08-29): "Should I add a preamp?"
+        // matched \badd\b and was answered with "What component are you
+        // looking to change?" — a budget intake for an architecture question
+        // about the system just assessed. Question-shaped turns leave the
+        // assessment only on explicit shopping evidence; "what would you
+        // buy?" still goes to shopping, "should I add / replace X?" stays
+        // and re-assesses.
+        const questionShaped = /\?\s*$/.test(text.trim())
+          || /^\s*(?:should|would|could|can|is|are|do|does|what|which|how)\b/i.test(text);
+        const explicitPurchase = /\b(?:buy|shop(?:ping)?|looking\s+for|budget|recommend|price)\b/i.test(text);
+        const wantsBuy = /\b(?:buy|new|shop|looking\s+for|get\s+(?:a|some)|upgrade|replace|add)\b/i.test(text)
+          && (!questionShaped || explicitPurchase);
         const wantsDiagnose = /\b(?:sounds?\s+(?:off|bad|wrong|thin|bright|muddy|harsh)|problem|issue|something.*off|fatiguing|lacking)\b/i.test(text);
 
         if (wantsDiagnose) {

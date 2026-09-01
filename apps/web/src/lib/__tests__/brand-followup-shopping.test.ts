@@ -10,11 +10,21 @@ import { createEmptyListenerProfile } from '../listener-profile';
 /**
  * "What about [brand]?" during an active shopping session.
  *
- * At the intent layer, these should resolve to product_assessment
- * (because "what about" + brand matches PRODUCT_ASSESSMENT_PATTERNS).
- * The page-level mode override then converts product_assessment → shopping
- * when shoppingAnswerCount > 0. This test validates the intent layer;
- * the mode override is exercised by page.tsx at runtime.
+ * These used to resolve to product_assessment at the intent layer, because a
+ * brand match alone satisfied that gate. It no longer does — a product
+ * assessment requires a product, and a bare brand is not one. See
+ * `lane-entity-requirement.test.ts` for why that gate changed.
+ *
+ * **The runtime outcome is unchanged.** The SHOPPING MODE LOCK
+ * (page.tsx ~2249) converts *any* intent except product_assessment to
+ * 'shopping' while shoppingAnswerCount > 0, so a brand follow-up still lands
+ * in the shopping pipeline — now via that lock directly, rather than being
+ * exempted there and picked up by the `productAssessmentInShopping` branch
+ * further down. Same destination, one hop fewer.
+ *
+ * These tests therefore assert what actually matters for this flow: the brand
+ * is extracted as a subject, and the turn is not claimed by a lane that would
+ * break out of shopping.
  */
 
 const BRAND_FOLLOWUPS = [
@@ -29,14 +39,17 @@ const BRAND_FOLLOWUPS = [
 
 describe('Brand follow-up in shopping: intent layer', () => {
   for (const { message, expectedBrand } of BRAND_FOLLOWUPS) {
-    it(`"${message}" → product_assessment with brand subject "${expectedBrand}"`, () => {
+    it(`"${message}" extracts brand "${expectedBrand}" and stays inside the shopping lock`, () => {
       const { intent, subjectMatches } = detectIntent(message);
-      expect(intent).toBe('product_assessment');
+
+      // A bare brand is not a product, so this must not claim the product lane —
+      // which is also the one intent the shopping lock exempts.
+      expect(intent).not.toBe('product_assessment');
 
       const brandMatch = subjectMatches.find(
         (m) => m.kind === 'brand' && m.name.toLowerCase() === expectedBrand,
       );
-      expect(brandMatch).toBeDefined();
+      expect(brandMatch, 'the brand must still be extracted as a subject').toBeDefined();
     });
   }
 

@@ -13,7 +13,16 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: 'http://localhost:3000',
-    headless: false,
+    /*
+     * Headless by default (QA-validity repair, 2026-08-11). The previous
+     * `headless: false` made every spec fail in sandboxed/CI environments
+     * with no display: the headed browser launches but page.goto() never
+     * navigates (about:blank), so the first locator wait times out — the
+     * cross-brand leakage harness failed this way while the app itself
+     * was healthy. Screenshot capture works headless; run with
+     * `npx playwright test --headed` when a visible browser is wanted.
+     */
+    headless: true,
     /*
      * Standardized reviewer-capture viewport (Stage 13, narrowed scope).
      *

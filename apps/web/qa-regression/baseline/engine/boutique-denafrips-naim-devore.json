@@ -1,0 +1,54 @@
+{
+  "id": "boutique-denafrips-naim-devore",
+  "label": "Boutique warm — coherent voicing",
+  "category": "coherent_voicing",
+  "systemText": "Assess my system: Denafrips Terminator II, Naim SuperNait 3, DeVore O/96",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "warm",
+    "smooth_detailed": "smooth",
+    "elastic_controlled": "elastic",
+    "airy_closed": "airy"
+  },
+  "bottleneck": null,
+  "signature": "Tonally warm, smooth, elastically flowing, spatially open system emphasizing musical engagement.",
+  "strengths": [
+    "Denafrips Terminator II contributes musical flow and continuity",
+    "Naim SuperNait 3 contributes musical flow and continuity",
+    "Naim SuperNait 3 adds composure under complex passages",
+    "DeVore Orangutan O/96 contributes musical flow and continuity"
+  ],
+  "limitations": [
+    "Stacked warmth may reduce transient precision and spatial clarity",
+    "Complex, dense recordings could sound congested",
+    "DeVore Orangutan O/96 has moderate placement sensitivity — Wide-baffle design produces substantial bass energy that can overwhelm rooms smaller than 15 square metres. Needs breathing room — pull away from rear walls to let the presentation open up."
+  ],
+  "upgradeDirection": "If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system's identity more fundamentally.",
+  "upgradePaths": [],
+  "keepRecommendations": [
+    {
+      "name": "Denafrips Terminator II",
+      "reason": "Rich harmonic rendering; Organic conversion character"
+    },
+    {
+      "name": "Naim SuperNait 3",
+      "reason": "Neutral tonal balance; Circuit transparency — reveals source differences"
+    },
+    {
+      "name": "DeVore Orangutan O/96",
+      "reason": "Full-bodied tonal presentation; Musical flow and ease"
+    }
+  ],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "Keep **Denafrips Terminator II**, **Naim SuperNait 3**, **DeVore Orangutan O/96** — performing well, no change warranted."
+    },
+    {
+      "step": 2,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **harmonic richness and tonal density and dynamic elasticity**. Denafrips Terminator II, Naim SuperNait 3, DeVore Orangutan O/96 share this design philosophy. The system shares a consistent harmonic density emphasis — this reinforces the system's identity. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}

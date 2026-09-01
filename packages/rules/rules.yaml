@@ -12,6 +12,15 @@ rules:
     label: System performing well — no purchase recommended
     priority: 1
     conditions:
+      # The output below claims to have read the listener's impressions, so it
+      # may only fire when the listener actually described symptoms.
+      # `symptoms_absent` is satisfied by an empty list, which let this rule
+      # give a first-time visitor a clean bill of health for a system it had
+      # never been told about. Counts symptoms only — trait readings are
+      # inferred from incidental wording ("better") and are present even when
+      # nothing about the listening experience was described. Without evidence
+      # the friendly-advisor fallback (priority 1000) asks what they hear.
+      min_symptom_signals: 1
       symptoms_absent:
         - brightness_harshness
         - thinness

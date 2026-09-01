@@ -1,0 +1,81 @@
+   ▲ Next.js 15.5.14
+   - Environments: .env.local, .env
+   - Experiments (use with caution):
+     · clientTraceMetadata
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 21.6s
+   Skipping validation of types
+   Linting ...
+   Collecting page data ...
+   Generating static pages (0/44) ...
+   Generating static pages (11/44) 
+   Generating static pages (22/44) 
+   Generating static pages (33/44) 
+ ✓ Generating static pages (44/44)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                     570 kB         765 kB
+├ ○ /_not-found                            387 B         182 kB
+├ ○ /about                                 373 B         184 kB
+├ ○ /account                              2.2 kB         197 kB
+├ ○ /affiliate-disclosure                  373 B         184 kB
+├ ƒ /api/auth/[...nextauth]                388 B         182 kB
+├ ƒ /api/billing/checkout                  388 B         182 kB
+├ ƒ /api/billing/portal                    387 B         182 kB
+├ ƒ /api/billing/status                    387 B         182 kB
+├ ƒ /api/billing/webhook                   388 B         182 kB
+├ ƒ /api/compare                           388 B         182 kB
+├ ƒ /api/components                        387 B         182 kB
+├ ƒ /api/debug/error                       388 B         182 kB
+├ ƒ /api/diagnose                          387 B         182 kB
+├ ƒ /api/evaluate                          388 B         182 kB
+├ ƒ /api/evaluate/candidate                388 B         182 kB
+├ ƒ /api/events                            388 B         182 kB
+├ ƒ /api/listing-eval                      387 B         182 kB
+├ ƒ /api/memo-overlay                      388 B         182 kB
+├ ƒ /api/memo-overlay/drift                388 B         182 kB
+├ ƒ /api/my-systems                        388 B         182 kB
+├ ƒ /api/my-systems/[id]                   387 B         182 kB
+├ ƒ /api/onboarding                        388 B         182 kB
+├ ƒ /api/orchestrator                      388 B         182 kB
+├ ƒ /api/profile                           388 B         182 kB
+├ ƒ /api/systems                           387 B         182 kB
+├ ƒ /api/systems/[id]                      388 B         182 kB
+├ ƒ /api/systems/[id]/components           388 B         182 kB
+├ ○ /apple-icon.png                          0 B            0 B
+├ ƒ /artifact                            2.99 kB         189 kB
+├ ○ /auth/signin                         2.66 kB         195 kB
+├ ƒ /brand/[slug]                        1.32 kB         185 kB
+├ ○ /compare                             1.35 kB         192 kB
+├ ƒ /diagnose                            2.39 kB         193 kB
+├ ƒ /evaluate                            2.29 kB         193 kB
+├ ƒ /evaluate/candidate                  1.84 kB         193 kB
+├ ○ /glossary                              372 B         184 kB
+├ ○ /how-it-works                          373 B         184 kB
+├ ○ /icon.svg                                0 B            0 B
+├ ○ /onboarding                          4.24 kB         195 kB
+├ ƒ /path/upgrade/[flavor]               1.57 kB         185 kB
+├ ○ /privacy                               373 B         184 kB
+├ ƒ /product/[brand]/[name]                372 B         184 kB
+├ ○ /profile                                4 kB         195 kB
+├ ○ /resources                             375 B         184 kB
+├ ○ /save                                3.19 kB         196 kB
+├ ○ /systems                             2.69 kB         200 kB
+├ ƒ /systems/[id]                        2.74 kB         186 kB
+├ ƒ /systems/[id]/assessment             1.77 kB         185 kB
+├ ○ /systems/new                           962 B         182 kB
+├ ○ /systems/saved                       2.43 kB         186 kB
+├ ƒ /systems/saved/[id]                  2.65 kB         186 kB
+└ ƒ /tech/[slug]                           373 B         184 kB
++ First Load JS shared by all             182 kB
+  ├ chunks/5046-3806219c7adf8570.js       124 kB
+  ├ chunks/87c73c54-0165124c54158059.js  54.4 kB
+  └ other shared chunks (total)          3.03 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

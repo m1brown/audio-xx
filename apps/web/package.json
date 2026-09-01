@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -11,21 +11,24 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "next lint",
+    "qa:regress:visual": "playwright test -c playwright.visual.config.ts",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:push": "node ../../scripts/guard-prisma-push.mjs",
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "async-mutex": "^0.5.0",
     "@libsql/client": "^0.17.0",
     "@prisma/adapter-libsql": "^6.19.0",
     "@prisma/client": "^6.19.0",
     "@sentry/nextjs": "^10.51.0",
+    "@vercel/analytics": "^2.0.1",
+    "async-mutex": "^0.5.0",
     "bcryptjs": "^2.4.3",
     "next": "^15.1.0",
     "next-auth": "^4.24.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "stripe": "^22.3.2",
     "yaml": "^2.6.0"
   },
   "devDependencies": {

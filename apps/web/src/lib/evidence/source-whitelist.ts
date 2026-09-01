@@ -35,6 +35,20 @@ export interface WhitelistedSource {
   perspective: string;
   /** URL for the publication homepage. */
   url: string;
+  /**
+   * Additional hosts this publication genuinely publishes on.
+   *
+   * NOT a widening of the whitelist — no publication is added, and a
+   * publication not listed here remains excluded. It corrects the domain
+   * record for one already approved: SoundStage! is a network that publishes
+   * the same editorial operation across soundstagehifi.com,
+   * soundstageultra.com and others, so a single homepage URL cannot recognise
+   * its own reviews.
+   *
+   * Listed explicitly rather than pattern-matched, because "any host starting
+   * with soundstage" would admit a domain anyone could register.
+   */
+  alternateDomains?: string[];
 }
 
 /**
@@ -42,12 +56,10 @@ export interface WhitelistedSource {
  */
 export const SOURCE_WHITELIST: WhitelistedSource[] = [
   // ── Tier 1 — Preferred ──────────────────────────────
-  {
-    name: '6moons',
-    tier: 'preferred',
-    perspective: 'System-aware, experience-led reviewing. Strong on spatial, timing, and tonal character. Extensive comparison methodology.',
-    url: 'https://6moons.com/',
-  },
+  // NOTE (2026-07-31, founder): 6moons is deliberately absent. It must
+  // never be whitelisted — 6moons content may not be displayed, quoted,
+  // or linked anywhere in the product. Dormant catalog references are
+  // tolerated only because this filter blocks them at render time.
   {
     name: 'Mono and Stereo',
     tier: 'preferred',
@@ -68,6 +80,59 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
   },
 
   // ── Tier 2 — Acceptable ─────────────────────────────
+  /*
+   * ADDED 2026-08-25 after an acquisition pass that treated the existing list
+   * as incomplete rather than authoritative.
+   *
+   * Each was evaluated on the same four questions the earlier entries were:
+   * does it have a named editorial masthead; does it publish long-form
+   * reviews that state associated equipment and listening conditions; is it
+   * independent of the makers it covers; and does it name its reviewers. All
+   * four are `acceptable` rather than `preferred` — the tier reflects
+   * editorial alignment with Audio XX's register, not credibility, and the
+   * character layer weights every admitted publication equally regardless.
+   *
+   * The occasion was Nathan: the Butler MONAD A100 and Acora QRC-2 have no
+   * coverage in the previously listed publications, and treating that as "no
+   * evidence exists" was a statement about our list rather than about the
+   * world.
+   */
+  {
+    name: 'The Audio Beatnik',
+    tier: 'acceptable',
+    perspective: 'Long-form single-reviewer listening notes with associated equipment '
+      + 'stated throughout. Enthusiast register; light on measurement.',
+    url: 'https://theaudiobeatnik.com/',
+  },
+  {
+    name: 'Enjoy the Music',
+    tier: 'acceptable',
+    perspective: 'Long-running US publication with a named masthead and a wide review '
+      + 'roster. Review depth varies by contributor.',
+    url: 'https://www.enjoythemusic.com/',
+  },
+  {
+    name: 'Positive Feedback',
+    tier: 'acceptable',
+    perspective: 'Established US publication, essayistic register, strong on design '
+      + 'philosophy and system context.',
+    url: 'https://positive-feedback.com/',
+  },
+  {
+    name: 'Part-Time Audiophile',
+    tier: 'acceptable',
+    perspective: 'Show coverage and equipment reviews. Show reports are heavily '
+      + 'conditioned by definition and must carry that condition.',
+    url: 'https://parttimeaudiophile.com/',
+    alternateDomains: ['pt.audio'],
+  },
+  {
+    name: 'Tracking Angle',
+    tier: 'acceptable',
+    perspective: 'Analog-led publication under a named editor. Detailed on setup '
+      + 'conditions and comparisons.',
+    url: 'https://trackingangle.com/',
+  },
   {
     name: 'Stereophile',
     tier: 'acceptable',
@@ -97,6 +162,28 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
     tier: 'acceptable',
     perspective: 'North American publication network. Consistent methodology across reviewers.',
     url: 'https://www.soundstagenetwork.com/',
+    alternateDomains: [
+      'soundstagehifi.com',
+      'soundstageultra.com',
+      'soundstagesolo.com',
+      'soundstageaccess.com',
+      'soundstagesimplifi.com',
+    ],
+  },
+  {
+    /*
+     * ADDED 2026-08-27, FRANCE acquisition pass. Long-running professional
+     * AV magazine (AVTech Media), named masthead and reviewers, states
+     * associated equipment, and — rarely for this list — publishes its own
+     * bench measurements. Its JOB 225 review is the only independent
+     * measurement of the JOB amplifier circuit found in any professional
+     * publication.
+     */
+    name: 'Sound & Vision',
+    tier: 'acceptable',
+    perspective: 'Mainstream professional AV magazine; measurement-literate, '
+      + 'plain-spoken, value-aware. Publishes bench tests alongside listening.',
+    url: 'https://www.soundandvision.com/',
   },
   {
     name: 'Tone Publications',
@@ -137,6 +224,62 @@ const PREFERRED_SET = new Set(
 /**
  * Returns true if a source name matches any whitelisted publication (either tier).
  */
+/**
+ * Every host an approved publication publishes on, mapped to its canonical name.
+ *
+ * The host is the verifiable half of a search result. A model can return any
+ * string as the publication name — "Hi-Fi+", "Stereophile Magazine",
+ * "SoundStage! Hi-Fi" — but it cannot invent which domain served the page.
+ * Resolution therefore starts here and treats the returned name as a claim to
+ * be confirmed rather than as the identity.
+ */
+const HOST_TO_PUBLICATION: Map<string, string> = (() => {
+  const m = new Map<string, string>();
+  const strip = (h: string) => h.toLowerCase().replace(/^www\./, '');
+  for (const entry of SOURCE_WHITELIST) {
+    try { m.set(strip(new URL(entry.url).host), entry.name); } catch { /* skip */ }
+    for (const alt of entry.alternateDomains ?? []) m.set(strip(alt), entry.name);
+  }
+  return m;
+})();
+
+/** The canonical publication that owns this host, if any. */
+export function publicationForHost(sourceUrl: string): string | undefined {
+  if (!sourceUrl || /\s/.test(sourceUrl)) return undefined;
+  try {
+    const u = new URL(sourceUrl);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
+    const host = u.host.toLowerCase().replace(/^www\./, '');
+    const exact = HOST_TO_PUBLICATION.get(host);
+    if (exact) return exact;
+    // A subdomain of an approved host is still that publication.
+    for (const [owned, name] of HOST_TO_PUBLICATION) {
+      if (host.endsWith(`.${owned}`)) return name;
+    }
+    return undefined;
+  } catch { return undefined; }
+}
+
+/**
+ * The canonical name for a publication written loosely.
+ *
+ * "Hi-Fi+" and "HiFi+" are the same publication; storing them separately would
+ * split one source's evidence into two identities and make agreement look like
+ * two independent voices. Matching ignores punctuation and case only — it never
+ * guesses at an unlisted publication, so a name that is not on the whitelist
+ * still resolves to nothing.
+ */
+export function canonicalPublicationName(name: string): string | undefined {
+  if (!name?.trim()) return undefined;
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(name);
+  if (!target) return undefined;
+  for (const entry of SOURCE_WHITELIST) {
+    if (norm(entry.name) === target) return entry.name;
+  }
+  return undefined;
+}
+
 export function isWhitelistedSource(sourceName: string): boolean {
   return SOURCE_MAP.has(sourceName.toLowerCase());
 }

@@ -135,15 +135,19 @@ describe('Amazon link verification', () => {
     expect(amazonLink?.url).not.toContain('/s?');
   });
 
-  it('does NOT generate search-based Amazon link for products without ASIN', () => {
+  it('generates a search-based Amazon link for eligible brands without ASIN', () => {
+    // Affiliate activation fix (2026-08-04): the B1 remediation removed
+    // every stored ASIN (all 8 had rotted), so requiring one made Amazon
+    // links impossible catalog-wide. Eligible brands now get the
+    // documented search-based link (ASIN-rot-proof, tag-carrying).
     const noAsin: ProductLinkInput = {
       ...WITHOUT_AMAZON,
       brand: 'Schiit', // Not excluded, but no Amazon link in catalog
     };
     const result = buildProductLinks(noAsin);
-    // Should not generate a search URL since no ASIN in retailer_links
     const amazonLink = result.newLinks.find(l => l.label === 'Amazon');
-    expect(amazonLink).toBeUndefined();
+    expect(amazonLink?.url).toContain('amazon.com/s?');
+    expect(amazonLink?.url).not.toContain('/dp/');
   });
 });
 

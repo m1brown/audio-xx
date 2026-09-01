@@ -313,7 +313,12 @@ describe('orchestratorToAdvisory — success path', () => {
     expect(advisory.tradeOffs![0]).toContain('warm-leaning tube amps');
   });
 
-  it('collects source references from matched products', () => {
+  // F4 gate (private beta, 2026-05-18):
+  //   Original assertion required sourceReferences to be populated
+  //   from matched products. Under the F4 reviewer-data exclusion
+  //   rule the adapter must always emit sourceReferences: undefined.
+  //   The assertion is inverted accordingly.
+  it('F4 gate — no source references attached to advisory output', () => {
     const advisory = orchestratorToAdvisory({
       shoppingOutput: makeShoppingDecisionOutput(),
       productExamples: makeProductExamples(),
@@ -322,8 +327,7 @@ describe('orchestratorToAdvisory — success path', () => {
       debug: makeOrchestratorOutput().debug,
     });
 
-    expect(advisory.sourceReferences).toHaveLength(1);
-    expect(advisory.sourceReferences![0].source).toBe('What Hi-Fi?');
+    expect(advisory.sourceReferences).toBeUndefined();
   });
 
   it('sets directed=true when budget is provided', () => {

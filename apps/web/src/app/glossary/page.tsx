@@ -10,6 +10,12 @@ import {
 
 /* ── Styles (mirrors resources/page.tsx) ─────────────── */
 
+export const metadata = {
+  title: 'Glossary',
+  description:
+    'Plain-language definitions of the hi-fi terms Audio XX uses — topology, damping, sensitivity, and the rest.',
+};
+
 const sectionStyle: React.CSSProperties = {
   marginBottom: '2.25rem',
 };

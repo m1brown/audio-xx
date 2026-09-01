@@ -15,9 +15,27 @@
  * without restyling the rest of the app.
  */
 :root {
-  --editorial-bg: #FCFCFB;
-  --editorial-ink: #151515;        /* hero headline + primary text */
-  --editorial-ink-muted: #3A3A3A;  /* hero body + supporting prose */
+  /* ── Editorial restraint pass (2026-07-30) ─────────────────────────
+   * ONE muted accent for all application chrome: warm terracotta/rust.
+   * Discipline target: 90–95% neutral ink-on-paper, 5–10% accent.
+   * The accent appears ONLY in: active states, kicker dashes, thin
+   * selected outlines, small labels, focus rings, and recommendation
+   * emphasis. Never as filled blocks or saturated buttons.
+   * (The Assessment artifact keeps its own approved palette — it is
+   * the reference this chrome now defers to, not a target.) */
+  --xx-accent: #A6432C;
+  --xx-accent-soft: rgba(166, 67, 44, 0.08);
+  --xx-paper-raised: #FFFDF7;   /* paper resting on paper */
+  --xx-hairline: #E2DACB;       /* warm hairline, replaces cool #ddd/#eae8e4 */
+  --xx-hairline-soft: #EDE7D9;
+
+  --editorial-bg: #FCF8EE;
+  /* 2026-05-20 premium polish: ink tokens shifted a few points toward
+   * warm charcoal so long advisory prose reads less SaaS-stark and
+   * more "listening room". Magnitudes intentionally tiny — the page
+   * should feel calmer, not visibly tinted. */
+  --editorial-ink: #1B1815;        /* hero headline + primary text (was #151515) */
+  --editorial-ink-muted: #3E3A33;  /* hero body + supporting prose (was #3A3A3A) */
   --editorial-faint: #8A8A8A;      /* eyebrow labels, hints */
   --editorial-rule: #E5E5E5;       /* thin hairlines — neutral, no slate */
   /* (Dead --editorial-accent #D85A1F token removed pass-6 alongside
@@ -36,20 +54,43 @@
   opacity: 1;
 }
 
-/* ── Base typography ─────────────────────────────── */
-
+/* ── Base typography ───────────────────────────────
+ *
+ * Design Doctrine v1 role discipline (layout.tsx):
+ *   Fraunces       → major headlines
+ *   Source Serif 4 → all reading text (body, standfirst, prose)
+ *   Inter          → navigation, metadata, labels, buttons, UI chrome
+ *
+ * 2026-07-01 (site-wide typography pass): the body default was
+ * `var(--face-grotesque)` (Inter). That put every route except the
+ * artifact — which explicitly opts into Source Serif via `.axx-artifact
+ * { font-family: var(--face-text) }` — into a sans-serif reading face.
+ * The doctrine-sweep PDF captured 10 pages as "doctrinal drift"
+ * (how-it-works, glossary, resources, about, privacy, affiliate-
+ * disclosure, onboarding, tech/*, brand/harbeth) largely because of
+ * this one default. Flipping it here brings the site into the
+ * editorial voice by default. UI chrome — nav, buttons, form
+ * controls, labels, tags — is explicitly kicked back to
+ * `var(--face-grotesque)` in its own rules below so the doctrine
+ * role split holds.
+ */
 body {
-  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  background: #FCFCFB;
-  color: #151515;
-  line-height: 1.65;
-  font-size: 15px;
+  font-family: var(--face-text), Georgia, 'Times New Roman', serif;
+  background: #FCF8EE;
+  color: #1B1815;
+  line-height: 1.6;
+  font-size: 15.5px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a { color: #1F3A5F; text-decoration: none; }
-a:hover { color: #2D5C8A; text-decoration: underline; text-underline-offset: 2px; }
+/* 2026-05-20 polish: link color moved off slate-blue (#1F3A5F) — which
+ * read as generic web-link / SaaS — toward a quieter warm-charcoal that
+ * sits closer to the editorial ink. Underline-on-hover preserved so
+ * links remain discoverable; rest-state distinct enough to recognise
+ * without competing with body type. */
+a { color: #4A3F2E; text-decoration: none; }
+a:hover { color: #1B1815; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ── Layout ──────────────────────────────────────── */
 
@@ -59,36 +100,98 @@ a:hover { color: #2D5C8A; text-decoration: underline; text-underline-offset: 2px
   padding: 2rem 2.5rem;
 }
 
-/* ── Headings ────────────────────────────────────── */
+/* ── Headings ──────────────────────────────────────
+ *
+ * 2026-07-01 doctrine pass: h1 now uses Fraunces (`--face-display`),
+ * bumped in size to work as a real page-titling face. h2 / h3 stay
+ * in the reading face (Source Serif via body inheritance) but at
+ * larger sizes than before so sections have a proper editorial
+ * cadence in long-form prose. Heading colour stays on the warm
+ * charcoal set in the 2026-05-20 polish.
+ */
+h1 {
+  font-family: var(--face-display), Georgia, 'Times New Roman', serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  letter-spacing: -0.018em;
+  color: #2A2620;
+  line-height: 1.15;
+}
+h2 { font-size: 1.28rem; font-weight: 600; margin-bottom: 0.9rem; margin-top: 1.75rem; letter-spacing: -0.012em; color: #2A2620; line-height: 1.3; }
+h3 { font-size: 1.08rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.008em; color: #2A2620; }
 
-h1 { font-size: 1.3rem; font-weight: 600; margin-bottom: 1rem; letter-spacing: -0.015em; color: #2a2a2a; }
-h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; margin-top: 1.25rem; color: #2a2a2a; }
-h3 { font-size: 0.98rem; font-weight: 600; margin-bottom: 0.5rem; color: #333; }
+/* ── Editorial kicker utility ──────────────────────
+ *
+ * The small accent-red rule + small-caps label pattern used by the
+ * artifact route and the shopping recommendations. Exposed as a
+ * utility class here so brand / tech / support pages can adopt it
+ * without importing the artifact stylesheet.
+ *
+ * Usage: <div class="axx-kicker">Philosophy</div>
+ * The label is auto-uppercased at the CSS layer, so authors write
+ * sentence-case content and the class handles small caps.
+ */
+.axx-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: 0.75rem;
+  /* 2026-08-15: section eyebrows carry the accent at full weight, matching
+   * the Assessment artifact. Sections were reading as faint gray captions
+   * rather than as structure. */
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  /* Literal fallback: this class also renders on pages whose stylesheet
+   * defines --accent but not --xx-accent, where a bare var() would resolve
+   * to nothing and drop the colour entirely. */
+  color: var(--xx-accent, #A6432C);
+  margin: 1.75rem 0 0.55rem;
+}
+.axx-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 1.5rem;
+  height: 2px;
+  background: var(--xx-accent);
+  flex: 0 0 auto;
+}
+.axx-kicker + p,
+.axx-kicker + ul,
+.axx-kicker + ol { margin-top: 0; }
 
-hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
+hr, .divider { border: none; border-top: 1px solid var(--xx-hairline-soft); margin: 1.25rem 0; }
 
 .section { margin-bottom: 1.5rem; }
 
-/* ── Buttons ─────────────────────────────────────── */
+/* ── Buttons ───────────────────────────────────────
+ *
+ * 2026-07-01: `font-family: inherit` used to be fine because body
+ * was Inter. Now that body is Source Serif, buttons must opt out
+ * back to grotesque or every CTA renders as italic-looking body
+ * text. Same applies to inputs / labels / tags / verdicts below.
+ */
 
 .btn {
   display: inline-block;
   padding: 7px 16px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--xx-hairline);
   border-radius: 6px;
-  background: #fff;
+  background: var(--xx-paper-raised);
   color: #333;
   cursor: pointer;
   font-size: 13px;
-  font-family: inherit;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   font-weight: 500;
   transition: all 0.15s ease;
 }
-.btn:hover { background: #f8f8f6; border-color: #ccc; }
+.btn:hover { background: #FBF7EC; border-color: #CFC5B2; }
 .btn-primary { background: #f5f4f2; border-color: #c0bdb5; }
 .btn-primary:hover { background: #eeedea; }
-.btn-danger { color: #b33; border-color: #dcc; }
-.btn-danger:hover { background: #fef5f5; }
+.btn-danger { color: var(--xx-accent); border-color: #E0CFC7; }
+.btn-danger:hover { background: var(--xx-accent-soft); }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
 
 /* ── Form controls ───────────────────────────────── */
@@ -96,19 +199,26 @@ hr, .divider { border: none; border-top: 1px solid #eae8e4; margin: 1.25rem 0; }
 input, textarea, select {
   width: 100%;
   padding: 9px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--xx-hairline);
   border-radius: 6px;
-  background: #fff;
+  background: var(--xx-paper-raised);
   color: #2a2a2a;
   font-size: 15px;
-  font-family: inherit;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* The conversational composer textarea should read as prose
+ * (the reader is typing to Audio XX, not filling a form). Opt it
+ * back to the reading face so the message the user is composing
+ * looks the same as the artifact it will produce. */
+textarea.audioxx-editorial-input {
+  font-family: var(--face-text), Georgia, 'Times New Roman', serif;
 }
 textarea { min-height: 100px; resize: vertical; }
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #a89870;
-  box-shadow: 0 0 0 3px rgba(168, 152, 112, 0.08);
+  border-color: var(--xx-accent);
+  box-shadow: 0 0 0 3px var(--xx-accent-soft);
 }
 
 label {
@@ -117,6 +227,7 @@ label {
   font-size: 13px;
   font-weight: 500;
   color: #666;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 .field { margin-bottom: 0.75rem; }
@@ -126,15 +237,16 @@ label {
 .tag {
   display: inline-block;
   padding: 2px 8px;
-  border: 1px solid #e5e3de;
+  border: 1px solid var(--xx-hairline-soft);
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
   margin-right: 4px;
   margin-bottom: 4px;
-  background: #fff;
+  background: var(--xx-paper-raised);
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-.tag-active { background: #f5f3ef; border-color: #c0bdb5; cursor: pointer; }
+.tag-active { background: transparent; border-color: var(--xx-accent); color: var(--xx-accent); cursor: pointer; }
 
 /* ── Verdicts ────────────────────────────────────── */
 
@@ -144,10 +256,11 @@ label {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
-.verdict-good { color: #1a7f37; }
-.verdict-caution { color: #9a6700; }
-.verdict-bad { color: #b33; }
+.verdict-good { color: #5A7057; }
+.verdict-caution { color: #8A6D3B; }
+.verdict-bad { color: var(--xx-accent); }
 .verdict-muted { color: #999; }
 
 /* ── Details ─────────────────────────────────────── */
@@ -171,9 +284,9 @@ details summary:hover { color: #555; }
 
 .muted { color: #999; }
 .small { font-size: 13px; }
-.warning { color: #9a6700; }
-.danger { color: #b33; }
-.success { color: #1a7f37; }
+.warning { color: #8A6D3B; }
+.danger { color: var(--xx-accent); }
+.success { color: #5A7057; }
 
 .mt-1 { margin-top: 0.5rem; }
 .mt-2 { margin-top: 1rem; }
@@ -192,7 +305,10 @@ ul.bullets li { padding: 2px 0; }
 nav {
   border-bottom: 1px solid #eae8e4;
   padding: 12px 1.5rem;
-  background: #fff;
+  background: #FCF8EE;
+  /* Nav sits in the grotesque role — must be pinned now that body
+   * inherits the reading face. */
+  font-family: var(--face-grotesque), -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 nav .nav-inner {
   max-width: 90rem; /* match .container */
@@ -397,3 +513,278 @@ nav .nav-radar-link:hover {
   }
 }
 
+/* D1 mobile QA — M1 (2026-05-18).
+ *
+ * Below 480px the top nav can't fit "AUDIO XX · How It Works · Glossary
+ * · Resources · Sign in" on one line; the existing horizontal-scroll
+ * behaviour on .nav-links left "Resources" clipped and ran straight
+ * into "Sign in" with no visible separator (the QA pass captured this
+ * as "ResourcesSign in"). The smallest scope-respecting fix is to
+ * collapse the two least-essential items (Glossary, Resources) on
+ * narrow viewports. Brand, How It Works, Systems (auth-only) and
+ * Sign in stay visible. No hamburger, no new menu — Glossary and
+ * Resources remain reachable via the homepage chips and the
+ * conversational interior. */
+@media (max-width: 479px) {
+  nav .nav-link-secondary {
+    display: none !important;
+  }
+  /* Pre-beta item 7 (2026-07-31): the SIGNED-IN nav (brand · How It
+   * Works · My Systems · taste radar · Sign out) overflowed 375px by
+   * ~49px — .nav-secondary rendered past the right edge and forced
+   * horizontal scroll on every signed-in page. Tighten the gap/padding
+   * budget at phone widths and allow the row to wrap as a safety net
+   * instead of overflowing. Desktop values unchanged. */
+  nav {
+    padding: 12px 0.75rem;
+  }
+  nav .nav-inner {
+    padding: 0 0.5rem;
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  nav .nav-primary {
+    gap: 1rem;
+  }
+  nav .nav-links {
+    gap: 0.8rem;
+  }
+  nav .nav-secondary {
+    gap: 0.7rem;
+  }
+  /* Pre-beta item 7: stack the builder's two actions vertically at
+   * phone widths — side-by-side, "+ Add another component" wrapped to
+   * three cramped lines against the CTA border. Full-width CTA gives
+   * the primary action the visual weight it deserves on mobile. */
+  .builder-action-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem;
+  }
+  .builder-action-row > button[data-testid="read-assessment"] {
+    width: 100%;
+  }
+}
+
+/* Mobile homepage polish (2026-05-20).
+ *
+ * The hero block — accent rule, wordmark, h1 tagline, system badge,
+ * starter chips, then textarea — was tuned for desktop in the
+ * 2026-05-20 hero rhythm pass. On iPhone-class viewports (≈390w) the
+ * same paddings, font sizes, and gaps push the textarea below the fold
+ * and make the h1 wrap to three lines. The rules below tighten only
+ * the mobile presentation; desktop values (set inline on the elements
+ * themselves in page.tsx) are unchanged.
+ *
+ * Inline styles win against bare CSS rules, so each override here uses
+ * !important — matching the convention already used by the workspace
+ * grid and nav-link-secondary overrides above.
+ *
+ * 2026-05-20 second mobile tightening pass: hero was still too
+ * vertically heavy at 390px after the first pass. This revision is
+ * more assertive — h1 down to 1.38rem with line-height 1.15, inner
+ * wordmark hidden (top nav already carries the brand), chip footprint
+ * reduced further, and every inter-stanza margin compressed. The
+ * goal is for the textarea to land above the fold on iPhone-class
+ * heights without the page reading as cramped. */
+@media (max-width: 479px) {
+  /* Reduce the workspace grid's top padding — the gap between the
+   * top nav and the hero accent rule was the single biggest source
+   * of wasted vertical space on mobile (the desktop value is 4rem). */
+  .audioxx-workspace-grid {
+    padding-top: 1.5rem !important;
+  }
+  /* Hide the inner "Audio XX" wordmark on mobile. The top nav already
+   * carries the brand at this width, so the duplicated stanza only
+   * pushes the h1 and input further down the viewport. */
+  .audioxx-hero-wordmark {
+    display: none !important;
+  }
+  /* h1 tagline: smaller, tighter line-height, max-width controls
+   * wrapping so line breaks land on natural phrase boundaries. */
+  .audioxx-hero-h1 {
+    font-size: 1.38rem !important;
+    line-height: 1.15 !important;
+    letter-spacing: -0.02em !important;
+    max-width: 340px !important;
+    margin-bottom: 0.4rem !important;
+  }
+  /* Top accent rule sits above the wordmark; tighter bottom margin
+   * pulls the hero up so more of the input is visible above the fold. */
+  .audioxx-hero-accent {
+    margin-bottom: 0.7rem !important;
+  }
+  /* System badge stanza below the h1 — compressed on mobile so the
+   * chip row sits closer to the value-prop tagline. */
+  .audioxx-hero-system-badge {
+    margin-bottom: 0.3rem !important;
+  }
+  /* Starter prompt chips: tighter padding, smaller font, minimal
+   * inter-chip gap. The chip row also sits closer to the badge above
+   * and the textarea below. */
+  .audioxx-hero-chips {
+    gap: 0.3rem !important;
+    margin-top: 0.15rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .audioxx-hero-chips > button {
+    padding: 0.3rem 0.6rem !important;
+    font-size: 0.75rem !important;
+  }
+  /* Top nav: slightly more vertical breathing room and a touch more
+   * gap between the wordmark and the link cluster so the bar reads as
+   * deliberate rather than jammed at narrow widths. */
+  nav {
+    padding: 14px 1rem !important;
+  }
+  nav .nav-inner {
+    padding: 0 0.5rem !important;
+  }
+  nav .nav-primary {
+    gap: 1.4rem !important;
+  }
+}
+
+/* ── Listing-evaluation MVP — image upload UI ─────────────
+ * Subtle styling for the upload entry point under the composer and
+ * the small preview chips that show selected listing photos.
+ */
+/* Paperclip upload button — intentionally restrained so it never
+ * competes with the Send CTA. Square, transparent, only a 1px hairline.
+ * The emoji glyph itself carries the visual weight; the chrome around
+ * it should feel like an affordance, not a button. Mobile keeps the
+ * 36px tap target without growing the visual footprint. */
+.audioxx-image-upload-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.audioxx-image-upload-button:hover:not(:disabled) {
+  border-color: #B0B0B0;
+  background: #F7F7F7;
+}
+.audioxx-image-upload-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.audioxx-image-upload-icon {
+  font-size: 16px;
+  line-height: 1;
+  /* Some platforms render the emoji slightly off-baseline; this nudges
+   * it back into the center of the 36px button so the affordance reads
+   * as deliberate alignment, not a typo. */
+  transform: translateY(-1px);
+}
+.audioxx-image-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.audioxx-image-preview {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #FAFAFA;
+}
+.audioxx-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.audioxx-image-preview-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.audioxx-image-preview-remove:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+.audioxx-image-upload-error {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: #8A3A2A;
+}
+.audioxx-image-message-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.audioxx-image-message-thumbs img {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+}
+
+/* M4 launch polish — visible keyboard focus, everywhere, in the house
+   accent. Buttons and links ride browser defaults otherwise; this makes
+   keyboard navigation read as designed rather than accidental. */
+a:focus-visible,
+button:focus-visible,
+[role='option']:focus-visible {
+  outline: 2px solid #A8231B;
+  outline-offset: 2px;
+}
+
+/* Print: the assessment is the only thing on paper — never site chrome.
+   (Certification Gate 1, defect G1-D1.) */
+@media print {
+  /*
+   * A listener who presses Cmd-P on the conversation gets the assessment, not
+   * the workspace. Their five-page print carried Review & save, the composer,
+   * Start over, the feedback controls, View / Print / Share, and the site
+   * footer — every one of them a screen affordance with nothing to say on
+   * paper.
+   *
+   * The Print / Save PDF control opens the frozen canonical artifact and was
+   * always correct. This is the other route, and it must not produce a
+   * different document.
+   */
+  nav,
+  aside,
+  /* NOT the document's own footer. `.axx-doc-footer` is the EVIDENCE section —
+     the provenance ledger — and a blanket `footer` rule deleted it from every
+     printed assessment. Application chrome and document furniture are both
+     "footers"; only one of them is chrome. */
+  footer:not(.axx-doc-footer),
+  form,
+  textarea,
+  .audioxx-global-startover,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* The workspace is a three-column layout on screen; on paper there is one
+     column and it holds the assessment. */
+  main, .container { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+}

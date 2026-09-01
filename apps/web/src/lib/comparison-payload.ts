@@ -127,7 +127,7 @@ export interface ComparisonPayload {
 // ── Keyword scoring utility ─────────────────────────────
 
 const WARM_KEYWORDS = ['warm', 'rich', 'dense', 'harmonic', 'tonal density', 'tonal body', 'lush', 'musical', 'golden', 'tube-adjacent', 'saturated'];
-const CONTROL_KEYWORDS = ['controlled', 'composed', 'neutral', 'clean', 'damping', 'precise', 'analytical', 'tight', 'restrained', 'cool', 'dry'];
+const CONTROL_KEYWORDS = ['controlled', 'composed', 'neutral', 'clean', 'damping', 'precise', 'precision', 'transient', 'analytical', 'tight', 'restrained', 'cool', 'dry'];
 const FLOW_KEYWORDS = ['flow', 'elastic', 'alive', 'engagement', 'rhythmic', 'drive', 'timing'];
 const DENSITY_KEYWORDS = ['dense', 'density', 'body', 'harmonic', 'saturated', 'lush', 'weight', 'presence'];
 

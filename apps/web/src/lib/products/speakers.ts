@@ -89,7 +89,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'High-efficiency coaxial wideband monitor designed for dynamic expression and tonal color. Prioritizes rhythmic engagement, musical flow, and harmonic richness over last-degree analytical precision. The kind of speaker that makes you tap your foot before you start analyzing.',
     retailer_links: [
-      { label: 'WLM', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
+      { label: 'WLM', url: 'https://www.wiener-lautsprecher-manufaktur.com/en-speaker' },
     ],
     learnMore: {
       manufacturer: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker',
@@ -215,7 +215,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     // Step 10: buying metadata
     typicalMarket: 'new',
     buyingContext: 'dealer_likely',
-    // imageUrl: undefined, // TODO: add official product image from boenicke-audio.ch
+    imageUrl: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_halbvorne_web.jpg',
     philosophy: 'warm',
     marketType: 'nonTraditional',
   },
@@ -280,7 +280,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'BBC-heritage design with famously rich, warm midrange and exceptional vocal naturalness. Trades outright resolution for tonal beauty and zero fatigue. The reference for "I could listen to this all day."',
     retailer_links: [
-      { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-p3esr/' },
     ],
     notes: 'Limited bass extension and dynamic scale. Best for smaller rooms, vocal and acoustic music. Not the choice for hard-driving rock or large-scale orchestral.',
     placementSensitivity: {
@@ -310,7 +309,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     // Step 10: buying metadata
     buyingContext: 'better_used',
-    imageUrl: 'https://harbeth.co.uk/wp-content/uploads/2024/11/P3ESR-XD2-cherry.png',
+    // imageUrl removed 2026-05-21 — the harbeth.co.uk product URL
+    // was restructured and now 301-redirects to the homepage,
+    // landing in an ORB-blocked HTML response. Card renders the
+    // category placeholder until a curated replacement is sourced.
     philosophy: 'warm',
     marketType: 'traditional',
   },
@@ -321,13 +323,19 @@ export const SPEAKER_PRODUCTS: Product[] = [
     name: 'Super HL5 Plus',
     price: 5795,
     category: 'speaker',
-    architecture: 'BBC-tradition thin-wall ported box',
+    architecture: 'BBC-tradition thin-wall ported box, 6Ω nominal, 86dB/2.83V/1m',
     subcategory: 'standmount',
     priceTier: 'upper-mid',
     brandScale: 'specialist',
     region: 'uk',
     country: 'GB',
     topology: 'bass-reflex',
+    // Manufacturer-published: Harbeth Audio Ltd. SHL5plus XD2 Technical
+    // Information sheet — "Sensitivity: 86dB/2.83V/1m axial", "Impedance:
+    // 6 ohms, easy to drive", "Amplifier suggestion: suggested from
+    // 25W/channel". Harbeth publishes one sheet for the SHL5plus family;
+    // the XD/XD2 revisions changed the crossover, not the loading.
+    sensitivity_db: 86,
     archetypes: { primary: 'tonal_saturated', secondary: 'flow_organic' },
     primaryAxes: {
       warm_bright: 'warm',             // Harbeth family warmth with midrange density
@@ -370,14 +378,14 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Full-range Harbeth with the family warmth and midrange density, but more dynamic headroom and bass weight than the P3ESR. Resolving yet forgiving — a speaker for long sessions across all genres.',
     retailer_links: [
-      { label: 'Music Direct', url: 'https://www.musicdirect.com/speakers/harbeth-super-hl5-plus/' },
     ],
     sourceReferences: [
       { source: 'Stereophile', note: 'Herb Reichert review praising the SHL5+ as the complete Harbeth — midrange beauty with dynamic authority.', url: 'https://www.stereophile.com/content/harbeth-super-hl5plus-loudspeaker' },
       { source: 'The Audiophiliac', note: 'Steve Guttenberg coverage of the SHL5+ as a do-everything monitor.' },
       { source: '6moons', note: 'Review covering the BBC thin-wall design evolution and full-range balance.' },
     ],
-    imageUrl: 'https://www.harbeth.co.uk/images/SHL5plus-XD-Cherry-Front.jpg',
+    // imageUrl removed 2026-05-21 — same harbeth.co.uk restructure
+    // as P3ESR. Falls back to category placeholder.
     philosophy: 'warm',
     marketType: 'traditional',
   },
@@ -391,13 +399,18 @@ export const SPEAKER_PRODUCTS: Product[] = [
     price: 12000,
     imageUrl: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
     category: 'speaker',
-    architecture: 'high-efficiency wide-baffle two-way',
+    architecture: 'high-efficiency wide-baffle two-way, 10Ω nominal, 96dB/W/M',
     subcategory: 'floorstanding',
     priceTier: 'high-end',
     brandScale: 'boutique',
     region: 'north-america',
     country: 'US',
     topology: 'high-efficiency',
+    // Manufacturer-published: DeVore Fidelity O/96 product page —
+    // "Sensitivity: 96 dB/W/M", "Impedance: 10 ohms". The figure is the
+    // design premise, not a byproduct: DeVore states the O/96 is built
+    // for low-powered tube amplification.
+    sensitivity_db: 96,
     archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
     primaryAxes: {
       warm_bright: 'warm',             // Deep tonal density, zero fatigue — rich and warm
@@ -440,10 +453,10 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'High-efficiency design that combines deep tonal density with remarkable rhythmic drive. Makes music feel physically present in the room. A speaker built for engagement across all genres, voiced by ear rather than measurement.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/o96' },
+      { label: 'DeVore Fidelity', url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/' },
     ],
     learnMore: {
-      manufacturer: 'https://www.dfridelity.com/o96',
+      manufacturer: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/',
       usedMarket: 'https://www.hifishark.com/search?q=DeVore+Orangutan+O%2F96',
     },
     notes: 'Exceptional with low-power tube amplification. Sensitivity allows SET amps to drive them with authority. Room-dependent bass — needs space to breathe.',
@@ -486,7 +499,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     typicalMarket: 'both',
     usedPriceRange: { low: 7500, high: 10000 },
     buyingContext: 'dealer_likely',
-    // imageUrl: undefined, // TODO: add official product image from devorefidelity.com
+    // imageUrl already set above (line 392) from devorefidelity.com — TODO resolved.
     philosophy: 'warm',
     marketType: 'nonTraditional',
   },
@@ -548,7 +561,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Zu\'s entry-level high-efficiency design — raw, fast, dynamically explosive. Prioritizes rhythmic energy and speed over refinement. The audio equivalent of a muscle car: thrilling, rough around the edges, deeply fun.',
     retailer_links: [
-      { label: 'Zu Audio', url: 'https://www.zuaudio.com/dirty-weekend' },
+      { label: 'Zu Audio', url: 'https://www.zuaudio.com/' },
     ],
     notes: 'Can be forward and lively in the upper midrange. Benefits from warmer, smoother amplification. Not the choice for critical classical listening.',
     sourceReferences: [
@@ -655,6 +668,119 @@ export const SPEAKER_PRODUCTS: Product[] = [
     marketType: 'traditional',
   },
 
+  {
+    // Added 2026-08-16 as a regression control, not as coverage expansion.
+    // The Cornwall IV is a named fixture in the reference-system sanity
+    // suite (COHERENT list) and in the launch-QA benchmark set, but had no
+    // catalog row — so amp/speaker power matching resolved to 'unknown'
+    // for the one pairing the suite uses to prove a coherent system is NOT
+    // diagnosed flawed. The entry exists to make that interaction seeable.
+    id: 'klipsch-cornwall-iv',
+    brand: 'Klipsch',
+    name: 'Cornwall IV',
+    // Approximate US pair price. Klipsch publishes no MSRP on its own
+    // product page (dealer-referral only), so this is a street figure and
+    // not a manufacturer-published number — budget filtering only, per the
+    // Product.price contract.
+    price: 7998,
+    usedPriceRange: { low: 4500, high: 6000 },
+    availability: 'current',
+    typicalMarket: 'both',
+    category: 'speaker',
+    architecture: 'three-way horn-loaded with 15in direct-radiating woofer, 8Ω compatible, 102dB @ 2.83V/1m',
+    subcategory: 'floorstanding',
+    priceTier: 'high-end',
+    brandScale: 'mainstream',
+    region: 'north-america',
+    country: 'US',
+    topology: 'horn-loaded',
+    // Manufacturer-published: Klipsch "CORNWALL IV SPEC SHEET | V03 |
+    // 01.27.20" — "SENSITIVITY 102dB @ 2.83V / 1m", "NOMINAL IMPEDANCE
+    // 8 ohms Compatible", "FREQUENCY RESPONSE (+/- 4 dB) 34Hz - 20kHz",
+    // "POWER HANDLING (CONT/PEAK) 100W/400W".
+    //
+    // Epistemic note (D-7): the sheet footnotes this figure as
+    // "Sensitivity in average listening room" — it includes room gain and
+    // is therefore not an anechoic 1W/1m number. It is recorded as the
+    // manufacturer publishes it. Third-party anechoic measurement lands a
+    // few dB lower; at every amplifier power the catalog pairs this
+    // speaker with, both figures classify identically, so the difference
+    // does not currently move a verdict.
+    sensitivity_db: 102,
+    archetypes: { primary: 'rhythmic_propulsive', secondary: 'tonal_saturated' },
+    primaryAxes: {
+      warm_bright: 'neutral',            // Revoiced network sits between the Heresy's directness and warmth
+      smooth_detailed: 'detailed',       // Compression-driver speed on leading edges
+      elastic_controlled: 'elastic',     // Horn dynamics at low input power
+      airy_closed: 'airy',              // 15in woofer and larger cabinet give scale the Heresy has not
+    },
+    tendencyProfile: {
+      basis: 'review_consensus',
+      confidence: 'high',
+      tendencies: [
+        { trait: 'dynamics', level: 'emphasized' },
+        { trait: 'speed', level: 'emphasized' },
+        { trait: 'tonal_density', level: 'emphasized' },
+        { trait: 'rhythm', level: 'present' },
+        { trait: 'openness', level: 'present' },
+        { trait: 'texture', level: 'present' },
+        { trait: 'flow', level: 'present' },
+        { trait: 'clarity', level: 'present' },
+        { trait: 'warmth', level: 'present' },
+        { trait: 'composure', level: 'present' },
+        { trait: 'spatial_precision', level: 'less_emphasized' },
+      ],
+      riskFlags: [],
+    },
+    traits: {
+      rhythm: 0.7,
+      dynamics: 1.0,
+      tonal_density: 1.0,
+      spatial_precision: 0.4,
+      speed: 1.0,
+      warmth: 0.7,
+      texture: 0.7,
+      composure: 0.7,
+      flow: 0.7,
+      clarity: 0.7,
+      fatigue_risk: 0.4,
+      openness: 1.0,
+    },
+    description:
+      'Three-way horn-loaded Heritage design with a 15in woofer, rated by Klipsch at 102dB. The sensitivity is the architectural fact that governs the rest: a few watts reach listening levels, so low-power tube amplification is a design partner rather than a compromise. Larger in scale and fuller in the low end than the Heresy IV, with the same compression-driver speed.',
+    retailer_links: [
+      { label: 'Klipsch', url: 'https://www.klipsch.com/products/cornwall-iv-floorstanding-speaker' },
+    ],
+    notes: 'Sensitivity this high makes amplifier noise floor audible — hiss that is inaudible on an 87dB speaker is not inaudible here. Horn coloration remains present on sustained tones, though the IV network revoicing reduced it relative to the III.',
+    placementSensitivity: {
+      level: 'high',
+      notes: 'Large cabinet with rear Tractrix ports. Bass loading depends on distance to the wall behind; the design assumes reinforcement rather than free space. Needs room volume to work — this is not a small-room speaker.',
+    },
+    sourceReferences: [
+      { source: 'Klipsch', note: 'Manufacturer specification sheet (Cornwall IV, V03, 01.27.20) — sensitivity, impedance, power handling, crossover points, drivers.', url: 'https://assets.klipsch.com/product-specsheets/Cornwall-2019-Spec-Sheet-v03.pdf' },
+      { source: 'Klipsch', note: 'Manufacturer product page — Tractrix port geometry, K-702 midrange compression driver, revoiced network.', url: 'https://www.klipsch.com/products/cornwall-iv-floorstanding-speaker' },
+    ],
+    tendencies: {
+      confidence: 'high',
+      character: [
+        { domain: 'dynamics', tendency: 'dynamic swings arrive at their full size without the amplifier working for them — a consequence of the 102dB rating, not of voicing', basis: 'editorial_inference' },
+        { domain: 'timing', tendency: 'compression-driver leading edges are fast; transients start and stop cleanly', basis: 'review_consensus' },
+        { domain: 'tonality', tendency: 'fuller and weightier through the lower midrange and bass than the Heresy IV, from the 15in woofer and the larger enclosure', basis: 'review_consensus' },
+      ],
+      interactions: [
+        { condition: 'paired with low-power tube amplification (2-30W SET, push-pull triode)', effect: 'the pairing is the design premise — at 102dB a handful of watts reaches realistic levels with headroom in reserve', valence: 'positive', basis: 'manufacturer_intent' },
+        { condition: 'paired with amplifiers carrying an audible noise floor', effect: 'residual hiss and hum are amplified along with the music — high sensitivity raises the noise floor as readily as the signal', valence: 'caution', basis: 'listener_consensus' },
+        { condition: 'placed well out from the wall behind', effect: 'the rear ports lose boundary reinforcement and the bass thins', valence: 'caution', basis: 'manufacturer_intent' },
+      ],
+      tradeoffs: [
+        { gains: 'dynamic ease at low power, scale, and bass weight', cost: 'image precision and the tonal purity of a well-damped box on sustained tones', relative_to: 'conventional cone-and-dome floorstanders at the price', basis: 'review_consensus' },
+      ],
+    },
+    buyingContext: 'easy_new',
+    philosophy: 'energy',
+    marketType: 'traditional',
+  },
+
   // ── Focal ─────────────────────────────────────────────
 
   {
@@ -712,7 +838,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'French design combining Focal\'s beryllium tweeter precision with a warm, full cabinet voice. Highly resolving but not analytical — detail presented with tonal richness and spatial depth.',
     retailer_links: [
-      { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/kanta/kanta-n2' },
+      { label: 'Focal', url: 'https://www.focal.com/' },
     ],
     notes: 'Beryllium tweeter can lean bright in untreated rooms or with forward-sounding electronics. Benefits from careful amplifier matching.',
     placementSensitivity: {
@@ -788,7 +914,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Focal\'s flax-cone bookshelf — lively, open, and well-balanced for the price. Resolving without being aggressive. A solid all-rounder that hints at Focal\'s higher-end voicing.',
     retailer_links: [
-      { label: 'Focal', url: 'https://www.focal.com/en/home-audio/high-fidelity-speakers/aria-evo-x/aria-906' },
+      { label: 'Focal', url: 'https://www.focal.com/' },
       { label: 'Crutchfield', url: 'https://www.crutchfield.com/p_091AR906/' },
     ],
     sourceReferences: [
@@ -858,8 +984,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Brooklyn-made high-efficiency floorstander designed for tube amplification. 10-inch wideband driver delivers remarkable dynamic scale with rich tonal density and natural musical flow. 93dB sensitivity makes it ideal for low-power SET and push-pull amps.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfredelity.com/orangutan-o93' },
-      { label: 'Tone Imports', url: 'https://toneimports.com/devore/' },
+      { label: 'DeVore Fidelity', url: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-93-speakers/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -939,7 +1064,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Polish full-range widebander in a compact open-back cabinet — 96dB efficiency requires only 2–5W for full dynamic range, pairing naturally with SET amplifiers. The single driver handles the full frequency range without a crossover, avoiding the phase discontinuities that crossover networks introduce between drivers. The open-back cabinet radiates energy rearward as well as forward, so room reflections contribute to the spatial image — but also make speaker placement and room treatment critical.',
     retailer_links: [
-      { label: 'Cube Audio', url: 'https://www.cubeaudio.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1551,7 +1675,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Retro-styled three-way with rich, full-bodied sound. Exceptional value — punches well above its price in tonal richness and scale. Includes dedicated stands.',
     retailer_links: [
-      { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/linton/' },
+      { label: 'Wharfedale', url: 'https://www.wharfedale.co.uk/' },
     ],
     sourceReferences: [
       { source: 'Darko.Audio', note: 'Video review praising the Linton as exceptional value with old-school warmth.', url: 'https://darko.audio/2023/06/wharfedale-linton-heritage-video-review/' },
@@ -1802,7 +1926,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Swiss floorstanding with Boenicke\'s signature slim-cabinet, wide-bandwidth philosophy scaled up from the W5. Warm, spacious, and holographic with exceptional disappearing act for its size. The swing-base decoupling system isolates the cabinet from the floor. More bass extension and scale than the W5 while retaining the family\'s musical flow and spatial magic.',
     retailer_links: [
-      { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/w8' },
+      { label: 'Boenicke Audio', url: 'https://www.boenicke-audio.ch/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1829,6 +1953,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
       },
       { source: 'HiFi+', note: 'Review noting the disappearing act and musical engagement.' },
     ],
+    imageUrl: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W8_halbseite_web.jpg',
     notes: 'Swiss manufacturing. The swing-base decoupling system is key to the W8\'s imaging precision. Available in multiple wood finishes. Benefits from good amplification — 50–100W recommended.',
     philosophy: 'warm',
     marketType: 'nonTraditional',
@@ -1892,7 +2017,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Entry to the DeVore Orangutan line — the same warm, musical, tube-friendly philosophy in a compact standmount. 92dB sensitivity and 10Ω impedance make it an ideal match for low-power tube amplifiers. Paper cone and silk dome drivers deliver the natural, organic tonality the Orangutan line is known for. Smaller scale than the O/93 and O/96 but the same family voice.',
     retailer_links: [
-      { label: 'DeVore Fidelity', url: 'https://www.dfridelity.com/orangutan-obaby' },
+      { label: 'DeVore Fidelity', url: 'https://www.devorefidelity.com/' },
     ],
     tendencies: {
       confidence: 'high',
@@ -1977,7 +2102,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Entry-level planar magnetic from Magnepan — an extraordinary value that introduces the planar sound: transparent, detailed, spacious, and utterly open. The quasi-ribbon tweeter delivers textural detail that box speakers at 3x the price struggle to match. Limited bass extension and dynamics, and the 4Ω/86dB load demands a current-capable amplifier. But for midrange purity and spatial presentation, nothing at this price comes close.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_LRS_Plus' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2064,7 +2189,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'Scaled-up sibling of the LRS+ with a larger panel for more bass extension and dynamic headroom. Same planar magnetic virtues — transparency, spatial openness, textural detail — with better low-end weight. Still demands quality amplification and room to breathe. A natural step up for anyone who loves the planar sound and wants more scale.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_Point_7' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2150,7 +2275,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'The legendary BBC LS3/5a in contemporary Falcon Acoustics manufacture. A sealed-box monitor prized for its midrange purity, imaging precision, and vocal clarity. Needs high-quality stands and careful placement, but demands neither powerful amplification nor room treatment to shine. A reference-quality tool for listeners who value transparency and detail over bass extension. Iconic design that has influenced speaker engineering for decades.',
     retailer_links: [
-      { label: 'Falcon Acoustics', url: 'https://www.falcon-acoustics.co.uk/' },
+      { label: 'Falcon Acoustics', url: 'https://www.falconacoustics.co.uk/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2239,7 +2364,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A reissue of a British standmount classic, the 770 brings back the warm, musically engaging character that defined Mission speakers in their heyday. Rich midrange, smooth treble, and surprising bass extension from a compact box. More forgiving and emotionally engaging than strictly neutral designs — a speaker that makes listening a pleasure rather than an audition.',
     retailer_links: [
-      { label: 'Mission', url: 'https://www.missionspk.com/' },
+      { label: 'Mission', url: 'https://www.mission.co.uk/' },
     ],
     placementSensitivity: {
       level: 'moderate',
@@ -2325,7 +2450,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A true bargain-bin gem. The MS 50 8VET exemplifies the warm, BBC-influenced British tuning philosophy that defined Mission\'s early product line. At under $100 used (and typically available), it punches far above its price point. Warm, musical, forgiving presentation with genuine flow and musicality. Not a precision tool, but a speaker that makes listening engaging and pleasurable. Perfect for vinyl, acoustic music, and anyone who values emotional involvement over technical analysis. This speaker is a reminder that the best audio doesn\'t require expensive equipment.',
     retailer_links: [
-      { label: 'Used Market (eBay, Reverb)', url: 'https://www.ebay.com' },
     ],
     placementSensitivity: {
       level: 'moderate',
@@ -2584,7 +2708,6 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'A sonic time capsule. The Altec Model 19 horn-loaded speaker represents mid-century American design philosophy: efficiency, immediacy, and visceral impact. The 15" woofer and horn-loaded tweeter deliver dynamic punch that solid-state boxes cannot match. Warm, colored, undeniably musical. Plays well at low volumes with low-powered tube gear. Typically found used; condition and driver age matter significantly. An immersive experience rather than a reference tool.',
     retailer_links: [
-      { label: 'Used Market (Craigslist, Reverb)', url: 'https://www.reverb.com' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -2620,7 +2743,13 @@ export const SPEAKER_PRODUCTS: Product[] = [
     brand: 'DeVore Fidelity',
     name: 'Orangutan O/92',
     price: 8400,
-    imageUrl: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
+    // Image removed 2026-08-24 — wrong product. This entry is the Orangutan
+    // O/92; the asset is `O96-new-crop-766x1024.jpg`, the O/96, which the
+    // O/96 entry above also uses. A reader comparing the two was shown the
+    // same loudspeaker twice. First-party provenance was never the problem:
+    // devorefidelity.com is DeVore's own site, and hosting says nothing about
+    // WHICH product a photograph depicts.
+    // No replacement — no image is preferable to a sibling's.
     category: 'speaker',
     architecture: '2-way floorstanding, bass-reflex, 92dB/10Ω, tube-friendly impedance, more bass and scale than O/Baby',
     subcategory: 'floorstanding',
@@ -2931,7 +3060,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     description:
       'The iconic Magnepan 1.7i is the sweet spot of the planar line — larger than the LRS+ with more presence and staging, smaller and more affordable than the 3.7i. Planar transparency allows you to hear through the speakers into the room; dipole radiation creates a sense of space and openness rarely found in box speakers. Demands quality, current-capable amplification (100W+ into 4Ω) and space to breathe. Not a speaker for bass-heavy rooms or small spaces, but a musical revelation for listeners who prioritize openness and spatial presentation.',
     retailer_links: [
-      { label: 'Magnepan', url: 'https://www.magnepan.com/model_1_7i' },
+      { label: 'Magnepan', url: 'https://www.magnepan.com/' },
     ],
     placementSensitivity: {
       level: 'high',
@@ -3156,7 +3285,7 @@ export const SPEAKER_PRODUCTS: Product[] = [
     },
     description: 'Compact active wireless speaker with 11th-gen Uni-Q coaxial and DSP crossovers. Optimized for desktop and nearfield listening. Same Uni-Q point-source principle as LS60 but smaller driver limits bass extension and dynamic scale. Built-in streaming and wireless connectivity make it a complete desktop system.',
     retailer_links: [
-      { label: 'KEF', url: 'https://www.kef.com/products/lsx-ii' },
+      { label: 'KEF', url: 'https://www.kef.com/' },
     ],
     tendencies: {
       confidence: 'high',

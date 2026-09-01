@@ -227,6 +227,50 @@ describe('Diagnosis mode: explicit exit signals', () => {
     expect(result.state.mode).toBe('diagnosis');
     expect(result.response!.kind).toBe('proceed');
   });
+
+  // ── Companion guards for the purchase-intent gate ──────────
+  // These complement the "warmer source?" case to prevent the
+  // hasExplicitPurchaseIntent helper from being narrowed (e.g. to a
+  // single quality token) or broadened (e.g. to mention a category) in
+  // a way that would re-open the original continuation-state bug.
+
+  it('"what about a smoother amp?" stays in diagnosis (remedy hypothesis with different quality token)', () => {
+    const state = {
+      mode: 'diagnosis' as const,
+      stage: 'ready_to_diagnose' as const,
+      facts: { symptom: 'bright and fatiguing', hasSystem: true },
+    };
+    const text = 'what about a smoother amp?';
+    const { intent, subjectMatches } = detectIntent(text);
+
+    const result = transition(state, text, {
+      hasSystem: true,
+      subjectCount: subjectMatches.length,
+      detectedIntent: intent,
+    });
+
+    expect(result.state.mode).toBe('diagnosis');
+    expect(result.state.stage).toBe('ready_to_diagnose');
+    expect(result.response!.kind).toBe('proceed');
+  });
+
+  it('"what DAC under $1500 would help?" exits to shopping (budget signal present)', () => {
+    const state = {
+      mode: 'diagnosis' as const,
+      stage: 'ready_to_diagnose' as const,
+      facts: { symptom: 'bright and fatiguing', hasSystem: true },
+    };
+    const text = 'what DAC under $1500 would help?';
+    const { intent, subjectMatches } = detectIntent(text);
+
+    const result = transition(state, text, {
+      hasSystem: true,
+      subjectCount: subjectMatches.length,
+      detectedIntent: intent,
+    });
+
+    expect(result.state.mode).toBe('shopping');
+  });
 });
 
 // ── Symptom update during clarify_system ─────────────

@@ -1,0 +1,48 @@
+{
+  "id": "harbeth-naim-qutest",
+  "label": "Harbeth + Naim + Qutest",
+  "category": "general",
+  "systemText": "Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus",
+  "resolved": true,
+  "kind": "assessment",
+  "systemAxes": {
+    "warm_bright": "neutral",
+    "smooth_detailed": "detailed",
+    "elastic_controlled": "controlled",
+    "airy_closed": "airy"
+  },
+  "bottleneck": null,
+  "signature": "Tonally balanced, spatially open system.",
+  "strengths": [
+    "Naim SuperNait 3 contributes musical flow and continuity",
+    "Naim SuperNait 3 adds composure under complex passages"
+  ],
+  "limitations": [],
+  "upgradeDirection": "Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.",
+  "upgradePaths": [],
+  "keepRecommendations": [
+    {
+      "name": "Naim SuperNait 3",
+      "reason": "Neutral tonal balance; Circuit transparency — reveals source differences"
+    },
+    {
+      "name": "Harbeth Super HL5 Plus",
+      "reason": "Full-bodied tonal presentation; Musical flow and ease"
+    },
+    {
+      "name": "Chord Qutest",
+      "reason": "Neutral tonal balance; Conversion-stage microdetail and transparency"
+    }
+  ],
+  "recommendedSequence": [
+    {
+      "step": 1,
+      "action": "Keep **Naim SuperNait 3**, **Harbeth Super HL5 Plus**, **Chord Qutest** — performing well, no change warranted."
+    },
+    {
+      "step": 2,
+      "action": "Audition before committing. System synergy matters more than component reputation."
+    }
+  ],
+  "keyObservation": "Your component choices suggest a preference for equipment emphasising **precision and analytical control**. Naim SuperNait 3, Harbeth Super HL5 Plus, Chord Qutest share this design philosophy. The system leans toward control emphasis, which deepens this character but narrows the system's range. Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well."
+}

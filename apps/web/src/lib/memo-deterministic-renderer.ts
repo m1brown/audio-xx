@@ -59,6 +59,7 @@ import type {
   ComponentFindings,
 } from './memo-findings';
 import { LISTENER_PRIORITY_LABELS, type ListenerPriority } from './memo-findings';
+import { listenerPropertyLabel } from './listener-labels';
 import type {
   SystemChain,
   PrimaryConstraint,
@@ -156,7 +157,9 @@ function mapPrimaryConstraint(findings: MemoFindings): PrimaryConstraint | undef
 function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] {
   return findings.stackedTraits.map((s) => {
     const contribs = s.contributors.join(' and ');
-    const trait = s.property.replace(/_/g, ' ');
+    // Launch gate 2026-07-19: internal labels ("control emphasis") never
+    // print raw — translate to listener language everywhere they render.
+    const trait = listenerPropertyLabel(s.property);
 
     // Confidence-calibrated stacking language (Feature 5)
     // high = assertive, medium = light hedge, low = clearly tentative
@@ -176,7 +179,8 @@ function mapStackedTraitInsights(findings: MemoFindings): StackedTraitInsight[] 
     }
 
     return {
-      label: s.property,
+      // Translated label — the UI renders this string directly.
+      label: trait,
       contributors: s.contributors,
       classification: s.classification,
       explanation,
@@ -477,19 +481,19 @@ function deriveSystemSynergy(findings: MemoFindings): string | undefined {
 
   // Describe the system's shared direction
   if (characterTraits.length > 0) {
-    const traitLabels = characterTraits.map((t) => {
-      const label = t.property
-        .replace(/^high_/, '')
-        .replace(/_/g, ' ');
-      return label;
-    });
+    const traitLabels = characterTraits.map((t) =>
+      // Launch gate 2026-07-19: listener language, never internal labels.
+      listenerPropertyLabel(t.property.replace(/^high_/, '')),
+    );
     const joined = traitLabels.length <= 2
       ? traitLabels.join(' and ')
       : traitLabels.slice(0, -1).join(', ') + ', and ' + traitLabels[traitLabels.length - 1];
 
     // Count how many components contribute to each trait, and report per-trait
     const traitDetails = characterTraits.map((t) => {
-      const label = t.property.replace(/^high_/, '').replace(/_/g, ' ');
+      // Launch gate 2026-07-19: translate the internal label — the raw
+      // form produced "emphasizes detail emphasis".
+      const label = listenerPropertyLabel(t.property.replace(/^high_/, ''));
       return { label, count: t.contributors.length };
     });
 
@@ -505,7 +509,10 @@ function deriveSystemSynergy(findings: MemoFindings): string | undefined {
   }
 
   if (findings.isDeliberate) {
-    parts.push('The component choices suggest an intentional, coherent build.');
+    // Was "The component choices suggest an intentional, coherent build."
+    // "Choices" and "intentional" are claims about the listener; what the
+    // evidence supports is a statement about the components.
+    parts.push('The components are voiced in a consistent direction.');
   }
 
   return parts.join(' ');
@@ -567,7 +574,7 @@ function deriveListenerTasteProfile(
   if (wb > 0.65) avoided.push('tonal warmth');
   if (wb < 0.35) avoided.push('analytical brightness');
   if (sd > 0.65) avoided.push('smoothed-over detail');
-  if (sd < 0.35) avoided.push('excessive detail emphasis');
+  if (sd < 0.35) avoided.push('over-etched detail');
   if (ec > 0.65) avoided.push('rigid control');
   if (ec < 0.35) avoided.push('loose dynamics');
 
@@ -672,10 +679,16 @@ function deriveSystemSignature(
 
   const CONTESTED = 0.35; // Numeric average within ±CONTESTED is "balanced"
 
-  const wbAvg = weightedAvg('warm_bright');
-  const sdAvg = weightedAvg('smooth_detailed');
-  const ecAvg = weightedAvg('elastic_controlled');
-  const acAvg = weightedAvg('airy_closed');
+  // Tonal-signature unification (2026-08-13): prefer the shared numeric
+  // aggregation carried on findings — the same values drive the artifact's
+  // Tonal Signature graph, so prose and graph cannot disagree. The local
+  // weightedAvg (identical math) remains as fallback for findings built
+  // before the field existed.
+  const shared = findings.systemAxisNumeric;
+  const wbAvg = shared ? shared.warm_bright : weightedAvg('warm_bright');
+  const sdAvg = shared ? shared.smooth_detailed : weightedAvg('smooth_detailed');
+  const ecAvg = shared ? shared.elastic_controlled : weightedAvg('elastic_controlled');
+  const acAvg = shared ? shared.airy_closed : weightedAvg('airy_closed');
 
   // Tonal character
   if (wbAvg < -CONTESTED) traits.push('tonally warm');
@@ -701,7 +714,7 @@ function deriveSystemSignature(
   let engagementNote = '';
   if (prioritySet.has('musical_flow')) engagementNote = ' emphasizing musical engagement';
   else if (prioritySet.has('timing_accuracy')) engagementNote = ' emphasizing transient clarity';
-  else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal density';
+  else if (prioritySet.has('tonal_density')) engagementNote = ' emphasizing tonal richness';
 
   const traitStr = traits.join(', ');
   return traitStr.charAt(0).toUpperCase() + traitStr.slice(1) + ' system' + engagementNote + '.';
@@ -736,7 +749,10 @@ export function renderDeterministicMemo(
   // When omitted, derive from MemoFindings (new path).
   const systemChain = structured?.systemChain ?? mapSystemChain(findings);
   const primaryConstraint = structured ? structured.primaryConstraint : mapPrimaryConstraint(findings);
-  const stackedTraitInsights = structured?.stackedTraitInsights ?? mapStackedTraitInsights(findings);
+  // Launch gate 2026-07-19: whichever source supplied the insights, the
+  // rendered label is listener language — internal taxonomy stays internal.
+  const stackedTraitInsights = (structured?.stackedTraitInsights ?? mapStackedTraitInsights(findings))
+    .map((s) => ({ ...s, label: listenerPropertyLabel(s.label) }));
   const componentAssessments = structured?.componentAssessments ?? mapComponentAssessments(findings);
   const upgradePaths = structured?.upgradePaths ?? mapUpgradePaths(findings);
   const keepRecommendations = structured?.keepRecommendations ?? mapKeepRecommendations(findings);
@@ -771,7 +787,12 @@ export function renderDeterministicMemo(
     systemSynergy: deriveSystemSynergy(findings),
     listenerTasteProfile: deriveListenerTasteProfile(findings, findings.systemAxes),
     spiderChartData: deriveSpiderChartData(findings.systemAxes, findings.listenerPriorities),
-    sourceReferences: sourceReferences.length > 0 ? sourceReferences : undefined,
+    // F4 gate (private beta, 2026-05-18):
+    //   Reviewer-derived sourceReferences must not surface in memo
+    //   output under the F4 reviewer-data exclusion rule. The local
+    //   `sourceReferences` aggregation above is kept stable but its
+    //   value is intentionally discarded here.
+    sourceReferences: undefined,
     advisoryMode: 'system_review' as const,
     systemSignature: deriveSystemSignature(findings),
   };

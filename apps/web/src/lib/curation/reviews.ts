@@ -1,9 +1,8 @@
 /**
  * Curated review-entry wedge — phase 1.
  *
- * Scope: 7 products across tube amps and DACs (9 review entries —
- * Leben CS300 carries both a primary 6moons read and a secondary
- * Stereophile corroboration). Narrow by design.
+ * Scope: a narrow wedge of products across tube amps and DACs.
+ * Narrow by design.
  *
  * Selection rule: every product in this wedge both (a) appears in
  * benchmark routing prompts and (b) has a verifiable URL to a primary
@@ -21,26 +20,8 @@ export const REVIEW_ENTRIES: ReviewEntry[] = [
   // ── Tube amps ─────────────────────────────────────
 
   {
-    id: 'leben-cs300:srajan-ebaen',
-    productId: 'leben-cs300',
-    reviewerId: 'srajan-ebaen',
-    year: 2008,
-    url: 'https://6moons.com/audioreviews/leben/cs300x.html',
-    shortQuote: 'musically compelling EL84 voicing with tonal richness and ease',
-    sonicTags: ['tonal_saturated', 'flow_organic'],
-    synthesis:
-      'A small push-pull EL84 integrated whose appeal is tonal density '
-      + 'and unhurried musical flow rather than outright power or resolution. '
-      + 'Best matched to efficient, friendly speaker loads.',
-    pairingContext: 'Reviewed with efficient standmount speakers; not a '
-      + 'candidate for difficult loads or large rooms.',
-  },
-
-  {
-    // Secondary corroborating source for the Leben CS300. Stereophile is
-    // trusted (not golden) in the tube-amp domain and will sort below
-    // Srajan in the resolved order — but it adds measurement context and
-    // broadens provenance beyond a single reviewer.
+    // Stereophile is trusted in the tube-amp domain; it adds
+    // measurement context alongside the listening read.
     id: 'leben-cs300:stereophile-staff',
     productId: 'leben-cs300',
     reviewerId: 'stereophile-staff',
@@ -49,46 +30,9 @@ export const REVIEW_ENTRIES: ReviewEntry[] = [
     shortQuote: 'rhythmic engagement and tonal richness from a modest EL84 design',
     sonicTags: ['tonal_saturated', 'rhythmic_propulsive'],
     synthesis:
-      'Secondary source corroborating the CS300\u2019s reputation for '
+      'Source corroborating the CS300\u2019s reputation for '
       + 'rhythmic drive and midrange density. Useful when a listener '
-      + 'wants measurement-context reassurance alongside the primary '
-      + '6moons read.',
-  },
-
-  {
-    id: 'yamamoto-a-08s:srajan-ebaen',
-    productId: 'yamamoto-a-08s',
-    reviewerId: 'srajan-ebaen',
-    year: 2007,
-    url: 'https://6moons.com/audioreviews/yamamoto2/45.html',
-    shortQuote: 'single-ended 45 purity that few contemporary designs reach',
-    sonicTags: ['tonal_saturated', 'flow_organic', 'spatial_holographic'],
-    synthesis:
-      'A hand-built single-ended 45 triode integrated. Peak expression of '
-      + 'SET intimacy and tonal purity; requires high-sensitivity speakers '
-      + 'and disciplined system matching to deliver on its potential.',
-    pairingContext: 'Requires 95 dB+ speakers and a quiet listening room; '
-      + 'unsuitable for power-hungry loads.',
-  },
-
-  {
-    // Coverage fix: ensures the "tube amp under 2000" benchmark always
-    // surfaces at least one product with provenance. The Crack already
-    // routes for that query and 6moons is golden in tube-amp domain.
-    id: 'bottlehead-crack:srajan-ebaen',
-    productId: 'bottlehead-crack',
-    reviewerId: 'srajan-ebaen',
-    year: 2010,
-    url: 'https://6moons.com/audioreviews2/bottlehead/1.html',
-    shortQuote: 'OTL warmth and intimacy from a kit-built triode design',
-    sonicTags: ['tonal_saturated', 'flow_organic'],
-    synthesis:
-      'A DIY OTL tube headphone amplifier whose appeal is midrange '
-      + 'warmth and unhurried flow rather than bandwidth or grip. Best '
-      + 'matched with high-impedance dynamic headphones; not a candidate '
-      + 'for low-impedance planars.',
-    pairingContext: 'Designed around 300\u2013600\u03a9 dynamic headphones '
-      + '(Sennheiser HD6xx family is the canonical pairing).',
+      + 'wants measurement-context reassurance alongside the listening read.',
   },
 
   // ── DACs ──────────────────────────────────────────

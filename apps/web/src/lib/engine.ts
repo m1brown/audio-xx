@@ -2,7 +2,7 @@
  * Server-side evaluation pipeline.
  * Wires the signal processor and rule engine together.
  */
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 import { parse } from 'yaml';
 import type { ExtractedSignals, SignalDictionary, SignalDirection, SignalEntry } from './signal-types';
@@ -55,6 +55,34 @@ const CORRECTIONS: Record<string, string> = {
   'reavealing': 'revealing',
   'reveling': 'revealing',
 
+  // Comparative forms → base quality (Mission 4, 2026-08-10). Refinement
+  // turns use comparatives — "warmer sounding please", "smoother please" —
+  // and the signal dictionary carries only base forms, so these turns
+  // extracted ZERO desire signal: the ranking had no direction to move and
+  // a warmth request was answered with precision-focused picks. Explicit
+  // map, not stemming — "speaker" must never become "speak".
+  'warmer': 'warm',
+  'brighter': 'bright',
+  'smoother': 'smooth',
+  'darker': 'dark',
+  'richer': 'rich',
+  'cleaner': 'clean',
+  'faster': 'fast',
+  'softer': 'soft',
+  'harsher': 'harsh',
+  'leaner': 'lean',
+  'fuller': 'full',
+  'thinner': 'thin',
+  'sweeter': 'sweet',
+  'drier': 'dry',
+  'denser': 'dense',
+  'punchier': 'punchy',
+  'livelier': 'lively',
+  'airier': 'airy',
+  'thicker': 'thick',
+  'quicker': 'quick',
+  'tighter': 'tight',
+
   // Shorthand / product variants
   'ares 2': 'ares 15th',
   'ares2': 'ares 15th',
@@ -81,8 +109,27 @@ function normalizeText(lower: string): string {
 
 // ── Signal Processing ──────────────────────────────
 
-const SIGNALS_PATH = resolve(process.cwd(), '../../packages/signals/signals.yaml');
-const RULES_PATH = resolve(process.cwd(), '../../packages/rules/rules.yaml');
+// Resolve repo data files regardless of working directory: the Next
+// server runs with cwd=apps/web (../../ reaches the repo root), while
+// vitest runs from the repo root itself. Pick the first candidate that
+// exists; fall back to the historical path so runtime behavior is
+// unchanged when neither can be probed.
+function resolveRepoFile(rel: string): string {
+  const candidates = [
+    resolve(process.cwd(), '../../', rel),
+    resolve(process.cwd(), rel),
+  ];
+  for (const c of candidates) {
+    try {
+      if (existsSync(c)) return c;
+    } catch {
+      /* fall through */
+    }
+  }
+  return candidates[0];
+}
+const SIGNALS_PATH = resolveRepoFile('packages/signals/signals.yaml');
+const RULES_PATH = resolveRepoFile('packages/rules/rules.yaml');
 
 function loadSignalDictionary(): SignalDictionary {
   const raw = readFileSync(SIGNALS_PATH, 'utf-8');
@@ -193,6 +240,21 @@ function detectArchetypeConflict(archetypes: string[]): boolean {
   return archetypes.includes('engagement') && archetypes.includes('composure');
 }
 
+/**
+ * Symptoms that are markers of INTENT, not descriptions of what was heard.
+ *
+ * `improvement` is emitted by the "Improvement Markers" block in
+ * signals.yaml, whose phrases include the bare words "better" and "upgrade".
+ * It fires on "How do I make my system sound better?" — a request, containing
+ * no report of the listening experience at all. Counting it as impression
+ * evidence let `system-performing-well` tell a first-time visitor that their
+ * impressions showed no problems.
+ *
+ * Kept deliberately narrow: this is the only entry in signals.yaml filed
+ * under a "Markers" heading rather than a described condition.
+ */
+const NON_IMPRESSION_SYMPTOMS = new Set(['improvement']);
+
 function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
   const cond = rule.conditions;
 
@@ -218,6 +280,12 @@ function ruleMatches(rule: Rule, ctx: EvaluationContext): boolean {
   }
   if (cond.archetype_conflict !== undefined) {
     if (detectArchetypeConflict(ctx.archetypes) !== cond.archetype_conflict) return false;
+  }
+  // A rule that speaks about the listener's impressions may only fire when
+  // the listener actually described something they heard. See RuleConditions.
+  if (cond.min_symptom_signals !== undefined) {
+    const described = ctx.symptoms.filter((s) => !NON_IMPRESSION_SYMPTOMS.has(s));
+    if (described.length < cond.min_symptom_signals) return false;
   }
 
   return true;

@@ -36,10 +36,34 @@ interface AdvisoryLinksProps {
   links: AdvisoryLink[];
 }
 
+/**
+ * Will `AdvisoryLinks` actually render anything?
+ *
+ * Call sites gated the "Learn more" heading on `links.length > 0`, but the F4
+ * reviewer exclusion empties review-kind links INSIDE this component. Nathan's
+ * links are all reviews, so the content was correctly suppressed and the
+ * heading was left standing over nothing — a section label with no section.
+ *
+ * Exported so the heading and its content are decided by the SAME rule. F4 is
+ * not relaxed by a millimetre; what changes is that a suppressed section stops
+ * announcing itself.
+ */
+export function hasDisplayableLinks(links: AdvisoryLink[] | undefined): boolean {
+  if (!links || links.length === 0) return false;
+  return links.some((l) => !l.kind || l.kind === 'reference' || l.kind === 'dealer');
+}
+
 export default function AdvisoryLinks({ links }: AdvisoryLinksProps) {
   const refLinks = links.filter((l) => !l.kind || l.kind === 'reference');
   const dealerLinks = links.filter((l) => l.kind === 'dealer');
-  const reviewLinks = links.filter((l) => l.kind === 'review');
+  // F4 gate (private beta, 2026-05-18):
+  //   Review-kind links (`kind === 'review'`, previously rendered under
+  //   the "Reference:" label) must not surface to users under the F4
+  //   reviewer-data exclusion rule. The filter is kept for shape so
+  //   producers upstream don't need to change; the result is simply
+  //   never rendered.
+  const reviewLinks: AdvisoryLink[] = [];
+  void links.filter((l) => l.kind === 'review');
 
   return (
     <div style={{ fontSize: '0.88rem', color: '#666', lineHeight: 1.8 }}>

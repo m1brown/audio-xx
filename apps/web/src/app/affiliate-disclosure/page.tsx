@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Affiliate Disclosure — Audio XX',
+  title: 'Affiliate Disclosure',
   description: 'How Audio XX uses affiliate links.',
 };
 
@@ -11,15 +11,26 @@ export default function AffiliateDisclosurePage() {
       <h1>Affiliate Disclosure</h1>
 
       <p className="mb-1">
-        Audio&thinsp;XX may earn commissions from qualifying purchases as an
-        Amazon Associate. This does not affect our recommendations.
+        Audio&thinsp;XX currently earns <strong>no commission</strong> from any
+        link on this site. Every product, manufacturer, and used-market link is
+        provided purely as a convenience.
       </p>
 
-      <h2>How it works</h2>
+      <h2>How it works today</h2>
       <p className="mb-1">
-        Some product links on Audio&thinsp;XX direct you to Amazon.com. If you
-        click one of these links and make a purchase, we may earn a small
-        commission at no additional cost to you.
+        Product cards link to manufacturer pages and to used-market searches
+        (eBay, HiFi Shark, Audiogon). None of these links carry affiliate
+        tracking, and Audio&thinsp;XX receives nothing if you make a purchase.
+      </p>
+
+      <h2>If that changes</h2>
+      <p className="mb-1">
+        Audio&thinsp;XX may in future participate in affiliate programs (such
+        as Amazon Associates or the eBay Partner Network) to support the site.
+        If and when affiliate links become active, this page and the site
+        footer will say so plainly, and the principles below will continue to
+        apply unchanged: commercial participation does not affect our
+        recommendations — not today, and not then.
       </p>
 
       <h2>Independence</h2>
@@ -31,18 +42,30 @@ export default function AffiliateDisclosurePage() {
         recommended just as readily. Amazon links are provided as a convenience
         alongside manufacturer and dealer links.
       </p>
-
-      <h2>Why we use affiliate links</h2>
       <p className="mb-1">
-        Affiliate revenue helps support the development of Audio&thinsp;XX and
-        keeps the site accessible without charging users.
+        Audio&thinsp;XX does not make &ldquo;best deal&rdquo; or
+        &ldquo;recommended seller&rdquo; claims. Affiliate and outbound links
+        — Amazon, eBay, HiFi Shark, manufacturer, dealer — are availability and
+        convenience tools only. They are never used as evidence for a
+        recommendation, never weighted into product scoring, and never used to
+        decide which products are surfaced.
+      </p>
+
+      <h2>Pricing and availability</h2>
+      <p className="mb-1">
+        Prices and availability shown on product cards are catalog values,
+        refreshed manually. They are approximate and may not reflect current
+        market conditions. Audio&thinsp;XX does not synchronize live pricing
+        or inventory and does not make real-time stock claims. Check the
+        linked manufacturer, dealer, or used-market search for current
+        pricing and availability.
       </p>
 
       <h2>Other relationships</h2>
       <p className="mb-1">
-        Amazon Associates is currently the only affiliate program
-        Audio&thinsp;XX participates in. This page will be updated if that
-        changes.
+        Audio&thinsp;XX currently participates in no affiliate program and has
+        no commercial relationship with any manufacturer, dealer, or
+        marketplace. This page will be updated if that changes.
       </p>
 
       <div className="mt-2">

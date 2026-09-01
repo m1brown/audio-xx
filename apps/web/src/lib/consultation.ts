@@ -18,10 +18,17 @@
  * a diagnostic-style clarification question.
  */
 
+import {
+  alreadyNamedByMessage, messageSuppliesRole, samePhysicalComponent,
+} from './assessment/physical-identity';
+import { normalizeRole as normaliseComponentRole } from './assessment/authoritative';
+import { detectSystemDescription } from './system-extraction';
 import { DAC_PRODUCTS, type Product } from './products/dacs';
+import { parseLabelledComponents, labelContradictsCategory, preferUserSuppliedName, TURN_SEPARATOR, splitTurns } from './labelled-components';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { TURNTABLE_PRODUCTS } from './products/turntables';
+import { HEADPHONE_PRODUCTS } from './products/headphones';
 import { getUsableProvisionalProducts } from './provisional/store';
 import type { ProvisionalProduct } from './provisional/types';
 import { getProvenanceLabel } from './provisional/resolve';
@@ -62,6 +69,8 @@ import { getApprovedBrand } from './knowledge';
 import type { BrandKnowledge } from './knowledge/schema';
 import { getPilotCapsule, findProtectedMischaracterization } from './brand-philosophy-pilot';
 import { toDisplayName } from './canonical-names';
+import { prefixMatchIsSafe, suffixMatchIsSafe, remainderIsVariant } from './product-identity-match';
+import { BRAND_NAMES } from './intent';
 import { detectUsedFraming, buildUsedMarketNote } from './used-market';
 import type { ActiveSystemContext } from './system-types';
 import { classifySystemArchetype, consumerSystemIntro, buildConsumerWirelessResponse } from './system-class';
@@ -71,6 +80,7 @@ import {
   resolveProductAxes,
   detectCompounding,
   synthesiseSystemAxes,
+  synthesiseSystemAxisNumeric,
   AXIS_LABELS,
 } from './axis-types';
 import type {
@@ -103,7 +113,11 @@ import {
   philosophySentence,
 } from './listener-archetype';
 import { renderDeterministicMemo } from './memo-deterministic-renderer';
+import { listenerPropertyLabel } from './listener-labels';
 import { isWhitelistedSource } from './evidence/source-whitelist';
+import { physicalFactsFor } from './evidence/manufacturer-facts';
+import type { EvidenceItem } from './evidence/evidence-types';
+import type { PhysicalFactSource } from './memo-findings';
 // StructuredMemoInputs is transitional — the canonical rendering path is
 // renderDeterministicMemo(findings, prose) without the third argument.
 // See memo-deterministic-renderer.ts header for the removal plan.
@@ -111,19 +125,29 @@ import type { LegacyProseInputs, StructuredMemoInputs } from './memo-determinist
 import { computeSystemConfidence } from './llm-system-inference';
 import { runInference } from './inference-layer';
 import { assessTradeoffs } from './tradeoff-assessment';
-import { assessPreferenceProtection, classifyPriorities } from './preference-protection';
+import { assessPreferenceProtection, classifyPriorities, deriveIntentStance } from './preference-protection';
+import type { IntentStance } from './preference-protection';
 import { assessCounterfactual } from './counterfactual-assessment';
 import { frameStrategy, deduplicateStrategies } from './strategy-framing';
 import { topReviewsForCard, type ReviewerDomain } from './curation';
 import { getLegacyMapping } from './products/legacy-models';
 import { getProductImage, resolveProductImage, resolveProductImageStrict } from './product-images';
+import { shouldShowAmazonLink, getAmazonSearchUrl } from './amazon-links';
+import { getEbaySearchUrl } from './ebay-links';
 import { findCatalogProduct } from './listener-profile';
+import {
+  buildListenerFraming,
+  type ListenerProfile as ListenerPreferenceProfile,
+} from './listener-preferences';
 import { toSlug as routeToSlug } from './route-slug';
 
 // ── Types ───────────────────────────────────────────
 
 /** Where the response data originated — used for provenance labeling in the UI. */
 export type ConsultationSource = 'catalog' | 'brand_profile' | 'llm_inferred' | 'provisional_system';
+
+/** Per-component evidence tier, computed by Audio XX — never claimed by a model. */
+export interface ComponentProvenanceEntry { name: string; basis: 'catalog' | 'brand' | 'model' | 'user' }
 
 export interface ConsultationResponse {
   /** Display title for the assessment (e.g. "Living Room System"). */
@@ -136,6 +160,16 @@ export interface ConsultationResponse {
   source?: ConsultationSource;
   /** System signature — one-sentence sonic identity characterization. */
   systemSignature?: string;
+  /**
+   * A material limitation on the principal finding.
+   *
+   * General, not drive-specific: any derived conclusion may establish
+   * something and bound it in the same breath. Kept separate so presentation
+   * can subordinate it without splitting prose heuristically.
+   */
+  qualification?: string;
+  /** Component-scoped product knowledge; see AdvisoryResponse.componentDossiers. */
+  componentDossiers?: import('./evidence/dossier-presentation').DossierView[];
   /**
    * Comparison summary — renders first for comparison responses.
    * A concise contrast of the two subjects, answering the question
@@ -216,11 +250,96 @@ export interface ConsultationResponse {
   spiderChartData?: Array<{ trait: string; value: number; fullMark: number }>;
   /** Source references from catalogued components. */
   sourceReferences?: import('./advisory-response').SourceReference[];
+
+  // ── Brand Authority Preview (Pass 18 — dark behind feature flag) ──
+  /**
+   * Compact authority tile populated for bare-brand consultations only.
+   *
+   * Surfaces a same-brand local hero image + quick identity lines + a
+   * CTA link to `/brand/[slug]`. Read-only projection of fields that
+   * already appear on the brand authority page — no new claims, no
+   * F4-gated content, no external imagery.
+   *
+   * Populated by `buildBrandConsultation` and `buildKnowledgeBrandConsultation`
+   * when `eligibleForBrandAuthorityPreview` passes. Consumed in the
+   * renderer behind `NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW` (default off).
+   */
+  brandAuthorityPreview?: BrandAuthorityPreview;
+  /** Which action the assessment reached — fixes the permitted question kind. */
+  actionVerdict?: 'no_change' | 'constraint' | 'indeterminate';
+  /** Relations that survived D-12 validation, each at its licensed tier. */
+  systemRelations?: Array<{
+    components: [string, string];
+    axis: string;
+    kind: 'reinforcement' | 'counterweight' | 'constraint';
+    // Widened 2026-08-18 with the manufacturer evidence class. `basis` on the
+    // provenance entry is deliberately NOT widened: that is the component's
+    // evidence basis, and a manufacturer fact does not change what a component
+    // IS — it adds a licensed premise about it.
+    tier: 'catalog' | 'brand' | 'manufacturer' | 'independent_review' | 'model' | 'user';
+  }>;
+  /** Per-component evidence tier (provisional/expanded paths). */
+  componentProvenance?: ComponentProvenanceEntry[];
+  /** Component names the model reported it could actually speak to. */
+  characterized?: string[];
+  /** Per-component declaration of product-specific (not category) knowledge. */
+  componentKnowledge?: Array<{ name: string; specific?: boolean }>;
+}
+
+/**
+ * Compact data shape for the Brand Authority Preview tile.
+ *
+ * All fields are projections of BrandProfile fields already rendered
+ * on `/brand/[slug]`. The shape is exported so the renderer + tests
+ * can consume it directly.
+ */
+export interface BrandAuthorityPreview {
+  /** Display name (BrandProfile.names[0]). */
+  brandName: string;
+  /** Route slug for `/brand/${slug}` CTA. */
+  brandSlug: string;
+  /** Optional ≤12-word tagline. */
+  tagline?: string;
+  /** Engineering intent / what the brand designs FOR. */
+  designPhilosophy?: string;
+  /** Consistent sonic / behavioural signature. */
+  sonicTendency?: string;
+  /** Typical trade-off accepted. */
+  typicalTradeoff?: string;
+  /**
+   * Local hero image URL (must begin with `/brand-heroes/`).
+   * External hotlinks are rejected at population time — when no
+   * verified local asset exists the tile renders without an image.
+   */
+  localHeroImageUrl?: string;
 }
 
 // ── All products ────────────────────────────────────
 
-const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS];
+/**
+ * Internal data, surfaced for the Catalog layer.
+ *
+ * `ALL_PRODUCTS` and `BRAND_PROFILES` are intentionally module-local in
+ * intent, but are exported so the new `catalog/lookups.ts` module (the
+ * first Catalog-layer extraction) can read them at call time without a
+ * data duplication. They are NOT part of the consultation public API —
+ * downstream callers should resolve catalog data through `catalog/lookups.ts`,
+ * not by importing these arrays directly. The exports here exist solely
+ * to support the in-process refactor; a later commit will relocate the
+ * data into `catalog/` so this re-export becomes unnecessary.
+ */
+// HEADPHONE_PRODUCTS joined this pool on 2026-08-13. Their absence caused two
+// production defects from one cause: headphone recommendations rendered with no
+// purchase links (findProductByComponentName could not resolve them), and brand
+// queries for a catalogued maker — "moondrop?" — reported the brand as being
+// "outside the current curated catalog" and answered with generative prose,
+// while four Moondrop products sat in the catalogue. Patching the first
+// symptom narrowly (product-resources.ts) was the right altitude for one
+// defect; two from the same gap is the causing class, so the pool is corrected.
+// The cross-brand leakage invariant is the risk this touches: it is enforced by
+// subject-context-resolver.test.ts (8 cases) and the 11-brand live harness,
+// both of which gate every commit to this file.
+export const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS, ...TURNTABLE_PRODUCTS, ...HEADPHONE_PRODUCTS];
 
 // ── Brand knowledge ─────────────────────────────────
 //
@@ -228,7 +347,7 @@ const ALL_PRODUCTS: Product[] = [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIF
 // orientation. These are brief, tendency-based, not encyclopedic.
 
 /** A neutral reference link associated with a brand. */
-interface BrandLink {
+export interface BrandLink {
   /** What the link points to (e.g. "Official website", "US importer"). */
   label: string;
   url: string;
@@ -255,6 +374,16 @@ interface DesignFamily {
 
 export interface BrandProfile {
   names: string[];
+  /**
+   * Optional explicit display form (Pass 19 — 2026-06-08). Use ONLY when
+   * the brand's canonical written form is not recoverable from the slug
+   * by simple title-casing — i.e. acronyms (EMT, SPEC, KEF) and mixed-
+   * case brands (DeVore, McIntosh) that have no catalog products to
+   * fall back on. When set, the brand page renderer prefers this value
+   * over `products[0]?.brand` and `humanizeFromSlug(slug)`. Should match
+   * the brand's own written form exactly.
+   */
+  displayName?: string;
   /** Founder or lead designer, if notable. */
   founder?: string;
   /** Country of origin or primary manufacturing. */
@@ -373,11 +502,26 @@ export interface BrandProfile {
       summary?: string;
     }>;
   };
+
+  // ── Technology Page backlinks (Workstream #5A — Objective 3) ──
+  // Slugs into TECHNOLOGY_PROFILES (the /tech/[slug] editorial corpus).
+  // Lets a brand page link forward into the Technology Pages that
+  // explain the engineering ideas the brand argues for — closing the
+  // one-directional gap where Technology Pages linked to brands but
+  // brands were leaf nodes. Additive and optional; the brand-page
+  // renderer resolves each slug via findTechnologyProfileBySlug and
+  // silently drops any that do not resolve, so an out-of-date slug
+  // can never render a dead card. Keep the list short and
+  // high-confidence (the technologies the brand genuinely expresses),
+  // not an exhaustive tag cloud.
+  relatedTechnologySlugs?: string[];
 }
 
-const BRAND_PROFILES: BrandProfile[] = [
+/** See ALL_PRODUCTS above for the rationale behind exporting this. */
+export const BRAND_PROFILES: BrandProfile[] = [
   {
     names: ['devore', 'devore fidelity'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set', 'class-a-amplification'],
     founder: 'John DeVore',
     country: 'USA (Brooklyn, New York)',
     brandScale: 'boutique',
@@ -386,15 +530,14 @@ const BRAND_PROFILES: BrandProfile[] = [
     tagline: 'Speakers voiced by ear for musical engagement.',
     philosophy: 'DeVore Fidelity designs speakers around musical engagement and natural tonal character. The philosophy prioritises ease and flow over analytical precision. Speakers are voiced by ear rather than measurement target.',
     philosophyExtended: 'John DeVore builds speakers in Brooklyn, testing them with real music in real rooms rather than optimizing for anechoic measurement. The result is a speaker that sounds alive and rhythmically engaging, even at low volumes. This is a deliberate trade — tonal honesty over flat response.',
-    tendencies: 'Listeners describe DeVore speakers as warm, rhythmically alive, and harmonically rich. They tend to emphasise tonal body and midrange presence at the cost of some measured linearity.',
-    systemContext: 'DeVore speakers span a range of sensitivities and amplifier requirements. The brand-level tendency is warmth and engagement, but the specific design family matters for amplifier pairing.',
+    tendencies: 'DeVore speakers are warm, rhythmically alive, and harmonically rich. They emphasise tonal body, dynamic presence, and room-filling scale at the cost of measured linearity and the pinpoint imaging of narrow-baffle monitors.',
+    systemContext: 'Trade-off framing: vs compact coaxial or narrow-baffle point-source monitors, DeVore O-series adds scale, ease, tonal density, and dynamic presence — but gives up the disappearing-act imaging and small-cabinet immediacy those designs are known for. Driven by fast, transparent solid-state front-ends, DeVore balances the chain\'s clarity with weight and flow — but tonal balance must be watched in already-warm rooms or with already-rich sources. A sensible next step before committing: audition the specific O-series model against the current speakers in your own room, with your own amp.',
     designPhilosophy: 'Voiced by ear for ease and flow, not to a measurement target.',
-    sonicTendency: 'Warm, harmonically dense, rhythmically alive.',
-    typicalTradeoff: 'Tonal body over measured linearity and surgical detail.',
+    sonicTendency: 'Warm, harmonically dense, dynamically alive, scaled for the room.',
+    typicalTradeoff: 'Tonal body, scale, and dynamic ease over measured linearity, surgical detail, and pinpoint imaging.',
     leadershipOrigin: 'John DeVore founded DeVore Fidelity in 2000 in Brooklyn, New York. Before starting the company, he worked in professional audio and developed his ear through years of live music listening. The brand remains a one-person design operation with small-batch manufacturing.',
     reviewerQuotes: [
       { quote: 'The O/96 may be the most musically engaging speaker I have heard at any price.', source: 'Art Dudley (Stereophile)' },
-      { quote: 'DeVore speakers make you forget about equipment and listen to music.', source: 'Srajan Ebaen (6moons)' },
     ],
     strengths: [
       'Exceptional rhythmic engagement and musical flow',
@@ -407,9 +550,9 @@ const BRAND_PROFILES: BrandProfile[] = [
       'Premium pricing for boutique, small-batch manufacturing',
       'Limited model range — fewer options across price points',
     ],
-    pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state.',
+    pairingNotes: 'The Orangutan series is widely paired with single-ended triode amplifiers (Shindo, Line Magnetic, Audion). The Gibbon series works with a broader range of amplifiers including solid-state. DeVore Fidelity is the canonical modern high-efficiency loudspeaker brand of the Musical Communication School — the DeVore Orangutan + SET / Class A + analog-front-end chain is the most-cited flagship expression of the school in contemporary listening rooms.',
     links: [
-      { label: 'Official website', url: 'https://www.dfridelity.com/', region: 'global' },
+      { label: 'Official website', url: 'https://devorefidelity.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
@@ -427,17 +570,30 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       images: [
         {
+          // Local hero — replaces externally-hotlinked devore-fidelity-home
+          // as the primary hero. Sourced from devorefidelity.com official
+          // press, optimised to 766×1024 / ~146 KB / JPEG (portrait — the
+          // brand's signature warm-wood cabinet read).
+          url: '/brand-heroes/devore-o96.jpg',
+          caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
+          credit: 'DeVore Fidelity',
+          sourceUrl: 'https://devorefidelity.com/devore-fidelity-speakers/orangutan-series/devore-fidelity-o-96-speakers/',
+        },
+        {
           url: 'https://devorefidelity.com/wp-content/uploads/2021/11/devore-fidelity-home.jpg',
           caption: 'DeVore Fidelity — handcrafted speakers from Brooklyn, New York.',
           credit: 'DeVore Fidelity',
           sourceUrl: 'https://devorefidelity.com/',
         },
-        {
-          url: 'https://devorefidelity.com/wp-content/uploads/2021/05/O96-new-crop-766x1024.jpg',
-          caption: 'DeVore O/96 — the flagship Orangutan, voiced for low-power tubes.',
-          credit: 'DeVore Fidelity',
-          sourceUrl: 'https://devorefidelity.com/',
-        },
+        // Note (2026-06-05 polish): a third image previously sat here —
+        // an external O96-new-crop hotlink whose caption was byte-identical
+        // to the local /brand-heroes/devore-o96.jpg hero above. The brand
+        // page renderer placed it as the post-philosophy image, producing
+        // a visible duplicate (same product, same caption) on a single
+        // page. Removed; no safe distinct local DeVore asset existed to
+        // replace it. The remaining hero pair (local O/96 + Brooklyn-home
+        // secondary) renders side-by-side and there is no post-philosophy
+        // image — both are intentional after this polish.
       ],
       videos: [
         {
@@ -475,8 +631,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     typicalTradeoff: 'Dynamic scale and bass weight traded for spatial truth and refinement.',
     leadershipOrigin: 'Sven Boenicke founded Boenicke Audio in 1998 in Basel, Switzerland. Before loudspeakers, he spent years recording live concerts — an experience that shaped his reference for natural timbre and spatial accuracy. He designs, voices, and signs off on every unit personally. All final assembly, quality control, and tuning happen in Basel.',
     reviewerQuotes: [
-      { quote: 'The W8 supplied the most precise yet expansive imaging and soundstage I have yet to experience in my listening room.', source: 'Srajan Ebaen (6moons)' },
-      { quote: 'They performed that magic trick few speakers can pull off: they disappeared.', source: '6moons (W8 review)' },
     ],
     strengths: [
       'Exceptional spatial precision — holographic imaging far beyond cabinet size',
@@ -494,7 +648,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     pairingNotes: 'Best with clean, well-controlled amplification — solid-state integrateds (Hegel, Ayre) or refined tube amps with adequate power (50W+ for W5, 50–100W for W8). Source quality is directly audible. Room gain or a subwoofer helps in larger spaces.',
     links: [
       { label: 'Official website', url: 'https://www.boenicke-audio.ch/', region: 'global' },
-      { label: 'Minnesota Audio (US dealer)', url: 'https://minnesota.audio/collections/boenicke-audio-artisanal-speakers-for-the-discerning-audiophile', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
       {
@@ -516,6 +669,15 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       images: [
         {
+          // Local hero — replaces externally-hotlinked W5_raum as the
+          // primary hero. Sourced from boenicke-audio.ch official press,
+          // optimised to 1200×680 / ~38 KB / JPEG.
+          url: '/brand-heroes/boenicke-w11.jpg',
+          caption: 'Boenicke W11 — solid-wood floorstander voiced by ear.',
+          credit: 'Boenicke Audio',
+          sourceUrl: 'https://boenicke-audio.ch/products/loudspeakers/w11/',
+        },
+        {
           url: 'https://boenicke-audio.ch/wp-content/uploads/2017/08/W5_raum.jpg',
           caption: 'Boenicke W5 in a listening room — disappearing act in miniature.',
           credit: 'Boenicke Audio',
@@ -528,7 +690,7 @@ const BRAND_PROFILES: BrandProfile[] = [
           sourceUrl: 'https://boenicke-audio.ch/',
         },
         {
-          url: 'https://boenicke-audio.ch/wp-content/uploads/2019/05/sven-1.jpg',
+          url: 'https://boenicke-audio.ch/wp-content/uploads/2019/05/sven.jpg',
           caption: 'Sven Boenicke in his Basel workshop.',
           credit: 'Boenicke Audio',
           sourceUrl: 'https://boenicke-audio.ch/',
@@ -553,73 +715,98 @@ const BRAND_PROFILES: BrandProfile[] = [
     },
   },
   // ── Shindo Laboratory ──────────────────────────────────
+  // schools: musical-communication, japanese-artisan;
+  // horn-efficiency-affinity via canonical high-sensitivity speaker
+  // pairings (DeVore Orangutan, Altec, Living Voice, Klipsch Heritage).
+  // The Shindo argument: emotional communication matters more than
+  // technical perfection. Each circuit is designed individually around
+  // its chosen NOS tubes — the design serves the parts, not the other
+  // way around. The Western-Electric circuit-individuality tradition
+  // carried forward as new equipment rather than curated as memorabilia.
   {
     names: ['shindo', 'shindo laboratory'],
+    relatedTechnologySlugs: ['set', 'class-a-amplification', 'suts', 'high-efficiency-loudspeakers'],
     founder: 'Ken Shindo',
     country: 'Japan (Tokyo)',
     brandScale: 'boutique',
     region: 'japan',
     categories: ['amplifier'],
     tagline: 'Hand-built tube amplifiers voiced for musical truth.',
-    philosophy: 'Shindo Laboratory designs tube amplifiers around musical naturalness rather than measured specification. Each circuit is designed individually to exploit the sonic character of its chosen tubes — the design serves the parts, not the other way around.',
-    philosophyExtended: 'Ken Shindo started his career as an electrical engineer at Matsushita before founding Shindo Laboratory in Tokyo in 1977. He was a noted collector of new-old-stock vacuum tubes and vintage components, and designed each amplifier as a unique circuit suited to a specific set of parts, a specific kind of system, and a specific musical mood. There are no stock circuits in any Shindo product. The goal was never to build a technically optimal machine — it was to let reproduced music sing with the organic quality of a live performance.',
-    tendencies: 'Listeners consistently describe Shindo amplifiers as dense, flowing, and harmonically alive. They emphasise tonal weight, midrange texture, and a sense of physical musical presence at the cost of some transient precision and measured neutrality.',
-    systemContext: 'Shindo amplifiers are designed for high-efficiency speakers that can work with lower power output. The combination of Shindo electronics with high-sensitivity speakers is one of the most celebrated pairings in the tube audio community.',
-    designPhilosophy: 'Each circuit designed around its chosen tubes — the design serves the parts.',
+    philosophy: 'Shindo Laboratory designs tube amplifiers around musical naturalness rather than measured specification. Each circuit is designed individually to exploit the sonic character of its chosen NOS tubes — the design serves the parts, not the other way around. The Western-Electric tradition of circuit individuality carried forward as new equipment rather than curated as memorabilia.',
+    philosophyExtended: 'Ken Shindo started his career as an electrical engineer at Matsushita before founding Shindo Laboratory in Tokyo in 1977. He was a noted collector of new-old-stock vacuum tubes and vintage components, and designed each amplifier as a unique circuit suited to a specific set of parts, a specific kind of system, and a specific musical mood. There are no stock circuits in any Shindo product. The goal was never to build a technically optimal machine — it was to let reproduced music sing with the organic quality of a live performance, with the chosen tube and the chosen circuit acting as an inseparable pair rather than as interchangeable parts.',
+    tendencies: 'Listeners consistently describe Shindo amplifiers as dense, flowing, and harmonically alive — physical instrumental presence and harmonic realism rather than spec-sheet neutrality. The brand is closely associated with vintage-horn, single-driver, and high-efficiency speaker culture, and with the analogue (LP / tape) front end as the natural source.',
+    systemContext: 'Shindo amplifiers are designed for high-efficiency speakers that work with lower power output. The combination of Shindo electronics with high-sensitivity speakers is one of the most celebrated systemic pairings in modern audio — deeply identified with vintage horn, single-driver, and Musical-Communication-school enthusiasts.',
+    designPhilosophy: 'Each circuit designed around its chosen NOS tubes — the design serves the parts, not the other way around.',
     sonicTendency: 'Dense, harmonically alive, flowing — music sounds physically present.',
     typicalTradeoff: 'Tonal saturation and musical naturalness over transient precision and measured linearity.',
-    leadershipOrigin: 'Ken Shindo (1939–2014) founded Shindo Laboratory in Tokyo in 1977 after working as an electrical engineer at Matsushita. He built every amplifier by hand using point-to-point wiring, hand-wound transformers, and carefully selected vintage and NOS components. Production was deliberately limited — roughly 50 units per year globally. After his passing in 2014, production continues under the guidance of his trained associates, maintaining his methods and sonic philosophy.',
+    leadershipOrigin: 'Ken Shindo (1939–2014) founded Shindo Laboratory in Tokyo in 1977 after working as an electrical engineer at Matsushita — at a moment when the Japanese hi-fi industry was standardising around solid-state product and treating the post-Western-Electric tube tradition as territory for vintage gear or expensive imports. Shindo\'s argument was that the WE tradition of circuit individuality — each amplifier designed around a specific set of NOS components, hand-wound transformers, and a specific musical mood — could be carried forward as new equipment, not curated as memorabilia. He built every amplifier by hand using point-to-point wiring; production was deliberately limited to roughly 50 units per year globally. After his passing in 2014, production continues under his trained associates, maintaining his methods and sonic philosophy.',
     reviewerQuotes: [
       { quote: 'The Cortese did precisely what I expect a good single-ended amplifier to do: it put recorded instruments and voices in front of me with a near-psychedelic level of presence.', source: 'Art Dudley (Stereophile)' },
       { quote: 'Shindo has a certain quality that allows you to forget about the system — music sounds more like a live acoustic event.', source: 'Pitch Perfect Audio' },
     ],
     strengths: [
-      'Legendary harmonic richness and tonal density — the reference for tube musicality',
-      'Each circuit individually designed — no stock topologies',
-      'Hand-wound transformers and point-to-point wiring throughout',
-      'Exceptional midrange presence and vocal naturalness',
-      'Deep synergy with high-efficiency speakers — a defining pairing in the community',
+      'The Western-Electric circuit-individuality tradition carried forward as new equipment — each amplifier designed around a specific set of NOS components, hand-wound transformers, and a specific musical mood rather than around a stock topology',
+      'Harmonic richness and tonal density treated as the foundation of the voicing, not as additive flavour — the resulting sound has been the reference point for the broader tube-musicality school for two decades',
+      'Hand-built craft expressed at the brand scale: ~50 units per year globally, every amplifier by hand under continuous design-school stewardship since 1977',
+      'Midrange presence and vocal naturalness so distinctive that "the Shindo sound" has become editorial shorthand — the voicing is recognisable across the line, not just within individual models',
+      'Deep synergy with high-efficiency speakers (DeVore Orangutan, Altec horns, Klipsch Heritage) and analogue front ends — Shindo + high-sensitivity speakers is one of the most-celebrated systemic pairings in modern audio',
     ],
     tradeoffs: [
-      'Very limited production and high pricing — long wait times typical',
-      'Low power output requires high-sensitivity speakers (90 dB+)',
-      'Limited bass authority and dynamic headroom compared to high-power designs',
-      'Vintage NOS tube dependency — replacement tubes can be scarce and expensive',
+      'Production deliberately limited to ~50 units per year globally — the idea does not scale to broad availability; ownership requires patience, and pricing reflects the constraint',
+      'Low output power requires high-sensitivity speakers (90 dB+) — the idea forecloses pairing with the standard mid-power solid-state loudspeaker market',
+      'Bass authority and dynamic headroom are deprioritised relative to high-power solid-state — Shindo gives up slam for tonal density and harmonic presence',
+      'Vintage NOS tube and component dependency is part of the design philosophy but also a real ownership cost — supply matters over the lifecycle of the equipment',
     ],
-    pairingNotes: 'A natural match with DeVore Orangutan, Altec-based horns, and other high-efficiency speakers (90 dB+). The Shindo + DeVore combination is one of the most discussed pairings in high-efficiency audio. Source components matter — Shindo preamps are designed as system anchors and pair best with their own amplifiers.',
+    pairingNotes: 'Shindo pairs naturally with brands and components whose ideas align: musical communication over measured neutrality, circuit individuality over standardised topology, the analogue front end over the digital as the primary source, high-sensitivity speakers over the mid-power solid-state mainstream. The canonical Shindo system is the most-celebrated systemic pairing in modern high-efficiency audio: Shindo electronics into DeVore Orangutan, Altec-based horns, Living Voice, or Klipsch Heritage speakers, with an analogue source (LP via low-output MC cartridge → SUT → Shindo phono stage) feeding the chain. Other natural partners share the orientation: Auditorium 23 cables and SUTs (analog-interface coherence), Leben CS600X (Japanese-artisan tube voicing at lower cost), Aurorasound phono stages (low-noise transparency that does not edit the tonal palette), TotalDAC for the rare cases where a digital source enters the chain. The Shindo preamp — Aurièges, Monbrison, or Masseto — is the system anchor: the preamp typically defines the Shindo system sound more than the power amplifier, which makes preamp selection the most consequential decision in building a Shindo chain. Anti-pairings reveal the trade-off: high-feedback solid state, low-sensitivity speakers (below 88 dB), measurement-led front ends, and FPGA DACs that prioritise transient surgery over tonal weight will fight rather than partner the Shindo voicing.',
     links: [
       { label: 'Official website', url: 'https://www.shindo-laboratory.co.jp/', region: 'global' },
       { label: 'Tone Imports (US importer)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
     designFamilies: [
       {
-        name: 'Cortese',
-        character: 'Single-ended F2a stereo amplifier (~10W). Entry point to the Shindo line. Psychedelic presence and scale.',
-        ampPairing: 'Requires 90 dB+ speakers. Ideal with DeVore O/96, Altec horns.',
+        name: 'Cortese (single-ended power amplifiers)',
+        character: 'Single-ended stereo power amplifier series, voiced for low-power directness and harmonic presence. The Cortese F2a (~10W) re-purposes a Telefunken pentode for single-ended audio amplification; the Cortese 300B uses the canonical single-ended triode tube. Both are the most-cited expressions of the Shindo psychedelic-presence voicing and the entry point to the line.',
+        ampPairing: 'Requires 90 dB+ speakers. Canonical with DeVore O/96, Altec horns, Living Voice. Insufficient power for typical 86–88 dB stand-mount monitors.',
       },
       {
-        name: 'Haut-Brion / Montille',
-        character: 'Push-pull designs with more power (15–25W). Richer tonal palette with greater dynamic headroom.',
-        ampPairing: 'Works with 88 dB+ speakers. Broader pairing flexibility than single-ended models.',
+        name: 'Haut-Brion / Montille (push-pull power amplifiers)',
+        character: 'Push-pull designs with more power (15–25W) and a richer tonal palette than the single-ended Cortese. Greater dynamic headroom and broader speaker-pairing latitude while preserving the Shindo voicing. The model names follow Shindo\'s wine-naming tradition.',
+        ampPairing: 'Works with 88 dB+ speakers. Pairs with high-efficiency speakers that benefit from more grip than single-ended designs deliver, and with vintage horns that want slightly more bass authority than the Cortese provides.',
       },
       {
         name: 'Preamps (Aurièges, Monbrison, Masseto)',
-        character: 'System anchors — each voiced with a distinct character. The preamp often defines the Shindo system sound more than the power amp.',
+        character: 'System anchors — each voiced with a distinct character within the Shindo voicing tradition. The preamp typically defines the Shindo system sound more than the power amplifier, which makes preamp selection the most consequential decision in building a Shindo chain.',
+        ampPairing: 'Aurièges as the entry point; Monbrison in the middle tier; Masseto at the reference. Each pairs naturally with Shindo power amplifiers; mixing Shindo preamps with non-Shindo power amps is possible but typically compromises the chain coherence the brand is designed around.',
       },
     ],
     media: {
+      // F4 history (2026-05-18):
+      //   Earlier Shindo entries hotlinked from 6moons.com with
+      //   review-publication credit, which the F4 reviewer-data gate
+      //   correctly removed. The 2026-05-28 prestige-brand pass
+      //   identified a same-brand source on the manufacturer's English
+      //   page (shindo-laboratory.co.jp/English/C_300B_21.jpg); the
+      //   image is downloaded locally to apps/web/public/brand-heroes/
+      //   and served without any runtime hotlink dependency. F4 is
+      //   satisfied: the image is manufacturer-sourced, not
+      //   reviewer-derived.
+      //
+      // 2026-06-08 doctrine alignment: caption rewritten from inventory
+      // to characterisation; credit cleaned from the wordy "(curated
+      // under fair-use product reference)" disclaimer pattern (anti-
+      // pattern per the Editorial North Star) to the clean manufacturer-
+      // name credit precedent used by DeVore / Audio Note / Naim. A
+      // larger secondary image (workshop interior / Masseto preamp /
+      // Aurièges preamp) would lift the page to Level-4 visual standard
+      // once a safe manufacturer-sourced asset is available — Shindo's
+      // English directory is access-restricted and only the Cortese 300B
+      // file is currently reachable via direct probe (2026-06-08).
       images: [
         {
-          url: 'https://6moons.com/audioreviews/shindo3/hero_cortese.jpg',
-          caption: 'Shindo Cortese — single-ended stereo amplifier, point-to-point wired.',
-          credit: 'Shindo Laboratory / 6moons',
-          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
-        },
-        {
-          url: 'https://6moons.com/audioreviews/shindo3/hero_monbrison_front.jpg',
-          caption: 'Shindo Monbrison preamplifier — the system anchor.',
-          credit: 'Shindo Laboratory / 6moons',
-          sourceUrl: 'https://6moons.com/audioreviews/shindo3/shindo.html',
+          url: '/brand-heroes/shindo-cortese-300b.jpg',
+          caption: 'Shindo Laboratory Cortese 300B — single-ended power amplifier in the line\'s most-cited voicing.',
+          credit: 'Shindo Laboratory',
+          sourceUrl: 'http://www.shindo-laboratory.co.jp/English/C_300B_21.jpg',
         },
       ],
       videos: [
@@ -633,8 +820,212 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── Auditorium 23 ──────────────────────────────────────
+  // schools: musical-communication, horn-efficiency,
+  // analog-interface-coherence.
+  // The Auditorium 23 argument: system coherence is often decided at
+  // the analog interface — cartridge, step-up transformer, cable,
+  // loudspeaker, and amplifier voiced as a connected musical system
+  // rather than optimised as isolated components. The "invisible parts"
+  // of the chain — cables, transformers, the magnetic load between
+  // cartridge and phono stage — are made audible as part of the
+  // musical chain. The Hommage line is an explicit tribute (hommage)
+  // to Western Electric: the high-efficiency horn-loaded tradition
+  // carried forward as new equipment rather than curated as vintage
+  // memorabilia.
+  {
+    names: ['auditorium 23', 'auditorium-23', 'a23'],
+    relatedTechnologySlugs: ['suts', 'high-efficiency-loudspeakers', 'set'],
+    founder: 'Keith Aschenbrenner',
+    country: 'Germany (Frankfurt)',
+    brandScale: 'boutique',
+    region: 'europe',
+    categories: ['cable', 'speaker', 'phono'],
+    tagline: 'System coherence at the analog interface — cables, transformers, horn loudspeakers.',
+    philosophy: 'Auditorium 23 is the argument that system coherence is often decided at the analog interface — cables, step-up transformers, the magnetic load between cartridge and phono stage, and the loudspeaker as the terminating expression of the chain. Keith Aschenbrenner has built the brand around the position that these "invisible parts" are not commodities and not optional choices but voiced components in the musical chain. The brand is simultaneously a manufacturer (cables, transformers, the Hommage and Provence/Appassionata loudspeaker lines) and a distributor (J.C. Verdier turntables, Line Magnetic Audio, Euphya, and Shindo Laboratory accessory partner in the German market) — and the manufacturing and distribution choices serve the same editorial position.',
+    philosophyExtended: 'The Hommage line is a tribute (hommage) to Western Electric. The Hommage 22A, Hommage 755, and Hommage Cinema speakers reference WE-era horn-loaded designs reconstructed for contemporary use with sensitive single-ended and small push-pull tube amplifiers, and the driver complement is built around PHY-HP wideband units and Western-Electric-style compression drivers. The Hommage T1 step-up transformer is voiced specifically for low-output moving-coil cartridges and has become the canonical SUT in the Musical Communication School chain — voiced against Shindo electronics, EMT and SPU cartridges, and J.C. Verdier turntables rather than as a measurement-target generic component. The cables are voiced against the system context (low-feedback tube amplifiers driving high-efficiency speakers) rather than against an isolated-component measurement target. Aschenbrenner\'s argument carries through the distribution choices as well — A23 imports the brands whose ideas align (Verdier for turntables, Line Magnetic for tube amplification, Shindo accessories in the German market) and does not carry the brands whose ideas conflict.',
+    tendencies: 'Listeners describe A23 cables and transformers as serving system coherence rather than imposing a tonal signature — the changes are heard as the system "pulling together" or "sounding more connected" rather than as a specific tilt. The Hommage loudspeakers are described as tonally dense, harmonically present, and rhythmically alive in the WE / high-efficiency tradition: dynamic ease at moderate volume, presence-region forwardness, and a soundstage that prioritises image solidity over hyper-resolution. The brand\'s voicing across cables, transformers, and speakers is internally consistent — an A23 chain paired with A23 components produces a recognisably A23 character.',
+    systemContext: 'A23 is designed for systems already committed to the analog front-end + low-power tube + high-efficiency speaker tradition. The Hommage T1 SUT presupposes a low-output moving-coil cartridge and a phono stage voiced for MM input via the SUT (canonically Shindo). The cables presuppose tube amplification rather than high-feedback solid state. The Hommage speakers presuppose 8–15W of well-voiced tube power. Outside that tradition the products will function but the editorial intent is muted.',
+    designPhilosophy: 'System coherence at the analog interface — cables, transformers, and speakers voiced against the system context rather than as isolated commodities.',
+    sonicTendency: 'Serves system coherence rather than imposing a signature; A23-on-A23 chains read as recognisably A23 in character.',
+    typicalTradeoff: 'Voiced specifically for the low-power tube + high-efficiency speaker + analog-front-end tradition; outside that context the editorial intent is muted.',
+    leadershipOrigin: 'Keith Aschenbrenner founded Auditorium 23 in Frankfurt, Germany — at a moment when the audiophile consensus treated cables and transformers as either commodity wires or measurement-target objects, and treated the Western-Electric / Altec / vintage-horn tradition as territory for collectors of obsolete equipment rather than as a living design school. Aschenbrenner\'s argument was that the WE-era understanding of the analog interface — that cables, transformers, and the magnetic interfaces between source and amplifier are voiced components of the musical chain — could be carried forward as new equipment, and that the WE horn-loaded loudspeaker tradition could be reconstructed for contemporary use with sensitive tube amplifiers. The Hommage line is the explicit tribute. The relationship with Shindo Laboratory — A23 has been Shindo\'s German importer and accessory partner since well before Ken Shindo\'s 2014 death, and continues that relationship — reflects the shared editorial position: the system, not the component, is the unit of design.',
+    strengths: [
+      'The Western-Electric analog-interface tradition carried forward as new equipment — cables, transformers, and Hommage speakers voiced together rather than optimised individually, with the chain treated as the unit of design',
+      'The Hommage T1 step-up transformer has become the canonical SUT for low-output moving-coil cartridges in the Musical Communication School chain — voiced specifically for Shindo + EMT / SPU + Verdier rather than as a measurement-target generic component',
+      'Cables voiced against the system context (low-feedback tube amplifiers + high-efficiency speakers) rather than against isolated-component measurements — the voicing presupposes the chain it will serve',
+      'The Hommage loudspeaker line reconstructs the WE 22A / 755 / Cinema tradition for contemporary use with 8–15W tube amplifiers — the high-efficiency horn tradition treated as a living design school rather than vintage memorabilia',
+      'Distribution choices reinforce the editorial position — A23 imports brands whose ideas align (J.C. Verdier turntables, Line Magnetic Audio, Shindo accessories) and not brands whose ideas conflict',
+      'Continuous relationship with Shindo Laboratory since before Ken Shindo\'s 2014 death — A23 is one of the few brands whose authority within the Shindo ecosystem is recognised by the Shindo organisation itself',
+    ],
+    tradeoffs: [
+      'The voicing is specifically tuned to the low-power tube + high-efficiency speaker + analog-front-end tradition — outside that context the editorial intent is muted and the products will read as "just good cables / just a good SUT"',
+      'The Hommage SUT is voiced for low-output MC cartridges; high-output MM and many MI cartridges will not benefit from the SUT and may sound worse through it',
+      'Hommage horn-loaded speakers require ~8–15W of well-voiced tube power and presuppose a room large enough to handle horn-loaded scale — the idea does not transfer to small-room solid-state systems',
+      'Premium artisanal pricing reflects the small-batch German manufacture; A23 cables and transformers sit substantially above commodity equivalents, and the value is only recoverable when the rest of the chain expresses the same editorial position',
+      'Distribution-and-manufacturing dual role means availability is dealer-relationship-dependent — A23 does not have the broad dealer footprint of a measurement-led brand',
+    ],
+    pairingNotes: 'Auditorium 23 pairs naturally with brands whose ideas align: musical communication over measured neutrality, the analog front end over the digital as the primary source, low-power tube amplification over high-feedback solid state, high-efficiency horn-tradition loudspeakers over low-efficiency studio monitors. The canonical Musical Communication School chain places A23 at the analog-interface junctions of a Shindo system — A23 cables, A23 Hommage T1 SUT, and (where the loudspeaker is not itself from the Hommage line) DeVore Orangutan or Altec horn-loaded speakers driven by Shindo single-ended or push-pull tube amplifiers. Other natural partners: J.C. Verdier turntables (A23 distributes), EMT and SPU low-output moving-coil cartridges (the SUT voicing presupposes them), Leben CS600X (the tube-voicing affinity carries cleanly into the Japanese-artisan cluster), Line Magnetic Audio (A23 distributes; the high-efficiency tube tradition aligns), Aurorasound VIDA phono stages (analog-interface coherence carries through the phono stage). The Hommage line is best treated as part of an A23 + Shindo + Verdier system rather than as standalone speakers — the voicing presupposes the chain. Anti-pairings reveal the editorial argument: high-feedback solid-state amplifiers (the cable voicing fights), low-efficiency studio monitors (the horn-tradition speakers will not drive them), measurement-target generic SUTs in chains otherwise built around A23 (chain coherence is lost), and listeners who treat cables and transformers as commodities will not extract the editorial position the products express.',
+    links: [
+      { label: 'Auditorium 23 (Germany)', url: 'http://www.auditorium-23.de/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/auditorium-23', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'Cables — speaker and interconnect',
+        character: 'Speaker cables and interconnects voiced against the system context — low-feedback tube amplifiers driving high-efficiency speakers — rather than against an isolated-component measurement target. The voicing presupposes the chain the cables will serve.',
+        ampPairing: 'Designed for tube amplification driving sensitive (90 dB+) speakers. Mixing A23 cables into high-feedback solid-state chains or measurement-led systems will function but not deliver the editorial intent.',
+      },
+      {
+        name: 'Hommage step-up transformers (T1, T1 Diapason)',
+        character: 'Step-up transformers voiced specifically for low-output moving-coil cartridges feeding a phono stage\'s MM input via the SUT. The Hommage T1 has become the canonical SUT for the Musical Communication School chain — voiced against Shindo + EMT / SPU + Verdier rather than as a measurement-target generic component.',
+        ampPairing: 'Presupposes a low-output MC cartridge (~0.2–0.5 mV) feeding into an MM phono input. Voiced specifically for use with Shindo phono stages; works with other tube phono stages voiced in the same tradition (Aurorasound VIDA, etc.).',
+      },
+      {
+        name: 'Hommage loudspeakers (22A, 755, Cinema, Ken)',
+        character: 'Horn-loaded loudspeakers reconstructing the WE 22A / 755 / Cinema tradition for contemporary use. High efficiency (typically 95+ dB), driver complement built around PHY-HP wideband units and Western-Electric-style compression drivers. Tonal density, presence-region forwardness, and dynamic ease at moderate volume — the WE horn tradition as a living design school.',
+        ampPairing: 'Designed for 8–15W tube amplification — Shindo single-ended, Leben CS600X, Line Magnetic SET, or comparable. The idea does not transfer to small-room solid-state systems.',
+      },
+      {
+        name: 'Distribution and partnership (Verdier, Line Magnetic, Euphya, Shindo accessory partner)',
+        character: 'The brands A23 imports into the German market — chosen specifically because their ideas align with the analog-interface-coherence argument. J.C. Verdier turntables (the canonical analog front-end partner; Verdier La Platine has been in continuous production for decades). Line Magnetic Audio (high-efficiency tube amplification). Euphya. The relationship with Shindo Laboratory — A23 has been Shindo\'s German importer since well before Ken Shindo\'s 2014 death — reflects the shared editorial position that the system, not the component, is the unit of design.',
+      },
+    ],
+    media: {
+      // A23's official site is HTTP-only. Hero downloaded 2026-06-08
+      // from http://www.auditorium-23.de/Hommage/Cinema.jpg and placed
+      // under apps/web/public/brand-heroes/ to avoid runtime HTTP→HTTPS
+      // mixed-content concerns and to match the established local-
+      // hosting precedent (devore-o96 / leben-cs600 / shindo-cortese-
+      // 300b / audio-note-an-elx-hemp / naim-separates-stack).
+      //
+      // The Hommage Cinema is a horn-loaded loudspeaker in the Western-
+      // Electric tribute line — visually the strongest expression of
+      // the brand's WE-tradition design school available on A23's own
+      // site. Native size 295×352 (small for a hero; A23's site uses
+      // individual model-page images that are uniformly small).
+      // F4-satisfied (manufacturer-sourced, not reviewer-derived).
+      //
+      // Notable hero gap: the iconic Hommage T1 transformer photography
+      // on A23's site is bundled into a magazine-review scan (Le Coin
+      // de l'Audiophile) which is a reviewer source the F4 gate
+      // excludes. A standalone manufacturer-sourced T1 transformer
+      // hero, or a workshop/Aschenbrenner-at-the-bench shot, would
+      // lift the page to Level-4 visual standard once available.
+      images: [
+        {
+          url: '/brand-heroes/a23-hommage-cinema.jpg',
+          caption: 'Auditorium 23 Hommage Cinema — horn-loaded loudspeakers in the Western-Electric tribute line, voiced for 8–15W tube amplification.',
+          credit: 'Auditorium 23',
+          sourceUrl: 'http://www.auditorium-23.de/Hommage/Cinema.html',
+        },
+      ],
+    },
+  },
+  // ── EMT (Elektromesstechnik) ───────────────────────────
+  // schools: studio-accuracy, musical-communication, analog-front-end.
+  // The EMT argument: professional broadcast tools can become enduring
+  // audiophile objects when reliability, immediacy, mechanical solidity,
+  // and musical communication converge. Founded 1940 as a broadcast-
+  // equipment manufacturer; the cartridges and tonearms were designed
+  // for live broadcast use where speed of stylus return to centre,
+  // mechanical robustness, and unsentimental tonal directness mattered
+  // more than spec-sheet refinement. Those engineering priorities
+  // turned out to be what enthusiast listeners value too — but for
+  // reasons EMT did not originally target.
+  {
+    names: ['emt', 'emt tontechnik', 'emt studiotechnik'],
+    displayName: 'EMT',
+    founder: 'Wilhelm Franz (Elektromesstechnik Wilhelm Franz KG, 1940)',
+    country: 'Switzerland (current production) / Germany (historical)',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['cartridge', 'phono'],
+    tagline: 'Broadcast-tool immediacy and mechanical authority — professional engineering that became enthusiast canon.',
+    philosophy: 'EMT is the argument that professional broadcast tools can become enduring audiophile objects when reliability, immediacy, mechanical solidity, and musical communication converge. The cartridges and tonearms were originally designed for live broadcast use — where stylus-return speed after a needle drop, mechanical robustness under daily operation, and unsentimental tonal directness mattered more than spec-sheet refinement — and the same engineering priorities turn out to be what enthusiast listeners value too, for reasons EMT did not originally target. The brand carries forward a continuous analog-manufacture lineage of more than eighty years.',
+    philosophyExtended: 'EMT was founded in 1940 in Berlin by Wilhelm Franz as Elektromesstechnik Wilhelm Franz KG, building measurement and broadcast equipment for the German radio industry. The post-war decades established EMT as a European broadcast-engineering standard: the EMT 927 and 930 broadcast turntables, the EMT 139 tube phono stage, and the OFD- and TSD-series broadcast cartridges defined what professional vinyl playback looked like in studios from the BBC to RAI to NHK. The cartridges crossed over into enthusiast use because the design priorities (rigid mechanical coupling between stylus and generator, broadcast-grade reliability, fast transient settling) produced a tonal directness audiophile listeners found unsentimental and revealing in a way consumer-targeted cartridges of the era were not. Modern EMT production continues under EMT Tontechnik in Switzerland — the current JSD and HSD cartridge lines, the 9-series tonearms (909, 912, 928), and the analog electronics carry the same engineering posture into contemporary equipment. The cartridges retain the iconic four-pin broadcast-style connector and the signature housing geometry; the brand has not let consumer aesthetics overwrite the broadcast-tool identity.',
+    tendencies: 'Listeners describe EMT cartridges as immediate, mechanically authoritative, and tonally direct — voices and acoustic instruments arrive with weight and presence rather than as etched silhouettes. The "broadcast directness" is the through-line: an EMT cartridge in a system reveals tonal character of the recording quickly and without the ethereal-cartridge tendency to dissolve transients into ambience. The tonearms (9-series) are mechanically heavy by modern standards and presuppose medium-to-high-mass arm-and-cartridge matching; the engineering priority is rigid coupling, not low effective mass.',
+    systemContext: 'EMT is designed for systems committed to analog playback as the primary source, where the cartridge\'s mechanical character and the broadcast-derived tonal directness are heard as features rather than limitations. The cartridges require a phono stage capable of handling moderate-to-low output (most JSD and HSD models are low-output moving-coil designs at ~0.2–0.5 mV) and benefit from a step-up transformer voiced for the EMT output — canonically the Auditorium 23 Hommage T1, voiced specifically for low-output MC into the MM input of a tube phono stage.',
+    designPhilosophy: 'Broadcast-engineering priorities — reliability, immediacy, mechanical authority — carried into enthusiast equipment without consumer-aesthetic overwrites.',
+    sonicTendency: 'Immediate, mechanically authoritative, tonally direct — broadcast directness as a recognisable signature.',
+    typicalTradeoff: 'Tonal directness and mechanical authority over ethereal transient delicacy and audiophile-sentimental refinement.',
+    leadershipOrigin: 'Wilhelm Franz founded Elektromesstechnik Wilhelm Franz KG (EMT) in Berlin in 1940 — at a moment when the German broadcast industry was being built out under wartime and post-war reconstruction, and broadcast engineering was a serious technical discipline rather than a consumer-electronics market. Franz\'s argument was that broadcast equipment had to be engineered against operational reality — daily live use, rapid cueing, mechanical reliability over decades — and that those constraints were design virtues rather than compromises against an ideal audiophile target. The EMT 927 and 930 broadcast turntables became European studio standards; the cartridge division (later EMT Tontechnik, now in Switzerland) carried the same posture into the cartridge line. The crossover into enthusiast use was not a brand strategy — Art Dudley and other writers in the 2000s repositioned the TSD-15 and OFD-series cartridges as audiophile objects because the broadcast-tool sound turned out to be a sound audiophile listeners valued. The brand never abandoned the broadcast-engineering identity, which is part of why it has endured: the engineering priorities are durable in a way consumer-fashion cartridges are not.',
+    strengths: [
+      'Broadcast-engineering priorities — rigid mechanical coupling, fast transient settling, daily-use reliability — produce a tonal directness enthusiast listeners value, for reasons EMT did not originally target',
+      'More than eighty years of continuous analog manufacture under one brand identity — the engineering posture is durable in a way consumer-fashion cartridges are not',
+      'The iconic four-pin broadcast connector and signature housing geometry preserve the broadcast-tool identity rather than overwriting it with consumer aesthetics — the cartridge looks like what it is',
+      'JSD and HSD lineages cover the modern enthusiast range without abandoning the broadcast-derived voicing — the Novel, Pure, VM, and Gold variants are voicing siblings rather than a different design school',
+      'Canonical pairing with the Auditorium 23 Hommage T1 SUT and Shindo phono stages — the EMT output was voiced before the SUTs that became canonical alongside it, and the chain coherence is recognised within the Musical Communication School',
+      'Bridges the Studio Accuracy School (broadcast heritage, mechanical engineering rigor) and the Musical Communication School (tonal directness valued by tube-and-horn listeners) — one of the few brands in the catalog that sits at the intersection of both',
+    ],
+    tradeoffs: [
+      'The broadcast-tool tonal directness is unsentimental — listeners who want ethereal cartridge presentation, transient delicacy as the dominant impression, or audiophile-romantic warmth will hear the voicing as too direct and too forceful',
+      'Tonearms (9-series) are mechanically heavy by modern standards and presuppose medium-to-high-mass arm-and-cartridge matching — the engineering priority is rigid coupling, not low effective mass; this constrains compatibility with light, compliant non-EMT cartridges',
+      'JSD and HSD cartridges are low-output moving-coil designs (~0.2–0.5 mV) — a step-up transformer or high-gain MC phono stage is presupposed, and the SUT voicing matters; pairing into commodity MM-only phono stages will not work',
+      'Setup discipline matters — VTA, azimuth, loading, and arm-mass matching all interact with the broadcast-derived rigid-coupling design; casual plug-and-play analog setups will not extract the brand\'s editorial position',
+      'Modern EMT cartridges sit in premium territory — JSD Novel Titan and similar reference models reach high four-figure prices, and the value is only recoverable when the rest of the chain (arm, phono, system) is committed to the broadcast-tool / analog-front-end orientation',
+    ],
+    pairingNotes: 'EMT pairs naturally with brands and components whose ideas align: analog as the primary source rather than the digital auxiliary, mechanical authority over ethereal delicacy, broadcast-derived tonal directness over audiophile-sentimental refinement. The canonical EMT chain places the cartridge in an EMT 9-series tonearm (909, 912, or 928) on a serious analog turntable (J.C. Verdier La Platine and similar artisan high-mass designs are the natural partners), feeding through an Auditorium 23 Hommage T1 step-up transformer into a Shindo phono stage and preamplifier, and ultimately into Shindo, Leben, Audio Note, or Line Magnetic tube amplification driving DeVore Orangutan, Audio Note AN-E, or Altec / Klipsch Heritage / Living Voice high-efficiency loudspeakers. The chain is not assembled by accident — every junction has been voiced against the others by listeners and dealers in the Musical Communication School ecosystem, and EMT sits at the cartridge end as the canonical analog source. Other natural partners: Aurorasound phono stages and SUTs for cases where the chain stays closer to the Studio Accuracy School posture, and direct-drive professional turntables (Technics SP-10R, Reed) where the EMT cartridge is paired with a different broadcast-derived turntable tradition. Anti-pairings reveal the trade-off: ultra-light low-mass tonearms designed for compliant cartridges (an EMT in a unipivot ethereal arm fights its own design priorities), highly analytical FPGA-DAC-led digital-first chains (the EMT directness has no role to play if the source is digital), casual plug-and-play analog setups (the SUT and loading discipline are not optional), and listeners who want the cartridge to disappear into ambience (EMT will not).',
+    links: [
+      { label: 'EMT Tontechnik (Switzerland)', url: 'https://emt-tontechnik.ch/', region: 'global' },
+      { label: 'Brinkmann Audio (EMT cartridges under license)', url: 'https://www.brinkmann-audio.de/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'JSD cartridge lineage (Novel Titan, Novel Gold, Pure, VM, 5, 6)',
+        character: 'The modern EMT cartridge line — low-output moving-coil designs (~0.2–0.5 mV) carrying the broadcast-derived voicing into contemporary high-end equipment. The JSD Novel Titan and Novel Gold are the reference models; the JSD Pure, VM, 5, and 6 carry the same voicing through the range. All retain the iconic four-pin broadcast connector and the EMT housing geometry — the cartridge identity is preserved rather than redesigned for consumer aesthetics.',
+        ampPairing: 'Presupposes a step-up transformer (canonically the Auditorium 23 Hommage T1) feeding into a tube phono stage (Shindo, Aurorasound VIDA), or a high-gain MC phono stage voiced for low-output coils. Will not deliver the editorial intent through commodity MM-only phono stages.',
+      },
+      {
+        name: 'HSD cartridge lineage (006, SC6)',
+        character: 'HSD models occupy a more accessible price tier within the EMT range while preserving the broadcast-tool design priorities — mechanical authority, tonal directness, four-pin connector identity. The HSD 006 is the entry to the modern EMT line.',
+        ampPairing: 'Same setup discipline as the JSD line — SUT and loading matter; tube phono stage canonical.',
+      },
+      {
+        name: 'EMT tonearms (909, 912, 928 and the 9-series)',
+        character: 'Medium-to-high-mass arms designed for rigid coupling rather than low effective mass. The 9-series carries the broadcast-engineering posture into the tonearm itself — the priority is mechanical authority, not the ultra-light philosophy of unipivot or carbon-fibre designs. The arms are voiced specifically to mate with EMT cartridges and similar broadcast-derived designs; they are not neutral platforms for any cartridge.',
+        ampPairing: 'Pairs naturally with EMT cartridges. Compatible with other medium-output MC designs in the same engineering tradition (some Ortofon SPU, Lyra Atlas). Less ideal for light, highly compliant cartridges designed for ultra-light arms.',
+      },
+      {
+        name: 'Broadcast / historical archive (927, 930, TSD-15, OFD-15)',
+        character: 'The historical EMT lineage that built the brand\'s identity. The EMT 927 and 930 broadcast turntables were European studio standards from the 1950s through the 1970s; the TSD-15 and OFD-15 cartridges defined the broadcast-cartridge sound. These models are no longer in production but remain editorially central: they are the equipment Art Dudley and other enthusiast writers repositioned as audiophile objects, and they remain the reference point against which modern EMT cartridges are heard.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from
+      // https://emt-tontechnik.ch/uploads/1/4/8/6/148642164/emt-novel-titan-1_1.jpg
+      // and placed locally under apps/web/public/brand-heroes/ to match
+      // the established local-hosting precedent (devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / audio-note-an-elx-hemp /
+      // naim-separates-stack / a23-hommage-cinema). Manufacturer-sourced
+      // from the official EMT Tontechnik site (Switzerland), F4-
+      // satisfied (not reviewer-derived).
+      //
+      // The JSD Novel is visually the strongest current EMT cartridge:
+      // the iconic four-pin broadcast connector and the EMT housing
+      // geometry are immediately recognisable, and the gold "Novel"
+      // script + brass internals carry the brand identity into a
+      // contemporary product. Native size 800×533 (compact but
+      // editorially specific).
+      //
+      // Secondary-image gap: a manufacturer-sourced shot of an EMT 9-
+      // series tonearm in situ on a high-mass turntable (J.C. Verdier
+      // La Platine, etc.) would lift the page to Level-4 visual
+      // standard by visually completing the cartridge → arm →
+      // turntable chain the prose describes. Flagged for future polish.
+      images: [
+        {
+          url: '/brand-heroes/emt-jsd-novel.jpg',
+          caption: 'EMT JSD Novel — modern broadcast-derived moving-coil cartridge, four-pin connector and EMT housing geometry preserved from the broadcast lineage.',
+          credit: 'EMT Tontechnik',
+          sourceUrl: 'https://emt-tontechnik.ch/cartridge.html',
+        },
+      ],
+    },
+  },
   {
     names: ['pass labs', 'pass', 'first watt'],
+    relatedTechnologySlugs: ['class-a-amplification', 'high-efficiency-loudspeakers'],
     founder: 'Nelson Pass',
     country: 'USA (Auburn, California)',
     brandScale: 'specialist',
@@ -644,7 +1035,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Pass Labs designs emphasise simplicity and Class A operation where practical. First Watt is the low-power offshoot, exploring single-ended solid-state and unusual topologies.',
     philosophyExtended: 'Nelson Pass approaches amplifier design as a craft. His circuits use fewer gain stages than most competitors, and he prefers Class A biasing for its linearity even at the cost of efficiency. The result is an amplifier that runs hot and draws significant power but rewards with a tonal richness unusual in solid-state.',
     tendencies: 'Pass amplifiers tend toward warmth and midrange richness for solid-state. First Watt designs emphasise texture and intimacy at the cost of dynamic scale.',
-    systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps.',
+    systemContext: 'Pass Labs works across a range of speakers. First Watt pairs best with high-efficiency speakers — similar territory to low-power tube amps. The First Watt SIT-based single-ended Class A designs sit within the Musical Communication School as the American single-ended-solid-state expression of the school\'s chain-coherence commitment — the same chain-as-system argument the school carries through tube SET, expressed through a different device family. The broader Pass Labs Class A push-pull lineage (X.5 / X.8 / XA series) is the school-adjacent American Class A expression.',
     designPhilosophy: 'Simplicity and Class A bias — fewer gain stages, maximum linearity.',
     sonicTendency: 'Warm, textured solid-state with tube-like midrange richness.',
     typicalTradeoff: 'Heat and power draw for Class A linearity; First Watt sacrifices power for intimacy.',
@@ -652,7 +1043,6 @@ const BRAND_PROFILES: BrandProfile[] = [
     reviewerQuotes: [
       { quote: 'The INT-25 is the finest small amplifier I have ever used — pure Class A magic.', source: 'Herb Reichert (Stereophile)' },
       { quote: 'Pass Labs delivers the warmth and texture of tubes with the reliability of solid-state.', source: 'Robert Harley (The Absolute Sound)' },
-      { quote: 'First Watt amplifiers are for listeners who value intimacy over scale.', source: 'Srajan Ebaen (6moons)' },
     ],
     strengths: [
       'Class A operation delivers exceptional linearity and midrange richness',
@@ -687,6 +1077,16 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       images: [
         {
+          // Local hero — replaces externally-hotlinked Class-A banner as
+          // the primary hero. Sourced from passlabs.com official press
+          // (XA25_angle_bw), converted WebP → JPEG, optimised to
+          // 1200×772 / ~89 KB / JPEG.
+          url: '/brand-heroes/pass-labs-xa25.jpg',
+          caption: 'Pass Labs XA25 — 3/4 view, pure Class A in a compact chassis.',
+          credit: 'Pass Labs',
+          sourceUrl: 'https://www.passlabs.com/products/xa25/',
+        },
+        {
           url: 'https://www.passlabs.com/wp-content/uploads/2019/12/08-banner-class-A-xa25.webp',
           caption: 'Pass Labs XA25 — pure Class A simplicity in a compact chassis.',
           credit: 'Pass Labs',
@@ -717,6 +1117,114 @@ const BRAND_PROFILES: BrandProfile[] = [
       ],
     },
   },
+  // ── Sugden Audio Products ──────────────────────────────
+  // schools: british-class-a, musical-communication,
+  // low-power-amplification.
+  // The Sugden argument: low-power Class A amplification can preserve
+  // musical immediacy, tonal continuity, and human-scale dynamics
+  // without needing the scale, heat, or spectacle of larger high-power
+  // designs. The A21 (1967) is widely credited as the world's first
+  // commercial production Class A integrated amplifier; J.E. Sugden &
+  // Co Ltd has produced the A21 lineage continuously from West
+  // Yorkshire since. Sugden sits alongside Pass / First Watt
+  // (American minimalist Class A) as the British Class A node — same
+  // school argument expressed from a different design tradition.
+  {
+    names: ['sugden', 'sugden audio', 'j.e. sugden', 'je sugden'],
+    relatedTechnologySlugs: ['class-a-amplification', 'high-efficiency-loudspeakers'],
+    founder: 'J. E. Sugden (James Edward Sugden) — J. E. Sugden & Co Ltd, 1967',
+    country: 'UK (West Yorkshire)',
+    brandScale: 'specialist',
+    region: 'europe',
+    categories: ['amplifier', 'dac'],
+    tagline: 'Low-power Class A from Yorkshire — the A21 lineage as a durable path to musical naturalness.',
+    philosophy: 'Sugden is the argument that low-power Class A amplification can preserve musical immediacy, tonal continuity, and human-scale dynamics without needing the scale, heat, or spectacle of larger high-power designs. The A21 (1967) was widely credited as the world\'s first commercial production Class A integrated amplifier, and the lineage has been produced continuously from West Yorkshire by J. E. Sugden & Co Ltd since. The modest power ratings, the conspicuous heat sinks made visible as a design feature, and the deliberate refusal to chase feature counts or measurement spectacle are all part of the brand\'s argument: amplifier quality does not have to scale through power, complexity, or specification.',
+    philosophyExtended: 'J. E. (James Edward) Sugden designed the original A21 in Heckmondwike, West Yorkshire in 1967 — a moment when audiophile amplifier design was rapidly moving toward higher power, more complex circuits, more sophisticated feedback topologies, and higher specifications across the board. Sugden\'s argument was that the additional power and complexity were not free, and that the costs (in tonal continuity, midrange naturalness, and small-signal resolution) were being undercounted relative to the spec-sheet gains. A low-power single-ended-like Class A topology, simply executed, could deliver a musical communication that the high-power high-feedback consensus could not match. The A21 was the proof. Continuous production for nearly six decades has carried the same argument through three product families: the A21 Heritage line (A21, A21SE, ANV-50 Anniversary), the Masterclass series (IA-4 integrated, SPA-4 / FPA-4 power, LA-4 pre, PA-4 phono, HA-4 headphone, DAC-4, PDT-4F CD player), and the FBA-800 / DAP-800 reference Class A pair. The visual signature is constant: brushed silver chassis, exposed black-finned heat sinks as a celebrated design feature (the heat is the topology made visible), and a deliberately restrained feature set on every front panel.',
+    tendencies: 'Listeners describe Sugden amplifiers as having a tonal continuity, midrange naturalness, and small-signal resolution that low-feedback Class A topology delivers as a foundation rather than as a flavour — voices and acoustic instruments have body and tonal correctness without ethereal etching or transient surgery. The presentation is unsentimental but unmistakably musical: the brand\'s argument is that Class A simplicity is a positive choice, not a compromise, and the voicing carries the argument. The dynamic envelope is human-scale rather than spectacular; Sugden does not try to be loud, and the brand\'s editorial position is that being loud is not what amplifiers are for.',
+    systemContext: 'Sugden is designed for systems where the listener wants Class A musical naturalness in a chassis-and-power scale matched to real listening rooms rather than reference-system showpieces. The amplifiers pair naturally with moderate-to-high sensitivity loudspeakers (typically 86–92 dB) — Harbeth, Spendor, Graham, ProAc, and similar British monitor-tradition speakers; DeVore Orangutan or Audio Note AN-E where the Class A flow meets high-efficiency speakers; and any analog-front-end or NOS / R2R digital source that shares the tonal-continuity priority. The brand is not designed for difficult low-sensitivity loads or large rooms requiring high SPL.',
+    designPhilosophy: 'Low-power Class A topology executed simply — the heat sinks are not hidden because the heat is the topology, and the topology is the argument.',
+    sonicTendency: 'Tonal continuity, midrange naturalness, and small-signal resolution as a foundation; unsentimental but unmistakably musical.',
+    typicalTradeoff: 'Class A musical naturalness and continuity over high-power slam, ultra-feature-counts, or measurement spectacle.',
+    leadershipOrigin: 'James Edward (J. E.) Sugden founded J. E. Sugden & Co Ltd in Heckmondwike, West Yorkshire in 1967, where the company has been producing the A21 lineage continuously ever since. Sugden\'s argument at founding was that the audiophile amplifier industry was moving toward higher power, more complex circuits, and higher specifications as if those were free improvements — when in fact the gains were being bought at the cost of tonal continuity, midrange naturalness, and small-signal resolution that lower-power simpler Class A topologies delivered. The A21 was the demonstration: a modestly-powered, simply-executed Class A integrated that became the world\'s first commercial production Class A integrated amplifier and established the brand\'s editorial position. The company has remained family-owned and West Yorkshire-based for nearly six decades, with the founder\'s argument carried through three product families and continuous production into the present.',
+    strengths: [
+      'The argument that low-power Class A topology, simply executed, delivers tonal continuity and midrange naturalness as a foundation — and that the gains are real even when the spec sheet does not capture them',
+      'The A21 (1967) was widely credited as the world\'s first commercial production Class A integrated amplifier — a historical first that is not just a marketing point but the founding gesture of the brand\'s ongoing argument',
+      'Continuous production from West Yorkshire under family ownership for nearly six decades — the editorial position is durable in a way that depends on continuous design-school stewardship rather than corporate ownership cycles',
+      'The brand\'s visual signature (brushed silver chassis, exposed black-finned heat sinks made visible as a design feature) is the topology made visible — the heat is not hidden because the heat IS the Class A argument, and the front panel tells the listener what the amplifier is before it plays a note',
+      'Three product families — A21 Heritage (A21, A21SE, ANV-50), Masterclass (IA-4 / SPA-4 / FPA-4 / LA-4 / PA-4 / HA-4 / DAC-4), FBA-800 / DAP-800 reference Class A pair — all carry the same editorial position; price-tier compromises are taken at the chassis-scale and component layer, not at the voicing-posture layer',
+      'Sits in the British-Class-A node of the school graph alongside Pass / First Watt (American minimalist Class A) and Audio Note UK (British SET tube musical communication) — the same low-power-and-natural argument expressed from a different design tradition',
+    ],
+    tradeoffs: [
+      'Low output power is part of the argument, not a compromise around it — the A21SE (~30W Class A) and Masterclass IA-4 (~30W Class A) presuppose moderate-to-high sensitivity loudspeakers (typically 86 dB+); very low-sensitivity speakers will not be driven well, and the editorial intent is muted',
+      'Class A topology produces real heat — the conspicuous heat sinks are not decoration; the amplifier needs ventilation, room-temperature listening is part of the ownership picture, and listeners who want a cool-running amplifier should look elsewhere',
+      'Tonal continuity and midrange naturalness over high-power slam and brute-force bass grip — listeners who prioritise transient surgery, deep-bass authority, or maximum SPL will hear Sugden as gentle or underpowered for their target use case',
+      'The deliberately restrained feature set (no streaming, no DSP, no room-correction, no app-based control) is part of the brand\'s argument — listeners who want the amplifier to be a feature-rich hub will find Sugden\'s front-panel discipline insistent',
+      'Premium British specialist pricing reflects the continuous West Yorkshire manufacture under family ownership — Sugden sits substantially above commodity integrated amplifiers and the value is recoverable only when the rest of the chain (speakers, source, room) shares the brand\'s editorial position',
+    ],
+    pairingNotes: 'Sugden pairs naturally with brands and components whose ideas align: tonal continuity over transient surgery, musical naturalness over measurement spectacle, moderate-to-high-sensitivity loudspeakers where low-power Class A is sufficient and editorially correct, analog-first or NOS / R2R digital front ends whose tonal density matches the Class A foundation. Canonical British partners: Harbeth (Compact / Super HL5 / M40 — the BBC monitor-tradition coherence is where Sugden\'s tonal continuity reads as obvious correctness), Spendor (Classic and D-series), Graham Audio (LS5/9 and LS5/8 BBC reissues — the historical alignment is exact), ProAc (Tablette through Response). High-efficiency partners: DeVore Orangutan (the Class A flow into high-efficiency speakers is one of the cleanest expressions of the brand\'s argument), Audio Note AN-E (the British-Class-A + British-SET-tube cluster is internally consistent). Source partners: Aurorasound or any low-noise tube phono stage (the analog-front-end discipline carries through), Audio Note DAC One / Three or other NOS R2R DACs (the digital-source tonal density matches the Class A foundation), Naim CD5 / NDX2 (the British system tradition has a long-standing affinity even though Naim and Sugden are not the same school). Sister-brand affinity: Pass / First Watt (American minimalist Class A — the same low-power-as-positive-argument from the American designer side), Leben (Japanese-artisan low-power tube — same posture, different topology), Audio Note UK (British SET tube — same musical-communication priority, different topology). Anti-pairings reveal the trade-off: very low-sensitivity loudspeakers (below 84 dB) where Class A is insufficient, large rooms requiring high SPL, listeners who want maximum bass grip or transient surgery, systems where amplifier choice is judged primarily by measurement power or feature count, and chains built around DSP / streaming / app-based control where Sugden\'s deliberate front-panel restraint reads as missing-feature rather than editorial choice.',
+    links: [
+      { label: 'Sugden Audio (J. E. Sugden & Co Ltd)', url: 'https://www.sugdenaudio.com/', region: 'global' },
+    ],
+    designFamilies: [
+      {
+        name: 'A21 Heritage line (A21, A21SE, ANV-50 Anniversary)',
+        character: 'The lineage that began in 1967. The A21SE is the modern Special Edition continuation of the original A21 Class A integrated amplifier; the ANV-50 Anniversary edition (2017) marked fifty years of continuous A21 production. All carry the heritage chassis and the original editorial argument: low-power Class A as a complete musical statement, not as an entry tier on the way to something larger.',
+        ampPairing: 'A21SE drives moderate-to-high-sensitivity speakers (typically 86 dB+) in small-to-medium rooms — Harbeth Compact and Super HL5, Spendor Classic, Graham LS5/9, ProAc, DeVore O/93. The historical A21 + Linn Sondek + Spendor / BBC LS3/5a chain is the canonical British-system expression.',
+      },
+      {
+        name: 'Masterclass series (IA-4, SPA-4, FPA-4, LA-4, PA-4, HA-4, DAC-4, PDT-4F)',
+        character: 'The modern flagship "-4" line — Masterclass IA-4 integrated amplifier, SPA-4 stereo power amplifier, FPA-4 power amplifier, LA-4 pre-amplifier, PA-4 phono stage, HA-4 headphone pre-amplifier, DAC-4 D/A converter, PDT-4F CD player. The visual signature is the conspicuous heat sinks made visible alongside a brushed silver chassis and large precision knobs. Price-tier compromises against the A21 Heritage are taken at the chassis-scale and component layer, not at the voicing-posture layer.',
+        ampPairing: 'Masterclass IA-4 covers the same sensitivity range as the A21SE with a more contemporary chassis presentation; SPA-4 / FPA-4 partner with LA-4 pre for system-builders who want separate boxes and a more flexible source array.',
+      },
+      {
+        name: 'FBA-800 / DAP-800 reference Class A pair',
+        character: 'The reference-level Class A pair — FBA-800 stereo Class A power amplifier paired with the DAP-800 Digital Analogue Pre-Amplifier. The brand\'s argument carried into its most uncompromised expression: more output power than the A21 lineage and more chassis material, but the same low-feedback Class A topology and the same tonal-continuity priority.',
+        ampPairing: 'FBA-800 drives the same moderate-to-high sensitivity speakers as the A21 / Masterclass lines, with more headroom for larger rooms and slightly less sensitive partners (down to ~84 dB rather than 86 dB+).',
+      },
+      {
+        name: 'Speakers and CD players (LS21, Ergo series, Grande, Fusion 21)',
+        character: 'Sugden also produces loudspeakers (LS21, the Ergo / Ergo1 / Ergo2 and Grande series) and CD playback (Fusion 21 CD Player, PDT-4F CD Player in the Masterclass series). The brand\'s editorial position carries through: the speakers are designed to be musically complete at human-scale SPL with modest amplifier power; the CD players are designed for tonal continuity rather than ultra-high-resolution detail extraction.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from Sugden Audio's official site
+      // (https://www.sugdenaudio.com/ia-4-integrated-amplifier) — image
+      // sourced from the Sugden Wix media CDN
+      // (static.wixstatic.com/media/1ba66a_98aba0fa..._.jpg) and placed
+      // locally under apps/web/public/brand-heroes/ to avoid Wix CDN
+      // dependency and to match the established local-hosting precedent
+      // (devore-o96 / leben-cs600 / shindo-cortese-300b /
+      // audio-note-an-elx-hemp / naim-separates-stack /
+      // a23-hommage-cinema / emt-jsd-novel / spec-rpa-mg1).
+      // Manufacturer-sourced from Sugden Audio's official product page,
+      // F4-satisfied (not reviewer-derived).
+      //
+      // The Masterclass Integrated (IA-4) is visually the strongest
+      // Sugden expression — the conspicuous black-finned heat sinks
+      // either side of the brushed silver chassis make the Class A
+      // topology visible as a design feature ("the heat IS the
+      // topology, the topology IS the argument"). The front-panel
+      // restraint (POWER, MONITOR, VOLUME, RECORD, INPUTS — and the
+      // "SUGDEN MASTERCLASS INTEGRATED" lettering at the base) embodies
+      // the brand's deliberate refusal of feature-spectacle. Native
+      // size 1771×1181, ~92KB.
+      //
+      // Secondary-image gap: an A21SE Heritage front-panel shot, or a
+      // West-Yorkshire workshop / bench / Sugden-family shot would
+      // visually complete the heritage-lineage + continuous-family-
+      // ownership argument the prose describes. Flagged for future
+      // polish; lifting the page to Level-4 visual standard once a
+      // safe manufacturer-sourced asset is available.
+      images: [
+        {
+          url: '/brand-heroes/sugden-masterclass-ia4.jpg',
+          caption: 'Sugden Masterclass Integrated (IA-4) — conspicuous black-finned heat sinks make the Class A topology visible as a design feature.',
+          credit: 'Sugden Audio',
+          sourceUrl: 'https://www.sugdenaudio.com/ia-4-integrated-amplifier',
+        },
+      ],
+    },
+  },
   {
     names: ['naim'],
     founder: 'Julian Vereker',
@@ -724,42 +1232,178 @@ const BRAND_PROFILES: BrandProfile[] = [
     brandScale: 'specialist',
     region: 'uk',
     categories: ['amplifier', 'streamer', 'dac'],
-    philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy emphasises pace and engagement over tonal density or spatial refinement.',
-    tendencies: 'Listeners describe Naim systems as propulsive and engaging, with strong rhythmic coherence. They tend to de-emphasise warmth and spatial holography.',
-    systemContext: 'Traditionally paired with Naim sources and Naim-friendly speakers. The timing-first approach works well with speakers that have good transient response.',
-    designPhilosophy: 'Engineered around timing and rhythmic drive over tonal density.',
-    sonicTendency: 'Propulsive, rhythmically coherent, forward-leaning.',
-    typicalTradeoff: 'Less warmth and spatial holography than tonally lush designs.',
+    tagline: 'British system electronics built around rhythm, timing, and upgrade coherence.',
+    philosophy: 'Naim designs prioritise rhythmic drive and musical timing. The engineering philosophy treats the system — source, supply, amplification — as a single design rather than discrete components, and emphasises pace and engagement over tonal weight or spatial refinement.',
+    philosophyExtended: 'Julian Vereker founded Naim in Salisbury, England in 1969 after a career in sound recording, and the brand has remained in Salisbury through every ownership transition since. The engineering identity centres on a system-building philosophy: amplifiers, sources, and power supplies are designed as parts of a tiered ladder where each upgrade step — a more capable preamp, a separate power supply for the streamer, a Statement-level reference amplifier — is intended to be heard as a deliberate change rather than a marginal refinement. The "pace, rhythm, and timing" framing (often shortened to PRaT) is shorthand for that design priority: timing accuracy and transient coherence are treated as primary, with tonal density and spatial spread as secondary consequences of getting timing right. Outboard power supplies (PowerLine, XPS, Supercap, 555 PS) sit on the upgrade ladder rather than alongside it — they are part of the signal-path design, not aftermarket additions. The ladder runs from the all-in-one Mu-so through the Uniti streaming integrateds, the New Classic and Classic separates, and ultimately the Statement reference stack. Following the 2011 Focal–Naim merger and the formation of the Vervent Audio Group, the brand continues to design, voice, and assemble in Salisbury under that founding system-building logic.',
+    tendencies: 'Listeners describe Naim systems as propulsive, rhythmically coherent, and forward-leaning, with strong transient definition and a sense of musical drive. The presentation prioritises pace and engagement over spatial holography or harmonic warmth. Detail is delivered with grip and clarity rather than as ambient bloom. Bass is fast and articulate rather than expansive.',
+    systemContext: 'Naim electronics work best when treated as a system rather than a single-component substitution. The timing-first character pairs naturally with speakers that have strong transient response and reward a fast front end; it can feel lean against speakers voiced for tonal density or with relaxed top ends. Within the Naim ecosystem the separate-power-supply additions (XPS, Supercap, 555 PS) are not optional accessories — they are part of the upgrade ladder and define the brand\'s long-term ownership pattern.',
+    designPhilosophy: 'Engineered around timing and rhythmic drive, with the system — including power supplies — treated as a single design.',
+    sonicTendency: 'Propulsive, rhythmically coherent, forward-leaning; grip and timing over warmth.',
+    typicalTradeoff: 'System timing and ecosystem coherence over tonal density, spatial holography, and component-level interoperability.',
+    leadershipOrigin: 'Julian Vereker founded Naim Audio in Salisbury, England in 1969, having come to electronics design from a background as a racing driver and as a sound recordist for documentary film. Vereker\'s emphasis on rhythmic coherence as the primary criterion for amplifier voicing shaped the brand for its first three decades and is still cited as the founding design instinct. After Vereker\'s death in 2000, Paul Stephenson continued the design culture; in 2011 Naim merged with French speaker manufacturer Focal to form what is now the Vervent Audio Group. The Naim arm continues to design, voice, and assemble electronics in Salisbury under continuous brand stewardship, and the company maintains its own UK service operation supporting legacy products across decades — long-term ownership and the upgrade ladder are part of the brand identity, not just marketing posture.',
+    strengths: [
+      'Coherent upgrade ladder — components designed to be heard as you move from all-in-one to separates to Statement',
+      'Separate-power-supply architecture treats the supply as part of the signal-path design, not an aftermarket addition',
+      'Long-term UK service and component support across legacy product generations — multi-decade ownership is supported',
+      'Strong rhythmic engagement and transient definition — system timing is the primary design priority',
+      'Streaming and Roon integration across price tiers — Uniti and New Classic include digital sources without external boxes',
+      'Salisbury-based design, voicing, and assembly under continuous brand stewardship since 1969',
+    ],
+    tradeoffs: [
+      'Voicing is polarising — listeners who prioritise tonal density or spatial holography may find the timing-first presentation lean',
+      'The upgrade-ladder architecture rewards full-stack commitment; mixing with non-Naim power supplies or sources can blunt the design intent',
+      'Power-supply boxes scale quickly in cost — the Statement-level ladder runs to multi-shelf, multi-£10k territory',
+      'DIN connections and proprietary cabling are part of the system identity but limit interoperability with non-Naim components',
+      'All-in-one models (Mu-so, Uniti Atom) cap upgradeability — the all-in-one path is a different upgrade road than the separates ladder',
+    ],
+    pairingNotes: 'Within the Vervent Audio Group, Naim and Focal share a deliberate house pairing — the Focal Sopra, Kanta, and Utopia lines are voiced with Naim sources and amplifiers in mind, and dealer rooms commonly demonstrate the pairing as a system. Outside the in-house pairing, Naim electronics are a longstanding match for ProAc Response and Studio speakers, where the ProAc timing-and-flow character complements the Naim front end without compounding leanness. The brand has a strong following among British monitor traditionalists (Harbeth, Spendor, Graham) where Naim grip and timing are used to drive monitors that prefer a fast, controlled front end. With high-efficiency or tube-voiced speakers (Klipsch Heritage, DeVore Orangutan) the pairing is less idiomatic — the timing-forward presentation can become wiry where a tube amp would relax. Streaming buyers should consider the Naim/Focal product lock-in deliberately: the New Classic NSC 222 streaming preamp and NAP 250 power amp are designed to be heard as a coherent pair before being mixed with non-Naim components.',
     links: [
       { label: 'Official website', url: 'https://www.naimaudio.com/', region: 'global' },
+      { label: 'Focal Naim America (US distributor)', url: 'https://www.focalnaimamerica.com/', kind: 'dealer', region: 'US' },
     ],
+    designFamilies: [
+      {
+        name: 'Mu-so (wireless lifestyle systems)',
+        character: 'Single-box wireless music systems (Mu-so, Mu-so Qb) for table-top or kitchen scale. The entry to the brand at lifestyle pricing — engineered with the same DAC and amplifier philosophy as the higher tiers but capped at one-box scale.',
+        ampPairing: 'Self-contained; no separate amplifier required.',
+      },
+      {
+        name: 'Uniti (streaming integrated systems)',
+        character: 'All-in-one streaming integrated amplifiers — Atom, Star, Nova — combining streamer, DAC, and amplifier in a single chassis. Designed for users who want the Naim sound without committing to the separates ladder.',
+        ampPairing: 'Self-contained; pairs with most modern loudspeakers in the small-to-medium room range.',
+      },
+      {
+        name: 'New Classic (modern separates)',
+        character: 'Current-generation separates — NSC 222 streaming preamp, NAP 250 power amp, NPX 300 power supply — expressing the modern Naim system-building approach in a 2- or 3-box system that scales with separate-supply additions.',
+        ampPairing: 'NAP 250 drives most modern speakers with the characteristic Naim grip-and-timing presentation; benefits from the NPX 300 supply on the preamp side.',
+      },
+      {
+        name: 'Classic (legacy separates ladder)',
+        character: 'The long-running Classic line — NAC 282/252/552 preamps, NAP 250/300/500 power amps, Supercap and 555 PS power supplies — defines the multi-box upgrade ladder the brand is identified with. Still in production alongside New Classic.',
+        ampPairing: 'Wide power range across the line; higher-tier supplies (Supercap, 555 PS) are themselves part of the ladder rather than optional accessories.',
+      },
+      {
+        name: 'Statement (reference)',
+        character: 'Two-chassis reference stack — the NAC S1 preamp and NAP S1 power amplifier — sitting above the Classic line as the brand\'s no-compromise expression of the system-building philosophy at full price ladder.',
+        ampPairing: 'Reference-level system anchor; intended for full-stack reference contexts with appropriate room and speaker matching.',
+      },
+    ],
+    media: {
+      // Hero pair originally sourced from naimaudio.com via the official
+      // Focal-Naim CDN (media.focal-naim.com). Both URLs HEAD-200 verified
+      // 2026-06-07 prior to local hosting. Manufacturer-hosted, not
+      // reviewer-derived; F4 gate satisfied.
+      //
+      // Replacement (2026-06-07 polish): both prior heroes were
+      // visually attractive but too abstract — the Salisbury-identity
+      // and the cropped-separates close-up read as "luxury industrial
+      // design," not as "Naim electronics." A first-time visitor could
+      // not identify what products Naim makes from those shots.
+      //
+      // Swapped for two product-recognisable shots from the same
+      // Focal-Naim CDN: a four-box Naim Classic-tier separates stack
+      // (matches the New Classic stack and Classic separates families
+      // surfaced in designFamilies[2-3]) and a Uniti Nova streaming
+      // integrated (matches the Uniti family in designFamilies[1]).
+      // Both have the Naim arc logo prominently visible.
+      //
+      // 2026-06-08 local-hosting migration: both heroes downloaded from
+      // media.focal-naim.com at their native dimensions (580x768 for
+      // each, 75 KB and 193 KB respectively), placed under
+      // apps/web/public/brand-heroes/ to match the devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / audio-note precedent and
+      // remove the runtime Focal-Naim-CDN dependency. sourceUrl values
+      // retained verbatim for editorial provenance; caption + credit
+      // unchanged.
+      images: [
+        {
+          url: '/brand-heroes/naim-separates-stack.jpg',
+          caption: 'A Naim separates stack — the multi-box ladder that defines the New Classic and Classic series.',
+          credit: 'Naim Audio',
+          sourceUrl: 'https://www.naimaudio.com/',
+        },
+        {
+          url: '/brand-heroes/naim-uniti-nova.jpg',
+          caption: 'The Uniti Nova streaming integrated — a single-box streamer-DAC-amplifier from the Uniti family.',
+          credit: 'Naim Audio',
+          sourceUrl: 'https://www.naimaudio.com/',
+        },
+      ],
+    },
   },
   {
     names: ['luxman'],
-    country: 'Japan',
+    country: 'Japan (Yokohama)',
     brandScale: 'specialist',
     region: 'japan',
     categories: ['amplifier', 'dac'],
-    philosophy: 'Luxman is a long-established Japanese manufacturer building both tube and solid-state designs with an emphasis on refinement and tonal elegance.',
-    tendencies: 'Luxman amplifiers tend toward a slightly warm, composed presentation. Listeners describe good tonal density with more control and composure than most tube designs.',
-    systemContext: 'Versatile pairing — works across a range of speaker types. The refined character complements both analytical and warmer speakers.',
+    tagline: 'One of Japan\'s oldest hi-fi houses — continuous voicing tradition since 1925.',
+    philosophy: 'Luxman is among the oldest continuously operating hi-fi manufacturers in Japan, with origins in Kinsuido\'s radio department in Osaka in 1925. The brand builds across both tube and solid-state lineages with an emphasis on refinement, longevity, and graceful voicing rather than measurement-led extremes.',
+    philosophyExtended: 'The brand\'s identity is institutional continuity — nearly a century of refinement across changing electronic eras. The current solid-state integrateds (L-509Z, L-507Z) and the LX-380 tube integrated represent the modern expression of a voicing tradition that predates most of Japanese audio. Hand-finished casework, traditional VU metering, and a deliberately conservative cosmetic language are part of the identity, not decoration.',
+    tendencies: 'Luxman amplifiers are described as composed, tonally refined, and slightly warm — refinement and composure dominate over overt edge or attack. The tube line (LX-380, MQ-300) leans more harmonic and lush; the solid-state line (L-509Z, L-595A SE) carries the same family character with greater grip and headroom.',
+    systemContext: 'Versatile pairing across most speaker designs. The refined character complements analytical speakers and warmer designs alike. A frequent choice for listeners building systems they intend to keep for years rather than churn.',
+    designPhilosophy: 'Institutional continuity — refinement through iteration rather than reinvention.',
+    sonicTendency: 'Composed, tonally refined, graceful — warmth without colouration.',
+    typicalTradeoff: 'Refinement and longevity over rhythmic urgency or analytical extremes.',
+    leadershipOrigin: 'Luxman traces its lineage to the radio department of Kinsuido in Osaka, founded in 1925 — making it one of the oldest hi-fi names in Japan. The company evolved into Lux Corporation through the post-war period and adopted the Luxman name on its amplifier line in the 1960s. Today it is headquartered in Yokohama and maintains in-house electronic design with Japanese manufacturing for its premium tube models. A century-long brand life is itself part of the identity.',
     links: [
       { label: 'Official website', url: 'https://www.luxman.com/', region: 'global' },
-      { label: 'On a Higher Note', url: 'https://www.onahighernote.com/', region: 'US' },
+      { label: 'On a Higher Note (US distributor)', url: 'https://www.onahighernote.com/', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'L-509Z / L-507Z (solid-state)',
+        character: 'Reference integrateds in the modern solid-state line. Tonal refinement with the grip and headroom solid-state delivers.',
+        ampPairing: 'Drives most modern loudspeakers. Pairs well with revealing or warm-leaning speakers alike.',
+      },
+      {
+        name: 'LX-380 / MQ-300 (tube)',
+        character: 'Tube line carrying the Luxman voicing into push-pull and SET territory. Richer harmonics, lower power.',
+        ampPairing: 'Best with sensitive speakers (88 dB+) where lower output is sufficient.',
+      },
     ],
   },
   {
     names: ['accuphase'],
-    country: 'Japan',
+    founder: 'Nakaichi and Jiro Kasuga (Kensonic Laboratory, 1972)',
+    country: 'Japan (Yokohama)',
     brandScale: 'specialist',
     region: 'japan',
     categories: ['amplifier', 'dac'],
-    philosophy: 'Accuphase is a precision-oriented Japanese manufacturer. The design philosophy centres on measured accuracy, build quality, and long-term reliability.',
-    tendencies: 'Accuphase gear tends toward transparency and control with a slightly warm tonal balance. More composed than rhythmically aggressive.',
-    systemContext: 'Works well with revealing speakers where control and composure matter. A good match for listeners who value refinement over raw energy.',
+    tagline: 'Japanese precision audio engineering — continuous since 1972.',
+    philosophy: 'Accuphase is a precision-oriented Japanese manufacturer founded as Kensonic Laboratory in 1972 in Yokohama by Nakaichi and Jiro Kasuga, together with a group of engineers who had previously worked at Trio (later Kenwood). The design philosophy centres on measured accuracy, mechanical and electrical conservatism, and refinement through long-cycle iteration rather than wholesale redesign.',
+    philosophyExtended: 'Accuphase is one of the few Japanese hi-fi manufacturers that has remained independent and family-led across more than five decades. Models evolve incrementally — successive generations carry the same chassis language, the same VU metering, the same panel layout — and are routinely supported with parts and service for decades after release. The institutional identity is "buy once, keep for thirty years" — a posture that is itself part of the brand\'s appeal.',
+    tendencies: 'Accuphase electronics are described as transparent, controlled, and tonally refined with a faint warmth. Composure and refinement dominate over rhythmic aggression. The E-series integrateds (E-280, E-650, E-800, E-4000) carry the family voicing across price tiers with relatively small character differences between models.',
+    systemContext: 'Pairs well with revealing speakers where control and composure matter. A natural choice for listeners building systems they intend to keep for the long term. Less suited to listeners seeking rhythmic urgency or analytical extremes — the brand voices for refinement, not edge.',
+    designPhilosophy: 'Measured accuracy through conservative engineering and long-cycle iteration.',
+    sonicTendency: 'Transparent, composed, gently warm — refinement over edge.',
+    typicalTradeoff: 'Refinement and longevity over rhythmic urgency or analytical sharpness.',
+    leadershipOrigin: 'Founded in 1972 in Yokohama as Kensonic Laboratory by Nakaichi and Jiro Kasuga, together with engineers who had previously worked at Trio (later Kenwood). The Accuphase brand name was adopted later in the 1970s. The Kasuga family has continued to lead the company; institutional continuity and conservative product evolution are central to the brand\'s identity. The current E-series integrateds and DP-series CD players descend directly from designs that have been refined in place for decades.',
     links: [
       { label: 'Official website', url: 'https://www.accuphase.com/', region: 'global' },
     ],
+    // Prestige-brand hero image — locally hosted curated asset
+    // (Pass 2026-05-28). Sourced from accuphase.com E-3000 product
+    // photo, re-encoded at JPEG quality 88 and served from
+    // apps/web/public/brand-heroes/. Native size preserved (640×300).
+    // No runtime hotlink dependency.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/accuphase-e3000.jpg',
+          caption: 'Accuphase E-3000 Integrated Amplifier.',
+          // Rights basis: none_recorded. The credit previously read
+          // "(curated under fair-use product reference)". Fair use is a
+          // DEFENCE raised after the fact, not a permission granted in
+          // advance, so asserting it in a credit line stated a legal
+          // conclusion the evidence does not contain — and stated it to the
+          // reader. Cleaned to the plain manufacturer credit, matching the
+          // DeVore / Audio Note / Naim / Shindo precedent.
+          credit: 'Accuphase Laboratory',
+          sourceUrl: 'https://www.accuphase.com/model/photo/e-3000.jpg',
+        },
+      ],
+    },
   },
   {
     names: ['lampizator', 'lampi'],
@@ -844,6 +1488,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['rega'],
+    relatedTechnologySlugs: ['belt-drive-turntables'],
     founder: 'Roy Gandy',
     country: 'UK (Southend-on-Sea)',
     brandScale: 'specialist',
@@ -851,10 +1496,36 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['turntable', 'amplifier', 'speaker'],
     philosophy: 'Rega designs prioritise mechanical integrity, low resonance, and rhythmic engagement. The turntable philosophy centres on rigidity and simplicity — lightweight plinths, glass platters, and minimal damping. Roy Gandy\'s approach favours getting the mechanical fundamentals right over feature count.',
     tendencies: 'Rega turntables are consistently described as rhythmically alive and musically engaging. They tend to emphasise pace, timing, and midrange coherence. Bass weight and tonal richness are present but secondary to rhythmic drive.',
-    systemContext: 'Rega turntables work well across a range of systems. The Planar series is widely considered a benchmark for musical engagement at each price point. Cartridge matching matters — Rega\'s own cartridges are voiced for the arm, but third-party cartridges can shift the tonal balance.',
+    systemContext: 'Rega turntables work well across a range of systems. The Planar series is widely considered a benchmark for musical engagement at each price point. Cartridge matching matters — Rega\'s own cartridges are voiced for the arm, but third-party cartridges can shift the tonal balance. Rega sits within the Musical Communication School as the accessible-to-flagship British anchor of the belt-drive mechanical-isolation tradition — the Planar lineage from 1973 to the current Naia carries the school\'s analog-source posture across the brand\'s entire price ladder.',
     designPhilosophy: 'Mechanical-fundamentals-first; rigidity and low resonance over features.',
     sonicTendency: 'Pace-driven, rhythmically alive, midrange-coherent.',
     typicalTradeoff: 'Bass weight and tonal richness secondary to rhythmic drive.',
+    tagline: 'Mass reduction and rigidity over features — the turntable as a low-resonance instrument.',
+    philosophyExtended: 'Rega\'s engineering argument runs counter to the high-mass school of turntable design. Where many designers add mass and damping to fight resonance, Roy Gandy\'s position is that the better answer is a lightweight, rigid structure that does not store energy in the first place — a plinth stiff enough to keep the bearing and tonearm in a fixed relationship, light enough that it has little energy to release back into the record. The glass platter, the low-mass rigid plinths, the minimal damping, and the in-house tonearms are all expressions of this single idea: get the mechanical fundamentals right and the music\'s timing survives. The result is a brand consistently described in terms of pace and rhythmic drive rather than tonal lushness, and a Planar lineage that has carried the same philosophy across every price point from entry-level to flagship for five decades. The trade is deliberate: bass weight and tonal richness are present but secondary to keeping the rhythm intact.',
+    leadershipOrigin: 'Roy Gandy founded Rega Research in 1973 in Essex, England (now Southend-on-Sea), and the company has carried his mechanical-fundamentals-first philosophy continuously since. Gandy\'s argument from the start was that the audiophile industry over-valued mass, damping, and feature count, and under-valued the simple discipline of a rigid, low-resonance structure with the bearing and arm held in a fixed relationship. Rega built its identity around the Planar turntable and its own RB-series tonearms — designing the arm in-house rather than buying it in, because the arm-and-platter relationship is the thing the company believes it is really making. The brand has expanded into amplifiers, cartridges, and digital, but the turntable and the philosophy behind it remain the centre of gravity, and the Planar lineage is one of the longest continuously-produced design arguments in audio.',
+    strengths: [
+      'Rigidity-and-low-mass philosophy executed consistently across five decades — the Planar lineage applies one coherent engineering idea at every price point from accessible to flagship',
+      'In-house RB-series tonearms — Rega designs the arm rather than sourcing it, because the arm-and-platter relationship is the brand\'s core engineering concern, not an afterthought',
+      'Rhythmic drive and pace as a recognisable signature — the design priority shows up as musical timing and midrange coherence that listeners identify as the Rega character',
+      'A genuine benchmark at each price tier — the Planar series is widely treated as the reference for musical engagement at its price, accessible entry into serious analog without the high-mass cost floor',
+    ],
+    tradeoffs: [
+      'Bass weight and tonal richness are secondary to rhythmic drive — listeners who anchor on bottom-end heft or lush tonality may prefer a higher-mass design',
+      'Cartridge matching shifts the balance — Rega\'s own cartridges are voiced for the arm, and third-party cartridges can move the tonal centre away from the intended character',
+      'The low-mass philosophy is a deliberate position, not a universal answer — the high-mass school reaches different (and to some listeners preferable) results, and the two traditions genuinely disagree',
+      'Setup rewards care despite the simplicity — the rigid, lightly-damped design is honest about upstream and downstream choices rather than masking them',
+    ],
+    designFamilies: [
+      {
+        name: 'Planar series (entry to upper)',
+        character: 'The core lineage — Planar 1, 2, 3, 6, 8 — applying the rigidity-and-low-mass philosophy at successively higher resolution. The Planar 3 is the long-standing reference for musical engagement at its price.',
+        ampPairing: 'System-agnostic; pairs naturally with the Rega RB arm family and Rega cartridges for the fully in-house expression.',
+      },
+      {
+        name: 'Flagship (P10 / Naia)',
+        character: 'The philosophy at its most resolved — ultra-low-mass, high-rigidity construction using advanced materials. The Naia is the brand\'s statement of how far the low-mass argument extends when cost is not the constraint.',
+      },
+    ],
     links: [
       { label: 'Official website', url: 'https://www.rega.co.uk/', region: 'global' },
       { label: 'Dealer (The Sound Organisation, US)', url: 'https://www.soundorg.com/', kind: 'dealer', region: 'US' },
@@ -936,9 +1607,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'Gustard builds DACs across both delta-sigma and R2R architectures, targeting measured performance at competitive prices. The design philosophy balances technical ambition with value positioning.',
     tendencies: 'Gustard DACs vary by architecture — the ESS-based models (X16, X26 Pro) lean toward precision and clarity, while the R2R models (R26) offer more tonal body. Generally described as capable and transparent without strong colouration.',
     systemContext: 'Versatile system partners. The ESS-based models suit systems needing analytical precision; the R2R models offer a warmer alternative without the full density of Denafrips.',
-    links: [
-      { label: 'Apos Audio', url: 'https://apos.audio/collections/gustard', kind: 'dealer', region: 'global' },
-    ],
+    // links: [] — the Apos collection URL (apos.audio/collections/gustard)
+    // returned HTTP 404 in the 2026-05-21 audit. Apos restructured their
+    // site and the collection paths no longer exist. Removed pending a
+    // valid replacement dealer / official-site link.
   },
   {
     names: ['smsl'],
@@ -949,9 +1621,10 @@ const BRAND_PROFILES: BrandProfile[] = [
     philosophy: 'SMSL designs compact, measurement-oriented DACs and amplifiers. Similar design philosophy to Topping — ESS and AKM chip implementations optimised for measured performance at accessible prices.',
     tendencies: 'SMSL DACs are described as clean, precise, and detailed. The sonic character is neutral-to-analytical. Tonal weight is lighter than R2R alternatives but separation and transient clarity are strong for the price.',
     systemContext: 'Similar system context to Topping — a precise source that benefits from downstream warmth. The SU-9 and D300 are popular mid-fi choices for measurement-conscious listeners.',
-    links: [
-      { label: 'Apos Audio', url: 'https://apos.audio/collections/smsl', kind: 'dealer', region: 'global' },
-    ],
+    // links: [] — the Apos collection URL (apos.audio/collections/smsl)
+    // returned HTTP 404 in the 2026-05-21 audit. Apos restructured their
+    // site and the collection paths no longer exist. Removed pending a
+    // valid replacement dealer / official-site link.
   },
   {
     names: ['laiv'],
@@ -1010,13 +1683,36 @@ const BRAND_PROFILES: BrandProfile[] = [
     country: 'Switzerland',
     brandScale: 'specialist',
     region: 'europe',
-    categories: ['dac', 'amplifier'],
-    philosophy: 'Goldmund designs around speed, transparency, and mechanical precision. The engineering philosophy prioritises low distortion, fast transient response, and tightly controlled signal paths. JOB is the accessible sister brand.',
-    tendencies: 'Goldmund electronics are described as fast, transparent, precise, and controlled. Tonal character is lean and articulate — speed and clarity dominate over warmth or harmonic density. The SRDA DAC follows this pattern with a clean, analytical presentation.',
-    systemContext: 'Goldmund sources and amplifiers work well with speakers that provide their own tonal body. In systems already biased toward precision, the cumulative leanness may thin out the presentation.',
+    categories: ['dac', 'amplifier', 'speaker'],
+    tagline: 'Swiss ultra-high-end precision — time-domain accuracy and Mechanical Grounding.',
+    philosophy: 'Goldmund pursues time-domain accuracy, low distortion, and mechanical control of every component in the signal path with uncommon rigour. The engineering identity is precision-aesthetic: fast transient response, tightly controlled signal paths, and a chassis culture that treats structural vibration as a primary distortion source. JOB Electronics is the accessible sister brand carrying similar design priorities at substantially lower price points.',
+    philosophyExtended: 'Founded in Geneva in 1978, Goldmund has been a continuous presence in Swiss ultra-high-end audio for four decades. Its "Mechanical Grounding" approach treats structural rigidity and damping as audible elements of the design — an explicit position that predates the broader industry conversation on vibration control. The brand was also among the first ultra-high-end houses to commit to computer-based digital playback as a serious format. The engineering identity has stayed continuous: extreme chassis rigidity, time-domain focus, and a precision aesthetic.',
+    tendencies: 'Goldmund electronics are known for speed, transparency, articulation, and dynamic precision. The presentation emphasizes transient clarity, control, and immediacy, often creating a highly vivid and exciting sense of musical propulsion. Rather than pursuing warmth or overt tonal richness, Goldmund systems tend to prioritize timing accuracy, low-level resolution, and structural control across the system.',
+    systemContext: 'Goldmund components work especially well in systems where precision, speed, and transient clarity are central priorities.',
+    designPhilosophy: 'Time-domain precision and Mechanical Grounding — structural vibration treated as primary distortion.',
+    sonicTendency: 'Fast, vivid, articulate, rigorously controlled.',
+    typicalTradeoff: 'Speed, immediacy, and structural control over warmth and harmonic density.',
+    leadershipOrigin: 'Founded in Geneva in 1978, Goldmund evolved from a high-end turntable maker into a full-system Swiss ultra-high-end manufacturer. The JOB sub-brand was introduced as an entry point carrying related design priorities at lower price tiers. The engineering identity has stayed continuous across the brand\'s history: extreme chassis rigidity, time-domain focus, and the precision aesthetic.',
     links: [
       { label: 'Official website', url: 'https://www.goldmund.com/', region: 'global' },
     ],
+    // Prestige-brand hero image — locally hosted curated asset
+    // (Pass 2026-05-28). Sourced from goldmund.com Telos 670 product
+    // page (og:image), downsampled from 2000×2000 PNG to 1200×1200
+    // JPEG and served from apps/web/public/brand-heroes/. No runtime
+    // hotlink dependency on the manufacturer CDN.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/goldmund-telos-670.jpg',
+          caption: 'Goldmund Telos 670 Integrated Amplifier.',
+          // Rights basis: none_recorded — see the Accuphase note above.
+          // Fair use is not permission.
+          credit: 'Goldmund',
+          sourceUrl: 'https://goldmund.com/power-amplifiers/telos-670-integrated-amplifier/',
+        },
+      ],
+    },
   },
   {
     names: ['crayon'],
@@ -1042,20 +1738,202 @@ const BRAND_PROFILES: BrandProfile[] = [
     systemContext: 'Bookshelf speakers in this class benefit from quality amplification with good damping and current delivery. Room placement matters for bass reinforcement.',
   },
   {
+    // Vintage brand. The catalog carries the Scott 222B / 222C
+    // (scott-222b, founder_reference calibration) but had no brand-level
+    // entry, so brand-only questions ("tell me about H.H. Scott") could
+    // not reach curated content. Prose is deliberately restrained about
+    // period claims and explicit that condition, not model, dominates
+    // how any surviving unit actually sounds (Doctrine D-7).
+    names: ['scott', 'h.h. scott', 'hh scott', 'hermon hosmer scott'],
+    displayName: 'H.H. Scott',
+    founder: 'Hermon Hosmer Scott',
+    country: 'United States',
+    brandScale: 'mainstream',
+    region: 'north-america',
+    categories: ['amplifier'],
+    tagline: 'American mid-century tube electronics — domestic-scale hi-fi, built in volume.',
+    philosophy: 'H.H. Scott, Inc. built tube integrated amplifiers, receivers, and FM tuners in Maynard, Massachusetts from the late 1940s through the 1960s. The company was a volume manufacturer of consumer hi-fi rather than a boutique — many models were sold both factory-wired and as kits, and the circuits were designed for stable, repeatable performance in mass production rather than for exotic parts. The 222 series integrated amplifiers use push-pull EL84 / 7189 output stages at modest power: the domestic format of the period. The firm did not survive the transition to solid-state in commercially meaningful form.',
+    tendencies: 'The 222-series voicing is warm and tonally dense, with harmonic body foregrounded and a relaxed rhythmic character — the American push-pull EL84 idiom of its era. Detail retrieval, bandwidth, and noise floor sit well behind what modern electronics achieve, and that gap is part of the proposition rather than a defect to be corrected. One caution matters more than any model-level description: condition dominates character. A unit that has been recapped, with its output tubes matched and its bias set correctly, behaves quite differently from one that has not. An assessment of a specific Scott is largely an assessment of that unit\'s restoration history.',
+    systemContext: 'Modest output power asks for sensitive speakers — vintage American and British designs, horns, and modern high-efficiency two-ways. The amplifier supplies tonal density, so it balances a clean, resolving source and compounds an already-warm chain rather than correcting it. Ownership decisions here depend as much on the individual unit and on access to a competent technician as on the model.',
+    designPhilosophy: 'Mass-produced American tube electronics designed for stable performance in the home, sold wired or as kits.',
+    sonicTendency: 'Warm, tonally dense, relaxed — period voicing rather than modern resolution.',
+    typicalTradeoff: 'Harmonic body and ease over transparency, bandwidth, and noise performance; character is condition-dependent.',
+  },
+  {
+    // schools: musical-communication, japanese-artisan;
+    // horn-efficiency-affinity via canonical DeVore Orangutan pairing.
+    // The Leben argument: the Luxman voicing tradition — refinement,
+    // composure, harmonic presence — can be carried forward in small-
+    // batch hand-built push-pull tube amplifiers, with the listener
+    // gaining agency through tube rolling, rather than ceded to mass-
+    // manufactured solid-state.
     names: ['leben'],
-    founder: 'Hyodo-san',
+    relatedTechnologySlugs: ['class-a-amplification', 'set', 'high-efficiency-loudspeakers'],
+    founder: 'Taku Hyodo',
     country: 'Japan',
     brandScale: 'boutique',
     region: 'japan',
     categories: ['amplifier'],
-    philosophy: 'Leben builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. The CS600X and CS300X use push-pull KT77/KT88/EL34 topology with very low negative feedback. The design prioritises tonal density, harmonic richness, and rhythmic drive over measured neutrality. Every unit is hand-assembled in Japan.',
-    tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone — voices and acoustic instruments have unusual body and presence. Excellent dynamics for their power rating — surprising bass grip from the KT77/KT88 push-pull topology. The presentation is lush and flowing, with a dimensional soundstage that rewards close listening.',
-    systemContext: 'Leben amplifiers are a natural match for high-efficiency speakers — DeVore, Zu, Klipsch Heritage. The CS600X (~32W) drives speakers in the 90–96dB range with authority. A staple of the Japanese high-end community and widely regarded as one of the best tube integrateds under $10k.',
-    pairingNotes: 'The Leben CS600X + DeVore O/96 is one of the most celebrated pairings in modern high-efficiency audio — it appears consistently in "best system" discussions. Tube rolling is a significant part of the Leben experience — KT77, KT88, and EL34 all produce meaningfully different voicing.',
+    tagline: 'Post-Luxman artisanal Japanese tube amplifiers — hand-built, voiced by ear.',
+    philosophy: 'Leben Hi-Fi Stereo Company builds hand-wired tube amplifiers in the Japanese tradition — small-scale, obsessively crafted, voiced by ear. Taku Hyodo founded the firm after his career as a Luxman engineer, carrying the Luxman voicing into an explicitly small-batch tube format. The CS600X and CS300X use push-pull KT77 / KT88 / EL34 topology with very low negative feedback; the design prioritises tonal density, harmonic richness, and rhythmic drive over measured neutrality. Every unit is hand-assembled in Japan.',
+    philosophyExtended: 'The original CS300 used EL84 output tubes in a compact integrated chassis and became unusually popular among headphone listeners as a desktop-scale tube amplifier — a use case the design did not originally target but accommodates exceptionally well. The current CS300X retains the compact format with a revised tube complement; the larger CS600 / CS600X uses KT77 / KT88 / EL34 in push-pull and drives full-size loudspeakers. Tube rolling is a meaningful part of the listening experience — KT77, KT88, and EL34 produce noticeably different voicings in the same chassis, and the listener gains agency over the voicing without changing chassis. The post-Luxman lineage shows in the voicing: tonal refinement carried into a tube format at deliberately small production volumes, in a domain Luxman itself does not fully occupy in its modern solid-state lineup.',
+    tendencies: 'Listeners describe Leben amplifiers as warm, tonally dense, rhythmically alive, and harmonically rich. Strong midrange presence and natural instrument tone — voices and acoustic instruments have unusual body and dimensionality. Excellent dynamics for the power rating, with surprising bass grip from the KT77 / KT88 push-pull topology. The presentation is lush and flowing rather than analytical, with a dimensional soundstage that rewards close listening.',
+    systemContext: 'Leben amplifiers are a natural match for high-efficiency loudspeakers — DeVore, Zu, Klipsch Heritage, Audio Note AN-E. The CS600X (~32W) drives speakers in the 90–96 dB range with authority. The CS300 / CS300X has a parallel identity as a desktop tube amplifier for headphone listeners — a use case the design accommodates well despite not being its original target.',
+    designPhilosophy: 'Hand-built artisanal tube amplification carrying the Luxman voicing tradition into a small-batch tube format.',
+    sonicTendency: 'Warm, dense, rhythmically alive, harmonically rich — refinement and composure in a tube domain.',
+    typicalTradeoff: 'Tonal saturation and musical drive over measured precision; low output power requires sensitive speakers.',
+    leadershipOrigin: 'Taku Hyodo founded Leben Hi-Fi Stereo Company in Japan after a career as a Luxman engineer — at a moment when the Japanese hi-fi industry was consolidating toward mass-manufactured solid-state product and treating tube heritage as territory for vintage gear or expensive imports. Hyodo\'s argument was that the Luxman voicing tradition — refinement, composure, harmonic presence — could be carried forward in small-batch hand-built push-pull tube amplifiers, with the listener gaining agency through tube rolling rather than ceding it to factory voicing. The CS300 / EL84 lineage became unusually influential among headphone listeners; the CS600 family carries the same voicing into full-system territory. The firm remains small-scale — every amplifier is hand-assembled.',
+    strengths: [
+      'Low-feedback push-pull KT77/KT88/EL34 voicing — tonal density and harmonic richness as the foundation across the output stage, not an additive flavour',
+      'The Luxman refinement tradition expressed in a small-batch hand-built tube format — a voicing Luxman itself does not fully occupy in its modern solid-state lineup',
+      'Tube rolling (KT77 for sweetness, KT88 for grip, EL34 for vintage harmonic balance) as intentional listener-agency over the voicing — not an aftermarket modification',
+      'The same Leben voicing reaches across use cases — CS300 as a desktop tube amplifier for premium headphones, CS600X as a full-system amplifier for high-efficiency speakers — without compromising either identity',
+      'The CS600X + DeVore O/96 pairing has become one of the most-cited canonical combinations in modern high-efficiency audio — the idea has been validated by the community where it matters',
+      'Hand-built in Japan under continuous founder stewardship — material discipline expressed at the brand scale, not only at the product scale',
+    ],
+    tradeoffs: [
+      'Low output (CS600X ~32W; CS300 family ~12W) — the idea requires sensitive speakers in the 90 dB+ range for full-system use, foreclosing the standard mid-power solid-state market',
+      'Measured neutrality is deprioritised — listeners who prioritise flat response or surgical transient detail will hear the voicing as warm rather than honest',
+      'Bass extension is bounded by small-tube push-pull topology — Leben gives up deep bass authority for tonal density and harmonic richness',
+      'Small-batch production means waiting lists and limited dealer presence — the idea does not scale to broad availability, and ownership requires patience',
+      'Tube rolling is part of the voicing but also a real ownership cost — KT77 / KT88 / EL34 NOS supply matters over time',
+    ],
+    pairingNotes: 'Leben pairs naturally with brands and components whose ideas align: tonal density over surgical detail, musical communication over measured neutrality, small-scale craft over scaled manufacturing. The canonical CS600X + DeVore O/96 pairing is more than a popular combination — it is the most-cited expression in modern high-efficiency audio of the argument that low-power push-pull tubes and sensitive speakers can together produce a complete system without compromise on either end. Other natural partners share this orientation: Auditorium 23 cables and SUTs (analog-interface coherence), Shindo electronics (emotional communication via single-ended triodes), TotalDAC and similarly tonally-dense R2R sources, Aurorasound phono stages (low-noise transparency that does not edit the tonal palette). The CS300 family enters a different conversation entirely: as a desktop tube amplifier for premium headphones — HiFiMAN planars, Audeze, the Sennheiser HD-series — it occupies a niche where small-tube musicality matters more than power. Anti-pairings reveal the trade-off: high-feedback solid state, low-sensitivity speakers (below 86 dB), and FPGA DACs that prioritise transient surgery over tonal weight will fight rather than partner the Leben voicing. Tube rolling (KT77, KT88, EL34) is part of the ownership experience, not an aftermarket add-on; the listener gains agency over the voicing without changing chassis.',
     links: [
       { label: 'Leben (Japan)', url: 'https://www.leben-hifi.com/', region: 'global' },
       { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/', kind: 'dealer', region: 'US' },
     ],
+    designFamilies: [
+      {
+        name: 'CS300 / CS300X — compact tube integrated',
+        character: 'The compact end of the Leben range. Originally an EL84-based integrated for sensitive small-room speakers, the CS300 became unusually influential as a desktop tube amplifier for premium headphones — a use case the design did not target but accommodates exceptionally well. The CS300X retains the compact format with a revised tube complement. Where the CS600 line scales the Leben voicing to full-system use, the CS300 line concentrates it for desktop listening at smaller scale and lower power.',
+        ampPairing: 'Self-contained integrated. As a speaker amp, pairs with sensitive small-room loudspeakers (typically 90 dB+). As a desktop tube amp, pairs with premium dynamic and planar headphones in the HiFiMAN / Audeze / Sennheiser HD-series range — does not need a separate headphone amplifier.',
+      },
+      {
+        name: 'CS600 / CS600X — full-system push-pull',
+        character: 'The full-system expression of the Leben voicing. Push-pull KT77/KT88/EL34 integrated amplifier at ~32W with very low negative feedback. Tube rolling is a deliberate part of the listening experience — KT77 for additional sweetness and microdynamic colour, KT88 for greater grip and bass authority, EL34 for vintage harmonic balance. The CS600X carries the voicing forward with refinements; both share the same design intent.',
+        ampPairing: 'Pairs with high-efficiency speakers in the 90–96 dB range — DeVore Orangutan, Zu Audio, Klipsch Heritage, Audio Note AN-E. The canonical CS600X + DeVore O/96 combination is one of the most-cited pairings in modern high-efficiency audio.',
+      },
+    ],
+    // Locally hosted hero image. Sourced from lebenhifi.com CS-600
+    // product photo, re-encoded at JPEG quality 90 and served from
+    // apps/web/public/brand-heroes/. Native size preserved (400×252)
+    // since the source itself is small. A larger secondary image
+    // (workshop / Hyodo at the bench / CS600 internals) would help
+    // promote the page to Level-4 visual standard once a safe
+    // manufacturer-sourced asset is available.
+    media: {
+      images: [
+        {
+          url: '/brand-heroes/leben-cs600.jpg',
+          caption: 'Leben CS-600 Integrated Amplifier — push-pull KT77/KT88/EL34 voicing in a hand-built chassis.',
+          credit: 'Leben Hi-Fi Stereo Company',
+          sourceUrl: 'https://lebenhifi.com/',
+        },
+      ],
+    },
+  },
+  // ── SPEC Corporation ───────────────────────────────────
+  // schools: japanese-artisan, modern-switching, musical-communication.
+  // The SPEC argument: modern switching amplification can be voiced for
+  // natural decay, harmonic continuity, and musical communication rather
+  // than sterile efficiency or measurement spectacle. The "Real-Sound"
+  // (リアルサウンド) design language treats switching topology as a
+  // musical instrument: circuit choices, wood-and-material chassis
+  // tuning, and component selection all serve listener experience, not
+  // measurement targets. SPEC is the Japanese-artisan node of the
+  // modern-switching school, sister to Leben (post-Luxman tube) and
+  // Shindo (WE-tradition circuit individuality) in the Japanese-artisan
+  // cluster.
+  {
+    names: ['spec', 'spec corporation', 'spec corp', 'スペック'],
+    displayName: 'SPEC',
+    founder: 'Ryuji Banno',
+    country: 'Japan (Tokyo)',
+    brandScale: 'specialist',
+    region: 'japan',
+    categories: ['amplifier', 'dac'],
+    tagline: 'Real-Sound switching amplification — Class D voiced as a musical instrument.',
+    philosophy: 'SPEC is the argument that modern switching amplification can be voiced for natural decay, harmonic continuity, and musical communication rather than sterile efficiency or measurement spectacle. The brand\'s own design language is "Real Sound" (リアルサウンド): every product carries it in the model name — RPA Real-Sound Power Amplifier, RSA Real-Sound Amplifier, RSP Real-Sound Processor, RMP Real-Sound Music Processor. The claim is not that switching topology is incidentally musical; it is that Class D can be designed as a musical instrument, with circuit choices, chassis material (cherry-veneer wood side panels on every product), and component selection all coordinated toward listener experience rather than measurement targets.',
+    philosophyExtended: 'Founded in 2010 in Tokyo by Ryuji Banno, SPEC entered the market at a moment when Class D switching amplification was widely understood in audiophile circles as an efficiency technology with measurement advantages but a tonal handicap — dry, mechanical, lacking the natural decay and harmonic continuity of tube and high-current solid-state amplifiers. Banno\'s argument was that the handicap was not in the topology itself but in how the topology had been designed; Class D could be voiced for natural decay if the circuit, the power supply, the chassis resonance, and the component choices were all coordinated toward that goal. The "Real-Sound" design language carries through every product, from the RSA-EX1 entry integrated through the RSA-BW7 mid-tier integrated to the RPA-MG1 reference monoblocks. The distinctive material identity (black metal chassis with prominent cherry-veneer wood side panels) is a visible expression of the material-tuning philosophy: the wood is not decoration but a deliberate resonance-management element, and seeing it tells the listener the brand\'s argument before the system plays a note.',
+    tendencies: 'Listeners describe SPEC amplifiers as having a tube-adjacent tonal palette while preserving the dynamic ease and low-noise characteristics of well-designed switching topology — natural decay, harmonic continuity through the midband, and an absence of the dry mechanical signature commonly associated with Class D. The voicing is unmistakably Japanese-artisan in posture: refined, considered, willing to subordinate measurement targets to listener experience, with material discipline (the wood side panels, the chassis weight, the component selection) carried out at brand scale rather than product scale alone.',
+    systemContext: 'SPEC is designed for systems where the listener wants tube-like flow without committing to tube ownership burden (heat, tube rolling, biasing, NOS supply concerns) and wants the dynamic ease and low-noise characteristics of well-designed switching topology without accepting its conventional tonal handicap. The amplifiers pair naturally with high-coherence loudspeakers (Harbeth, Spendor, DeVore) where Class D dryness would normally be a concern, with analog front ends (the natural-decay voicing carries through), and with NOS or R2R DACs whose tonal density matches the SPEC voicing.',
+    designPhilosophy: 'Class D switching amplification voiced as a musical instrument — circuit, chassis resonance, and material selection all coordinated toward listener experience rather than measurement targets.',
+    sonicTendency: 'Tube-adjacent tonal palette with the dynamic ease and low-noise characteristics of well-designed switching topology — natural decay, harmonic continuity, no dry mechanical signature.',
+    typicalTradeoff: 'Natural decay and musical communication over ultra-dry studio control or brute-force high-current slam; modern switching topology over high-current solid state.',
+    leadershipOrigin: 'Ryuji Banno founded SPEC Corporation in Tokyo in 2010 — at a moment when Class D switching amplification was being adopted across the consumer electronics industry for its efficiency and measurement advantages, but was widely understood in audiophile circles as a tonally compromised technology. The mainstream audiophile position was that Class D meant sterile, dry, and mechanical — a trade-off accepted in exchange for efficiency and small chassis size. Banno\'s argument was that the trade-off was a consequence of how Class D had been designed, not of the topology itself; with the circuit, power supply, chassis resonance, and component choices all coordinated toward natural decay and harmonic continuity, the technology could be voiced as a musical instrument rather than as an efficiency technology. The "Real-Sound" (リアルサウンド) design language is the brand\'s name for that coordinated approach, and the distinctive material identity (cherry-veneer wood side panels on every product) is its visible expression. SPEC has remained a specialist Japanese manufacturer under continuous founder-led design school since 2010.',
+    strengths: [
+      'The argument that modern switching amplification can be voiced for natural decay and harmonic continuity rather than treated as an efficiency technology — circuit, chassis, and material choices coordinated toward listener experience rather than measurement targets',
+      'The "Real-Sound" design language carries through every product (RPA Power Amp, RSA Integrated, RSP Processor, RMP Music Processor) — the voicing is internally consistent across the line, not a flagship-only signature',
+      'Material discipline as visible design — the cherry-veneer wood side panels on every product are a deliberate resonance-management element, and seeing them tells the listener the brand\'s argument before the system plays a note',
+      'Tube-adjacent tonal palette without tube ownership burden — listeners get the natural decay and harmonic continuity of tube amplification with the dynamic ease, low-noise, and reliability of well-designed switching topology',
+      'Specialist Japanese manufacture under continuous founder-led design school since 2010 — the design school is durable in a way mainstream Class D product lines (where switching topology is bought in as a module and chassis-engineered to a price point) are not',
+      'Bridges the Japanese-artisan school (Shindo, Leben) with the modern-switching school — SPEC is the Japanese-artisan node of modern Class D, sister to Leben (post-Luxman tube) and Shindo (WE-tradition circuit individuality) in the Japanese-artisan cluster',
+    ],
+    tradeoffs: [
+      'The voicing is specifically tuned for natural decay and musical communication — listeners who want ultra-dry studio control, surgical transient detail as the dominant impression, or brute-force high-current slam will find the voicing too warm or too gentle for the target use case',
+      'Modern switching topology presupposes reasonably sensitive loudspeakers (85–95 dB typical) — SPEC will function with very insensitive speakers but the voicing is not optimised for them; brute-force high-current solid-state remains the better choice for genuinely difficult loads',
+      'Premium specialist Japanese pricing reflects the small-batch design-led manufacture — SPEC sits substantially above commodity Class D and even above many mainstream high-end Class D product lines',
+      'The distinctive wood-side aesthetic is part of the design, not optional — listeners who want chassis neutrality (all-metal, all-black, design-anonymous) will find the SPEC visual identity insistent',
+      'Modern switching topology and "Real Sound" voicing are not separable — SPEC is not a measurement-target neutral amplifier, and chains built around measurement-target neutrality will hear SPEC as a coloured-on-purpose amplifier rather than a transparent one',
+    ],
+    pairingNotes: 'SPEC pairs naturally with brands and components whose ideas align: natural decay and musical communication over sterile studio control, the analog front end or NOS / R2R digital as the primary source, sensitive-to-moderately-sensitive high-coherence loudspeakers where Class D dryness would normally be a concern, and listeners who want tube-like flow without tube ownership burden. Canonical partners: Harbeth and Spendor (the British coherence school — SPEC delivers a tube-tonal palette without forcing the listener to choose between tube ownership and coherent BBC-tradition loudspeakers), DeVore (the high-efficiency Musical-Communication School — SPEC works as the alternative to Leben CS600X for listeners who want the same voicing posture in a switching topology), Audio Note UK NOS DACs (the NOS digital + SPEC switching amp chain produces the tonally dense, dynamically eased presentation idiomatic to the Japanese-artisan listening tradition), Aurorasound phono stages (analog front-end discipline carries through cleanly), Leben (the sister brand in the Japanese-artisan modern cluster — both are voiced from the same posture even though one is tube and one is switching). The SPEC voicing also serves listeners coming from the EMT / Auditorium 23 / Shindo analog-front-end orientation who want a modern-era amplifier that does not fight the source-side voicing. Anti-pairings reveal the trade-off: chains built around measurement-target neutrality (SPEC will read as coloured-on-purpose), ultra-dry studio-monitoring contexts (the natural-decay voicing is not what those systems want), very insensitive speakers requiring brute-force high-current solid-state (SPEC will drive them but the editorial intent is muted), and listeners who want the amplifier to disappear into chassis-neutral anonymity (the wood-side design is not optional).',
+    links: [
+      { label: 'SPEC Corporation (Japan)', url: 'https://www.spec-corp.co.jp/', region: 'global' },
+      { label: 'Tone Imports (US distributor)', url: 'https://www.toneimports.com/spec', kind: 'dealer', region: 'US' },
+    ],
+    designFamilies: [
+      {
+        name: 'RPA-MG1 reference monoblocks',
+        character: 'The flagship Real-Sound Power Amplifier — monoblocks with the full expression of SPEC\'s design language: black-and-cherry chassis, Real-Sound switching topology, coordinated power supply, and the material-tuning philosophy carried out at the reference scale. The MG1 occupies the top of the line where the brand\'s argument is least compromised by price.',
+        ampPairing: 'Stand-alone power amplifier; presupposes a separate preamp (the SPEC RSP-55 processor or a chosen partner). Pairs with sensitive-to-moderately-sensitive high-coherence loudspeakers — Harbeth M40, DeVore O/96, Spendor Classic, Audio Note AN-E.',
+      },
+      {
+        name: 'RSA-BW7 + RSA-EX1 integrated amplifiers',
+        character: 'Real-Sound Amplifier integrated models — the BW7 sits in the middle tier and the EX1 at the entry point. Both carry the same Real-Sound design language as the RPA reference, but with line-stage and switching topology in one chassis. The wood side panels and Real-Sound voicing are preserved across the line; price-tier compromises are taken at the component-selection and chassis-scale layer, not at the voicing-posture layer.',
+        ampPairing: 'Self-contained integrated. Pairs with the same loudspeakers as the MG1 monoblocks scaled to the power tier — BW7 for mid-room moderately-sensitive speakers; EX1 for smaller rooms or more sensitive partners.',
+      },
+      {
+        name: 'RSP-55 Real-Sound Processor',
+        character: 'The Real-Sound Processor — SPEC\'s dedicated preamp / line-stage product. Carries the Real-Sound design language into the front-end of the chain. Designed to feed RPA-MG1 monoblocks or other tube/switching power amplifiers voiced in the same posture.',
+        ampPairing: 'Pairs naturally with RPA-MG1; also works with non-SPEC power amplifiers voiced in the same Japanese-artisan or musical-communication posture (Shindo, Leben, Audio Note tube amps).',
+      },
+      {
+        name: 'RMP-DAC3 Real-Sound Music Processor',
+        character: 'The Real-Sound Music Processor — SPEC\'s digital source product. Designed for analog-adjacent musical communication rather than measurement-target transparent reconstruction; carries the brand\'s voicing posture into the digital source layer so the front-end and amplification share a single Real-Sound design language.',
+      },
+    ],
+    media: {
+      // Hero downloaded 2026-06-08 from
+      // https://www.spec-corp.co.jp/audio/RPA-MG1/img/main.png and
+      // placed locally under apps/web/public/brand-heroes/ to match the
+      // established local-hosting precedent (devore-o96 / leben-cs600 /
+      // shindo-cortese-300b / audio-note-an-elx-hemp /
+      // naim-separates-stack / a23-hommage-cinema / emt-jsd-novel).
+      // Manufacturer-sourced from the official SPEC Corporation site,
+      // F4-satisfied (not reviewer-derived).
+      //
+      // The RPA-MG1 monoblock pair shows SPEC's distinctive material
+      // identity: black-and-cherry-veneer chassis with the small SPEC
+      // arrow/triangle logo. Native size 750×329 PNG (preserving the
+      // source-side transparency around the chassis silhouette) —
+      // visually the strongest expression of the brand's "Real-Sound"
+      // design language available on the manufacturer's own site.
+      //
+      // Secondary-image gap: a manufacturer-sourced shot of the RSA-BW7
+      // integrated front panel or an RPA-MG1 + RSP-55 chain in a
+      // listening room would lift the page to Level-4 visual standard
+      // by visually completing the design-language-across-the-line
+      // argument the prose describes. Flagged for future polish.
+      images: [
+        {
+          url: '/brand-heroes/spec-rpa-mg1.png',
+          caption: 'SPEC RPA-MG1 — Real-Sound monoblock power amplifiers with the brand\'s distinctive black-and-cherry material identity.',
+          credit: 'SPEC Corporation',
+          sourceUrl: 'https://www.spec-corp.co.jp/audio/RPA-MG1/index.html',
+        },
+      ],
+    },
   },
   {
     names: ['totaldac', 'total dac'],
@@ -1081,13 +1959,14 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['amplifier'],
     philosophy: 'Aurorasound designs phono stages and headphone amplifiers with exceptional technical sophistication. The VIDA series is widely considered a reference phono stage — designed for extremely low noise, flexible loading, and excellent transient response.',
     tendencies: 'The VIDA MKII is described as transparent, dynamic, and exceptionally quiet. It reveals cartridge character with minimal editorialising. Transient speed and decay are reference-calibre. The EQ-100 variable equalisation mono phono amplifier is a rare speciality piece for correct playback of pre-RIAA recordings.',
-    systemContext: 'Aurorasound phono stages are found in reference-level analogue front ends. The VIDA is one of the most respected phono stages for cartridge rolling — its flexible loading options make it ideal for listeners with multiple cartridges spanning different design philosophies.',
+    systemContext: 'Aurorasound phono stages are found in reference-level analogue front ends. The VIDA is one of the most respected phono stages for cartridge rolling — its flexible loading options make it ideal for listeners with multiple cartridges spanning different design philosophies. The VIDA in SUT-fed mode is the Aurorasound expression of the Musical Communication School chain-coherence argument — a transparent low-noise tube MM input behind the SUT, voiced for chains expressing the school.',
     links: [
       { label: 'Aurorasound', url: 'https://aurorasound.jp/', region: 'global' },
     ],
   },
   {
     names: ['michell', 'michell engineering'],
+    relatedTechnologySlugs: ['belt-drive-turntables'],
     founder: 'John Michell',
     country: 'UK',
     brandScale: 'specialist',
@@ -1095,7 +1974,33 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['turntable'],
     philosophy: 'Michell Engineering builds precision turntables using suspended subchassis designs. The Gyro SE is a long-standing reference — excellent speed stability, very low noise floor, and strong rhythmic articulation. British engineering with a focus on mechanical integrity.',
     tendencies: 'Michell turntables are described as detailed, rhythmically articulate, and dynamically open. The suspended design provides excellent isolation. The Gyro SE is one of the most respected mid-price turntables — a genuine reference that competes well above its price class.',
-    systemContext: 'The Gyro SE is a strong platform for a range of tonearms and cartridges. It has an excellent upgrade ecosystem (power supply, clamp, armboard options). A serious analogue front end that rewards cartridge investment.',
+    systemContext: 'The Gyro SE is a strong platform for a range of tonearms and cartridges. It has an excellent upgrade ecosystem (power supply, clamp, armboard options). A serious analogue front end that rewards cartridge investment. Michell sits within the Musical Communication School as the British suspended-subchassis expression of the belt-drive mechanical-isolation argument — the Gyro / Orbe lineup carries the Linn LP12 tradition with the brand\'s mechanical-precision posture and pairs naturally with the school\'s SUT / tube-phono / Class A / high-efficiency-speaker cluster.',
+    tagline: 'Precision-machined suspended subchassis — mechanical isolation built like an instrument.',
+    philosophyExtended: 'Michell\'s answer to the turntable\'s core problem — keep motor noise and external vibration out of the cartridge — is the suspended subchassis, the tradition the Linn LP12 made famous, executed with the brand\'s distinctive mechanical-engineering aesthetic. The suspension isolates the platter-and-arm assembly from the plinth and the outside world; the high-mass, precision-machined platter (with its visible weighted construction) acts as a flywheel smoothing speed; the oil-pumped bearing keeps the rotation quiet. The visual signature — acrylic, polished metal, the exposed mechanism — is not styling for its own sake but the isolation strategy made literal: the design publishes how it solves the problem in its physical form. The trade is the suspended-subchassis trade in general: instantaneous torque and absolute pitch precision are given up relative to direct-drive in exchange for a noise floor and an isolation quality the cartridge inherits as quietness between notes.',
+    leadershipOrigin: 'John Michell founded Michell Engineering in England, and the GyroDec — with its distinctive suspended subchassis and weighted platter — became the design the company is known for and a long-running reference in British turntable engineering. Michell\'s background was in precision engineering and machining, which shows in the brand\'s execution: the turntable is treated as a precision mechanical instrument, built to tolerances and finished to a standard that made the exposed mechanism part of the appeal. After John Michell\'s death in 2003 the company continued under its established engineering team and family stewardship, keeping the Gyro and Orbe lineage and the suspended-subchassis philosophy in continuous production rather than redesigning around it.',
+    strengths: [
+      'Suspended subchassis isolates the platter-and-arm assembly from motor and external vibration — the Linn LP12 tradition executed with Michell\'s precision-machining standard, inherited by the cartridge as a low noise floor',
+      'High-mass precision-machined platter acts as a flywheel — smoothing instantaneous speed variation and contributing to the quiet, stable presentation the brand is known for',
+      'Excellent upgrade ecosystem — outboard power supply, clamp, and armboard options let the Gyro grow with cartridge and tonearm investment rather than capping it',
+      'Mechanical execution as visible design philosophy — the exposed acrylic-and-metal mechanism publishes the isolation strategy in its physical form, and the build quality competes well above the price class',
+    ],
+    tradeoffs: [
+      'Instantaneous torque and absolute pitch precision are given up relative to direct-drive — the suspended belt-drive trade, accepted in exchange for mechanical isolation',
+      'The suspended subchassis rewards careful setup and levelling — the isolation that gives the design its quiet noise floor depends on correct adjustment',
+      'It is a serious front end that presupposes cartridge and tonearm investment — the platform rewards the rest of the analog chain rather than being a casual plug-and-play table',
+      'Like all belt-drive designs, it asks for belt maintenance and is the wrong tool for broadcast, archival, or DJ use where direct-drive pitch stability is the requirement',
+    ],
+    pairingNotes: 'Michell is a serious analog front end built to be grown with tonearm and cartridge investment. It sits in the Musical Communication School as the British suspended-subchassis expression of the belt-drive mechanical-isolation argument, carrying the Linn LP12 tradition with the brand\'s precision-machining posture. The canonical chain places the Gyro / Orbe ahead of a low-output MC cartridge, a step-up transformer, a tube phono and line stage, and Class A or tube amplification into high-efficiency speakers — the school\'s analog-source foundation. Anti-pairings: broadcast / archival / DJ workflows needing direct-drive pitch stability, casual setups unwilling to level and maintain the suspension, and chains built around measurement-target source components that fight the school\'s posture.',
+    designFamilies: [
+      {
+        name: 'Gyro / GyroDec / Gyro SE',
+        character: 'The brand\'s signature line — the suspended-subchassis design with the visible weighted platter and exposed mechanism. The Gyro SE is the long-standing mid-price reference that competes above its class.',
+      },
+      {
+        name: 'Orbe',
+        character: 'The higher expression of the same suspended-subchassis philosophy — more mass, more isolation, and tighter execution for listeners taking the platform toward its ceiling.',
+      },
+    ],
     links: [
       { label: 'Michell Engineering', url: 'https://www.michell-engineering.co.uk/', region: 'global' },
     ],
@@ -1108,17 +2013,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['turntable'],
     philosophy: 'Ortofon is the world\'s largest cartridge manufacturer, producing designs across every price point and philosophy. The SPU series represents the classic moving-coil tradition — warm, dense, and rhythmically powerful. The 2M series covers high-resolution moving-magnet designs.',
     tendencies: 'Ortofon cartridges span from warm and dense (SPU, Cadenza) to precise and revealing (2M Black, MC Windfeld). The brand covers a wider sonic range than most — cartridge selection matters more than brand character.',
-    systemContext: 'Ortofon cartridges are compatible with virtually any tonearm and phono stage. The SPU series requires medium-mass arms and MC-capable phono stages. The 2M series works with standard MM inputs.',
-  },
-  {
-    names: ['emt'],
-    country: 'Germany',
-    brandScale: 'specialist',
-    region: 'europe',
-    categories: ['turntable'],
-    philosophy: 'EMT designs broadcast-heritage cartridges known for dynamic power, tracking ability, and tonal authority. Originally built for professional broadcast use, EMT cartridges prioritise reliability and dynamic impact.',
-    tendencies: 'EMT cartridges are described as dynamic, powerful, and authoritative. Strong tracking ability and excellent transient definition. The HSD 006 is a modern design that retains the EMT house sound — bold, direct, and rhythmically commanding.',
-    systemContext: 'EMT cartridges pair well with medium-to-high mass tonearms. They reward phono stages with good dynamic headroom and MC gain.',
+    systemContext: 'Ortofon cartridges are compatible with virtually any tonearm and phono stage. The SPU series requires medium-mass arms and MC-capable phono stages. The 2M series works with standard MM inputs. The Ortofon SPU + matched-impedance SUT chain is one of the canonical low-output MC references of the Musical Communication School — the brand sits within the school as the wider cartridge cluster the school\'s analog-source side draws from.',
   },
   {
     names: ['rockna'],
@@ -1229,6 +2124,17 @@ const BRAND_PROFILES: BrandProfile[] = [
     media: {
       images: [
         {
+          // Local hero — replaces externally-hotlinked Amazon LS50 Meta
+          // thumbnail (flagged as a low-resolution external hotlink in
+          // the 2026-05-29 visual-trust audit) as the primary hero.
+          // Sourced from us.kef.com Shopify CDN (Blade Two Meta press),
+          // optimised to 900×900 / ~46 KB / JPEG.
+          url: '/brand-heroes/kef-blade-two-meta.jpg',
+          caption: 'KEF Blade Two Meta — flagship Uni-Q force-cancelling design.',
+          credit: 'KEF',
+          sourceUrl: 'https://us.kef.com/products/blade-two',
+        },
+        {
           url: 'https://m.media-amazon.com/images/I/51RmYCbQVQL._AC_SX679_.jpg',
           caption: 'KEF LS50 Meta — the benchmark Uni-Q stand-mount.',
           credit: 'KEF',
@@ -1286,16 +2192,33 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['wlm'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set'],
     country: 'Austria',
     brandScale: 'boutique',
     region: 'europe',
     categories: ['speaker'],
     philosophy: 'WLM builds high-efficiency speakers around coaxial wideband drivers, prioritising dynamic expression, rhythmic engagement, and tonal color over analytical precision. The design philosophy favors musical involvement — energy and momentum over measurement-flat neutrality.',
     tendencies: 'WLM speakers are described as rhythmically insistent, dynamically alive, and tonally warm. High efficiency delivers visceral micro and macro contrasts. The midrange is weighted and natural-sounding. Spatial precision is secondary to musical flow.',
-    systemContext: 'WLM speakers pair well with moderate-power amplification, including tube amps whose full dynamic range is unlocked by the high efficiency. In small or untreated rooms, bass energy from the passive radiator can overwhelm.',
+    systemContext: 'WLM speakers pair well with moderate-power amplification, including tube amps whose full dynamic range is unlocked by the high efficiency. In small or untreated rooms, bass energy from the passive radiator can overwhelm. The brand sits within the Musical Communication School as the Austrian boutique high-efficiency coaxial-wideband expression of the chain-as-system commitment — a European boutique destination for the school distinct from the British (Audio Note AN-E), American (DeVore), and Polish (Cube) speaker traditions.',
     designPhilosophy: 'High-efficiency coaxial wideband; dynamic expression and rhythmic engagement over analytical precision.',
     sonicTendency: 'Rhythmically insistent, dynamically explosive, warm midrange with natural timbres.',
     typicalTradeoff: 'Less pinpoint imaging and spatial precision than sealed-box or narrow-baffle monitors.',
+    tagline: 'Coaxial wideband efficiency voiced for rhythm and momentum over measurement-flat neutrality.',
+    philosophyExtended: 'WLM\'s argument is that the most musically important quality a loudspeaker delivers is energy — the sense that the system starts and stops with the music and pushes air with conviction at the volumes people actually listen at. The brand pursues this through high-efficiency coaxial wideband drivers, where a single point source carries the bulk of the range and a passive radiator extends the bottom. The coaxial layout keeps the critical band coherent from a single acoustic origin; the high efficiency means a modest tube amplifier can swing the driver through its full dynamic range without strain. The deliberate trade is named in the brand\'s own positioning: spatial pinpoint precision and the last degree of measured neutrality are secondary to rhythmic drive and tonal warmth. WLM is for the listener who would rather a system be alive than be flat.',
+    leadershipOrigin: 'WLM — Wiener Lautsprecher Manufaktur, the Vienna loudspeaker manufactory — is an Austrian boutique speaker maker working in the high-efficiency tradition. The brand\'s identity is built around the coaxial-wideband-plus-passive-radiator approach rather than around a single named designer, and its European boutique scale lets it voice speakers by ear for musical involvement rather than to a mass-market measurement target. WLM occupies the continental-European corner of the high-efficiency speaker world, distinct in execution from the British, American, and Polish brands that reach the same low-power-partner destination by other means.',
+    strengths: [
+      'High efficiency unlocks the full dynamic range of low-power tube amplification — modest wattage drives the speaker to lifelike contrasts without strain, which is the whole point of the design',
+      'Coaxial wideband driver keeps the critical midband coherent from a single acoustic origin — voices and instruments arrive from one point in space rather than being assembled across separate drivers',
+      'Rhythmic drive and tonal warmth as the primary voicing target — the brand optimises for musical momentum and a weighted, natural midrange, which listeners experience as engagement',
+      'Boutique-scale voicing by ear — the speaker is tuned for involvement rather than to a mass-market neutrality benchmark, giving it a distinct European high-efficiency character',
+    ],
+    tradeoffs: [
+      'Spatial precision and pinpoint imaging are secondary — listeners who prize a holographic, tightly-focused soundstage will find sealed-box or narrow-baffle monitors more exact',
+      'The passive-radiator bass can overload a small or untreated room — the design assumes room space and benefits from placement care',
+      'Measurement-led evaluation will read the warm, momentum-first voicing as a deviation from neutral rather than as the intended character',
+      'Like all high-efficiency designs, it presupposes the right amplifier partner — the dynamic-ease advantage is realised with tube or low-power amplification, not with every solid-state pairing',
+    ],
+    pairingNotes: 'WLM is voiced for moderate-power and tube amplification, where the high efficiency turns limited wattage into full dynamic expression. It sits in the Musical Communication School as the Austrian boutique high-efficiency coaxial-wideband expression of the chain-as-system commitment — a European boutique destination distinct from the British (Audio Note AN-E), American (DeVore), and Polish (Cube Audio) speaker traditions. The natural chain places it after a tube line stage and a Class A or push-pull tube amplifier, fed by a tonally dense source. Anti-pairings: small or untreated rooms where the passive-radiator energy overwhelms, measurement-led systems where the warm voicing fights the source, and listeners who anchor on imaging precision over rhythmic drive.',
     links: [
       { label: 'Official website', url: 'http://www.wiener-lautsprecher-manufaktur.com/en-speaker', region: 'global' },
     ],
@@ -1465,7 +2388,7 @@ const BRAND_PROFILES: BrandProfile[] = [
     region: 'asia',
     categories: ['headphone', 'amplifier', 'dac'],
     philosophy: 'Aune designs headphones and audio electronics that punch above their price class. Value-oriented but not budget-compromised. Their planar magnetic headphones and tube/solid-state hybrid amplifiers aim for refinement typically found at higher price points.',
-    tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar. Srajan Ebaen\'s 2024 brand pick on 6moons.',
+    tendencies: 'Clean, fast, refined. Planar magnetic headphones with good composure and speed. Not warm or romantic — precision-oriented but not clinical. Outstanding value-per-dollar.',
     systemContext: 'Aune products are accessible entry points for listeners exploring higher-end sound. Their headphones work well with modest amplification. Their amplifiers and DACs pair broadly.',
     links: [],
   },
@@ -1501,6 +2424,7 @@ const BRAND_PROFILES: BrandProfile[] = [
   },
   {
     names: ['cube audio'],
+    relatedTechnologySlugs: ['high-efficiency-loudspeakers', 'set'],
     founder: 'Grzegorz Rulka',
     country: 'Poland',
     brandScale: 'boutique',
@@ -1508,30 +2432,144 @@ const BRAND_PROFILES: BrandProfile[] = [
     categories: ['speaker'],
     philosophy: 'Cube Audio designs single full-range driver speakers for use without crossovers. The philosophy follows the SET amplifier ideal: minimal signal path, maximum coherence. Drivers are designed in-house with a focus on pistonic linearity and low distortion at real-world listening levels.',
     tendencies: 'Cube Audio speakers are described as extraordinarily coherent, midrange-rich, and tonally saturated. The full-range driver eliminates crossover colorations — voices and acoustic instruments are presented with unusual directness. High sensitivity (typically 95–98 dB) enables single-ended triode pairing.',
-    systemContext: 'Cube Audio speakers are designed specifically for low-power tube amplification — particularly SET designs using 300B, 2A3, or similar output tubes. They require careful room placement (near-field or treated rooms work best) and amplifiers with low output impedance to control the wide-range driver. In solid-state systems they function but the design intent is not served.',
+    systemContext: 'Cube Audio speakers are designed specifically for low-power tube amplification — particularly SET designs using 300B, 2A3, or similar output tubes. They require careful room placement (near-field or treated rooms work best) and amplifiers with low output impedance to control the wide-range driver. In solid-state systems they function but the design intent is not served. The brand sits within the Musical Communication School as the no-crossover single-driver expression of the chain-as-system commitment — a different speaker tradition than DeVore Orangutan or Audio Note AN-E, with the same architectural posture.',
     designPhilosophy: 'No-crossover full-range drivers for phase-perfect, coherent midrange presentation.',
     sonicTendency: 'Tonally rich, midrange-saturated, holographic — particularly natural on vocals and acoustic music.',
     typicalTradeoff: 'Reduced bass extension and treble energy vs. multi-way designs; demanding room setup.',
+    tagline: 'Single full-range driver, no crossover — the most direct path from amplifier to ear.',
+    philosophyExtended: 'The mainstream loudspeaker accepts the crossover as a necessary cost: split the signal across drivers optimised for their bands, and pay for the integration with phase complexity and a network of components between amplifier and cone. Cube Audio argues the cost is not necessary if a single driver can cover the range honestly. The in-house drivers — built around a paper cone with multiple whizzer sections and neodymium motors — are engineered to stay pistonic across the band without breaking into the ragged top-octave behaviour that sank earlier full-range designs. The result is a speaker the amplifier sees as one continuous load with no crossover between it and the cone, which is why the brand is voiced for and sold to single-ended-triode listeners. The trade is deliberate and named: the bottom octave and the very top are given up in exchange for a midrange coherence and a phase integrity that multi-way designs cannot reach because they are not trying to.',
+    leadershipOrigin: 'Grzegorz Rulka builds Cube Audio in Poland, designing the full-range drivers in-house rather than sourcing them — the driver is the company\'s core intellectual property, not the cabinet. The brand emerged from the contemporary single-driver revival, which set out to answer the historical objection to full-range designs (limited bandwidth, cone break-up) with modern materials and motor engineering rather than with apology. Cube\'s position is that the single-driver, no-crossover speaker is not a vintage curiosity but a current design answer for the low-power-amplification listener, and the company has built its identity around the driver as the thing it makes, with the speaker as the thing the driver goes in.',
+    strengths: [
+      'No crossover between amplifier and cone — the single full-range driver removes the phase complexity and component network that a multi-way design places in the signal path, which listeners hear as directness and coherence rather than as a measured spec',
+      'In-house driver design — the multi-whizzer paper-cone driver is the company\'s own engineering, not an off-the-shelf part, so the brand owns the trade-offs it is making rather than inheriting them',
+      'High sensitivity (typically 95–98 dB) by design — the speaker is built to be driven by a few watts of single-ended triode, making it one of the natural speaker partners for the SET amplifier',
+      'Midrange saturation and holographic presentation on voice and acoustic instruments — the band where the single driver is most honest is the band most music lives in',
+    ],
+    tradeoffs: [
+      'Bottom-octave bass extension is given up — a single driver in a modest cabinet cannot move the air a dedicated woofer can, and bass-anchored listeners will hear the limit',
+      'Top-octave air and sparkle are softer than a dedicated tweeter delivers — the full-range driver trades the last octave of treble energy for coherence through the midband',
+      'Room placement is demanding — the design rewards near-field or treated rooms and careful positioning, and punishes casual placement more than a forgiving multi-way',
+      'The intended result requires low-output-impedance, low-power amplification — in a high-feedback solid-state system the speaker works but the design intent is not served',
+    ],
+    pairingNotes: 'Cube Audio is voiced for single-ended-triode and low-power tube amplification (300B, 2A3, 845, and similar), where the high sensitivity turns a few watts into full dynamic range. It sits in the Musical Communication School as the no-crossover single-driver expression of the chain-as-system commitment — a different speaker tradition than DeVore Orangutan (wide-baffle) or Audio Note AN-E (BBC-derived), reaching the same architectural posture by a different route. The canonical chain places it after a tube line stage and a Class A or SET amplifier, fed by a tonally dense source (NOS / R2R DAC or an analog front end). Anti-pairings: high-power solid-state where the design intent is lost, large rooms requiring deep bass at high SPL, and listeners who anchor on bottom-octave slam or top-octave sparkle.',
+    designFamilies: [
+      {
+        name: 'Nenuphar',
+        character: 'The brand\'s flagship-tier statement of the single-driver argument — a larger cabinet built around the full-range driver, voiced for SET amplification and the most complete expression of the no-crossover idea in the range.',
+      },
+      {
+        name: 'Bliss / Magus and the driver line',
+        character: 'More accessible cabinets carrying the same in-house full-range driver philosophy at smaller scale, plus the bare drivers themselves — the company sells the driver as well as the speaker, underscoring that the driver is the product.',
+      },
+    ],
     links: [
       { label: 'Cube Audio', url: 'https://cubeaudio.eu/', region: 'global' },
     ],
   },
   {
     names: ['audio note', 'audio note uk', 'ank', 'audio note kits'],
+    relatedTechnologySlugs: ['set', 'nos-dacs', 'r2r-dacs', 'high-efficiency-loudspeakers', 'class-a-amplification'],
     founder: 'Peter Qvortrup',
     country: 'UK (Brighton)',
     brandScale: 'boutique',
     region: 'uk',
     categories: ['dac', 'amplifier', 'speaker'],
-    philosophy: 'Audio Note UK designs full system chains around the SET triode amplifier ideal. The approach is holistic: each component — DAC, preamplifier, amplifier, speaker — is voiced to work as a coherent whole rather than optimised in isolation. NOS (non-oversampling) DAC topologies and silver wire are distinctive house signatures.',
-    tendencies: 'Audio Note components are described as warm, harmonically dense, tonally saturated, and musically compelling. The NOS DAC conversion topology (no digital filtering, no upsampling) delivers a uniquely direct presentation. The overall system character prioritises musical engagement over measured precision.',
-    systemContext: 'Audio Note components are best evaluated as a system. Individual components may appear to lack measured performance when used with other brands, but within the AN ecosystem they are synergistic. AN-E speakers are designed for corner placement and work specifically with low-power AN amplifiers. The brand offers a tiered "Level" system (Level 0 through Level 5+) with significant differences between tiers.',
-    designPhilosophy: 'Full-system coherence around SET triode amplification and NOS conversion.',
-    sonicTendency: 'Warm, tonally dense, musically saturated — system-dependent coherence.',
-    typicalTradeoff: 'Measured performance vs. musical engagement; strong brand lock-in by design.',
+    tagline: 'Music-first full-system design — SET triode amplification and NOS conversion as a coherent whole.',
+    philosophy: 'Audio Note UK designs full system chains around the SET (single-ended triode) amplifier ideal and the NOS (non-oversampling, non-filtering) DAC topology. The approach is holistic: each component — DAC, preamplifier, amplifier, speaker — is voiced to work as a coherent ecosystem rather than optimised in isolation. Silver-wired transformers, hand-wound chokes, paper-in-oil capacitors, and material choices at higher tiers are distinctive house signatures.',
+    philosophyExtended: 'Peter Qvortrup founded Audio Note UK after a period working with Hiroyasu Kondo of Audio Note Japan; the UK and Japanese arms are now separately operated. The brand sits intentionally outside mainstream audio engineering culture — measurement-skeptical, music-first, and strongly opinionated in its design choices. The tiered "Level" system (Level 0 through Level 5+) frames the range as a single coherent ladder rather than discrete products. The result is a design culture that is internally coherent and consistent: components, topologies, and materials are chosen to express the same set of priorities at every tier.',
+    tendencies: 'Audio Note components are described as warm, harmonically dense, tonally saturated, and musically compelling. The NOS DAC topology (no digital filtering, no upsampling) delivers a distinctive direct presentation that some hear as natural and others as soft. Overall the system character prioritises musical engagement and tonal saturation over transient precision and measured linearity.',
+    systemContext: 'Audio Note components are best evaluated as a system. Individual components may appear to lack measured performance when used with other brands; within the AN ecosystem they are synergistic by design. AN-E speakers are designed for corner placement and pair specifically with the low-power AN amplifiers. The brand\'s tiered "Level" system (Level 0 through Level 5+) carries significant character differences between tiers, not just refinement. Audio Note UK is the canonical flagship anchor of the Musical Communication School — the chain-as-system editorial argument the school carries through every Technology Page in the Audio XX corpus is, in modern audio, most completely expressed by this brand.',
+    designPhilosophy: 'Full-system coherence around SET triode amplification, NOS conversion, and material absolutism.',
+    sonicTendency: 'Warm, tonally dense, musically saturated — coherence by ecosystem.',
+    typicalTradeoff: 'Measured performance versus musical engagement; intentional ecosystem lock-in.',
+    leadershipOrigin: 'Peter Qvortrup founded Audio Note UK after a period working with Hiroyasu Kondo of Audio Note Japan (now Kondo Audio Note). The two operations have since been entirely separate. The UK arm is based in Brighton and remains under Qvortrup\'s direction; it offers both finished components and the Audio Note Kits (ANK) line for builders.',
+    strengths: [
+      'Internally coherent full-system design — DAC, preamp, power amp, and speaker voiced as a single chain rather than optimised individually',
+      'SET (single-ended triode) amplification and NOS (non-oversampling, non-filtering) DAC topology as a paired house pattern across the entire range',
+      'Material absolutism at higher tiers — silver-wired transformers, hand-wound chokes, and paper-in-oil capacitors as distinctive house signatures',
+      'Tiered "Level" system (Level 0 through Level 5+) treats the range as a single coherent ladder rather than discrete products',
+      'AN-E speakers designed for corner placement — removes the placement compromise that most stand-mount monitors require',
+      'Strongly opinionated, internally consistent design culture — measurement-skeptical, music-first, and voiced end-to-end',
+    ],
+    tradeoffs: [
+      'Measurement-skeptical engineering posture — individual components may underperform measurement-led benchmarks even when synergistic in-system',
+      'Intentional ecosystem lock-in — components evaluated outside the AN system may appear to lack performance because they were not voiced for foreign partners',
+      'NOS DAC topology (no digital filtering, no upsampling) is polarising — the direct presentation reads as natural to some listeners and as soft to others',
+      'Level-to-Level differences are deliberate character shifts, not just refinement — Level 2 and Level 5+ are voiced differently rather than the same voicing at different price points',
+      'Transient precision and measured linearity are deprioritised — treated as secondary to musical engagement and tonal saturation',
+    ],
+    pairingNotes: 'The canonical Audio Note UK use case is a closed-loop AN-only chain: AN DAC into AN preamp into AN power amp into AN speaker, with the Level rating framing the entire chain rather than individual components. The AN-E loudspeaker is voiced specifically for corner placement and for the brand\'s own low-power SET amplifiers — the OTO SE, P2 SE, and Meishu Phono/Line are canonical partners at the entry and middle of the ladder, with the Jinro, Kegon, Ongaku, and Gaku-On occupying the upper Levels. Listeners sometimes deploy AN DACs as standalone NOS sources into other tube chains (Shindo, Leben, Line Magnetic) where their tonal density is compatible with the receiving stage; outside that specific case, mixing AN with non-AN amplification or with speakers not voiced for corner placement tends to soften the in-house design intent. Partial-AN entries (e.g., AN-E speakers with non-AN amplification, or AN preamps into non-AN power amps) should be expected to read differently from the full-stack voicing — the Level rating only describes the full chain.',
     links: [
       { label: 'Audio Note UK', url: 'https://www.audionote.co.uk/', region: 'global' },
     ],
+    designFamilies: [
+      {
+        name: 'Level 1',
+        character: 'Entry tier — the accessible end of the AN ladder. Carries the SET + NOS house pattern in its most affordable form, with conventional materials (copper wiring, standard capacitor choices) rather than the silver-foil and paper-in-oil signatures that appear higher in the range. Canonical Level 1 systems pair the CD 2.1x/II DAC, the OTO SE integrated, and AN-K speakers.',
+        ampPairing: 'Anchored by the OTO SE integrated (≈9W EL84-based SET) into AN-K corner-placed two-way speakers. Sits below Level 2 in material grade and refinement; the family voicing is recognisable here but compressed compared to higher Levels.',
+      },
+      {
+        name: 'Level 2',
+        character: 'Mid-entry tier — silver-plated copper begins to appear in selected interconnects, and the house material discipline starts asserting itself more clearly. The DAC 2.1x Signature, OTO SE Signature, and AN-J/Spe speakers are typical Level 2 anchors. The voicing relaxes and gains tonal body relative to Level 1 without changing the underlying topology.',
+        ampPairing: 'OTO SE Signature integrated or P1 SE power amp; AN-J/Spe corner-placed speakers. Sits between Level 1 (entry voicing, conventional materials) and Level 3 (silver wiring and tantalum resistors begin appearing throughout the chain).',
+      },
+      {
+        name: 'Level 3',
+        character: 'Mid-range tier — the AN house character is fully present. Silver-wired transformers and tantalum resistors begin appearing across the chain; the DAC 3.1x Signature, M3 line preamp, and either the OTO Phono SE or the P2 SE power amplifier are canonical pairings with AN-E/Spe or AN-E/Lx speakers. The Level system\'s "single coherent ladder" framing becomes audible here in a way it is not at Levels 1–2.',
+        ampPairing: 'M3 preamp + P2 SE (≈18W push-pull triode) or Quest Silver Signature monoblocks; AN-E/Spe or AN-E/Lx speakers. Sits between Level 2 (silver enters selectively) and Level 4 (silver-wired output transformers + reference-grade interconnects throughout).',
+      },
+      {
+        name: 'Level 4',
+        character: 'Upper-mid tier — silver-wired output transformers, hand-wound chokes, paper-in-oil signal capacitors, and reference-grade interconnects appear throughout the chain rather than at points. The DAC 4.1x Signature, M6 line preamp, and Jinro or Kegon (300B-based SET) monoblocks anchor the tier, paired with AN-E/SPe HE or AN-E/SPx HE speakers. Material absolutism becomes the defining house signature here.',
+        ampPairing: 'M6 preamp + Jinro/Kegon SET monoblocks; AN-E/SPe HE or higher Spe-line speakers. Sits between Level 3 (silver and house materials present but not throughout) and Level 5+ (no-compromise reference materials, top-of-range voicing).',
+      },
+      {
+        name: 'Level 5+',
+        character: 'Reference tier — the no-compromise end of the AN ladder. DAC 5 Signature, M9/M10 line preamps, and the Ongaku or Gaku-On power amplifiers represent the brand\'s reference statements, paired with AN-E/SEC Signature or the largest AN speakers. The Level system here is no longer about scaling refinement; it is about expressing the house priorities — SET, NOS, silver, paper-in-oil — without any cost-driven compromise.',
+        ampPairing: 'M9/M10 preamp + Ongaku/Gaku-On power amplifier; AN-E/SEC Signature or top-tier AN speakers. Sits at the top of the ladder above Level 4; comparisons to other reference-tier brands shift from cost-class to voicing-philosophy.',
+      },
+    ],
+    media: {
+      // Hero pair sourced from the official Audio Note UK site
+      // (audionote.co.uk → static.wixstatic.com CDN). Both URLs HEAD-200
+      // verified 2026-06-07 prior to local hosting. Manufacturer-hosted
+      // via the brand's own Wix CDN; not reviewer-derived, not dealer-
+      // sourced. F4 gate satisfied.
+      //
+      // 2026-06-08 local-hosting migration: both heroes downloaded from
+      // the Wix CDN at the same fill-transform dimensions used at the
+      // hotlink stage (w_900,h_900 for AN-ELX HEMP at 74 KB; w_1200,h_800
+      // for the Ongaku transformer at 180 KB), placed under
+      // apps/web/public/brand-heroes/ to match the devore-o96 /
+      // leben-cs600 / shindo-cortese-300b / naim precedent and remove
+      // the runtime Wix-CDN dependency. sourceUrl values retained verbatim
+      // for editorial provenance; caption + credit unchanged.
+      images: [
+        {
+          url: '/brand-heroes/audio-note-an-elx-hemp.jpg',
+          caption: 'Audio Note AN-ELX HEMP in Olive — the flagship of the AN-E lineage, voiced for corner placement and low-power SET amplification.',
+          credit: 'Audio Note UK',
+          sourceUrl: 'https://www.audionote.co.uk/loudspeakers',
+        },
+        {
+          // Replacement (2026-06-07 polish): the prior right-hand hero was
+          // a satin-veneer chart that read like a dealer brochure rather
+          // than an editorial brand image. Swapped for an Audio Note UK
+          // factory documentary shot — a transformer being hand-wound,
+          // with the labelled box reading "ONGAKU TR 370 GT 300" (an
+          // Ongaku output transformer in production). This directly
+          // visualises the silver-wired-transformers / hand-wound-chokes
+          // material absolutism that is named in strengths[2] and pairs
+          // editorially with the AN-ELX HEMP Olive speaker on the left
+          // (finished product + the craft that made it). Local-hosted
+          // 2026-06-08 as part of the brand-heroes/ migration above.
+          url: '/brand-heroes/audio-note-ongaku-transformer.jpg',
+          caption: 'Hand-winding an Ongaku output transformer at the Brighton factory — the silver-wired transformers and hand-wound chokes that define Audio Note at the upper Levels.',
+          credit: 'Audio Note UK',
+          sourceUrl: 'https://www.audionote.co.uk/',
+        },
+      ],
+    },
   },
   {
     names: ['mola mola'],
@@ -1587,20 +2625,50 @@ function joinWithCommas(items: string[]): string {
 
 // ── Subject extraction ──────────────────────────────
 
+/**
+ * A brand name inside another word is not a brand mention.
+ *
+ * These matchers used raw `includes()`, so the brand Spec matched the
+ * substring "spec" inside "special" — and array order let it beat the brand
+ * the user actually named. Verified on production: "what's special about
+ * harbeth" returned the Spec profile. Word-boundary matching fixes the class
+ * ("specs", "special", "a23" inside a model number, …) without touching
+ * profile order or reachability of genuinely named brands.
+ */
+function aliasInText(alias: string, lowerText: string): boolean {
+  const escaped = alias.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`).test(lowerText);
+}
+
 function findBrandProfile(text: string): BrandProfile | undefined {
   const lower = text.toLowerCase();
   return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => lower.includes(name)),
+    bp.names.some((name) => aliasInText(name, lower)),
   );
 }
 
-/** Look up a brand profile by exact brand name (case-insensitive). */
-export function findBrandProfileByName(brandName: string): BrandProfile | undefined {
-  const lower = brandName.toLowerCase();
-  return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => name.toLowerCase() === lower),
-  );
-}
+// ── Catalog lookups — function bodies live in `./catalog/lookups`. ──
+// These imports give consultation.ts's own code (other builders in this
+// file) a local binding under the original names, AND re-export them
+// so the public API of consultation.ts is unchanged. Renderers under
+// `components/advisory/` now import directly from `@/lib/catalog/lookups`;
+// a later commit may remove this shim once the remaining lib/ callers
+// have migrated. No behaviour change.
+import {
+  findBrandProfileByName,
+  findBrandProfileBySlug,
+  findProductsByBrandSlug,
+  findProductInProse,
+  findProductByComponentName,
+} from './catalog/lookups';
+import { validateChainNames } from './chain-validation';
+export {
+  findBrandProfileByName,
+  findBrandProfileBySlug,
+  findProductsByBrandSlug,
+  findProductInProse,
+  findProductByComponentName,
+};
 
 /**
  * Substring-matching profile lookup that also reports the alias the
@@ -1622,7 +2690,9 @@ function findBrandProfileMatch(text: string):
   const lower = text.toLowerCase();
   for (const bp of BRAND_PROFILES) {
     for (const alias of bp.names) {
-      if (lower.includes(alias.toLowerCase())) {
+      // Boundary-aware for the same reason as findBrandProfile above —
+      // "special" must not match the brand Spec.
+      if (aliasInText(alias, lower)) {
         return { profile: bp, matchedAlias: alias };
       }
     }
@@ -1652,108 +2722,41 @@ export function findBrandProfileMatchByName(brandName: string):
   return undefined;
 }
 
-/**
- * Look up a brand profile by URL slug (output of `toSlug`).
- * Used by `/brand/[slug]` to resolve the route segment back to its
- * curated profile. Match is by slug-equivalence on any name in
- * BrandProfile.names — so '/brand/devore' and '/brand/devore-fidelity'
- * both resolve to the same profile.
- */
-export function findBrandProfileBySlug(slug: string): BrandProfile | undefined {
-  if (!slug) return undefined;
-  return BRAND_PROFILES.find((bp) =>
-    bp.names.some((name) => routeToSlug(name) === slug),
-  );
+// Word-boundary containment (plural-tolerant). Bare substring matching
+// resolved everyday words to products with generic catalog names —
+// "not sure if it's the amp" returned the WiiM AMP product sheet, and
+// "$330" would match the Soulution 330. Launch QA PH-05/NT-01
+// non-sequitur class.
+function textContainsTerm(lowerText: string, term: string): boolean {
+  const t = term.trim().toLowerCase();
+  if (!t) return false;
+  const esc = t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[^a-z0-9])${esc}s?(?:[^a-z0-9]|$)`).test(lowerText);
 }
-
-/**
- * Catalog products whose brand slugifies to `slug`. Filters the unified
- * ALL_PRODUCTS pool by exact slug match on `product.brand`, so a brand
- * with multiple BrandProfile aliases (e.g. ['pass labs', 'first watt'])
- * correctly returns only the products matching the URL the user clicked
- * — not the union of every alias.
- */
-export function findProductsByBrandSlug(slug: string): Product[] {
-  if (!slug) return [];
-  return ALL_PRODUCTS.filter((p) => routeToSlug(p.brand) === slug);
+// Product names that are ordinary category vocabulary or bare numerals
+// can never identify a product on their own — the brand must appear in
+// the text ("WiiM Amp" resolves; a stray "amp" does not).
+const GENERIC_PRODUCT_NAMES = new Set([
+  'amp', 'amplifier', 'integrated', 'pro', 'monitor', 'monitors',
+  'speaker', 'speakers', 'streamer', 'dac', 'one', 'plus', 'mini',
+  'classic', 'reference', 'signature',
+]);
+function productNameQualifiesForTextMatch(name: string): boolean {
+  const n = name.trim().toLowerCase();
+  if (GENERIC_PRODUCT_NAMES.has(n)) return false;
+  if (/^[\d.\-+]+$/.test(n)) return false;
+  return true;
 }
-
 function findProductsByBrand(text: string): Product[] {
   const lower = text.toLowerCase();
   return ALL_PRODUCTS.filter((p) =>
-    lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
+    textContainsTerm(lower, p.brand)
+    || (productNameQualifiesForTextMatch(p.name) && textContainsTerm(lower, p.name)),
   );
 }
 
-/**
- * Look up a single catalog product by a free-form component name such as
- * "WLM Diva Monitor", "JOB Integrated", or "Chord Hugo". The name comes
- * from the parsed "Do not touch:" line in the advisor's optimize body —
- * it is a display string, not a structured key.
- *
- * Strategy:
- *   1. Exact `brand + " " + name` match (case-insensitive).
- *   2. Name-only match when the input contains the brand AND name tokens.
- *   3. ID slug match ("wlm-diva-monitor" ↔ "WLM Diva Monitor").
- *
- * Returns `undefined` when no catalog product matches — callers degrade
- * honestly.
- */
-/**
- * Looser product resolver for prose: returns the first catalog product
- * whose brand AND any distinctive name token (≥4 chars) appears in
- * `text`. Used by the consultation renderer to surface a hero image
- * when the response prose discusses a specific product even though the
- * dispatched subject is brand-only (e.g. "Chord" → "Chord Hugo" once
- * the prose mentions Hugo). 4-char floor avoids false positives from
- * short suffix tokens like "II", "SE", "X".
- */
-export function findProductInProse(text: string): Product | undefined {
-  if (!text) return undefined;
-  const lower = text.toLowerCase();
-  return ALL_PRODUCTS.find((p) => {
-    if (!lower.includes(p.brand.toLowerCase())) return false;
-    const tokens = p.name.split(/\s+/).filter((tok) => tok.length >= 4);
-    if (tokens.length === 0) return false;
-    return tokens.some((tok) => lower.includes(tok.toLowerCase()));
-  });
-}
-
-export function findProductByComponentName(text: string): Product | undefined {
-  if (!text) return undefined;
-  const lower = text.toLowerCase().trim();
-  // 1. Exact brand+name match
-  const exact = ALL_PRODUCTS.find(
-    (p) => `${p.brand} ${p.name}`.toLowerCase() === lower,
-  );
-  if (exact) return exact;
-  // 2. Contains both brand and full name tokens
-  const byTokens = ALL_PRODUCTS.find(
-    (p) =>
-      lower.includes(p.brand.toLowerCase()) &&
-      lower.includes(p.name.toLowerCase()),
-  );
-  if (byTokens) return byTokens;
-  // 2b. Brand + distinctive-last-token match (Phase 2.6 polish,
-  //     2026-05-14). The chain rendering sometimes shortens a product
-  //     name by omitting the middle word — e.g. "DeVore Orangutan O/96"
-  //     becomes "DeVore O/96" in the displayed chain. Step 2 fails
-  //     because the input no longer contains the full product name.
-  //     This step rescues that case: when the input contains the brand
-  //     AND the distinctive last token of the product name (≥4 chars
-  //     to avoid noise from short designators like "II" / "SE"), match.
-  const byBrandAndDistinctiveToken = ALL_PRODUCTS.find((p) => {
-    if (!lower.includes(p.brand.toLowerCase())) return false;
-    const tokens = p.name.split(/\s+/);
-    const lastToken = tokens[tokens.length - 1].toLowerCase();
-    if (lastToken.length < 4) return false;
-    return lower.includes(lastToken);
-  });
-  if (byBrandAndDistinctiveToken) return byBrandAndDistinctiveToken;
-  // 3. ID slug match (hyphen-separated lowercase)
-  const slug = lower.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return ALL_PRODUCTS.find((p) => p.id === slug);
-}
+// (findProductInProse and findProductByComponentName moved to ./catalog/lookups;
+// re-exported above for compatibility.)
 
 /**
  * Search the provisional product store for products matching the text.
@@ -1762,7 +2765,8 @@ export function findProductByComponentName(text: string): Product | undefined {
 function findProvisionalProductsByBrand(text: string): ProvisionalProduct[] {
   const lower = text.toLowerCase();
   return getUsableProvisionalProducts().filter((p) =>
-    lower.includes(p.brand.toLowerCase()) || lower.includes(p.name.toLowerCase()),
+    textContainsTerm(lower, p.brand)
+    || (productNameQualifiesForTextMatch(p.name) && textContainsTerm(lower, p.name)),
   );
 }
 
@@ -2090,6 +3094,79 @@ function buildArchetypeConsultation(
  * pairing notes. This is the path for "what do you know about DeVore Fidelity?"
  * — distinct from the product consultation used for "DeVore O/96 thoughts?"
  */
+/**
+ * Eligibility predicate for the Brand Authority Preview tile.
+ *
+ * Returns true only when the profile carries enough authoritative
+ * content for the preview to read as a meaningful pointer to
+ * `/brand/[slug]`. Sparse profiles are intentionally excluded so the
+ * tile never renders as a thin "authority lite" stub.
+ *
+ * Gate:
+ *   - has tagline OR philosophyExtended (anchor prose), AND
+ *   - has at least 2 of: designPhilosophy, sonicTendency,
+ *     typicalTradeoff, strengths, tradeoffs, designFamilies.
+ *
+ * Pure function — no side effects, safe to call repeatedly.
+ */
+export function eligibleForBrandAuthorityPreview(p: BrandProfile): boolean {
+  const hasAnchorProse = !!p.tagline || !!p.philosophyExtended;
+  if (!hasAnchorProse) return false;
+  const richnessSignals =
+    Number(!!p.designPhilosophy) +
+    Number(!!p.sonicTendency) +
+    Number(!!p.typicalTradeoff) +
+    Number(!!(p.strengths && p.strengths.length > 0)) +
+    Number(!!(p.tradeoffs && p.tradeoffs.length > 0)) +
+    Number(!!(p.designFamilies && p.designFamilies.length > 0));
+  return richnessSignals >= 2;
+}
+
+/**
+ * Pick a locally-hosted hero image for the preview tile, or undefined.
+ *
+ * Resolution order:
+ *   1. `profile.media.images[0].url` if it starts with `/brand-heroes/`.
+ *   2. `profile.representativeImageUrl` if it starts with `/brand-heroes/`.
+ *   3. `undefined` — the tile renders without an image (no placeholder).
+ *
+ * External URLs are always rejected. This guarantees the preview never
+ * fires a request to a third-party origin and never participates in the
+ * external-hotlink trust regression surfaced in the visual-trust audit.
+ */
+export function pickLocalHeroImageUrl(p: BrandProfile): string | undefined {
+  const LOCAL_PREFIX = '/brand-heroes/';
+  const m0 = p.media?.images?.[0]?.url;
+  if (m0 && m0.startsWith(LOCAL_PREFIX)) return m0;
+  if (p.representativeImageUrl && p.representativeImageUrl.startsWith(LOCAL_PREFIX)) {
+    return p.representativeImageUrl;
+  }
+  return undefined;
+}
+
+/**
+ * Build a BrandAuthorityPreview from a BrandProfile, or undefined when
+ * the eligibility gate fails. The displayName + slug fall back to
+ * `profile.names[0]` and its slugified form.
+ */
+function buildBrandAuthorityPreview(profile: BrandProfile): BrandAuthorityPreview | undefined {
+  if (!eligibleForBrandAuthorityPreview(profile)) return undefined;
+  const rawName = profile.names[0];
+  // toDisplayName matches the casing used by `buildBrandConsultation`
+  // and `/brand/[slug]` so the preview tile reads with the same brand
+  // capitalization as the conversational answer below it.
+  const brandName = toDisplayName(rawName);
+  return {
+    brandName,
+    brandSlug: routeToSlug(rawName),
+    tagline: profile.tagline,
+    designPhilosophy: profile.designPhilosophy,
+    sonicTendency: profile.sonicTendency,
+    typicalTradeoff: profile.typicalTradeoff,
+    localHeroImageUrl: pickLocalHeroImageUrl(profile),
+  };
+}
+
 function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
   const name = toDisplayName(profile.names[0]);
 
@@ -2123,6 +3200,10 @@ function buildBrandConsultation(profile: BrandProfile): ConsultationResponse {
     systemContext,
     followUp: 'Are you exploring the brand generally, or considering a specific model?',
     links: profile.links,
+    // Pass 18: optional authority-preview projection. Renderer is
+    // gated behind NEXT_PUBLIC_BRAND_AUTHORITY_PREVIEW so populating
+    // this field is dark by default.
+    brandAuthorityPreview: buildBrandAuthorityPreview(profile),
   };
 }
 
@@ -2187,6 +3268,18 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
     }
   }
 
+  // Pass 18: best-effort BrandAuthorityPreview projection.
+  //
+  // BrandKnowledge entries don't carry tagline / designPhilosophy / etc.
+  // directly, so we look up the matching BrandProfile by the entry's
+  // canonical name. When a profile exists AND passes the eligibility
+  // gate, the preview tile populates; otherwise this stays undefined
+  // and the renderer simply omits the tile — no fallback artifact.
+  const matchedProfile = findBrandProfileByName(name);
+  const brandAuthorityPreview = matchedProfile
+    ? buildBrandAuthorityPreview(matchedProfile)
+    : undefined;
+
   return {
     subject: name,
     philosophy: philosophyLine,
@@ -2194,6 +3287,7 @@ function buildKnowledgeBrandConsultation(entry: BrandKnowledge): ConsultationRes
     systemContext: systemContext || undefined,
     followUp: 'Are you exploring the brand generally, or considering a specific model?',
     links: links.length > 0 ? links : undefined,
+    brandAuthorityPreview,
   };
 }
 
@@ -3523,6 +4617,83 @@ export function buildConsultationResponse(
   currentMessage: string,
   subjectMatches?: SubjectMatch[],
 ): ConsultationResponse | null {
+  const result = buildConsultationResponseCore(currentMessage, subjectMatches);
+  return applyOneSidedComparisonHonesty(result, currentMessage);
+}
+
+/**
+ * One-sided comparison honesty (Launch QA PD-02 / PD-04).
+ *
+ * When the user asks a two-sided comparison ("Holo May vs Schiit
+ * Yggdrasil") and only one side resolves, the core builder silently
+ * answers the known side — the Yggdrasil half of the question vanished
+ * without acknowledgement. This post-pass detects that shape and
+ * prepends an honest note before the single-subject content.
+ *
+ * Fires only when ALL hold, so the honesty claim is true by construction:
+ *   - the message has a comparison shape (vs / versus / "worth it over")
+ *   - the result is a single-subject response (no comparisonSummary)
+ *   - the result's subject matches exactly one side of the comparison
+ *   - the other side does NOT resolve to a catalog product (a genuinely
+ *     known other side is a comparison-composition failure, not a data
+ *     gap — claiming "I don't have data" there would be false)
+ */
+function applyOneSidedComparisonHonesty(
+  result: ConsultationResponse | null,
+  currentMessage: string,
+): ConsultationResponse | null {
+  if (!result || result.comparisonSummary || typeof result.philosophy !== 'string' || !result.philosophy.trim()) {
+    return result;
+  }
+
+  const shape = currentMessage.match(/^(.*?)\s+(?:vs\.?|versus)\s+(.*)$/i)
+    ?? currentMessage.match(/^(.*?)\s+worth\s+it\s+over\s+(.*)$/i);
+  if (!shape) return result;
+
+  const cleanSide = (s: string): string => {
+    let t = s.trim().replace(/[?!.,;:]+$/g, '').trim();
+    // Strip leading filler repeatedly ("Is the Eversolo A8" → "Eversolo A8").
+    for (let i = 0; i < 4; i++) {
+      const stripped = t.replace(/^(?:is|are|was|were|the|a|an|my|which|what|how|about|between|buy|get)\s+/i, '');
+      if (stripped === t) break;
+      t = stripped;
+    }
+    return t;
+  };
+  const sideA = cleanSide(shape[1]);
+  const sideB = cleanSide(shape[2]);
+  if (!sideA || !sideB || sideA.length > 60 || sideB.length > 60) return result;
+  if (sideA.toLowerCase() === sideB.toLowerCase()) return result;
+
+  // Which side does the delivered subject cover? Generic tokens like
+  // "audio" appear in many brand names and must not count as a match.
+  const GENERIC_TOKENS = new Set(['audio', 'labs', 'lab', 'electronics', 'acoustics', 'design', 'designs', 'the']);
+  const subjectTokens = result.subject.toLowerCase().split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3 && !GENERIC_TOKENS.has(t));
+  if (subjectTokens.length === 0) return result;
+  const covers = (side: string): boolean => {
+    const lower = side.toLowerCase();
+    return subjectTokens.some((t) => lower.includes(t));
+  };
+  const coversA = covers(sideA);
+  const coversB = covers(sideB);
+  if (coversA === coversB) return result; // ambiguous or neither — do nothing
+
+  const unknownSide = coversA ? sideB : sideA;
+  // A resolvable other side means the comparison failed to compose, not
+  // that data is missing — the honesty note would be false. Skip.
+  if (findCatalogProduct(unknownSide)) return result;
+
+  // Reviewer voice, not implementation language — no "calibrated data",
+  // "profiles", or engine terminology in customer-facing copy.
+  const note = `I know ${result.subject} well, but I haven't spent enough time with the ${unknownSide} to compare them fairly. Here's what I can say with confidence.`;
+  return { ...result, philosophy: `${note}\n\n${result.philosophy}` };
+}
+
+function buildConsultationResponseCore(
+  currentMessage: string,
+  subjectMatches?: SubjectMatch[],
+): ConsultationResponse | null {
   // 1. Brand-level comparison — "Chord vs Denafrips" (both tagged as brands)
   if (subjectMatches && subjectMatches.length >= 2) {
     const brandMatches = subjectMatches.filter((m) => m.kind === 'brand');
@@ -3546,9 +4717,20 @@ export function buildConsultationResponse(
         );
       }
 
-      // One or both missing curated profiles — try catalog-derived summaries
-      const productsA = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase());
-      const productsB = ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase());
+      // One or both missing curated profiles — try catalog-derived summaries.
+      // Launch gate 2026-07-19: when the user named a SPECIFIC model, that
+      // product must lead the summary — "Qutest vs Bifrost 2/64" was
+      // describing the multibit Bifrost with another Schiit product's
+      // delta-sigma architecture (MVP review PD-01).
+      const preferNamed = (products: Product[]): Product[] => {
+        const msg = currentMessage.toLowerCase();
+        const named = products.filter((p) => msg.includes(p.name.toLowerCase()));
+        return named.length > 0
+          ? [...named, ...products.filter((p) => !named.includes(p))]
+          : products;
+      };
+      const productsA = preferNamed(ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === a.name.toLowerCase()));
+      const productsB = preferNamed(ALL_PRODUCTS.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()));
       const summaryA = profileA ?? (productsA.length > 0 ? deriveBrandSummaryFromCatalog(a.name, productsA) : null);
       const summaryB = profileB ?? (productsB.length > 0 ? deriveBrandSummaryFromCatalog(b.name, productsB) : null);
 
@@ -3739,6 +4921,12 @@ export function buildComparisonRefinement(
     links?: import('./advisory-response').AdvisoryLink[];
   },
   followUpMessage: string,
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Used only to
+   * prepend a hedged framing paragraph to comparisonSummary. Comparison
+   * scoring/winner selection is unaffected.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse {
   const nameA = toDisplayName(activeComparison.left.name);
   const nameB = toDisplayName(activeComparison.right.name);
@@ -3779,7 +4967,11 @@ export function buildComparisonRefinement(
     : null;
 
   // Pack into concise side-by-side format — no long review sections.
-  const concise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const baseConcise = `${summary}\n\n**${nameA}:** ${contextA}\n\n**${nameB}:** ${contextB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+
+  // PB2.4 — prepend listener-aware framing if confidence allows.
+  const framing = buildListenerFraming(listenerProfile, 'comparison');
+  const concise = framing ? `${framing}\n\n${baseConcise}` : baseConcise;
 
   return {
     subject: `${nameA} vs ${nameB} — ${criterion.label}`,
@@ -3819,6 +5011,12 @@ export function buildContextRefinement(
   },
   contextMessage: string,
   contextKind: ContextKind,
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Prepends a
+   * hedged framing paragraph to comparisonSummary when confidence is
+   * sufficient. Does not change scope, ranking, or follow-up choice.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse {
   const nameA = toDisplayName(activeComparison.left.name);
   const nameB = toDisplayName(activeComparison.right.name);
@@ -3844,9 +5042,15 @@ export function buildContextRefinement(
       contextMessage,
     );
 
+    // PB2.4 — prepend listener-aware framing to the anchored body.
+    const anchoredFraming = buildListenerFraming(listenerProfile, 'comparison');
+    const anchoredBody = anchoredFraming
+      ? `${anchoredFraming}\n\n${anchored.body}`
+      : anchored.body;
+
     return {
       subject: `${nameA} vs ${nameB} — with ${contextName}`,
-      comparisonSummary: anchored.body,
+      comparisonSummary: anchoredBody,
       comparisonImages: buildComparisonImages(nameA, nameB, contextMessage),
       // Carry forward sources/links from the originating comparison turn
       // so the system-anchored decision retains its parent's richness.
@@ -3871,7 +5075,9 @@ export function buildContextRefinement(
     ? buildTasteDecisionFrame(contextMessage, nameA, '', infoA.tendencies, nameB, '', infoB.tendencies)
     : null;
 
-  const concise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const baseConcise = `${summary}\n\n**${nameA}:** ${sideA}\n\n**${nameB}:** ${sideB}${tasteFrame ? `\n\n${tasteFrame}` : ''}`;
+  const refinementFraming = buildListenerFraming(listenerProfile, 'comparison');
+  const concise = refinementFraming ? `${refinementFraming}\n\n${baseConcise}` : baseConcise;
 
   return {
     subject: `${nameA} vs ${nameB} — ${contextLabel}`,
@@ -4872,9 +6078,12 @@ function buildComparisonShopping(
   const primaryProfile = primary === nameA ? profileA : profileB;
   const secondaryProfile = secondary === nameA ? profileA : profileB;
 
-  // Build HiFiShark and eBay search URLs
+  // Build HiFiShark and eBay search URLs. HiFi Shark stays plain
+  // (no affiliate program). eBay host + EPN tagging come from
+  // ebay-links → affiliate-config (env-driven). The " amplifier"
+  // suffix narrows the eBay search for this amp-comparison context.
   const hifisharkUrl = (name: string) => `https://www.hifishark.com/search?q=${encodeURIComponent(name)}`;
-  const ebayUrl = (name: string) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(name + ' amplifier')}`;
+  const ebayUrl = (name: string) => getEbaySearchUrl(name + ' amplifier');
 
   // Primary recommendation — HiFiShark first, eBay second
   lines.push(`- **${primary}** — primary recommendation. Search: [HiFiShark](${hifisharkUrl(primary)}), [eBay](${ebayUrl(primary)})`);
@@ -4924,14 +6133,6 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bjob\b/i,
     sources: [
-      // 6moons as lead reviewer for Job (Srajan Ebaen's coverage of
-      // Goldmund-derived circuit work).
-      {
-        outlet: '6moons',
-        note: 'Srajan Ebaen review of the Job 225 — Goldmund-derived lateral MOSFET DC-coupled wide-bandwidth amplifier.',
-        url: 'https://6moons.com/audioreviews/job/1.html',
-        title: 'Job Electronics Job 225',
-      },
       { outlet: 'Darko.Audio', note: 'JOB 225 coverage — compact high-current amplification' },
     ],
   },
@@ -4947,12 +6148,6 @@ const EDITORIAL_SOURCES: Array<{
         note: 'Michael Lavorgna on the Leben CS600 — his 2018 Product of the Year, returned to his reference system in 2022.',
         url: 'https://twitteringmachines.com/system-building-the-leben-cs600-integrated-amplifier-the-return/',
         title: 'System Building — The Leben CS600 Integrated Amplifier: The Return',
-      },
-      {
-        outlet: '6moons',
-        note: 'Leben CS300X review — push-pull EL84 tube integrated',
-        url: 'https://6moons.com/audioreviews/leben/cs300x.html',
-        title: 'Leben CS300X review',
       },
       {
         outlet: 'Stereophile',
@@ -4988,7 +6183,6 @@ const EDITORIAL_SOURCES: Array<{
         url: 'https://twitteringmachines.com/review-devore-fidelity-o-96-loudspeakers/',
         title: 'Review: DeVore Fidelity O/96 Loudspeakers',
       },
-      { outlet: '6moons', note: 'DeVore Fidelity O/96 coverage — high-efficiency speaker design' },
       {
         outlet: 'Stereophile',
         note: 'Art Dudley review — Orangutan O/96 as a modern classic for tube systems',
@@ -5020,12 +6214,6 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bshindo\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: 'Shindo Laboratory profile — Tokyo workshop and tube amplification heritage',
-        url: 'https://6moons.com/audioreviews/shindo3/shindo.html',
-        title: 'Shindo Laboratory feature',
-      },
     ],
   },
   {
@@ -5039,7 +6227,6 @@ const EDITORIAL_SOURCES: Array<{
         url: 'https://twitteringmachines.com/review-totaldac-d1-unity-dac/',
         title: 'Review: totaldac d1-unity DAC',
       },
-      { outlet: '6moons', note: 'TotalDAC reviews — discrete R2R ladder DAC analysis' },
     ],
   },
   // ── Darko-as-lead-reviewer brands ────────────────────
@@ -5108,89 +6295,41 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\bkinki\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Kinki Studio EX-M1 — value-tier high-current Class A/B integrated.',
-        url: 'https://www.6moons.com/audioreviews2/kinki2/1.html',
-        title: 'Kinki Studio EX-M1',
-      },
     ],
   },
   {
     brandPattern: /\blaiv\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Laiv Crescendo Verse — discrete R2R DAC built around the same engineering as the Harmony.',
-        url: 'https://6moons.com/audioreview_articles/laiv-audio-crescendo-verse/3/',
-        title: 'Laiv Audio Crescendo Verse',
-      },
     ],
   },
   {
     brandPattern: /\bdenafrips\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Denafrips Terminator — Srajan Ebaen coverage of the flagship discrete R2R DAC.',
-        url: 'https://6moons.com/audioreviews2/denafrips/1.html',
-        title: 'Denafrips Terminator',
-      },
     ],
   },
   {
     brandPattern: /\btopping\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Topping B200 — fully-balanced discrete NFCA stereo amplifier.',
-        url: 'https://6moons.com/audioreview_articles/topping-b200/2/',
-        title: 'Topping B200',
-      },
     ],
   },
   {
     brandPattern: /\bwlm\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the WLM Diva Monitor with Diva Control — coaxial wideband design with room-tuning network.',
-        url: 'https://6moons.com/audioreviews/wlm/divamonitor.html',
-        title: 'WLM Diva Monitor with Diva Control',
-      },
     ],
   },
   {
     brandPattern: /\bboenicke\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Boenicke W8 — floorstander delivering mini-monitor staging with full-system scale.',
-        url: 'https://6moons.com/audioreviews2/boenicke3/4.html',
-        title: 'Boenicke Audio W8',
-      },
     ],
   },
   {
     brandPattern: /\bqualio\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Qualio IQ — Mundorf AMT + SB Acoustics 6.5" midrange open-baffle three-way.',
-        url: 'https://6moons.com/audioreview_articles/qualio-iq/',
-        title: 'Qualio Audio IQ',
-      },
     ],
   },
   {
     brandPattern: /\bcrayon\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Crayon Audio CIA-1T — compact Austrian Class A/B integrated.',
-        url: 'https://6moons.com/audioreviews2/crayon/4.html',
-        title: 'Crayon Audio CIA-1T',
-      },
     ],
   },
   // ── PB1.2 follow-up: catalog-wide coverage pass ─────
@@ -5394,56 +6533,26 @@ const EDITORIAL_SOURCES: Array<{
   {
     brandPattern: /\baurorasound\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Aurorasound Heada — headphone amp/preamp from the Japanese boutique that designed the HFSA-01.',
-        url: 'https://6moons.com/audioreviews2/aurorasound3/1.html',
-        title: 'Aurorasound Heada',
-      },
     ],
   },
   {
     brandPattern: /linear tube|\blta\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Linear Tube Audio Z10 ZOTL — proprietary Berning circuit, all-tube architecture without transformers.',
-        url: 'https://6moons.com/audioreview_articles/lineartubeaudio2/',
-        title: 'Linear Tube Audio Z10',
-      },
     ],
   },
   {
     brandPattern: /\bdecware\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Decware SE84CSP — preamp counterpart to the SE84UFO; same SET design philosophy.',
-        url: 'https://6moons.com/audioreviews/decware2/pre.html',
-        title: 'Decware SE84CSP',
-      },
     ],
   },
   {
     brandPattern: /\baudalytic\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons follow-up review of the Audalytic DR70 — discrete R2R DAC with 1-bit DSD direct path.',
-        url: 'https://6moons.com/audioreview_articles/audalytic-dr70-2nd-thoughts/',
-        title: 'Audalytic DR70 — 2nd thoughts',
-      },
     ],
   },
   {
     brandPattern: /\bgoldmund\b/i,
     sources: [
-      {
-        outlet: '6moons',
-        note: '6moons review of the Goldmund Telos 590 NextGen — flagship integrated; Goldmund\'s reference for the Job-derived lineage.',
-        url: 'https://6moons.com/audioreviews2/goldmund3/1.html',
-        title: 'Goldmund Telos 590 NextGen',
-      },
     ],
   },
 
@@ -5594,6 +6703,24 @@ function buildComparisonStructuredSources(
   profileA: BrandProfile | { name: string; philosophy: string; tendencies: string },
   profileB: BrandProfile | { name: string; philosophy: string; tendencies: string },
 ): import('./advisory-response').SourceReference[] | undefined {
+  // F4 gate (private beta, 2026-05-18):
+  //   Comparison output must not surface reviewer-derived source
+  //   attributions. The aggregation logic below (EDITORIAL_SOURCES +
+  //   reviewerQuotes + product.sourceReferences + brand review links)
+  //   draws on review-publication data and is excluded from the runtime
+  //   path under the F4 reviewer-data exclusion rule. The function
+  //   returns undefined so callers (e.g. the comparison advisory
+  //   builder) emit no sourceReferences field.
+  //
+  //   The original aggregation body is preserved below behind a
+  //   compile-time-dead `if (false)` block so it can be re-evaluated
+  //   post-beta alongside any new source/attribution approach.
+  void profileA;
+  void profileB;
+  return undefined;
+
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
   const refs: import('./advisory-response').SourceReference[] = [];
   // Dedupe by `source + url` pair. URL-less plain-text citations are
   // deduped by source alone (no URL distinguishes them).
@@ -5647,12 +6774,12 @@ function buildComparisonStructuredSources(
     const bp = profile as BrandProfile;
     if (!bp.reviewerQuotes) continue;
     const brand = bp.names[0];
-    for (const q of bp.reviewerQuotes) {
+    for (const q of bp.reviewerQuotes!) {
       const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
       const publication = (parenMatch?.[1] ?? q.source).trim();
       if (!isWhitelistedSource(publication)) continue;
       const reviewer = parenMatch
-        ? q.source.slice(0, parenMatch.index).trim()
+        ? q.source.slice(0, parenMatch!.index).trim()
         : '';
       const note = reviewer
         ? `${reviewer} on ${brand}`
@@ -5669,7 +6796,7 @@ function buildComparisonStructuredSources(
       brandLower !== nameB.toLowerCase()
     ) continue;
     if (!product.sourceReferences) continue;
-    for (const sr of product.sourceReferences) {
+    for (const sr of product.sourceReferences!) {
       tryPush({
         source: sr.source,
         note: sr.note,
@@ -5696,6 +6823,7 @@ function buildComparisonStructuredSources(
   }
 
   return refs.length > 0 ? refs.slice(0, 5) : undefined;
+  } // end if (false) — F4 gate dormant block
 }
 
 /** Produce a short human-readable label for the context the user provided. */
@@ -6297,20 +7425,25 @@ export function buildConsultationFollowUp(
   }
 
   // ── General follow-up ────────────────────────────────
-  // Re-route through the full consultation builder with the original subject
-  // context. This catches anything the specific handlers missed.
-  const result = buildConsultationResponse(
-    `${activeConsultation.originalQuery} ${followUpMessage}`,
-    activeConsultation.subjects,
-  );
-  if (result) return result;
-
-  // Last resort — honest acknowledgement
+  // QA C1 fix (PB beta-hardening): the previous behaviour re-ran the
+  // first-turn builder (`buildConsultationResponse`) on the original
+  // query concatenated with the follow-up. Because the subject and
+  // source data are unchanged on a general follow-up — by
+  // classifyFollowUp's own definition, none of the four specific
+  // dimensions (other_models / sonic_detail / pairing / system_fit)
+  // shifted — re-running the builder produced a near-verbatim repeat
+  // of the prior advisory. Users saw "Audio XX repeating itself."
+  //
+  // Replace the rebuild with a continuity-shaped acknowledgement that
+  // advances the conversation: name the subject (so it doesn't read
+  // as a context drop), offer the next-step dimensions explicitly,
+  // and ask which the user wants to explore. No first-turn template
+  // is re-emitted.
   return {
     subject: subjectName,
-    philosophy: `Still on ${subjectName} — that's a good question.`,
-    tendencies: "I don't have enough specific data to give a detailed answer on that aspect. The brand profile and general tendencies are the most reliable basis I have.",
-    followUp: 'What would be most useful — more about the brand philosophy, or practical pairing guidance?',
+    philosophy: `Still with ${subjectName}. We can go further in a few directions — sonic character, pairing with specific gear, fit in a given system, or how it compares with alternatives.`,
+    tendencies: 'Each angle gives a different basis for the decision; the most useful next step depends on what you want to weigh.',
+    followUp: 'Which would be most useful to explore — character, pairings, system fit, or a comparison?',
   };
 }
 
@@ -6349,6 +7482,14 @@ export interface SystemComponent {
   };
   /** Product data if available. */
   product?: Product;
+  /**
+   * True when the component exists in the graph on the user's authority alone
+   * — an explicit label established its role, but the catalog could not
+   * identify it. Downstream reasoning must not assert characteristics for
+   * these nodes (D-7): their identity is a user-supplied fact, their
+   * behaviour is unknown.
+   */
+  unresolved?: boolean;
 }
 
 // ── Multi-role resolution ────────────────────────────
@@ -6386,6 +7527,19 @@ const CATALOG_NAME_ALIASES: Record<string, string> = {
   // Users familiar with legacy reviews may search "Bakoon AMP-23R".
   'bakoon amp-23r': 'enleum amp-23r',
   'bakoon': 'enleum',
+  // Phase 2A alias resolution — owner shorthand that the token matcher
+  // cannot bridge. "SHL5+" is how owners actually write "Super HL5 Plus";
+  // without the alias the richest Harbeth product entry is never attached.
+  'shl5+': 'super hl5 plus',
+  'shl5 plus': 'super hl5 plus',
+  'shl5plus': 'super hl5 plus',
+  'shl5': 'super hl5 plus',
+  'harbeth shl5+': 'harbeth super hl5 plus',
+  'supernait': 'supernait 3',
+  'naim supernait': 'naim supernait 3',
+  'linton': 'linton heritage',
+  'heresy': 'heresy iv',
+  'kanta': 'kanta no. 2',
 };
 
 // Brand aliases: maps parent-brand names to the catalog brand.
@@ -6776,7 +7930,47 @@ function surfaceAmpSpeakerInteraction(
  * power_watts and sensitivity_db fields, and classifies compatibility.
  * When no amp or no speaker exists, returns an 'unknown' assessment.
  */
-export function assessPowerMatch(components: SystemComponent[]): PowerMatchAssessment {
+/**
+ * Resolve one physical figure under the governing precedence.
+ *
+ * PRECEDENCE (founder, 2026-08-18):
+ *   1. curated/catalog product facts
+ *   2. manufacturer facts
+ *   3. listener-supplied explicit specifications, where already licensed
+ *   4. otherwise unknown
+ *
+ * Model memory is absent by construction — there is no branch that could
+ * admit it. That is deliberate: a remembered wattage is exactly the kind of
+ * plausible figure that would make a compatibility verdict feel authoritative
+ * while resting on nothing checkable.
+ */
+function resolveFigure(
+  catalogValue: number | null | undefined,
+  manufacturerValue: number | undefined,
+  listenerValue: number | null,
+): { value: number | null; source: PhysicalFactSource } {
+  if (catalogValue != null) return { value: catalogValue, source: 'catalog' };
+  if (manufacturerValue != null) return { value: manufacturerValue, source: 'manufacturer' };
+  if (listenerValue != null) return { value: listenerValue, source: 'listener' };
+  return { value: null, source: 'none' };
+}
+
+/** Manufacturer facts belonging to one component. */
+function factsFor(name: string, evidence: EvidenceItem[]): EvidenceItem[] {
+  const key = name.toLowerCase().replace(/[^\w\s/-]/g, ' ').replace(/\s+/g, ' ').trim();
+  return evidence.filter((e) => e.productKey === key);
+}
+
+export function assessPowerMatch(
+  components: SystemComponent[],
+  /**
+   * Manufacturer-tier physical evidence, when the caller holds any. Consumed
+   * only where the catalog is silent — this does not broaden reasoning, it
+   * lets the existing compatibility machinery see evidence Audio XX already
+   * holds instead of reporting 'unknown' beside a published specification.
+   */
+  manufacturerEvidence: EvidenceItem[] = [],
+): PowerMatchAssessment {
   // Find the primary amplifier (prefer integrated > power amp > headphone amp)
   const ampCandidates = components.filter((c) => {
     const role = c.role.toLowerCase();
@@ -6804,16 +7998,36 @@ export function assessPowerMatch(components: SystemComponent[]): PowerMatchAsses
     };
   }
 
-  const powerWatts = amp.product?.power_watts ?? null;
-  const sensitivityDb = speaker.product?.sensitivity_db ?? null;
-  const { compatibility, estimatedMaxCleanSPL } = classifyPowerMatch(powerWatts, sensitivityDb);
-  const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivityDb);
+  // The listener's own words are licensed evidence. Someone who writes
+  // "Zorblax ZX1 5 watt SET" has told us the output power; refusing to use it
+  // because the amplifier has no catalog row discards a fact they supplied and
+  // leaves a material interaction unassessable for no reason.
+  const statedWatts = (() => {
+    const m = /(\d+(?:\.\d+)?)\s*(?:w\b|watts?\b)/i.exec(amp.displayName);
+    const v = m ? Number(m[1]) : NaN;
+    return Number.isFinite(v) && v > 0 && v <= 2000 ? v : null;
+  })();
+  const ampFacts = physicalFactsFor(factsFor(amp.displayName, manufacturerEvidence));
+  const speakerFacts = physicalFactsFor(factsFor(speaker.displayName, manufacturerEvidence));
+
+  const power = resolveFigure(amp.product?.power_watts, ampFacts.powerWatts, statedWatts);
+  // Sensitivity has no listener-supplied form today: nobody writes their
+  // speaker's dB figure into a chain description, and inventing a parse for it
+  // would be a rule with no observed input.
+  const sensitivity = resolveFigure(
+    speaker.product?.sensitivity_db, speakerFacts.sensitivityDb, null);
+
+  const { compatibility, estimatedMaxCleanSPL } =
+    classifyPowerMatch(power.value, sensitivity.value);
+  const relevantInteraction = surfaceAmpSpeakerInteraction(amp.product, sensitivity.value);
 
   return {
     ampName: amp.displayName,
     speakerName: speaker.displayName,
-    ampPowerWatts: powerWatts,
-    speakerSensitivityDb: sensitivityDb,
+    ampPowerWatts: power.value,
+    speakerSensitivityDb: sensitivity.value,
+    powerSource: power.source,
+    sensitivitySource: sensitivity.source,
     compatibility,
     estimatedMaxCleanSPL,
     relevantInteraction,
@@ -6994,14 +8208,28 @@ function detectUserAppliedRole(
   if (prodIdx < 0) return undefined;
 
   // Extract the text segment between the previous and next chain separators
-  // (arrows, "into", commas, " - ") around the product name. This prevents
-  // role keywords attached to other products from being picked up.
+  // (arrows, "into", commas, " - ", "/", and an unlabelled-space before a
+  // role colon label) around the product name. This prevents role keywords
+  // attached to other products from being picked up.
   //
-  // " - " (whitespace-hyphen-whitespace) was added as a separator so that
-  // labelled chains like "speakers: X - amp: Y - streamer: Z" segment
-  // correctly and a trailing "streamer:" doesn't collide with an earlier
-  // "amp:" label (QA residual R3).
-  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s+into\s+|\s*,\s*|\s+-\s+)/g;
+  // " - " (whitespace-hyphen-whitespace) was added so that labelled chains
+  // like "speakers: X - amp: Y - streamer: Z" segment correctly and a
+  // trailing "streamer:" doesn't collide with an earlier "amp:" label
+  // (QA residual R3).
+  //
+  // "/" was added so that compound labels like "DAC / Streamer: Eversolo"
+  // separate cleanly from the preceding component segment.
+  //
+  // The lookahead-based separator splits before any whitespace that
+  // precedes a known role colon label (e.g. " Amplifier:"). This bounds
+  // each segment to the chunk that belongs to its own role label, so a
+  // subsequent "Streamer:" later in the message can't bleed back into
+  // the "Amplifier:" segment that named the user's amplifier.
+  // Connector verbs added (campaign, 2026-08-29): "X amplifier driving Y
+  // speakers" was ONE segment, and the first role keyword in it — the
+  // amplifier's own descriptor — was returned for Y. A connector verb ends
+  // the segment the same way an arrow does.
+  const SEP = /(?:\s*(?:→|—>|-{1,3}>|={1,2}>|>{2,3})\s*|\s*\u001E\s*|\s+into\s+|\s+driving\s+|\s+feeding\s+|\s+powering\s+|\s+paired\s+with\s+|\s+with\s+|\s*,\s*|\s+-\s+|\s*\/\s*|\s+(?=(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:))/g;
   const separators: { start: number; end: number }[] = [];
   let m;
   while ((m = SEP.exec(msgLower)) !== null) {
@@ -7034,10 +8262,41 @@ function detectUserAppliedRole(
     if (pattern.test(segment)) return role;
   }
 
-  for (const { pattern, role } of USER_ROLE_KEYWORDS) {
-    if (pattern.test(segment)) return role;
+  /*
+   * POSITIONAL BINDING (campaign, 2026-08-29). A role keyword describes the
+   * component it ADJOINS — "Magnepan LRS speakers" is a speaker; a keyword
+   * elsewhere in the segment belongs to something else. First-match-in-
+   * segment bound "amplifier" (the SIT-3's own descriptor) to the LRS and
+   * asked the listener to explain a role they never applied. The keyword
+   * nearest AFTER the product (a trailing descriptor, within a short
+   * window) wins; nothing after, nothing returned.
+   *
+   * A trailing "streaming DAC" (or DAC/streamer in either order) is a
+   * COMPOUND naming one box's two functions, never a conflict with either.
+   */
+  const prodInSeg = prodIdx - segStart;
+  const prodEndInSeg = prodInSeg + prodLower.length;
+  const after = segment.slice(prodEndInSeg, prodEndInSeg + 32);
+  if (/^[\s]*stream(?:er|ing)?[\s/-]*dac\b|^[\s]*dac[\s/-]*stream(?:er|ing)?\b/i.test(after)) {
+    return 'streamer_dac';
   }
-  return undefined;
+  let best: { role: string; dist: number } | undefined;
+  let bestBefore: { role: string; dist: number } | undefined;
+  for (const { pattern, role } of USER_ROLE_KEYWORDS) {
+    const re = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    let km: RegExpExecArray | null;
+    while ((km = re.exec(segment)) !== null) {
+      const dist = km.index - prodEndInSeg;
+      if (dist >= 0 && dist <= 24 && (!best || dist < best.dist)) best = { role, dist };
+      // Leading form — "my DAC is the Chord Hugo": keyword ends shortly
+      // before the product begins.
+      const beforeDist = prodInSeg - (km.index + km[0].length);
+      if (beforeDist >= 0 && beforeDist <= 14 && (!bestBefore || beforeDist < bestBefore.dist)) {
+        bestBefore = { role, dist: beforeDist };
+      }
+    }
+  }
+  return best?.role ?? bestBefore?.role;
 }
 
 /**
@@ -7046,6 +8305,9 @@ function detectUserAppliedRole(
  */
 function rolesConflict(userRole: string, expectedRole: string): boolean {
   if (userRole === expectedRole) return false;
+  // A compound streamer/DAC agrees with either half.
+  if (userRole === 'streamer_dac' && (expectedRole === 'dac' || expectedRole === 'streamer')) return false;
+  if (expectedRole === 'streamer_dac' && (userRole === 'dac' || userRole === 'streamer')) return false;
   // Check equivalences: amplifier ≈ integrated
   const userNorm = ROLE_EQUIVALENCES[userRole] ?? userRole;
   const expectedNorm = ROLE_EQUIVALENCES[expectedRole] ?? expectedRole;
@@ -7102,6 +8364,20 @@ export function validateSystemComponents(
 
     // Detect what role the user applied in their text
     const otherNames = components.filter((o) => o !== c).map((o) => o.displayName);
+    // An explicit label is the user stating a fact about their own system, and
+    // it outranks proximity inference. A compound label ("DAC/Streamer") names
+    // several roles for ONE component; our category being among them is
+    // agreement, not conflict. Asking the user to resolve our narrower taxonomy
+    // is exactly what D-8 forbids. Order-independent: "Streamer/DAC" and
+    // "DAC/Streamer" behave identically.
+    const labelled = parseLabelledComponents(rawMessage);
+    const ownLabel = labelled.find((l) =>
+      c.displayName.toLowerCase().includes(l.rawName.toLowerCase())
+      || l.rawName.toLowerCase().includes(c.displayName.toLowerCase()));
+    if (ownLabel) {
+      if (!labelContradictsCategory(ownLabel.roles, expectedCategory)) continue;
+    }
+
     const userAppliedRole = detectUserAppliedRole(rawMessage, c.displayName, otherNames);
     if (!userAppliedRole) continue;
 
@@ -7109,6 +8385,30 @@ export function validateSystemComponents(
       const userRoleDisplay = ROLE_DISPLAY[userAppliedRole] ?? userAppliedRole;
       const expectedDisplay = ROLE_DISPLAY[expectedCategory] ?? expectedCategory;
       const brand = displayBrand ?? c.displayName;
+
+      // ── Sufficiency check (D1, 2026-08-11): never ask what the text
+      // already answers. Each conflict question below has a small set of
+      // answer phrasings; when one is present in the raw message the
+      // conflict is RESOLVED — either inline ("Eversolo DMP-A6 (internal
+      // DAC)") or because this is a reunited/accumulated exchange whose
+      // earlier turn answered the ask ("internal DAC. assess my
+      // system: …"). Re-raising it re-asks the user for a fact they
+      // already supplied — the production D1 defect: "What would you
+      // upgrade first?" after an answered clarification got the same
+      // clarification again instead of an answer.
+      const CONFLICT_ANSWER_PHRASES: Record<string, RegExp> = {
+        'streamer-as-dac': /\b(?:internal|built[- ]?in|its\s+own|onboard)\s+dac\b|\bmain\s+conversion\b|\b(?:feeds?|feeding|into)\s+(?:an?\s+)?external\s+dac\b/i,
+        'dac-as-streamer': /\bseparate\s+transport\b|\bbuilt[- ]?in\s+stream(?:er|ing)?\b|\bstreaming\s+function\b/i,
+        'integrated-role': /\bfull\s+integrated\b|\bpower\s+section\b|\bexternal\s+pre(?:amp)?\b|\bas\s+an?\s+integrated\b/i,
+      };
+      const conflictKey =
+        expectedCategory === 'streamer' && userAppliedRole === 'dac' ? 'streamer-as-dac'
+          : expectedCategory === 'dac' && userAppliedRole === 'streamer' ? 'dac-as-streamer'
+            : expectedCategory === 'integrated' && (userAppliedRole === 'amplifier' || userAppliedRole === 'preamplifier') ? 'integrated-role'
+              : null;
+      if (conflictKey && CONFLICT_ANSWER_PHRASES[conflictKey].test(rawMessage)) {
+        continue; // answered in the text — clarification not licensed
+      }
 
       // Generate a specific, direct clarification based on the conflict type
       if (expectedCategory === 'streamer' && userAppliedRole === 'dac') {
@@ -7204,32 +8504,15 @@ export function validateSystemComponents(
     }
   }
 
-  // ── 3. Chain-order ambiguity ──
-  // Only flag when the full chain extraction returned medium confidence
-  // AND the canonical ordering failed (couldn't classify all segments).
-  // Reuse chainExtracted from duplicate-role check if available.
-  //
-  // Suppress when all components have distinct, well-known roles (dac, amplifier,
-  // speaker, streamer, etc.) — the canonical signal path is inferrable even without
-  // explicit ordering notation. This avoids unnecessary clarification friction for
-  // natural phrasing like "I have a X DAC, Y amp, and Z speakers."
-  const ambiguityExtracted = chainExtracted ?? extractFullChain(rawMessage);
-  if (ambiguityExtracted && ambiguityExtracted.confidence === 'medium') {
-    const knownSignalRoles = new Set(['dac', 'amplifier', 'speaker', 'streamer', 'turntable', 'phono', 'preamp', 'integrated']);
-    const allRolesKnown = components.every((c) => knownSignalRoles.has(c.role));
-    const allRolesDistinct = new Set(components.map((c) => c.role)).size === components.length;
-
-    if (!allRolesKnown || !allRolesDistinct) {
-      const canonicalAttempt = tryCanonicalOrder(ambiguityExtracted.segments);
-      if (!canonicalAttempt) {
-        issues.push({
-          kind: 'chain-order-ambiguity',
-          subject: 'signal path order',
-          detail: 'I\'m not confident about the signal-flow order here. Could you describe the system from source to output?',
-        });
-      }
-    }
-  }
+  // ── 3. Chain-order ambiguity — assume standard signal flow ──
+  // An ordinary listed system (DAC + amp + speakers, turntable + amp +
+  // speakers, streamer + integrated + speakers…) has exactly one sensible
+  // signal path. Asking the owner to spell out source-to-output order
+  // reads as the advisor not knowing hi-fi. The assessment pipeline does
+  // not depend on written order — roles come from extraction — so when
+  // the order cannot be confirmed we assume the canonical flow and
+  // proceed. Genuine ambiguities that change the answer (two DACs, two
+  // amps, role-label conflicts) are still caught by checks 1 and 2 above.
 
   // ── Build clarification response ──
   if (issues.length === 0) return null;
@@ -7348,11 +8631,725 @@ export type SystemAssessmentResult =
   | { kind: 'low_confidence'; components: SystemComponent[]; unknownComponents: string[]; query: string }
   | null;
 
+// ── Graph-integrity gate (Gate 6 remediation, G6-D1) ─────────────────────
+// When the parsed component graph cannot be trusted — a component the user
+// listed was dropped, one component was bound to another's identity or
+// duplicated into two roles, or two-plus models could not be resolved at all
+// — Audio XX must ask for clarification rather than synthesise an assessment
+// from a graph it does not trust. Brand-level resolution must not conceal
+// model-level uncertainty. This is a counting/consistency check over the
+// ALREADY-resolved components (no re-parse, no re-match), so it can never
+// itself drop, rebind, or duplicate a component.
+
+const GI_ACCESSORY_LABEL =
+  /\b(?:speaker\s*cables?|spk\s*cables?|interconnects?|power\s*(?:cables?|cords?|leads?)|usb\s*cables?|ethernet\s*cables?|lan\s*cables?|hdmi\s*cables?|digital\s*cables?|coax(?:ial)?\s*cables?|rca\s*cables?|xlr\s*cables?|jumpers?|cabling|cables?)\s*:/gi;
+const GI_SEG_BOUNDARY =
+  /(?:→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|,|\s+-\s+|\/|\n|\r|\b(?:speakers?|amp(?:lifier)?|integrated|dac|stream(?:er|ing)?|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:)/gi;
+const GI_ROLE_LABEL_ONLY =
+  /^(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?|system|setup|rig|chain|gear)$/i;
+
+/**
+ * Count the DISTINCT primary (signal-chain) components the user actually
+ * described, excluding explicitly-labelled accessories and role-only labels,
+ * de-duplicating identical wording. Deterministic segment count — not a
+ * re-resolution.
+ */
+function distinctInputComponentSegments(rawMessage: string): string[] {
+  // Count per TURN and take the union. A listener who restates their whole
+  // system has not doubled it; a listener who adds a component has added one.
+  // Counting the joined text made "2 components you listed went unmatched" out
+  // of the same four components written twice.
+  /*
+   * The union is on canonical PHYSICAL IDENTITY, not on wording.
+   *
+   * De-duplicating identical strings was not enough. A saved system reaches
+   * the engine as synthetic text ("My system: dCS Rossini Apex, ARC ref, ...")
+   * prepended to the listener's own turn, and the two spellings of one box
+   * differ: "ARC ref" against "ARC ref 5". Counted as separate mentions, the
+   * expected total ran ahead of what resolved, and Audio XX told a signed-in
+   * listener it could not match three components while listing all four as
+   * recognised.
+   *
+   * Same invariant as the graph itself: one physical component counts once,
+   * whichever source named it and in whatever words.
+   */
+  const segments = rawMessage.includes(TURN_SEPARATOR)
+    ? splitTurns(rawMessage).map(countMeaningfulSegments).flat()
+    : countMeaningfulSegments(rawMessage);
+
+  const distinct: string[] = [];
+  for (const seg of segments) {
+    /*
+     * A QUESTION IS NOT A COMPONENT (Nathan beta, 2026-08-28). The
+     * accumulate-and-reassess loop appends follow-up turns to the system
+     * text, so "Do you think the Butler is holding the system back?"
+     * arrived here as a segment. It contains a brand word, fails identity
+     * against "Butler Monads" (single-token overlap on a two-token name),
+     * and the count then manufactured the 4/4-recognised-but-one-missing
+     * phantom this check was built to kill. An interrogative sentence names
+     * a question, not equipment.
+     */
+    if (/^\s*(?:do|does|did|what|which|where|when|why|how|is|are|was|were|should|would|could|can|will)\b/i.test(seg)
+      || /\?\s*$/.test(seg)) continue;
+    if (distinct.some((kept) => samePhysicalComponent(
+      { brand: '', name: kept }, { brand: '', name: seg },
+    ))) continue;
+    distinct.push(seg);
+  }
+  return distinct;
+}
+
+function countMeaningfulInputComponents(rawMessage: string): number {
+  return distinctInputComponentSegments(rawMessage).length;
+}
+
+/** The distinct component-ish segments a single turn names. */
+function countMeaningfulSegments(rawMessage: string): string[] {
+  // Drop the assessment lead-in ("evaluate my system:", "assess my system:",
+  // or the bare colon-list verb form "review: …" / "rate: …").
+  let msg = rawMessage.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '');
+  msg = msg.replace(/^\s*(?:review|assess(?:ment)?|evaluate|rate)\s*[:\-–—]/i, '');
+  // Blank out accessory-labelled segments so wires don't inflate the count.
+  const lower = msg.toLowerCase();
+  GI_ACCESSORY_LABEL.lastIndex = 0;
+  let lm: RegExpExecArray | null;
+  const spans: Array<[number, number]> = [];
+  while ((lm = GI_ACCESSORY_LABEL.exec(lower)) !== null) {
+    GI_SEG_BOUNDARY.lastIndex = lm.index + lm[0].length;
+    const nb = GI_SEG_BOUNDARY.exec(lower);
+    spans.push([lm.index, nb ? nb.index : lower.length]);
+  }
+  for (const [s, e] of spans) msg = msg.slice(0, s) + ' '.repeat(e - s) + msg.slice(e);
+  // Split on component separators. NB: a bare "/" is NOT a separator — it
+  // occurs inside model names (DeVore O/96, Spendor SP3/1R, LS3/5A) and
+  // splitting on it would over-count and falsely report a dropped component.
+  const segs = msg.split(/[,\n]|→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|\s+-\s+/i);
+  const seen = new Set<string>();
+  for (let seg of segs) {
+    seg = seg.replace(
+      /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
+      '',
+    );
+    // Strip a leading list marker BEFORE normalising. "1. Pre-amp: ARC ref 5"
+    // and "- Pre-amp: ARC ref 5" name the same component; leaving the marker on
+    // made them two distinct strings, so a listener who restated their system
+    // in a different format was told components had gone unmatched.
+    // Formatting is structure, never identity — the same rule the parser follows.
+    seg = seg.replace(/^\s*(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])\s*/, '');
+    seg = seg.replace(
+      /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
+      '',
+    );
+    const norm = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (!norm || norm.length < 2) continue;
+    if (GI_ROLE_LABEL_ONLY.test(norm)) continue;
+    // Discourse filler split off by punctuation ("Actually, go back…")
+    // carries no component identity and must not count as one.
+    if (norm.split(' ').every((t) => GI_DISCOURSE_TOKENS.has(t))) continue;
+    seen.add(norm);
+  }
+  return [...seen];
+}
+
+const GI_DISCOURSE_TOKENS: ReadonlySet<string> = new Set([
+  'actually', 'anyway', 'also', 'ok', 'okay', 'right', 'well', 'sure',
+  'thanks', 'thank', 'you', 'please', 'so', 'then', 'though', 'really',
+  'yes', 'no', 'yeah', 'hmm', 'oh', 'now', 'instead', 'never', 'mind',
+]);
+
+/** Token set of a display name, minus trivial tokens. */
+function giTokens(name: string): Set<string> {
+  return new Set(
+    name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((t) => t.length >= 2),
+  );
+}
+
+/**
+ * Every name and alias by which a brand is known, so a component that resolved
+ * only to a brand can be recognised however the listener wrote it.
+ */
+const BARE_BRAND_NAMES: ReadonlySet<string> = new Set([
+  // The SAME vocabulary that produced the brand match in the first place.
+  // Deriving this from BRAND_PROFILES alone missed every brand without a
+  // curated profile — Wilson Audio has no profile, yet extraction knows the
+  // name, so a component that resolved to nothing but "Wilson audio" read as
+  // correctly identified.
+  ...BRAND_NAMES.map((n) => n.toLowerCase().trim()),
+  ...BRAND_PROFILES.flatMap((bp) => (bp.names ?? []).map((n) => n.toLowerCase().trim())),
+]);
+
+/** Is this display name a brand standing in for a model we never resolved? */
+function isBareBrandName(displayName: string | undefined): boolean {
+  if (!displayName) return false;
+  return BARE_BRAND_NAMES.has(displayName.toLowerCase().replace(/\s+/g, ' ').trim());
+}
+
+/**
+ * Do the listener's words resolve, through the catalog's own alias map, to
+ * this product?
+ *
+ * Only the alias map counts. Guessing that two names might mean one product is
+ * how a variant gets merged into its sibling; the alias map is a curated
+ * statement that two spellings name one box.
+ */
+function resolvesToProduct(displayName: string, product: Product): boolean {
+  const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9+/ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const name = norm(displayName);
+  const brand = norm(product.brand);
+  const model = norm(product.name);
+  // Strip the brand the listener wrote, leaving the model they used.
+  const typedModel = name.startsWith(`${brand} `) ? name.slice(brand.length + 1) : name;
+  return aliasCatalogLookup(typedModel) === model;
+}
+
+
+/**
+ * Remove the INCUMBENT when the message states a substitution.
+ *
+ * Patterns understood, all requiring the candidate and incumbent to share a
+ * functional role so unrelated mentions can never delete a component:
+ *   "<candidate> … instead of / in place of / rather than … <incumbent>"
+ *   "replace/swap (out) <incumbent> … with/for <candidate>"
+ * Matching is by distinctive name token near the marker, so "the Butler"
+ * finds "Butler Monads".
+ */
+function applyStatedSubstitutions(
+  components: SystemComponent[],
+  rawMessage: string,
+  /** OUT: display names whose raw-text mentions are explained by
+   *  substitution phrasing (candidates and displaced incumbents), so the
+   *  graph-integrity gate does not read them as dropped components. */
+  consumedNames: string[] = [],
+): { incumbent: string; candidate: string } | null {
+  const lower = rawMessage.toLowerCase();
+  const tokensOf = (name: string) => name.toLowerCase().split(/[^a-z0-9+]+/)
+    .filter((t) => t.length >= 3 && !['the', 'and', 'with'].includes(t));
+  const findNear = (pos: number, span: number, dirAfter: boolean, exclude?: SystemComponent) => {
+    let best: { c: SystemComponent; d: number } | undefined;
+    for (const c of components) {
+      if (c === exclude) continue;
+      for (const t of tokensOf(c.displayName)) {
+        let i = -1;
+        while ((i = lower.indexOf(t, i + 1)) >= 0) {
+          const d = dirAfter ? i - pos : pos - (i + t.length);
+          if (d >= 0 && d <= span && (!best || d < best.d)) best = { c, d };
+        }
+      }
+    }
+    return best?.c;
+  };
+  /*
+   * A candidate that is only a BRAND cannot form a licensed counterfactual
+   * identity ("What about Harbeths instead?" — which Harbeth?). Swapping it
+   * in silently picks a model on the listener's behalf, and the dossier then
+   * shows one model's figures under a bare brand name. No swap: the extra
+   * same-role component flows to the duplicate-role clarification, which
+   * asks. EXCEPTION: when the listener's own words carried model morphology
+   * next to the brand ("a Hegel H590 instead?") the identity was stated —
+   * the parser merely lost the model token — and the swap stands.
+   */
+  const candidateHasIdentity = (c: SystemComponent) => {
+    if (!isBareBrandName(c.displayName)) return true;
+    const esc = c.displayName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`${esc}\\s+[a-z]*\\d`, 'i').test(lower);
+  };
+  const sameRole = (a: SystemComponent, b: SystemComponent) => {
+    const na = ROLE_EQUIVALENCES[a.role?.toLowerCase() ?? ''] ?? a.role?.toLowerCase();
+    const nb = ROLE_EQUIVALENCES[b.role?.toLowerCase() ?? ''] ?? b.role?.toLowerCase();
+    return !!na && na === nb;
+  };
+  let swapped: { incumbent: string; candidate: string } | null = null;
+  /*
+   * Chained counterfactuals collapse to the ORIGINAL incumbent. Across
+   * accumulated turns — "Leben instead of the Butler?" then "a Hegel H590
+   * instead?" — the second swap displaces the first CANDIDATE from the
+   * graph, but the question the listener is asking is still "this in place
+   * of the Butler". The frame must name the original occupant, not the
+   * previous hypothesis.
+   */
+  const chainOrigin = new Map<string, string>();
+  type Removal = { incumbent: SystemComponent; candidate: SystemComponent; at: number; pos: number };
+  const removals: Removal[] = [];
+  const drop = (incumbent: SystemComponent, candidate: SystemComponent, pos: number) => {
+    if (!sameRole(incumbent, candidate) || incumbent === candidate) return;
+    if (!candidateHasIdentity(candidate)) return;
+    const idx = components.indexOf(incumbent);
+    if (idx >= 0) {
+      components.splice(idx, 1);
+      const origin = chainOrigin.get(incumbent.displayName) ?? incumbent.displayName;
+      swapped = { incumbent: origin, candidate: candidate.displayName };
+      chainOrigin.set(candidate.displayName, origin);
+      removals.push({ incumbent, candidate, at: idx, pos });
+      for (const n of [incumbent.displayName, candidate.displayName]) {
+        if (!consumedNames.includes(n)) consumedNames.push(n);
+      }
+    }
+  };
+
+  const INSTEAD = /\binstead\s+of\b|\bin\s+place\s+of\b|\brather\s+than\b/g;
+  let m: RegExpExecArray | null;
+  while ((m = INSTEAD.exec(lower)) !== null) {
+    const candidate = findNear(m.index, 80, false);
+    const incumbent = candidate ? findNear(m.index + m[0].length, 50, true, candidate) : undefined;
+    if (candidate && incumbent) drop(incumbent, candidate, m.index);
+  }
+  /*
+   * Trailing bare "instead" — "What about a Hegel H590 instead?" names no
+   * incumbent, because its referent is the same-role component already in
+   * the system. The swap is licensed only when that referent is UNIQUE:
+   * one other component sharing the candidate's role. Ambiguity (two
+   * sources, unknown role) never deletes — the engine's clarification
+   * path handles it.
+   */
+  const BARE_INSTEAD = /\binstead\b(?!\s+of)/g;
+  while ((m = BARE_INSTEAD.exec(lower)) !== null) {
+    const candidate = findNear(m.index, 80, false);
+    if (!candidate) continue;
+    const peers = components.filter((c) => c !== candidate && sameRole(c, candidate));
+    if (peers.length === 1) drop(peers[0], candidate, m.index);
+  }
+  const REPLACE = /\b(?:replace|swap(?:\s+out)?)\b/g;
+  while ((m = REPLACE.exec(lower)) !== null) {
+    const incumbent = findNear(m.index + m[0].length, 50, true);
+    if (!incumbent) continue;
+    const WITH = /\b(?:with|for)\b/g;
+    WITH.lastIndex = m.index + m[0].length;
+    const w = WITH.exec(lower);
+    if (!w) continue;
+    const candidate = findNear(w.index + w[0].length, 60, true, incumbent);
+    if (candidate) drop(incumbent, candidate, m.index);
+  }
+  /*
+   * REVERTS (multi-turn counterfactual state). "Keep the Butler." cancels
+   * the amplifier-slot hypothesis; "go back to the original system" cancels
+   * every hypothesis. A revert undoes only swap chains whose last marker
+   * precedes it, restores the original occupant at its old position, and
+   * removes the hypothetical candidates from the graph. After a full
+   * revert, no counterfactual frame is reported: the system under
+   * assessment IS the original again.
+   */
+  const undo = (r: Removal) => {
+    const ci = components.indexOf(r.candidate);
+    if (ci >= 0) components.splice(ci, 1);
+    if (!components.includes(r.incumbent)) {
+      components.splice(Math.min(r.at, components.length), 0, r.incumbent);
+    }
+  };
+  const RESTORE_ALL = /\b(?:go|going)\s+back\b|\brevert\b|\breturn\s+to\s+(?:the\s+)?original\b/g;
+  const KEEP = /\bkeep\s+(?:the\s+|my\s+)?([a-z0-9][a-z0-9 +/-]{2,30}?)(?=[.,?!;]|\s+(?:and|but|what|which|for)\b|$)/g;
+  const undone = new Set<Removal>();
+  const undoChain = (seed: Removal, pos: number) => {
+    // Undo the whole chain in this slot: every removal transitively linked
+    // through chainOrigin to the same original occupant, if its marker
+    // precedes the revert.
+    const origin = chainOrigin.get(seed.candidate.displayName) ?? seed.incumbent.displayName;
+    for (let i = removals.length - 1; i >= 0; i--) {
+      const r = removals[i];
+      if (undone.has(r) || r.pos > pos) continue;
+      const rOrigin = chainOrigin.get(r.candidate.displayName)
+        ?? r.incumbent.displayName;
+      if (rOrigin !== origin) continue;
+      undo(r);
+      undone.add(r);
+    }
+  };
+  while ((m = RESTORE_ALL.exec(lower)) !== null) {
+    const pos = m.index;
+    if (!/\b(?:original|previous|whole|everything|system|setup)\b/.test(lower.slice(pos, pos + 60))) continue;
+    for (const r of [...removals]) if (!undone.has(r) && r.pos < pos) { undoChain(r, pos); }
+  }
+  while ((m = KEEP.exec(lower)) !== null) {
+    const named = m[1].trim();
+    for (const r of [...removals]) {
+      if (undone.has(r) || r.pos > m.index) continue;
+      const inc = r.incumbent.displayName.toLowerCase();
+      const nameTokens = named.split(/[^a-z0-9+]+/).filter((t) => t.length >= 3);
+      if (nameTokens.some((t) => inc.includes(t))) undoChain(r, m.index);
+    }
+  }
+  if (undone.size > 0 && undone.size === removals.length) swapped = null;
+  else if (undone.size > 0) {
+    // Report the latest surviving swap.
+    const live = removals.filter((r) => !undone.has(r));
+    const last = live[live.length - 1];
+    swapped = last
+      ? { incumbent: chainOrigin.get(last.candidate.displayName) ?? last.incumbent.displayName,
+          candidate: last.candidate.displayName }
+      : null;
+  }
+  return swapped;
+}
+
+
+/**
+ * Merge component records that describe the SAME physical unit.
+ *
+ * Two rules, both structural — neither compares products by name equality,
+ * because the whole defect is that one unit carries several names.
+ *
+ *   1. SAME SOURCE SPAN. Two records built from overlapping stretches of the
+ *      listener's own sentence came from one mention. "Denafrips Ares II"
+ *      yields a brand match at 41 and a product match at 51; both sit inside
+ *      the words the listener typed once.
+ *
+ *   2. BARE-BRAND ECHO. A single-token record with no catalog product whose
+ *      token is contained in a record that HAS one ("Crayon" beside "Crayon
+ *      Audio CIA-1T"). No span needed — a bare brand cannot be a second unit
+ *      when the model is already placed.
+ *
+ * The RICHER record wins: a catalog product outranks a bare brand, and more
+ * identity tokens outrank fewer. Roles are unioned, so a role the weaker
+ * record carried is preserved rather than discarded.
+ *
+ * Deliberately conservative. A record whose span cannot be located, or which
+ * is not contained by another, is left alone: two genuinely distinct units are
+ * far more costly to merge than one duplicate is to keep, and the duplicate is
+ * still caught downstream.
+ */
+function collapsePhysicalRepresentations(
+  components: SystemComponent[],
+  rawMessage: string,
+): void {
+  if (components.length < 2) return;
+  const lower = rawMessage.toLowerCase();
+
+  const spanOf = (c: SystemComponent): [number, number] | null => {
+    const n = c.displayName?.toLowerCase();
+    if (!n) return null;
+    const i = lower.indexOf(n);
+    return i < 0 ? null : [i, i + n.length];
+  };
+  const tokensOf = (c: SystemComponent) => giTokens(c.displayName);
+  /** Identity richness: a catalog product first, then token count. */
+  const rank = (c: SystemComponent) => (c.product ? 1000 : 0) + tokensOf(c).size;
+
+  const drop = new Set<SystemComponent>();
+  for (const a of components) {
+    if (drop.has(a)) continue;
+    for (const b of components) {
+      if (a === b || drop.has(b)) continue;
+
+      const ta = tokensOf(a), tb = tokensOf(b);
+      if (ta.size === 0 || tb.size === 0) continue;
+
+      /*
+       * SAME PHYSICAL BOX, WHATEVER SOURCE NAMED IT — checked first.
+       *
+       * A saved system reaches the engine two ways: as `activeSystem`, which
+       * the seeding guard reconciles, and as synthetic TEXT injected into the
+       * accumulated message ("My system: dCS Rossini Apex, ARC ref, ..."). The
+       * second bypasses the seeding guard entirely: by the time the parser
+       * runs, the saved system is just more prose, and the listener's own turn
+       * names the same four boxes again.
+       *
+       * Production, signed in: the graph carried "ARC ref" from the injection
+       * and "ARC ref 5" from the message, and Audio XX asked which components
+       * it could not match while listing all four as recognised.
+       *
+       * The invariant is one physical component, one node, REGARDLESS of
+       * whether the mention came from the saved system, prior conversation
+       * state, or the current message. Only canonical identity can enforce
+       * that, because the two spellings share no source span and neither
+       * resolves to a catalog product.
+       */
+      if (samePhysicalComponent(
+        { brand: '', name: a.displayName }, { brand: '', name: b.displayName },
+      )) {
+        drop.add(rank(a) >= rank(b) ? b : a);
+        continue;
+      }
+
+      /**
+       * SAME BOX UNDER AN ALIAS — checked BEFORE the token test, because no
+       * token test can see it. The catalog knows "SHL5+" is the "Super HL5
+       * Plus", so a listener typing the abbreviation produced both the
+       * canonical record and their own words, and was asked which of their two
+       * identical Harbeths was in the signal path. "shl5" appears nowhere in
+       * "super hl5 plus" — that is precisely why the alias map exists.
+       *
+       * Canonical RESOLUTION is the identity test here. Only the curated alias
+       * map counts: guessing that two names might mean one product is how a
+       * variant gets merged into its sibling.
+       */
+      const aliasesToSameProduct = !a.product && !!b.product
+        && a.role === b.role
+        && resolvesToProduct(a.displayName, b.product);
+
+      const aInB = [...ta].every((t) => tb.has(t));
+      if (!aInB && !aliasesToSameProduct) continue;
+      if (rank(a) >= rank(b)) continue;
+
+      const sa = spanOf(a), sb = spanOf(b);
+      const sameSpan = sa !== null && sb !== null && sa[0] < sb[1] && sb[0] < sa[1];
+      const bareBrandEcho = ta.size <= 1 && !a.product && !!b.product;
+      /**
+       * UNDER-RESOLVED MENTION. `a` names no catalog product, every one of its
+       * tokens appears in `b`, `b` DOES resolve, and they occupy the same role.
+       *
+       * That is one component seen twice: the listener's words and the
+       * canonical record of the same box. A listener who typed "DeVore O/96"
+       * was asked whether their "DeVore Orangutan O/96" and their "DeVore O/96"
+       * were both in the signal path.
+       *
+       * Span overlap cannot catch this, because the canonical name is not text
+       * the listener wrote — it comes from the catalog, so it appears nowhere
+       * in the message to overlap with.
+       *
+       * Distinct products are NOT subsets of one another: "Leben CS600" and
+       * "Leben CS600X" differ on the model token itself, so this never merges
+       * a variant into its sibling.
+       */
+      const underResolvedMention = !a.product && !!b.product
+        && a.role === b.role && ta.size >= 1;
+      if (!sameSpan && !bareBrandEcho && !underResolvedMention && !aliasesToSameProduct) continue;
+
+      // b is the surviving record; carry across anything a knew that it does not.
+      b.roles = [...new Set([...(b.roles ?? []), ...(a.roles ?? [])])];
+      drop.add(a);
+      break;
+    }
+  }
+
+  if (drop.size === 0) return;
+  const kept = components.filter((c) => !drop.has(c));
+  components.length = 0;
+  components.push(...kept);
+}
+
+function checkGraphIntegrity(
+  rawMessage: string,
+  allComponents: SystemComponent[],
+  /** Names consumed by substitution phrasing — a segment naming a swap's
+   *  candidate or displaced incumbent is explained, not dropped. */
+  substitutionConsumed: string[] = [],
+): ClarificationResponse | null {
+  // Drop spurious bare-brand echoes of a properly-cataloged component: when a
+  // bare-brand entry (≤1 token, no product) is a token-subset of another
+  // component that DOES carry a cataloged product, it's an extraction echo of
+  // that same physical unit (e.g. "Crayon" beside "Crayon Audio CIA-1T"), not
+  // a second component. Deduping to the cataloged entry preserves the
+  // correctly-identified component rather than clarifying. A duplicate where
+  // neither side is cataloged (e.g. "Wilson" beside "Wilson audio", model
+  // lost) is NOT an echo and still trips the gate below.
+  const components = allComponents.filter((c) => {
+    const t = giTokens(c.displayName);
+    if (c.product || t.size > 1) return true;
+    return !allComponents.some(
+      (o) => o !== c && o.product && [...t].every((tok) => giTokens(o.displayName).has(tok)),
+    );
+  });
+
+  const resolved = components.length;
+  if (resolved < 2) return null; // handled by the caller's own guards
+
+  // (2) Duplication / mis-binding: one component's token set is a subset of
+  // another's (e.g. "Ares Ii" ⊂ "Denafrips Ares II", "Wilson" ⊂ "Wilson
+  // audio") — the same physical component surfaced twice.
+  let hasDuplicate = false;
+  const toks = components.map((c) => giTokens(c.displayName));
+  for (let i = 0; i < toks.length && !hasDuplicate; i++) {
+    for (let j = i + 1; j < toks.length; j++) {
+      const a = toks[i], b = toks[j];
+      if (a.size === 0 || b.size === 0) continue;
+      const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+      if ([...small].every((t) => big.has(t))) { hasDuplicate = true; break; }
+    }
+  }
+
+  // (unresolved) model-level uncertainty that a brand name is concealing: the
+  // component resolved to a BARE BRAND — no cataloged product AND no model
+  // token in the display name (e.g. "Rega", "Spendor", "Emt"). A component
+  // that carries its model ("Leben CS600X", "DeVore Orangutan O/96",
+  // "KEF LS50 Meta") is correctly identified even without a catalog product
+  // row and is NOT counted. A SINGLE bare-brand component in an otherwise
+  // intact graph follows existing behaviour; the gate fires only on 2+, or on
+  // a dropped or duplicated component.
+  //
+  // A MULTI-WORD brand name is still a bare brand. The token-count test read
+  // "Wilson audio" as carrying a model because it has two words, so a
+  // component whose model was lost counted as correctly identified. The same
+  // held for "Audio Research", "Pass Labs", "Linear Tube Audio". Ask the
+  // brand registry instead of counting words.
+  const unresolved = components.filter(
+    (c) => !c.product && (giTokens(c.displayName).size <= 1 || isBareBrandName(c.displayName)),
+  );
+
+  /*
+   * (1) Dropped — decided by IDENTITY, not by count.
+   *
+   * The count comparison produced an internally impossible document: four
+   * components listed as RECOGNISED with ticks, followed by "one component in
+   * what you wrote I couldn't match". The phantom came from the two sides
+   * counting different things — `expected` is a union over EVERY accumulated
+   * turn's segments, `resolved` is the current graph — so any prior-turn
+   * residue that fails to collapse into a resolved identity ("the amp is a
+   * Butler Monad" beside "Butler Monads": 'monad' and 'monads' are different
+   * tokens) inflated expected past resolved with nothing actually missing.
+   *
+   * The invariant, both directions: a clarification fires exactly when some
+   * DISTINCT INPUT SEGMENT matches no resolved component's identity — and
+   * then it can say WHICH ONE, instead of reporting an arithmetic gap the
+   * recognised list contradicts two lines above.
+   */
+  const foldTokens = (x: string) =>
+    new Set([...giTokens(x)].map((t) => t.replace(/s$/, '')));
+  const segmentNamesResolved = (seg: string, name: string): boolean => {
+    if (samePhysicalComponent({ brand: '', name: seg }, { brand: '', name: name })) return true;
+    if (samePhysicalComponent({ brand: '', name: name }, { brand: '', name: seg })) return true;
+    /*
+     * Overlap, not subset — in either direction. Subset-of-resolved failed
+     * the moment identities were canonicalised: the listener types "DeVore
+     * O/96", the graph resolves "DeVore Orangutan O/96", and the resolved
+     * name now carries a token the input never contained. Subset-of-segment
+     * fails the other way on prose ("the amp is a Butler Monad" has six
+     * tokens). Two shared folded tokens identify one physical box — brand
+     * plus model — while a lone brand word still matches nothing, which is
+     * what keeps a genuinely unknown component able to raise its hand.
+     */
+    const resolvedToks = foldTokens(name);
+    const segToks = foldTokens(seg);
+    const overlap = [...resolvedToks].filter((t) => segToks.has(t)).length;
+    /*
+     * A component the graph resolved down to a BARE BRAND ("KEF" from "KEF
+     * LS50 Meta") still CONSUMED the listener's segment — the shallowness of
+     * that resolution is the separate unresolved-bare-brand gate's business,
+     * not a missing component. One shared token is identity enough when the
+     * resolved name has only one.
+     */
+    if (resolvedToks.size === 1) return overlap === 1;
+    return overlap >= 2;
+  };
+  const inputSegments = distinctInputComponentSegments(rawMessage);
+  const REVERT_PROSE = /\b(?:keep|go(?:ing)?\s+back|revert|stick\s+with)\b/i;
+  /*
+   * A directive about ROLES — "keep the speakers and change the amp" —
+   * names what the listener wants done, not a component. It is prose the
+   * moment no token could carry identity: no digits, and every word is a
+   * role label, a directive verb, or small-talk. A directive that names
+   * actual gear ("keep the Naim NAP 250") keeps its identity tokens and
+   * still counts.
+   */
+  const GI_DIRECTIVE = /\b(?:keep|change|swap|replace|upgrade|stick|go|went)\b/i;
+  const GI_DIRECTIVE_STOP: ReadonlySet<string> = new Set([
+    'keep', 'change', 'swap', 'replace', 'upgrade', 'stick', 'go', 'went', 'back',
+    'the', 'and', 'my', 'an', 'to', 'of', 'for', 'what', 'would', 'you', 'it',
+    'me', 'with', 'next', 'first', 'better', 'worse', 'new', 'modern', 'solid',
+    'state', 'tube', 'tubes', 'should', 'could', 'if', 'that', 'this', 'one',
+    'speaker', 'speakers', 'amp', 'amps', 'amplifier', 'amplifiers', 'integrated',
+    'dac', 'dacs', 'streamer', 'preamp', 'preamplifier', 'source', 'sources',
+    'turntable', 'headphone', 'headphones', 'monitor', 'monitors', 'cd', 'player',
+    'system', 'setup', 'original', 'previous', 'actually', 'instead',
+  ]);
+  const directiveProse = (seg: string) =>
+    GI_DIRECTIVE.test(seg) && !/\d/.test(seg)
+    && seg.toLowerCase().split(/[^a-z0-9+]+/).filter((t) => t.length >= 2)
+      .every((t) => GI_DIRECTIVE_STOP.has(t) || GI_DISCOURSE_TOKENS.has(t));
+  const consumedBySubstitution = (seg: string) =>
+    directiveProse(seg)
+    ||
+    substitutionConsumed.some((n) => segmentNamesResolved(seg, n))
+    /*
+     * A keep/revert sentence naming a component it refers to ("keep the
+     * butler — what would you change next") is an instruction about the
+     * graph, not a new component. It shares only ONE token with the
+     * component it names (prose around it dilutes the overlap), so the
+     * two-token identity rule correctly refuses to match it — and it must
+     * be exempted rather than read as a dropped component.
+     */
+    || (REVERT_PROSE.test(seg) && (
+      /\b(?:original|previous|system|setup|everything)\b/i.test(seg)
+      || [...foldTokens(seg)].some((t) =>
+        components.some((c) => foldTokens(c.displayName).has(t))
+        || substitutionConsumed.some((n) => foldTokens(n).has(t)))));
+  const unmatchedSegments = inputSegments.filter((seg) =>
+    giTokens(seg).size > 0
+    && !components.some((c) => segmentNamesResolved(seg, c.displayName))
+    && !consumedBySubstitution(seg));
+  /*
+   * BOTH tests must agree before a missing component is announced, because
+   * each covers the other's blind spot. The count comparison alone produced
+   * the 4/4-recognised phantom (prior-turn residue inflates the count with
+   * nothing missing); the identity test alone flagged misspelled inputs as
+   * missing (fuzzy-corrected "hegal h190" shares one token with "Hegel
+   * H190"). Count-excess says HOW MANY look absent; an identity-unmatched
+   * segment says WHICH ONE actually is. A clarification needs both — and a
+   * legitimate one always has both.
+   */
+  const exempted = inputSegments.filter((seg) =>
+    giTokens(seg).size > 0
+    && !components.some((c) => segmentNamesResolved(seg, c.displayName))
+    && consumedBySubstitution(seg)).length;
+  const expected = countMeaningfulInputComponents(rawMessage) - exempted;
+  const dropped = expected > resolved && unmatchedSegments.length > 0;
+
+  if (!dropped && !hasDuplicate && unresolved.length < 2) return null; // graph trusted
+
+  const understood = [...new Set(components.map((c) => c.displayName))].filter(Boolean);
+  const understoodList = understood.length ? understood.join(', ') : 'part of your system';
+
+  // Expert-verification framing: confirm what's already placed (rendered as a
+  // compact ✓ checklist from `recognized`), then ask ONLY about the unresolved
+  // ambiguity. Copy/structure only — the dropped / duplicate / unresolved
+  // determination above is unchanged.
+  let acknowledge: string;
+  let question: string;
+  let recognized: string[] = understood;
+  const unresolvedNames = unresolved.map((u) => u.displayName);
+
+  if (dropped) {
+    const missing = expected - resolved;
+    acknowledge = "I've placed most of your system.";
+    question =
+      `${missing === 1 ? 'One component' : `${missing} components`} in what you wrote I couldn't match to a specific model — ` +
+      `what ${missing === 1 ? 'is it' : 'are they'}, exact make and model? Then I'll read the whole system.`;
+  } else if (hasDuplicate) {
+    acknowledge = "I've placed your system, though one component may be listed twice.";
+    question = "Could you confirm each one's exact make and model? Then I'll run the assessment.";
+  } else {
+    const known = understood.filter((n) => !unresolved.some((u) => u.displayName === n));
+    const uncertainList = unresolvedNames.join(', ');
+    recognized = known;
+    if (known.length) {
+      acknowledge = `I've placed most of your system — ${unresolved.length === 1 ? 'one component' : `${unresolved.length} components`} to confirm.`;
+      question =
+        `I couldn't match ${uncertainList} to ${unresolved.length === 1 ? 'a specific model' : 'specific models'} — ` +
+        `what ${unresolved.length === 1 ? 'is it' : 'are they'}, exact make and model? Then I'll assess the whole system.`;
+    } else {
+      acknowledge = 'I can see the shape of your system — let me lock in the exact models.';
+      question =
+        `I couldn't match ${uncertainList} to specific models in my catalog — ` +
+        `what are the exact makes and models? Then I'll assess the whole system.`;
+    }
+  }
+
+  return {
+    acknowledge,
+    question,
+    recognized: recognized.length ? recognized : undefined,
+    unresolved: unresolvedNames.length ? unresolvedNames : undefined,
+  };
+}
+
 export function buildSystemAssessment(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
   activeSystem?: ActiveSystemContext | null,
   desires?: DesireSignal[],
+  /**
+   * Stage PB2.4 — accumulated listener preference profile. When provided
+   * and confidence is above the framing floor, a single short paragraph
+   * is prepended to `systemContext` priming the assessment with the
+   * listener's apparent leans. Pure prose layer — no impact on findings,
+   * scoring, or product selection.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
+  /**
+   * Manufacturer-tier physical evidence, when the caller holds any.
+   * Optional and additive: every existing call site behaves exactly as before,
+   * and the only consumer is the compatibility check, which uses it solely
+   * where the catalog is silent.
+   */
+  manufacturerEvidence: EvidenceItem[] = [],
 ): SystemAssessmentResult {
   // ── Consumer-wireless short-circuit ──────────────────
   // Audio XX Playbook §3 (preference protection) + §6 (partial-knowledge
@@ -7377,8 +9374,11 @@ export function buildSystemAssessment(
     //   1. one-sentence characterization
     //   2. one "what this means" paragraph
     //   3. soft provenance line
+    // PB2.4 — optionally prepend a listener-aware framing sentence.
+    const consumerFraming = buildListenerFraming(listenerProfile, 'assessment');
     const systemContext =
-      `${firstTurn.systemSignature}\n\n`
+      (consumerFraming ? `${consumerFraming}\n\n` : '')
+      + `${firstTurn.systemSignature}\n\n`
       + `${firstTurn.tendencies}`;
 
     const response: ConsultationResponse = {
@@ -7461,13 +9461,81 @@ export function buildSystemAssessment(
   // current message. This prevents cross-contamination from saved systems that
   // include components not part of the chain being evaluated.
   const msgLowerForSeed = currentMessage.toLowerCase();
+
+  const messageComponents = detectSystemDescription(
+    currentMessage, subjectMatches, {} as never,
+  )?.components ?? [];
+
+  /*
+   * PRECEDENCE APPLIES ONLY WHERE THE MESSAGE PARSE IS TRUSTWORTHY.
+   *
+   * The components that enter the graph come from `subjectMatches`;
+   * `detectSystemDescription` is a second, independent parse. Where they
+   * agree, precedence is safe. Where they disagree, suppressing a saved
+   * component on the strength of the second parse discards a box that the
+   * first one never produces — and the box simply vanishes.
+   *
+   * That is exactly what broke the signed-in journey. The "Assess this system"
+   * control sends the saved system as an unlabelled list, "Assess my system:
+   * dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2", which
+   * `detectSystemDescription` reads as four components while `subjectMatches`
+   * yields two BARE BRANDS. All four saved components were suppressed as
+   * "already named", two were never rebuilt, and every signed-in listener with
+   * a saved system selected got "2 components I couldn't match" instead of an
+   * assessment.
+   *
+   * Explicit role labels are the discriminator. A listener writing
+   * "Pre-amp: ARC ref 5" has stated structure the label parser reads directly,
+   * and that is the case precedence exists for — the duplicate node and the
+   * replaced component. An unlabelled list is a hint, not a graph, and the
+   * saved system remains the better source.
+   */
+  const messageIsLabelled = parseLabelledComponents(currentMessage).length >= 2;
+
   if (activeSystem && activeSystem.components.length > 0) {
     for (const ac of activeSystem.components) {
+      /*
+       * Same physical box, named by the listener → the message's node stands.
+       * Different box, same slot → the message supersedes rather than adds.
+       * Both only where the message's structure is explicit; otherwise the
+       * saved component seeds and the graph collapse reconciles later.
+       */
+      if (messageIsLabelled && alreadyNamedByMessage(ac, messageComponents)) continue;
+      if (messageIsLabelled
+        && messageSuppliesRole(messageComponents, ac.category, normaliseComponentRole)) continue;
+
+      /*
+       * RECONCILIATION ALSO HAPPENS AT THE GRAPH.
+       *
+       * Two precedence guards used to sit at this point, suppressing a saved
+       * component that `detectSystemDescription` had already found in the
+       * message. They broke the signed-in journey outright.
+       *
+       * The components that actually enter the graph come from
+       * `subjectMatches`, a DIFFERENT resolution path. When the two disagree
+       * the guard discarded the saved component on the strength of a parse
+       * whose result never arrived: the saved-system text "Assess my system:
+       * dCS Rossini Apex, ARC ref, Butler Monads, Acora QRC-2" resolves here
+       * to two BARE BRANDS, so Butler and Acora were suppressed as
+       * "already named" and then never produced. A signed-in listener with any
+       * saved system selected got "2 components I couldn't match" and no
+       * assessment at all.
+       *
+       * Precedence is real and still enforced — one layer later, in
+       * `collapsePhysicalRepresentations`, which runs over the components that
+       * genuinely exist and keeps the better-specified record of each physical
+       * box. Nothing can be discarded there on the strength of a node that was
+       * never built.
+       */
       const fullName = normalizeDisplayName(ac.brand, ac.name);
       const nameLower = ac.name.toLowerCase();
       const strippedNameLower = stripVersionTag(ac.name).toLowerCase();
       const brandLower = ac.brand.toLowerCase();
-      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower) || processedNames.has(brandLower)) continue;
+      // An empty brand is not an identity: checking/recording '' let the
+      // first brandless component poison the set and every later one was
+      // skipped — a two-unknown system collapsed to one (campaign, 2026-08-29).
+      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower)
+        || (brandLower !== '' && processedNames.has(brandLower))) continue;
 
       // Only seed if the component's brand or model name appears in the message.
       // Use word-boundary matching for short names (≤4 chars) to prevent
@@ -7506,7 +9574,7 @@ export function buildSystemAssessment(
 
       processedNames.add(nameLower);
       processedNames.add(strippedNameLower);
-      processedNames.add(brandLower);
+      if (brandLower !== '') processedNames.add(brandLower);
 
       // Try to find rich catalog data (use stripped name for matching too).
       // Apply CATALOG_NAME_ALIASES so family members without their own
@@ -7549,7 +9617,18 @@ export function buildSystemAssessment(
           || df.name.toLowerCase().includes(nameLower),
       );
 
-      const primaryRole = product?.category ?? ac.category ?? 'component';
+      /*
+       * THE LISTENER'S SAVED ROLE IS AUTHORITATIVE (P0, 2026-08-27). The
+       * saved record carries a per-system role ('preamp', 'power_amp',
+       * 'speaker'…) — the listener's own statement about THIS box in THIS
+       * chain — and it was never consulted: the catalog's category outranked
+       * it, and a stale shared catalog row ('other', or 'amplifier' for a
+       * preamplifier) then manufactured duplicate-role clarifications for a
+       * correctly saved system. Role first; catalog and category are
+       * fallbacks for records that carry no role.
+       */
+      const savedRole = ac.role ? (normaliseComponentRole(ac.role) ?? ac.role) : undefined;
+      const primaryRole = savedRole ?? product?.category ?? ac.category ?? 'component';
       components.push({
         displayName: fullName,
         role: primaryRole,
@@ -7608,14 +9687,27 @@ export function buildSystemAssessment(
             || pFull === lower
             || pName === aliasedLower
             || pFull === aliasedLower
-            || (lower.length >= 3 && pName.startsWith(lower))
+            // Partial matches must not CROSS A VARIANT BOUNDARY. Plain
+            // `startsWith` resolved a typed "Leben CS600" to the CS600X —
+            // reasoning from a different amplifier's specifications, not
+            // merely showing the wrong photograph. See product-identity-match.
+            || prefixMatchIsSafe(lower, pName)
             // Model suffix match: "o/96" matches "Orangutan O/96"
-            || (lower.length >= 3 && pName.endsWith(lower))
+            || suffixMatchIsSafe(lower, pName)
             // Brand+partial-name: input contains brand AND product name contains the remainder
             // e.g. "hornshoppe horn" → brand "hornshoppe" matches, name "horns" includes "horn"
+            // Brand + partial name. Subject to the SAME variant boundary:
+            // "leben cs600" contains the brand and leaves "cs600", which
+            // `"cs600x".includes("cs600")` accepted — resolving a typed CS600
+            // to the CS600X through a different branch than the prefix rule.
+            // Closing one branch of an identity defect closes one branch.
             || (lower.includes(pBrand) && pBrand.length >= 3 && (() => {
               const remainder = lower.replace(pBrand, '').trim();
-              return remainder.length >= 2 && pName.includes(remainder);
+              if (remainder.length < 2 || !pName.includes(remainder)) return false;
+              const idx = pName.indexOf(remainder);
+              const before = pName.slice(0, idx);
+              const after = pName.slice(idx + remainder.length);
+              return !remainderIsVariant(before) && !remainderIsVariant(after);
             })());
         },
       );
@@ -7670,16 +9762,36 @@ export function buildSystemAssessment(
         const msgLower = currentMessage.toLowerCase();
         const prodIdx = msgLower.indexOf(lower);
 
-        // Score brand matches by proximity to the product name
-        const candidateBrands = subjectMatches
+        // Borrow a brand for this uncatalogued model ONLY when a brand sits
+        // IMMEDIATELY before it in the text (the "<Brand> <Model>" convention,
+        // e.g. "Eversolo DMP-A6"). Borrowing a merely-nearby brand fabricates a
+        // product that does not exist: in "Technics SL-1200, Marantz 2270, …"
+        // the model's own adjacent brand ("Technics") is consumed by its own
+        // component first, so the next-nearest *unprocessed* brand ("Marantz")
+        // would otherwise be grabbed to invent "Marantz SL-1200". Requiring true
+        // adjacency (the brand ends just before the model starts) admits the
+        // legitimate pairing and rejects the fabrication; a model with no
+        // adjacent brand renders bare rather than wrongly branded.
+        const adjacentBrands = subjectMatches
           .filter((m) => m.kind === 'brand' && !processedNames.has(m.name.toLowerCase()))
           .map((m) => {
             const brandIdx = msgLower.indexOf(m.name.toLowerCase());
-            return { match: m, distance: brandIdx >= 0 ? Math.abs(brandIdx - prodIdx) : Infinity };
+            const brandEnd = brandIdx >= 0 ? brandIdx + m.name.length : -1;
+            // Gap between the brand's end and the model's start; only a small
+            // separator (space, "the", a comma) counts as adjacency.
+            const gap = brandEnd >= 0 && brandEnd <= prodIdx ? prodIdx - brandEnd : Infinity;
+            return { match: m, gap };
           })
-          .sort((a, b) => a.distance - b.distance);
+          .filter((c) => c.gap <= 3)
+          .sort((a, b) => a.gap - b.gap);
 
-        const brandMatch = candidateBrands.length > 0 ? candidateBrands[0].match : undefined;
+        // A multi-word free-text model (e.g. "Holo May") already carries its
+        // own brand; borrowing a brand subject here mis-attributes a different
+        // component's brand. Only borrow for a single-token model that plainly
+        // needs one AND has an adjacent brand (e.g. "DMP-A6" → "Eversolo DMP-A6").
+        const modelTokens = match.name.trim().split(/\s+/).filter(Boolean);
+        const modelNeedsBrand = modelTokens.length < 2;
+        const brandMatch = modelNeedsBrand && adjacentBrands.length > 0 ? adjacentBrands[0].match : undefined;
         let brandName = '';
         if (brandMatch) {
           // Use KNOWN_PRODUCT_ROLES displayBrand for proper casing (e.g. "XSA" not "Xsa")
@@ -7691,10 +9803,19 @@ export function buildSystemAssessment(
           processedNames.add(brandMatch.name.toLowerCase());
         }
 
-        // Preserve original casing for model names with hyphens (DMP-A6, DAC-Z8)
-        let productName = match.name.includes('-')
-          ? match.name.toUpperCase()
-          : match.name.charAt(0).toUpperCase() + match.name.slice(1);
+        // Title-case each model word (so "holo may" → "Holo May", not
+        // "Holo may"); keep hyphenated tokens upper (DMP-A6, DAC-Z8).
+        //
+        // A token mixing letters and digits is a model DESIGNATOR, not a word,
+        // so it is upper-cased whole: "cs600" → "CS600", not "Cs600". The
+        // sentence-case rule printed "Leben Cs600" on the production artifact,
+        // which is the maker's product name spelled wrong on a document whose
+        // whole claim is that it is careful about identity.
+        let productName = modelTokens
+          .map((w) => (w.includes('-') || /\d/.test(w)
+            ? w.toUpperCase()
+            : w.charAt(0).toUpperCase() + w.slice(1)))
+          .join(' ');
         // Strip brand prefix from product name if already present (e.g. "leben cs300" → "CS300")
         if (brandName && productName.toLowerCase().startsWith(brandName.toLowerCase() + ' ')) {
           const modelPart = productName.substring(brandName.length + 1).trim();
@@ -7768,8 +9889,20 @@ export function buildSystemAssessment(
           currentMessage.toLowerCase().includes(p.name.toLowerCase()),
         );
 
-        // Use proper brand casing from catalog products when available (e.g. "DeVore" not "Devore")
-        const catalogBrandCasing = brandProducts.length > 0 ? brandProducts[0].brand : undefined;
+        // Proper brand casing from the catalog (e.g. "DeVore" not "Devore") —
+        // but ONLY from the brand the listener actually named.
+        //
+        // `brandProducts` deliberately pools every brand sharing an editorial
+        // BrandProfile, so a Pass Labs mention also reaches First Watt
+        // products. Taking `brandProducts[0].brand` therefore adopted whichever
+        // sibling happened to sort first, and a listener who typed "Pass Labs
+        // XA25" was shown a component called FIRST WATT — a brand alias
+        // promoted to a physical component in their signal path.
+        //
+        // An alias is not a component. The casing must come from the brand that
+        // was named, and from nowhere else.
+        const catalogBrandCasing = brandProducts
+          .find((p) => p.brand.toLowerCase() === match.name.toLowerCase())?.brand;
         const displayName = specificProduct
           ? normalizeDisplayName(specificProduct.brand, specificProduct.name)
           : catalogBrandCasing
@@ -7940,6 +10073,147 @@ export function buildSystemAssessment(
     }
   }
 
+  // ── Amazon link injection for Component Contribution Explore ─
+  // Public-beta affiliate hook (2026-05-19): when a cataloged
+  // component is Amazon-eligible per shouldShowAmazonLink (pure
+  // attribute test — brand exclusion list, availability, typical
+  // market), attach an Amazon search link to its per-component
+  // explore list. The affiliate `tag=` parameter, if any, is
+  // applied at request time via affiliate-config (env-driven).
+  //
+  // This pass NEVER influences ranking, scoring, or any
+  // recommendation logic — it only enriches the link list shown
+  // beside an already-selected component. Skips components that
+  // already carry an Amazon URL (e.g. catalog entries with a
+  // verified ASIN direct link) so we never display two Amazon
+  // entries for the same component.
+  for (const c of components) {
+    if (!c.product) continue;
+    const eligible = shouldShowAmazonLink({
+      brand: c.product.brand,
+      availability: c.product.availability,
+      typicalMarket: c.product.typicalMarket,
+      buyingContext: c.product.buyingContext,
+    });
+    if (!eligible) continue;
+    const existing = componentLinks.get(c.displayName) ?? [];
+    if (existing.some((l) => l.url.includes('amazon.com'))) continue;
+    trackLink(
+      { label: 'Amazon', url: getAmazonSearchUrl(c.product.name, c.product.brand) },
+      c.displayName,
+    );
+  }
+
+  // ── Explicit labels: trusted structure, honest coverage ──────────────
+  //
+  // Real-user beta defect (2026-08-15). When the user writes
+  // "Speakers: Acora QRC-2" they have stated a fact about their system. Two
+  // things followed from ignoring that:
+  //
+  //   - Role was inferred from a fixed +/-40-character window that could reach
+  //     into the NEXT component's label, so a component's role depended on the
+  //     character length of the preceding label.
+  //   - A component the catalog could not resolve was dropped SILENTLY, and
+  //     the assessment then described "your system" minus a node the user named.
+  //
+  // Catalog coverage governs what we may SAY about a node. It does not govern
+  // whether the node EXISTS. An unresolved component becomes an opaque node:
+  // name verbatim, role from the label, characteristics unknown and never
+  // invented. The graph-integrity gate below is unchanged and still runs — a
+  // labelled graph simply stops being incomplete.
+  const labelledComponents = parseLabelledComponents(currentMessage);
+  if (labelledComponents.length > 0) {
+    for (const lc of labelledComponents) {
+      const lcLower = lc.rawName.toLowerCase();
+      const existing = components.find((c) => {
+        const dn = c.displayName.toLowerCase();
+        return dn === lcLower || dn.includes(lcLower) || lcLower.includes(dn);
+      });
+
+      if (existing) {
+        // Label-scoped role assignment. The user's own label outranks
+        // proximity inference; the catalog still wins when it actually
+        // resolved the product, because that is stronger identity evidence.
+        if (!existing.product) {
+          // REPLACE, never union. The role this component arrived with came
+          // from the proximity window that this repair exists to remove;
+          // merging it back in would preserve the defect ("ARC ref 5" kept a
+          // spurious 'streamer' role picked up from a neighbouring label).
+          existing.role = lc.roles[0];
+          existing.roles = [...lc.roles];
+          // Curated BRAND evidence is a legitimate tier, not an absence.
+          // Stripping brandProfile here conflated "no product entry" with "no
+          // evidence at all", demoting tier 2 (brand_profile) to tier 4
+          // (user-supplied). That is the same over-correction as before, and it
+          // had two costs: an ordinary catalogued system read as mostly unknown
+          // and fell into Expanded Reasoning, and the dCS Rossini Apex lost the
+          // dCS brand evidence Audio XX actually holds.
+          //
+          // A component is only unresolved when there is NEITHER product NOR
+          // brand evidence. Where a brand profile exists it is retained and the
+          // node carries brand-scoped authority — which the provenance layer
+          // renders as "Audio XX brand evidence", distinct from the catalog.
+          if (!existing.brandProfile) {
+            existing.unresolved = true;
+            existing.character = `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not identified in our catalog, so no sonic characteristics are claimed for it.`;
+          }
+          // Keep the identity the user gave. Brand recognition alone reduces
+          // "ARC ref 5" to "Arc", which then reads as a bare brand concealing
+          // a model and trips the graph gate — asking the user for a model
+          // they already typed. Their words are the better record.
+          existing.displayName = preferUserSuppliedName(existing.displayName, lc.rawName);
+        } else if (!labelContradictsCategory(lc.roles, existing.product.category)) {
+          existing.roles = [...new Set([...(existing.roles ?? []), ...lc.roles])];
+        }
+        continue;
+      }
+
+      // Opaque node — identity retained as a user-supplied fact, nothing
+      // asserted about how it sounds.
+      components.push({
+        displayName: lc.rawName,
+        role: lc.roles[0],
+        roles: lc.roles,
+        character: `${lc.rawName} — described by you as ${lc.labelText.toLowerCase()}; not in our catalog, so no sonic characteristics are claimed for it.`,
+        unresolved: true,
+      });
+    }
+  }
+
+  // ── One physical unit, however many records describe it ────────────
+  //
+  // THE INVARIANT. Multiple representations or evidence records for one
+  // physical component are not multiple components in the signal path.
+  //
+  // The graph is assembled from several sources — the active system, brand
+  // matches, product matches, explicit labels — and each contributes its own
+  // NAME STRING for the same box. Identity was then compared as a string
+  // (`processedNames`), so any two sources that spelled it differently both
+  // survived. A listener with one Denafrips Ares II was asked which of
+  // "Denafrips Ares II" and "Denafrips" was active in their signal path.
+  //
+  // Collapsed HERE, before validation, so the duplicate-role check and the
+  // graph-integrity gate both reason about the true physical graph. Neither
+  // check is weakened; they are simply no longer handed a graph in which one
+  // amplifier appears twice. `checkGraphIntegrity` carried its own echo filter
+  // for part of this, which meant the two gates disagreed about how many
+  // components existed — the duplicate-role clarification fired on a graph the
+  // integrity gate had already cleaned.
+  collapsePhysicalRepresentations(components, currentMessage);
+
+  /*
+   * STATED SUBSTITUTION (Wave 2, 2026-08-29). "What about a Leben CS600
+   * instead of the Butler?" accumulated BOTH amplifiers and then asked
+   * "has one replaced the other?" — a question the listener's own words
+   * had just answered. A message that names a candidate and an incumbent
+   * through substitution phrasing is a COUNTERFACTUAL: the graph swaps the
+   * incumbent for the candidate and assesses the proposed system. Genuine
+   * ambiguity ("I run Leben and Butler amps") has no such phrasing and
+   * still asks.
+   */
+  const substitutionConsumed: string[] = [];
+  const statedSubstitution = applyStatedSubstitutions(components, currentMessage, substitutionConsumed);
+
   // Need at least 2 identified components to build a system assessment
   if (components.length < 2) return null;
 
@@ -7949,6 +10223,14 @@ export function buildSystemAssessment(
   const validationClarification = validateSystemComponents(currentMessage, components);
   if (validationClarification) {
     return { kind: 'clarification', clarification: validationClarification };
+  }
+
+  // ── Graph-integrity gate (G6-D1) — trust the parse before assessing ──
+  // Detects a dropped, duplicated, or unresolvable component graph and asks
+  // for a specific clarification instead of synthesising a wrong assessment.
+  const integrityClarification = checkGraphIntegrity(currentMessage, components, substitutionConsumed);
+  if (integrityClarification) {
+    return { kind: 'clarification', clarification: integrityClarification };
   }
 
   // ── Step 0: Confidence check — do we have enough catalog coverage? ──
@@ -7973,11 +10255,21 @@ export function buildSystemAssessment(
   // ── Step 1: Resolve axis positions for each component ──
   // This happens BEFORE prose generation so that system-level reasoning
   // (compounding, compensation, balance) is available to all downstream steps.
+  //
+  // Only LICENSED profiles aggregate. An unresolved component's synthetic
+  // neutrals used to vote here, which both diluted a genuinely voiced system
+  // toward the middle and let an unidentified box read as evidence of balance.
+  // Axes and roles are filtered together — they are zipped downstream, and
+  // filtering one without the other applies each component's weight to a
+  // different component.
+  const licensedProfiles = componentAxisProfiles
+    .map((p, i) => ({ p, role: components[i].role }))
+    .filter(({ p }) => carriesAxisEvidence(p));
   const systemAxes = synthesiseSystemAxes(
-    componentAxisProfiles.map(p => p.axes),
-    components.map(c => c.role),
+    licensedProfiles.map(({ p }) => p.axes),
+    licensedProfiles.map(({ role }) => role),
   );
-  const axisCompounding = detectCompounding(componentAxisProfiles.map(p => p.axes));
+  const axisCompounding = detectCompounding(licensedProfiles.map(({ p }) => p.axes));
 
   // ── Build per-component character paragraphs ──────
   const componentParagraphs = components.map((c) => {
@@ -8012,11 +10304,17 @@ export function buildSystemAssessment(
   // ── Amplifier-speaker fit note ──────────────────────
   const ampSpeakerFit = inferAmplifierSpeakerFit(components);
 
+  // ── User-intent stance (Recommendation = Judgment × User Intent) ──
+  // Resolved once from the two permitted intent sources (desires + listener
+  // profile). Drives intent-relative limitation framing (P5) and intent-aware
+  // upgrade promotion/direction (P2/P3). Never reads listenerPriorities.
+  const intentStance = deriveIntentStance(desires, listenerProfile);
+
   // ── Build "what's working well" ──────────────────────
   const assessmentStrengths = inferAssessmentStrengths(components);
 
   // ── Build "where limitations may appear" ─────────────
-  const assessmentLimitations = inferAssessmentLimitations(components);
+  const assessmentLimitations = inferAssessmentLimitations(components, intentStance);
 
   // ── Build upgrade direction ──────────────────────────
   const upgradeDirection = inferUpgradeDirection(components);
@@ -8051,13 +10349,14 @@ export function buildSystemAssessment(
   const memoStacked = detectStackedTraits(components, componentAxisProfiles);
   const memoConstraint = systemTier === 'reference'
     ? undefined  // Reference-level systems don't have meaningful bottlenecks
-    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes, voicingCoherence);
+    : detectPrimaryConstraint(components, componentAxisProfiles, memoStacked, systemAxes,
+      voicingCoherence, manufacturerEvidence);
   const memoAssessments = buildComponentAssessments(components, componentAxisProfiles, memoConstraint, componentLinks);
   // Hoist listener priority inference before upgrade paths (Feature 3: preference protection)
   const memoListenerPriorities = inferListenerPriorityTags(systemAxes, desires);
   const memoUpgradePaths = systemTier === 'reference'
     ? []  // Suppress upgrade paths for reference-tier systems
-    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked, systemAxes, memoListenerPriorities, desires);
+    : buildUpgradePaths(components, componentAxisProfiles, memoAssessments, memoConstraint, memoStacked, systemAxes, memoListenerPriorities, desires, intentStance);
   const memoKeepsRaw = buildKeepRecommendations(memoAssessments, memoUpgradePaths, memoConstraint);
   const memoIntro = buildIntroSummary(components, systemAxes, memoStacked, systemTier);
   const memoKeyObservation = buildKeyObservation(components, componentAxisProfiles, memoStacked, systemAxes, desires);
@@ -8099,7 +10398,7 @@ export function buildSystemAssessment(
   // ── Extract MemoFindings contract ──────────────────
   // The structured contract between the deterministic pipeline and
   // all downstream renderers. Produced BEFORE any prose rendering.
-  const findings: MemoFindings = extractMemoFindings(
+  const findingsBase: MemoFindings = extractMemoFindings(
     components,
     componentAxisProfiles,
     memoChain,
@@ -8115,7 +10414,11 @@ export function buildSystemAssessment(
     componentLinks,
     memoListenerPriorities,
     voicingCoherence,
+    manufacturerEvidence,
   );
+  const findings: MemoFindings = statedSubstitution
+    ? { ...findingsBase, statedSubstitution }
+    : findingsBase;
 
   // ── System character opening (brief) ──────────────
   // A one-two sentence overview of the system's overall lean.
@@ -8182,6 +10485,14 @@ export function buildSystemAssessment(
   // whenever advisoryMode === 'system_review' and systemContext is set.
   response.systemContext = composeAssessmentNarrative(findings);
 
+  // ── PB2.4 — listener-aware framing prepend ──────────
+  // Read-only prose addition; does not alter findings or any structured
+  // memo field. Helper returns '' when the profile is absent/weak.
+  const framing = buildListenerFraming(listenerProfile, 'assessment');
+  if (framing) {
+    response.systemContext = `${framing}\n\n${response.systemContext}`;
+  }
+
   return { kind: 'assessment', findings, response };
 }
 
@@ -8243,9 +10554,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     uniqueNames.push(n);
   }
   const namesList =
-    uniqueNames.length > 1
-      ? uniqueNames.slice(0, -1).join(', ') + ', and ' + uniqueNames[uniqueNames.length - 1]
-      : uniqueNames[0] ?? '';
+    uniqueNames.length === 2
+      ? uniqueNames[0] + ' and ' + uniqueNames[1]
+      : uniqueNames.length > 2
+        ? uniqueNames.slice(0, -1).join(', ') + ', and ' + uniqueNames[uniqueNames.length - 1]
+        : uniqueNames[0] ?? '';
   const names = `The ${namesList}`;
   const deliberate = findings.isDeliberate
     ? 'The pieces lean in compatible directions rather than fighting one another.'
@@ -8347,12 +10660,52 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     return r === 'streamer' || r === 'source' || r === 'turntable' || r === 'transport';
   });
 
-  // Derive upstream and downstream character from per-component axes
+  // Components carrying no axis evidence. "No single component is holding this
+  // system back" quantifies over EVERY component, so it cannot be asserted
+  // while one of them was never assessed — that is a claim about a set we only
+  // partly know. Restraint is still available; unqualified restraint is not.
+  const unassessedNames = findings.perComponentAxes
+    .filter((a) => !carriesAxisEvidence(a))
+    .map((a) => a.name);
+  const unassessedClause = unassessedNames.length === 0
+    ? ''
+    : unassessedNames.length === 1
+      ? ` This reading excludes the ${unassessedNames[0]}, which I could not identify.`
+      : ` This reading excludes ${unassessedNames.slice(0, -1).join(', ')} and `
+        + `${unassessedNames[unassessedNames.length - 1]}, which I could not identify.`;
+
+  // ── Material interaction that could not be assessed ──────────────
+  //
+  // `classifyPowerMatch` returns 'unknown' whenever either watts or
+  // sensitivity is missing, and 'unknown' has always behaved downstream
+  // exactly like 'fine'. So "no mismatch found" covered both "we checked and
+  // it is fine" and "we could not check", and only the first of those is
+  // evidence of compatibility.
+  //
+  // Scoped to MATERIALITY, not completeness. Amplifier against loudspeaker is
+  // the one pairing where missing data changes what may be concluded; an
+  // uncatalogued streamer does not make a system unassessable, and treating
+  // every gap as blocking would be the blanket hedging this must avoid.
+  const pmForMateriality = findings.powerMatchAssessment;
+  const hasAmpAndSpeaker = comps.some((c) => /amp|integrated/i.test(c.role || ''))
+    && comps.some((c) => /speak|headphone/i.test(c.role || ''));
+  const powerUnassessable = hasAmpAndSpeaker
+    && pmForMateriality.compatibility === 'unknown';
+  const powerUnassessableClause = powerUnassessable
+    ? ` I could not check whether the amplifier and loudspeakers suit each other —`
+      + ` that needs a power rating and a sensitivity figure, and at least one is missing.`
+    : '';
+
+  // Derive upstream and downstream character from per-component axes.
+  // Only profiles carrying evidence vote: these counts drive the "pushes
+  // toward warmth" / "reinforce the same direction" sentences, which are
+  // relational claims, and a component we could not identify has no side to
+  // be on.
   const upstreamAxes = findings.perComponentAxes.filter(a =>
-    upstreamComps.some(c => c.name === a.name),
+    carriesAxisEvidence(a) && upstreamComps.some(c => c.name === a.name),
   );
   const downstreamAxes = findings.perComponentAxes.filter(a =>
-    downstreamComps.some(c => c.name === a.name),
+    carriesAxisEvidence(a) && downstreamComps.some(c => c.name === a.name),
   );
 
   // Upstream lean: are the upstream components bright/detailed or warm/smooth?
@@ -8365,18 +10718,27 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const downBright = downstreamAxes.filter(a => a.axes.warm_bright === 'bright').length;
   const downSmooth = downstreamAxes.filter(a => a.axes.smooth_detailed === 'smooth').length;
 
-  // Build upstream character phrase
-  const upstreamNames = upstreamComps.map(c => c.name);
-  const downstreamNames = downstreamComps.map(c => c.name);
-  const sourceNames = sourceComps.map(c => c.name);
+  // Build upstream character phrase.
+  // These names are the SUBJECTS of the interaction sentence ("X and Y
+  // reinforce the same direction"), so they are filtered by the same rule as
+  // the counts above. Filtering one and not the other is how a fabricated
+  // amplifier ended up named in a reinforcement claim whose arithmetic had
+  // already excluded it.
+  const licensedName = (n: string) =>
+    findings.perComponentAxes.some((a) => a.name === n && carriesAxisEvidence(a));
+  const upstreamNames = upstreamComps.map(c => c.name).filter(licensedName);
+  const downstreamNames = downstreamComps.map(c => c.name).filter(licensedName);
+  const sourceNames = sourceComps.map(c => c.name).filter(licensedName);
 
+  // Upstream character as an ordinary-language phrase — this feeds the
+  // "why it behaves that way" sentence, never a system-identity label.
   let upstreamChar = '';
-  if (upBright > 0 && upDetailed > 0) upstreamChar = 'speed-first';
-  else if (upBright > 0) upstreamChar = 'clarity-first';
-  else if (upDetailed > 0) upstreamChar = 'detail-first';
-  else if (upWarm > 0 && upSmooth > 0) upstreamChar = 'warmth-first';
-  else if (upWarm > 0) upstreamChar = 'tone-first';
-  else upstreamChar = 'neutral';
+  if (upBright > 0 && upDetailed > 0) upstreamChar = 'speed and clarity';
+  else if (upBright > 0) upstreamChar = 'clarity and presence';
+  else if (upDetailed > 0) upstreamChar = 'resolution and precision';
+  else if (upWarm > 0 && upSmooth > 0) upstreamChar = 'warmth and ease';
+  else if (upWarm > 0) upstreamChar = 'tonal richness';
+  else upstreamChar = '';
 
   // Build downstream counterbalance phrase
   let downstreamPhrase = '';
@@ -8429,8 +10791,22 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   let thesisSentence2: string;
   if (upstreamComps.length > 0 && downstreamComps.length > 0) {
     const upList = upstreamNames.join(' and ');
-    thesisSentence1 = `This is a ${upstreamChar} system anchored by ${upList}, ${downstreamPhrase}.`;
-    // Sentence 2: what dominates (power note overrides if present)
+    const upVerb = upstreamComps.length > 1 ? 'lean' : 'leans';
+    // Phase 2A: when an upstream component's catalog entry declares a
+    // transparency design goal, say so causally — the engineering fact IS
+    // the explanation of why the speakers set the character.
+    const transparentUpstream = upstreamComps.find(c =>
+      findings.transparencyDeclared?.includes(c.name),
+    );
+    // Causal explanation, not a second identity claim: the intro already
+    // states what the system is; this sentence explains why it behaves
+    // that way (electronics character + speaker contribution).
+    thesisSentence1 = transparentUpstream
+      ? `The ${transparentUpstream.name} is engineered to add essentially nothing of its own, so the ${downstreamNames.join(' and ')} ${downstreamComps.length > 1 ? 'set' : 'sets'} the system's tonal character.`
+      : upstreamChar
+        ? `The ${upList} ${upVerb} toward ${upstreamChar}, ${downstreamPhrase}.`
+        : `The ${upList} ${upstreamComps.length > 1 ? 'provide' : 'provides'} a neutral, uncoloured foundation, ${downstreamPhrase}.`;
+    // Sentence 2: what that means for the listener (power note overrides)
     const pw = powerNote.trim();
     if (pw) {
       thesisSentence2 = pw;
@@ -8442,12 +10818,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       thesisSentence2 = `Speaker, amp, and DAC are deliberately voiced together around ${synergyPhrase}.`;
     } else if (upBright > 0 || upDetailed > 0) {
       thesisSentence2 = hasContrast
-        ? 'Clarity, timing, and spatial precision dominate unless the speaker compensates.'
-        : 'Clarity, timing, and spatial precision dominate throughout.';
+        ? 'In practice the two tendencies should balance each other — clarity from the electronics, body from the speakers.'
+        : 'In practice, expect clarity, timing, and spatial precision to lead the presentation.';
     } else if (upWarm > 0 || upSmooth > 0) {
       thesisSentence2 = hasContrast
-        ? 'Warmth and body dominate unless the speaker adds edge.'
-        : 'Warmth and body dominate throughout.';
+        ? 'In practice warmth sets the tone, with the speakers adding enough definition to keep it honest.'
+        : 'In practice, warmth and body set the tone throughout.';
     } else {
       thesisSentence2 = 'No single quality dominates — the system splits the difference.';
     }
@@ -8469,8 +10845,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   const identitySentence = archetypeId ? archetypeSentence(archetypeId) : '';
   const thesisSentence = philosophyId ? philosophySentence(philosophyId) : '';
 
+  // Phase 2A: one matched interaction observation, when the chain hits a
+  // documented case — evidence woven into the read, never trivia. The
+  // strongest positive entry only; cautions surface in Trade-offs.
+  const pairingEvidenceSentence =
+    findings.pairingEvidence?.find((e) => e.valence === 'positive')?.sentence ?? '';
+
   const systemReadParagraph = [
     thesisSentence2 ? `${thesisSentence1} ${thesisSentence2}` : thesisSentence1,
+    pairingEvidenceSentence,
     identitySentence,
     thesisSentence,
   ]
@@ -8491,6 +10874,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 
   // Helper: derive a short behavior phrase from axes and strengths
   function deriveComponentBehavior(c: typeof comps[0], compAxes: typeof findings.perComponentAxes[0] | undefined): string {
+    // No evidence, no sonic phrase. Every branch below reads axes that, for an
+    // unresolved component, are placeholders — which is how a product that does
+    // not exist came to be described as "neutral, controlled". The row still
+    // appears, because the listener owns the thing and its position in the
+    // chain is real; what it says is what we actually know.
+    if (compAxes && !carriesAxisEvidence(compAxes)) return 'not identified — no sonic character claimed';
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
     const ec = compAxes?.axes.elastic_controlled;
@@ -8542,6 +10931,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     compAxes: typeof findings.perComponentAxes[0] | undefined,
     sysAxes: typeof axes,
   ): string {
+    // An interaction effect is a claim that this component changes what the
+    // others do. That is a relation, and it needs evidence on both sides.
+    if (compAxes && !carriesAxisEvidence(compAxes)) {
+      return `occupies the ${(c.role || 'component').toLowerCase()} position`;
+    }
     const roleKey = (c.role || '').toLowerCase();
     const wb = compAxes?.axes.warm_bright;
     const sd = compAxes?.axes.smooth_detailed;
@@ -8558,14 +10952,37 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       if (wb === 'warm') return 'anchors the tonal foundation with warmth';
       return 'sets the tonal foundation';
     }
+    // Phase 2B — interaction before description: name the actual partner
+    // whose behaviour this component changes, when the chain makes it
+    // unambiguous. "Passes the Qutest's character through intact" explains
+    // a relationship; "preserves upstream character" describes a habit.
+    // Partners are referenced by brand (reviewer convention, and it keeps
+    // full names appearing exactly once in the prose) unless two chain
+    // components share the brand.
+    const partnerRef = (fullName: string): string => {
+      const brand = fullName.split(/\s+/)[0];
+      if (!brand || brand.length < 3) return fullName;
+      const shared = comps.filter(x => x.name.split(/\s+/)[0] === brand).length > 1;
+      return shared ? fullName : brand;
+    };
+    const upstreamSourceName =
+      comps.find(x => (x.role || '').toLowerCase() === 'dac')?.name
+      ?? sourceComps[0]?.name;
+
     // Amplifier: preserves or shapes
     if (roleKey === 'amplifier' || roleKey === 'amp' || roleKey === 'integrated') {
       // Does it match upstream (DAC) lean?
       if (wb === sysAxes.warm_bright && sd === sysAxes.smooth_detailed) return 'preserves speed and edge';
       if (wb === 'warm' && sysAxes.warm_bright === 'bright') return 'adds body to a lean upstream';
       if (wb === 'bright' && sysAxes.warm_bright === 'warm') return 'adds speed to a warm upstream';
-      if (wb === 'neutral') return 'low coloration, preserves upstream character';
-      return 'preserves upstream character';
+      if (wb === 'neutral') {
+        return upstreamSourceName && upstreamSourceName !== c.name
+          ? `low coloration — passes the ${partnerRef(upstreamSourceName)}'s character through intact`
+          : 'low coloration, preserves upstream character';
+      }
+      return upstreamSourceName && upstreamSourceName !== c.name
+        ? `carries the ${partnerRef(upstreamSourceName)}'s character forward`
+        : 'preserves upstream character';
     }
     // Speaker/headphone: final voice
     if (roleKey === 'speaker' || roleKey === 'speakers' || roleKey === 'headphone' || roleKey === 'headphones') {
@@ -8578,7 +10995,23 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           ? 'adds body while preserving speed and flow'
           : 'adds body and prevents thinness';
       }
-      if (wb === sysAxes.warm_bright) return 'reinforces the system\'s overall lean';
+      if (wb === sysAxes.warm_bright) {
+        // Name the component that actually sets the tone — a neutral
+        // source "staying out of the way" cannot also "set the direction".
+        const toneSetter = comps.find(x => {
+          const r2 = (x.role || '').toLowerCase();
+          if (!/dac|amp|integrated|streamer|source|turntable/.test(r2) || x.name === c.name) return false;
+          const xa = findings.perComponentAxes.find(a => a.name === x.name);
+          // The named partner is the SUBJECT of a relational claim, so it needs
+          // evidence of its own. Without this the speaker was reported as
+          // reinforcing "the direction the Zorblax sets" — a direction set by a
+          // component we had just declined to characterise.
+          return !!xa && carriesAxisEvidence(xa) && xa.axes.warm_bright === sysAxes.warm_bright;
+        });
+        return toneSetter
+          ? `reinforces the direction the ${partnerRef(toneSetter.name)} sets`
+          : 'reinforces the system\'s overall lean';
+      }
       if (wb === 'warm') return 'adds body at the output stage';
       return 'shapes the final presentation';
     }
@@ -8592,16 +11025,50 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const bIdx = logicOrder.indexOf((b.role || '').toLowerCase());
     return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
   });
+  // Phase 2B — evidence selection. Every component has an engineering
+  // descriptor available, but showing all of them is decoration, not
+  // explanation. Score each note by how much it explains THIS system —
+  // constraint targets and evidenced pairings first, distinguishing
+  // technology next — and spend the engineering budget on the top two.
+  // The rest keep the terse axis behaviour: a reviewer names the facts
+  // that carry the story and leaves the rest out.
+  const engineeringRelevance = (name: string, note: string): number => {
+    let s = 0;
+    if (findings.bottleneck?.component === name) s += 3;
+    if (findings.pairingEvidence?.some(e => e.components.includes(name))) s += 2;
+    // Distinguishing content — numbers and named technology explain;
+    // bare category labels do not.
+    if (/\d/.test(note) || /FPGA|R2R|SoundEngine|THX|triode|KT\d|EL\d|MOSFET|coaxial|wide-?baffle|thin-wall|single-ended|push-pull|ZOTL|zero-feedback|feed-forward|Goldmund-derived|BBC-tradition/i.test(note)) s += 1;
+    if (/^(bass-reflex|ported|class[- ]?ab( solid[- ]?state)?|solid[- ]?state|standmount|floorstander|integrated)$/i.test(note.trim())) s -= 2;
+    return s;
+  };
+  const engineeringBudget = new Set(
+    (findings.componentEngineering ?? [])
+      .map(e => ({ name: e.name, score: engineeringRelevance(e.name, e.note) }))
+      .filter(e => e.score >= 1)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2)
+      .map(e => e.name),
+  );
+
   for (const c of sortedComps) {
     if (systemLogicRows.length >= 4) break;
     const compAxes = findings.perComponentAxes.find(a => a.name === c.name);
-    const behavior = deriveComponentBehavior(c, compAxes);
+    // Engineering descriptor only when it earned its place; axis template
+    // otherwise (and always for brand-only components).
+    const eng = engineeringBudget.has(c.name)
+      ? findings.componentEngineering?.find(e => e.name === c.name)?.note
+      : undefined;
+    const behavior = eng ?? deriveComponentBehavior(c, compAxes);
     const effect = deriveInteractionEffect(c, compAxes, axes);
     systemLogicRows.push(`${c.name} → ${behavior} → ${effect}`);
   }
-  // System logic summary — 2 sentences max, names interaction direction
+  // System logic summary — 2 sentences max, names interaction direction.
+  // Gated on the LICENSED name lists: with nothing licensed on one side there
+  // is no interaction to state, and the sentence would otherwise be built with
+  // an empty subject.
   let logicSummary = '';
-  if (upstreamComps.length > 0 && downstreamComps.length > 0) {
+  if (upstreamNames.length > 0 && downstreamNames.length > 0) {
     const upNames = upstreamNames.join(' and ');
     const downNames = downstreamNames.join(' and ');
     if (hasContrast) {
@@ -8611,9 +11078,9 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
         // every component carries part of the system's character.
         logicSummary = `Each component contributes to the system's ${synergyPhrase}.`;
       } else if (upBright > 0 || upDetailed > 0) {
-        logicSummary = `${upNames} push toward precision. The ${downNames} alone restores weight.`;
+        logicSummary = `${upNames} ${upstreamComps.length > 1 ? 'push' : 'pushes'} toward precision. The ${downNames} alone ${downstreamComps.length > 1 ? 'restore' : 'restores'} weight.`;
       } else {
-        logicSummary = `${upNames} push toward warmth. The ${downNames} alone adds definition.`;
+        logicSummary = `${upNames} ${upstreamComps.length > 1 ? 'push' : 'pushes'} toward warmth. The ${downNames} alone ${downstreamComps.length > 1 ? 'add' : 'adds'} definition.`;
       }
     } else {
       logicSummary = `${upNames} and ${downNames} reinforce the same direction.`;
@@ -8645,7 +11112,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   ];
   const traitTails = [
     (contribs: string) => `${contribs} reinforce the same quality, producing a clear and consistent result.`,
-    (contribs: string) => `Because ${contribs} align here, the effect is strong and unambiguous.`,
+    (contribs: string) => `Because ${contribs} align here, this quality should be consistent and easy to hear.`,
     (contribs: string) => `${contribs} work together on this — the system commits rather than splitting the difference.`,
   ];
   // ── Role-based strength inclusion ──
@@ -8781,6 +11248,32 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   //   3. The first stacked imbalance.
   // If none of the above, we surface the "no material constraint" line.
   type PrimaryConstraint =
+    /**
+     * A licensed physical constraint — power against sensitivity today.
+     *
+     * This kind exists because `primary` was computed entirely from axis
+     * scoring and per-component weaknesses, and so could not see the
+     * power-match assessment at all. The result was an assessment that
+     * contradicted itself within one screen: the System read stated
+     *
+     *   "The Zorblax ZX1 5 watt SET at 5W has limited headroom for the
+     *    Magnepan LRS+ at 86 dB sensitivity (estimated ~93 dB maximum clean
+     *    output)."
+     *
+     * and Primary leverage then reported "None — no obvious bottleneck …
+     * nothing needs correcting."
+     *
+     * The evidence was never missing. `assessPowerMatch` had produced it, the
+     * prose had printed it, and `detectPrimaryConstraint` had even built a
+     * licensed candidate from it — but that fed the memo-format field, while
+     * the prose renderer read a different model. Two constraint models, one
+     * of them blind.
+     *
+     * The invariant this restores: an Evaluate verdict may not contradict a
+     * licensed Explain constraint. Physical constraints outrank axis
+     * refinements (Playbook §4), so this kind is selected before scoring runs.
+     */
+    | { kind: 'physical'; component: string; role: string; statement: string; remedy: string }
     | { kind: 'bottleneck'; component: string; role: string; axes: string[] }
     | { kind: 'component'; name: string; role: string; weakness: string }
     | { kind: 'imbalance'; property: string; contributors: string[] }
@@ -8906,7 +11399,33 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   );
 
   let primary: PrimaryConstraint = { kind: 'none' };
-  if (
+
+  // Licensed physical constraint first. Everything below weighs tonal
+  // preference; this is a question of whether the amplifier can drive the
+  // speakers, and no amount of axis agreement answers it.
+  const pmForPrimary = findings.powerMatchAssessment;
+  const pmConstrained = (pmForPrimary.compatibility === 'mismatched'
+    || pmForPrimary.compatibility === 'strained')
+    && !!pmForPrimary.ampName && !!pmForPrimary.speakerName;
+
+  if (pmConstrained) {
+    const splStr = pmForPrimary.estimatedMaxCleanSPL != null
+      ? ` — an estimated ~${Math.round(pmForPrimary.estimatedMaxCleanSPL)} dB maximum clean output`
+      : '';
+    primary = {
+      kind: 'physical',
+      component: pmForPrimary.ampName!,
+      role: comps.find((c) => c.name === pmForPrimary.ampName)?.role ?? 'amplifier',
+      statement: pmForPrimary.compatibility === 'mismatched'
+        ? `${pmForPrimary.ampName} at ${pmForPrimary.ampPowerWatts}W is significantly underpowered for `
+          + `${pmForPrimary.speakerName} at ${pmForPrimary.speakerSensitivityDb} dB sensitivity${splStr}.`
+        : `${pmForPrimary.ampName} at ${pmForPrimary.ampPowerWatts}W has limited headroom for `
+          + `${pmForPrimary.speakerName} at ${pmForPrimary.speakerSensitivityDb} dB sensitivity${splStr}.`,
+      remedy: pmForPrimary.compatibility === 'mismatched'
+        ? 'Dynamics will compress and bass control will suffer at moderate levels. Either more amplifier power or higher-efficiency speakers resolves this.'
+        : 'Expect compression on dynamic peaks and some loss of composure on dense passages. More amplifier power, or more efficient speakers, buys back the headroom.',
+    };
+  } else if (
     winner &&
     bottleneck &&
     winner.comp.name === bottleneck.component &&
@@ -9107,7 +11626,7 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
           name: tierBottleneck.name,
           role: tierBottleneck.role,
           weakness:
-            'it is the weakest link in the system — the rest of the chain can resolve more than this component provides',
+            'it is the most modest component in the chain — the rest of the system can likely resolve more than it provides',
         };
       }
     }
@@ -9128,19 +11647,10 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // _DEBUG instrumentation removed — the bottleneck detection logic is
   // stable and the diagnostic output was leaking into user-facing
   // system reviews (QA blocker N1).
-  // Short listener-facing example clauses keyed to axis/property. Exactly
-  // one appears in the primary-constraint sentence — nowhere else in the
-  // response. Each is a brief noun-phrase tied to what the listener hears.
-  const axisExample = (axis: string): string => {
-    switch (axis) {
-      case 'warm_bright': return 'less weight under male vocals';
-      case 'smooth_detailed': return 'shorter cymbal decay';
-      case 'elastic_controlled': return 'bass notes starting a fraction late';
-      case 'airy_closed': return 'less air between instruments';
-      case 'scale_intimacy': return 'a narrower stage between the speakers';
-      default: return 'thinner body on sustained notes';
-    }
-  };
+  // Short listener-facing example clauses keyed to axis/property live in
+  // constrainedAxisExample (module level, direction-aware). Exactly one
+  // appears in the primary-constraint sentence — nowhere else in the
+  // response.
   const propertyExample = (prop: string): string => {
     const key = prop.toLowerCase().replace(/[^a-z0-9]+/g, '_');
     const map: Record<string, string> = {
@@ -9155,18 +11665,25 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   };
 
   if (primary.kind === 'bottleneck') {
-    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+    const bottleneckLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+      | Record<string, string>
+      | undefined;
+    const axesText = primary.axes.slice(0, 2)
+      .map((a) => constrainedAxisLabel(a, bottleneckLeans?.[a]))
+      .join(', and ');
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const example = axisExample(primary.axes[0]);
+    const example = constrainedAxisExample(primary.axes[0], bottleneckLeans?.[primary.axes[0]]);
     constraintParts.push(
       `The main limitation is the **${primary.component}**. It reduces ${axesText} — for example, ${example}. Everything downstream can only resolve what the ${role} provides.`,
     );
   } else if (primary.kind === 'component') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const isTierDetected = primary.weakness.includes('weakest link in the system');
+    const isTierDetected = primary.weakness.includes('most modest component');
     if (isTierDetected) {
+      // Tier-gap nomination is a heuristic, not evidence of a defect —
+      // present it as headroom, never as a fault (nothing here is broken).
       constraintParts.push(
-        `The main limitation is the **${primary.name}**. The rest of the system can resolve more than the ${role} provides. You are hearing what the ${role} allows, not what the system is capable of.`,
+        `Nothing here is misbehaving — but the **${primary.name}** is the most modest piece in the chain, and the rest of the system can likely resolve more than the ${role} provides. That makes it the natural place to look when you next feel like upgrading.`,
       );
     } else {
       constraintParts.push(
@@ -9242,24 +11759,41 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // ── Primary leverage section (output contract: mandatory) ──
   // Gold format: "The [role].\n\n[Name] sets the system's [quality]. Change it and [consequence]."
   let primaryLeverageSection: string;
-  if (primary.kind === 'bottleneck') {
+  if (primary.kind === 'physical') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
-    const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
       `The ${role}.`,
       ``,
-      `${primary.component} limits ${axesText}. Change it and the entire system opens up.`,
+      `${primary.statement} ${primary.remedy}`,
+    ].join('\n');
+  } else if (primary.kind === 'bottleneck') {
+    const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
+    const leverageLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+      | Record<string, string>
+      | undefined;
+    const axesText = primary.axes.slice(0, 2)
+      .map((a) => constrainedAxisLabel(a, leverageLeans?.[a]))
+      .join(', and ');
+    primaryLeverageSection = [
+      `**Primary leverage**`,
+      ``,
+      `The ${role}.`,
+      ``,
+      `${primary.component} limits ${axesText}. Change it and the rest of the system should open up.`,
     ].join('\n');
   } else if (primary.kind === 'component') {
     const role = primary.role.toUpperCase().length <= 4 ? primary.role.toUpperCase() : primary.role.toLowerCase();
+    const isTierDetected = primary.weakness.includes('most modest component');
     primaryLeverageSection = [
       `**Primary leverage**`,
       ``,
       `The ${role}.`,
       ``,
-      `${primary.name} sets the system's resolution ceiling. Change it and the rest of the chain delivers more.`,
+      isTierDetected
+        ? `${primary.name} likely sets the ceiling on what the rest of the chain can show. Upgrading it is the change most likely to be audible — though nothing here needs fixing.`
+        : `${primary.name} likely sets the system's ceiling. Change it and the rest of the chain should deliver more.`,
     ].join('\n');
   } else if (primary.kind === 'imbalance') {
     const prop = humanizeProperty(primary.property);
@@ -9293,20 +11827,27 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       ? comps.find(c => c.name === dacName)
       : comps.find(c => (c.role || '').toLowerCase() === 'dac');
     if (dacComp) {
+      // No bottleneck exists — do not manufacture one. The DAC pointer is
+      // framed as a taste lever, not a deficiency.
       primaryLeverageSection = [
         `**Primary leverage**`,
         ``,
-        `The DAC.`,
+        `None — no obvious bottleneck.`,
         ``,
-        `${dacComp.name} sets the system's tonal balance. Change it and the entire character shifts.`,
+        `${unassessedNames.length > 0 || powerUnassessable
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}${powerUnassessableClause}`
+          : 'No single component is holding this system back;'} `
+        + `${unassessedNames.length > 0 || powerUnassessable ? 'From here' : 'from here'}, changes are a matter of taste rather than correction. If you ever want to shift the tonal balance, the ${dacComp.name} is where that adjustment starts.`,
       ].join('\n');
     } else {
       primaryLeverageSection = [
         `**Primary leverage**`,
         ``,
-        `None — system is at equilibrium.`,
+        `None — no obvious bottleneck.`,
         ``,
-        `No single component limits the system.`,
+        `${unassessedNames.length > 0 || powerUnassessable
+          ? `Nothing in what I could assess is holding this system back.${unassessedClause}${powerUnassessableClause}`
+          : 'No single component is holding this system back.'} Improvements from here are likely to be incremental — setup, positioning, and room treatment will do more than swapping boxes.`,
       ].join('\n');
     }
   }
@@ -9337,6 +11878,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   } else {
     doNothingLine1 = `The system already works. Swapping components without clear cause risks an adjustment period with no guaranteed improvement.`;
     doNothingLine2 = 'If the music sounds engaging, the system is doing its job.';
+  }
+
+  // Phase 2B — memorable-insight slot (one only, rule-ordered). When the
+  // read already carries an insight (a documented pairing or a
+  // transparency thesis), add nothing. Otherwise, if the speaker's entry
+  // declares room sensitivity, that is usually the single most useful
+  // thing an owner can be told: the room outweighs the electronics.
+  const readCarriesInsight =
+    Boolean(findings.pairingEvidence?.some((e) => e.valence === 'positive')) ||
+    (findings.transparencyDeclared ?? []).some((n) => upstreamComps.some((u) => u.name === n));
+  let insightLine = '';
+  if (!readCarriesInsight && findings.roomSensitivityNote) {
+    const rn = findings.roomSensitivityNote;
+    const noteLC = rn.note.charAt(0).toLowerCase() + rn.note.slice(1).replace(/\.$/, '');
+    insightLine = `One thing likely to matter more than any component swap: with the ${rn.component}, ${noteLC}.`;
   }
 
   const doNothingCheck = [
@@ -9405,11 +11961,23 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       const r = s.targetRole.toLowerCase();
       return r.includes(targetRole.toLowerCase()) || targetRole.toLowerCase().includes(r);
     });
-    const lead = matchedStep ? `**${matchedStep.action}.**` : `**Change the ${role}.**`;
+    const isTierOnlyStep = primary.kind === 'component' && primary.weakness.includes('most modest component');
+    const lead = matchedStep
+      ? `**${matchedStep.action}.**`
+      : isTierOnlyStep
+        ? `**Upgrade the ${role} when you're ready — nothing is urgent.**`
+        : `**Change the ${role}.**`;
     // Build a listener-terms result phrase from the bottleneck axes when available.
-    let resultPhrase = 'Expect more depth, more texture, more space.';
+    let resultPhrase = isTierOnlyStep
+      ? 'Expect the rest of the chain to show more of what it can already do.'
+      : 'Expect more depth, more texture, more space.';
     if (primary.kind === 'bottleneck' && primary.axes.length > 0) {
-      const axesText = primary.axes.slice(0, 2).map(listenerAxisLabel).join(' and ');
+      const stepLeans = comps.find((c) => c.name === primary.component)?.axisPosition as
+        | Record<string, string>
+        | undefined;
+      const axesText = primary.axes.slice(0, 2)
+        .map((a) => constrainedAxisLabel(a, stepLeans?.[a]))
+        .join(', and ');
       if (axesText) resultPhrase = `Expect more ${axesText}.`;
     }
     chosenStepText = `${lead} ${resultPhrase}`;
@@ -9445,10 +12013,18 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     ?? comps.find(c => (c.role || '').toLowerCase() === 'dac')?.name;
 
   let changeLine: string;
-  if (primary.kind === 'bottleneck' || primary.kind === 'component') {
+  if (primary.kind === 'physical') {
+    // The one branch that must never reach the taste-only phrasing below.
+    changeLine = `CHANGE the ${primary.role.toLowerCase()} if you listen at any volume — this is a `
+      + `headroom limit rather than a matter of taste, and it is the one thing here that `
+      + `constrains what the rest of the system can do.`;
+  } else if (primary.kind === 'bottleneck' || primary.kind === 'component') {
     const compName = primary.kind === 'bottleneck' ? primary.component : primary.name;
     const role = (primary as { role: string }).role.toLowerCase();
-    changeLine = `CHANGE the ${role} if the system sounds constrained. ${compName} limits what the rest of the chain can deliver.`;
+    const isTierOnly = primary.kind === 'component' && primary.weakness.includes('most modest component');
+    changeLine = isTierOnly
+      ? `CHANGE the ${role} only when you're ready for an upgrade — nothing is wrong, but the ${compName} is where the next real step lives.`
+      : `CHANGE the ${role} if the system sounds constrained. ${compName} likely limits what the rest of the chain can deliver.`;
   } else if (dacForDecision) {
     // KEEP system — offer DAC as directional change.
     // Phase 2.5 cleanup (2026-05-14): when intentional synergy is
@@ -9460,12 +12036,22 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     const isLeanUpstream = upBright > 0 || upDetailed > 0;
     const leanDesc = isLeanUpstream
       ? (intentionalSynergy && hasContrast
-          ? 'This system is intentionally speed-forward; change the DAC only if you want more tonal density.'
-          : 'This system leans lean unless corrected.')
-      : (upWarm > 0) ? 'This system leans warm — adding clarity requires upstream change.' : '';
-    changeLine = `CHANGE the DAC if vocals feel thin or instruments lack weight. ${leanDesc}`.trim();
+          ? 'This system is intentionally speed-forward; change the DAC only if you want more tonal weight.'
+          : 'The balance leans toward clarity, so any taste adjustment would start there.')
+      : (upWarm > 0) ? 'The balance leans warm, so adding clarity would mean an upstream change.' : '';
+    changeLine = unassessedNames.length > 0 || powerUnassessable
+      ? `CHANGE — I cannot say. Nothing I could assess needs correcting, but `
+        + `${powerUnassessable
+          ? 'I could not verify that the amplifier and loudspeakers suit each other'
+          : unassessedNames.length === 1
+            ? 'one component in this chain is unidentified'
+            : 'several components in this chain are unidentified'}`
+        + `, so I cannot tell you the system as a whole is where you want it. ${leanDesc}`.trim()
+      : `CHANGE only as a matter of taste — nothing needs correcting. The DAC is the first place to look if you ever want a different tonal balance. ${leanDesc}`.trim();
   } else {
-    changeLine = 'No single component demands change.';
+    changeLine = unassessedNames.length > 0
+      ? `No component I could assess demands change.${unassessedClause}`
+      : 'No single component demands change — improvements from here are preference, not correction.';
   }
 
   const decisionSection = [
@@ -9523,6 +12109,15 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     tradeOffBullets.push(`Current setup excels on ${strongMaterial} music, exposes thinness on ${weakMaterial} tracks`);
   }
 
+  // Phase 2A: a documented caution that matches this exact chain earns a
+  // bullet — it is the most concrete trade-off available.
+  const cautionEvidence = findings.pairingEvidence?.find((e) => e.valence === 'caution');
+  if (cautionEvidence && tradeOffBullets.length < 4) {
+    tradeOffBullets.push(
+      cautionEvidence.sentence.replace(/^One documented caution — /i, 'Documented caution: ').replace(/\.$/, ''),
+    );
+  }
+
   const tradeOffsSection = [
     `**Trade-offs**`,
     ``,
@@ -9548,7 +12143,11 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
     nextStepBullets.push('Explore directional alternatives');
     nextStepBullets.push('Compare topology options');
   }
-  nextStepBullets.push('Check system fit for your listening habits');
+  // Phase 2B — no filler: the generic "check system fit" bullet earned
+  // nothing. Only pad to two bullets when the list would otherwise be thin.
+  if (nextStepBullets.length < 2) {
+    nextStepBullets.push('Check system fit for your listening habits');
+  }
 
   const nextStepSection = [
     `**Next step options**`,
@@ -9559,7 +12158,21 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // ── Do nothing check (1–2 sentences, system-specific restraint) ──
   // References this system's specific balance and the risk of changing it.
   // Must not repeat the Decision section verbatim.
+  // A licensed physical constraint forecloses "leave it alone". This section
+  // exists to protect restraint, and restraint is the right default — but it is
+  // a conclusion, not a reflex, and it cannot be reached over the top of a
+  // constraint the assessment has already established two sections earlier.
   let doNothingSection: string;
+  if (primary.kind === 'physical') {
+    doNothingSection = [
+      `**Do nothing check**`,
+      ``,
+      `Doing nothing is reasonable if you listen at modest levels and the system `
+      + `never sounds strained — the limit is headroom, not character, and it only `
+      + `shows itself when the music asks for it. What you would be accepting is a `
+      + `ceiling on dynamics, not a flaw in the sound at volumes below it.`,
+    ].join('\n');
+  } else {
   if (hasContrast && downstreamComps.length > 0 && upstreamComps.length > 0) {
     // System has upstream/downstream contrast — name the balance and the risk
     const upQuality = (upBright > 0 || upDetailed > 0) ? 'speed and clarity' : 'warmth and body';
@@ -9592,6 +12205,12 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
       `If the system sounds right, it is right. Swapping components without clear cause risks losing coherence without gaining engagement.`,
     ].join('\n');
   }
+  }
+  // Phase 2B — memorable-insight slot lands on the RENDERED do-nothing
+  // section (one insight per assessment; pairing evidence outranks it).
+  if (insightLine) {
+    doNothingSection = `${doNothingSection} ${insightLine}`;
+  }
 
   // ── Final assembly (gold-standard output contract + do nothing check) ──
   // Sections:
@@ -9614,8 +12233,20 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
   // transform fires) and the `.filter()` below silently omits it.
   const emergentSection = composeEmergentBehavior(findings);
 
+  // ── Consistency gate (launch condition 2026-07-19) ──
+  // "A well-balanced system with no obvious weak point" must never share
+  // a screen with "Primary leverage: change X" (MVP review SA-12/13).
+  // When the narrative carries a change-worthy constraint, the balanced
+  // identity is rephrased to one that admits the improvement.
+  const overviewFinal = dominantInsight === 'bottleneck'
+    ? overview.replace(
+        'a well-balanced system with no obvious weak point',
+        'a coherent system with one clear place to improve',
+      )
+    : overview;
+
   return [
-    overview,
+    overviewFinal,
     emergentSection,
     systemLogicSection,
     primaryLeverageSection,
@@ -9629,13 +12260,13 @@ function composeAssessmentNarrative(findings: MemoFindings): string {
 }
 
 function describeCoreIdentity(axes: PrimaryAxisLeanings): string {
-  if (axes.warm_bright === 'warm' && axes.smooth_detailed === 'smooth') return 'a tone-first system built for extended listening';
-  if (axes.warm_bright === 'warm' && axes.elastic_controlled === 'elastic') return 'a tone-and-flow system that favours musical continuity over analytical precision';
-  if (axes.smooth_detailed === 'detailed' && axes.elastic_controlled === 'controlled') return 'a resolution-first system that prioritises precision and control';
-  if (axes.warm_bright === 'bright' && axes.smooth_detailed === 'detailed') return 'a transparency-first system';
-  if (axes.elastic_controlled === 'elastic') return 'a flow-first system';
-  if (axes.elastic_controlled === 'controlled') return 'a control-first system';
-  return 'a balanced system with no dominant bias';
+  if (axes.warm_bright === 'warm' && axes.smooth_detailed === 'smooth') return 'a warm, relaxed system built for extended listening';
+  if (axes.warm_bright === 'warm' && axes.elastic_controlled === 'elastic') return 'a system that favours musical continuity over analytical precision';
+  if (axes.smooth_detailed === 'detailed' && axes.elastic_controlled === 'controlled') return 'a system built around precision and control';
+  if (axes.warm_bright === 'bright' && axes.smooth_detailed === 'detailed') return 'a system built for transparency and openness';
+  if (axes.elastic_controlled === 'elastic') return 'a system that puts rhythmic flow first';
+  if (axes.elastic_controlled === 'controlled') return 'a system that puts grip and composure first';
+  return 'a well-balanced system with no obvious weak point';
 }
 function rewardFromAxes(axes: PrimaryAxisLeanings): string {
   if (axes.warm_bright === 'warm' || axes.smooth_detailed === 'smooth') return 'extended listening sessions and tonally rich recordings';
@@ -9660,6 +12291,54 @@ function listenerAxisLabel(a: string): string {
     default: return a.replace(/_/g, ' ');
   }
 }
+// Direction-aware constraint label. constrainedAxes stores only axis
+// NAMES; which pole is missing depends on the component's own lean —
+// a 'detailed' component cannot "limit inner detail", it limits tonal
+// ease; a 'controlled' one limits flow, not grip. Launch QA SA-06
+// rendered the Benchmark AHB2 (detailed + controlled) as "limits inner
+// detail and texture and rhythmic flow and grip" — its strengths
+// phrased as deficits. Falls back to the direction-blind label when
+// the lean is unknown or neutral.
+function constrainedAxisLabel(axis: string, lean: string | undefined): string {
+  switch (axis) {
+    case 'warm_bright':
+      if (lean === 'warm') return 'top-end air and transient sparkle';
+      if (lean === 'bright') return 'tonal weight and body';
+      break;
+    case 'smooth_detailed':
+      if (lean === 'smooth') return 'inner detail and texture';
+      if (lean === 'detailed') return 'tonal ease and forgiveness';
+      break;
+    case 'elastic_controlled':
+      if (lean === 'elastic') return 'grip and control';
+      if (lean === 'controlled') return 'rhythmic flow and elasticity';
+      break;
+    case 'airy_closed':
+      if (lean === 'airy') return 'image density and focus';
+      if (lean === 'closed') return 'air and depth around instruments';
+      break;
+  }
+  return listenerAxisLabel(axis);
+}
+// Direction-aware example clause paired with constrainedAxisLabel.
+function constrainedAxisExample(axis: string, lean: string | undefined): string {
+  switch (axis) {
+    case 'warm_bright':
+      if (lean === 'warm') return 'softer leading edges on plucked strings';
+      return 'less weight under male vocals';
+    case 'smooth_detailed':
+      if (lean === 'detailed') return 'a drier, less forgiving midrange';
+      return 'shorter cymbal decay';
+    case 'elastic_controlled':
+      if (lean === 'controlled') return 'crescendos that rise stiffly rather than swelling';
+      return 'bass notes starting a fraction late';
+    case 'airy_closed':
+      if (lean === 'airy') return 'images that float rather than lock in place';
+      return 'less air between instruments';
+    case 'scale_intimacy': return 'a narrower stage between the speakers';
+    default: return 'thinner body on sustained notes';
+  }
+}
 function humanizeAxis(a: string): string {
   return a
     .replace('warm_bright', 'tone')
@@ -9672,21 +12351,9 @@ function humanizeAxis(a: string): string {
 // Listener-facing label for stacked-trait property names. The raw property
 // keys are short engineering tokens (e.g. "low_stored_energy"); these
 // translations describe the audible result, not the mechanism.
-function listenerPropertyLabel(p: string): string {
-  const key = p.toLowerCase().replace(/[^a-z0-9]+/g, '_');
-  const map: Record<string, string> = {
-    low_stored_energy: 'clean note endings',
-    transient_speed: 'attack and snap',
-    tonal_density: 'body and weight',
-    harmonic_density: 'tonal richness',
-    dynamic_elasticity: 'elasticity',
-    microdetail: 'inner detail',
-    musical_flow: 'musical flow',
-    stability: 'rhythmic grip',
-    spatial_scale: 'soundstage size',
-  };
-  return map[key] ?? p.replace(/_/g, ' ');
-}
+// listenerPropertyLabel moved to ./listener-labels (launch gate
+// 2026-07-19) so the deterministic renderer can share the same
+// internal-label → listener-language translation without a cycle.
 function humanizeProperty(p: string): string {
   return listenerPropertyLabel(p);
 }
@@ -9988,7 +12655,7 @@ function inferSystemTradeoffs(components: SystemComponent[]): string | null {
       } else if (warning.includes('smooth')) {
         tradeoffs.push('Stacked smoothness may soften transient edges and reduce perceived detail. If the presentation feels too polite or lacking in clarity, the system may be trading resolution for ease.');
       } else if (warning.includes('detailed')) {
-        tradeoffs.push('Stacked detail emphasis may foreground analytical qualities at the expense of musical flow. If listening feels like work, the system may be prioritizing information over engagement.');
+        tradeoffs.push('With resolution repeated at several stages, the presentation may foreground analytical qualities at the expense of musical flow. If listening feels like work, the system may be prioritizing information over engagement.');
       } else if (warning.includes('controlled')) {
         tradeoffs.push('Stacked control may dampen dynamic expression and reduce the sense of musical life. If the system sounds overdamped or mechanical, consider introducing a component with more elastic character.');
       } else if (warning.includes('elastic')) {
@@ -10038,7 +12705,7 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
   if (compounding.length === 0) {
     // No compounding — balanced system
     if (system.warm_bright === 'warm') {
-      strengths.push('Consistent warmth and tonal density — midrange should feel present and immersive');
+      strengths.push('Consistent warmth and body — midrange should feel present and immersive');
     }
     if (system.warm_bright === 'bright') {
       strengths.push('Strong transient definition and clarity — micro-detail retrieval should be excellent');
@@ -10076,47 +12743,102 @@ function inferAssessmentStrengths(components: SystemComponent[]): string[] {
 /**
  * Infer where limitations may appear in the system.
  * Uses compounding detection to flag per-axis risks.
+ *
+ * P5 (FM-3) — intent-relative framing. A "limitation" that describes the
+ * downside of a trait the USER explicitly wants is not a flaw for that user;
+ * it is the accepted cost of the character they're after. When `stance`
+ * carries intent aligned with the trait a limitation is about, the entry is
+ * reframed from "your system is deficient in X" into "this is the trade-off
+ * of the X you want." Limitations unrelated to intent — and genuine capability
+ * limits (placement sensitivity, congestion on dense material) — are unchanged.
+ * Pure framing: no entry is silently dropped; assessment honesty is preserved.
  */
-function inferAssessmentLimitations(components: SystemComponent[]): string[] {
+function inferAssessmentLimitations(
+  components: SystemComponent[],
+  stance?: IntentStance,
+): string[] {
   const limitations: string[] = [];
   const profiles = classifyComponentAxes(components);
   const axes = profiles.map(p => p.axes);
   const compounding = detectCompounding(axes);
 
-  // Compounding warnings map directly to limitations
+  // Compounding warnings map directly to limitations. When the user's intent
+  // aligns with the leaning trait, frame the cost as a deliberate trade-off
+  // rather than a defect.
   for (const warning of compounding) {
     if (warning.includes('warm')) {
-      limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
-      limitations.push('Complex, dense recordings could sound congested');
+      if (stance?.warm_bright === 'warm') {
+        limitations.push('The system\'s warmth is consistent — in line with the warmth you\'re after. The trade-off is some loss of transient precision and spatial clarity, most audible on dense, complex material');
+      } else {
+        limitations.push('Stacked warmth may reduce transient precision and spatial clarity');
+        limitations.push('Complex, dense recordings could sound congested');
+      }
     } else if (warning.includes('bright')) {
-      limitations.push('Stacked brightness may thin out tonal body over long sessions');
-      limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+      if (stance?.warm_bright === 'bright') {
+        limitations.push('The system\'s clarity and energy are consistent — in line with the detail-forward balance you want. The trade-off is less tonal body, and a fatigue risk on long sessions without a warmth counterbalance');
+      } else {
+        limitations.push('Stacked brightness may thin out tonal body over long sessions');
+        limitations.push('Extended listening could trend toward fatigue without a warmth counterbalance');
+      }
     } else if (warning.includes('smooth')) {
-      limitations.push('Stacked smoothness may obscure transient detail and reduce perceived resolution');
+      if (stance?.smooth_detailed === 'smooth') {
+        limitations.push('The system\'s ease and smoothness are consistent — the relaxed presentation you\'re after. The trade-off is some obscured transient detail and lower perceived resolution');
+      } else {
+        limitations.push('Stacked smoothness may obscure transient detail and reduce perceived resolution');
+      }
     } else if (warning.includes('detailed')) {
-      limitations.push('Stacked detail emphasis may feel analytical or fatiguing on lesser recordings');
+      if (stance?.smooth_detailed === 'detailed') {
+        limitations.push('The system\'s resolution is consistent — the detail you want. The trade-off is that it can feel analytical or fatiguing on lesser recordings');
+      } else {
+        limitations.push('Resolution repeats at several stages — lesser recordings may sound analytical or fatiguing');
+      }
     } else if (warning.includes('controlled')) {
-      limitations.push('Stacked control may sound overdamped — reducing dynamic expression and musical life');
+      if (stance?.elastic_controlled === 'controlled') {
+        limitations.push('The system\'s grip and control are consistent — the precision you want. The trade-off is a more damped presentation with less dynamic looseness and bloom');
+      } else {
+        limitations.push('Stacked control may sound overdamped — reducing dynamic expression and musical life');
+      }
     } else if (warning.includes('elastic')) {
-      limitations.push('Stacked elasticity may lose composure on complex orchestral or dense electronic material');
+      if (stance?.elastic_controlled === 'elastic') {
+        limitations.push('The system\'s dynamic elasticity is consistent — the bounce and energy you want. The trade-off is some lost composure on complex orchestral or dense electronic material');
+      } else {
+        limitations.push('Stacked elasticity may lose composure on complex orchestral or dense electronic material');
+      }
     }
   }
 
-  // Component-specific limitations from product traits
+  // Component-specific limitations from product traits. A leaner midrange or a
+  // precision-over-flow character is only a "limitation" when it runs counter
+  // to what the user wants; when it matches their intent, name it as the
+  // accepted cost of that preference instead of a deficiency.
   for (const c of components) {
     if (c.product?.traits) {
       const t = c.product.traits;
-      if ((t.tonal_density ?? 0.5) < 0.35) limitations.push(`${c.displayName} may lean thin in the midrange`);
-      if ((t.flow ?? 0.5) < 0.35) limitations.push(`${c.displayName} may prioritize precision over musical flow`);
+      if ((t.tonal_density ?? 0.5) < 0.35) {
+        const wantsLeaner = stance?.warm_bright === 'bright' || stance?.smooth_detailed === 'detailed';
+        limitations.push(wantsLeaner
+          ? `${c.displayName} runs lean in the midrange — consistent with the clarity-forward balance you want, at the cost of tonal body to fall back on`
+          : `${c.displayName} may lean thin in the midrange`);
+      }
+      if ((t.flow ?? 0.5) < 0.35) {
+        const wantsPrecision = stance?.smooth_detailed === 'detailed' || stance?.elastic_controlled === 'controlled';
+        limitations.push(wantsPrecision
+          ? `${c.displayName} favors precision over flow — in line with the detail and control you want, at some cost to ease and continuity`
+          : `${c.displayName} may prioritize precision over musical flow`);
+      }
     }
 
-    // Placement dependency warning for speakers
+    // Placement dependency warning for speakers — a genuine capability/setup
+    // limit, not preference-relative; always surfaced verbatim.
     if (c.product?.placementSensitivity && c.product.placementSensitivity.level !== 'low') {
       const ps = c.product.placementSensitivity;
+      // Join with a colon, not an em-dash: `ps.notes` begins with a capital,
+      // so a dash produced a broken mid-sentence construction ("… sensitivity —
+      // Compact sealed design …"). Colon keeps the note verbatim and grammatical.
       if (ps.level === 'high') {
-        limitations.push(`${c.displayName} has high placement sensitivity — ${ps.notes}`);
+        limitations.push(`${c.displayName} has high placement sensitivity: ${ps.notes}`);
       } else if (ps.level === 'moderate') {
-        limitations.push(`${c.displayName} has moderate placement sensitivity — ${ps.notes}`);
+        limitations.push(`${c.displayName} has moderate placement sensitivity: ${ps.notes}`);
       }
     }
   }
@@ -10149,25 +12871,19 @@ function inferUpgradeDirection(components: SystemComponent[]): string {
     }
   }
 
-  // Compounding — suggest counter-direction
-  const suggestions: string[] = [];
-  for (const warning of compounding) {
-    if (warning.includes('warm')) {
-      suggestions.push('If you want to add clarity without losing the warmth that defines this system, a source upgrade (DAC or streamer) with better transient resolution is the gentlest move. Swapping the amplifier or speakers would shift the system\'s identity more fundamentally.');
-    } else if (warning.includes('bright')) {
-      suggestions.push('If you want to add warmth and flow without sacrificing the clarity this system delivers, a DAC with richer harmonic texture or speakers with more tonal density would be the most aligned direction. Adding tubes upstream is another option — but changes character more broadly.');
-    } else if (warning.includes('smooth')) {
-      suggestions.push('If you want to introduce more detail and presence without losing the ease, a more revealing source or cables with better transient definition could add clarity without fundamentally changing the system\'s character.');
-    } else if (warning.includes('detailed')) {
-      suggestions.push('If the system feels analytically intense, consider a warmer or more fluid component — a tube stage, a smoother DAC topology, or speakers with more midrange body could restore balance.');
-    } else if (warning.includes('controlled')) {
-      suggestions.push('If the system feels overdamped, a more elastic source or amplifier could restore dynamic life. Single-ended or low-feedback topologies tend to introduce more elasticity.');
-    } else if (warning.includes('elastic')) {
-      suggestions.push('If the system feels loose or uncontrolled, a more composed amplifier or tighter-grip speaker pairing could add stability without losing all dynamic energy.');
-    }
+  // Doctrine D-8 (Recommendation Licensing): a tonal lean is the system's
+  // character, not a hypothetical deficiency. Converting a lean like "elastic"
+  // into a speculative "if it feels loose or uncontrolled…" upgrade is an
+  // inference the assessment never established, so it is not permitted. When the
+  // only signal is a compounding tonal direction — with no identified limitation
+  // — no upgrade is licensed: name the lean as character and invite the listener
+  // to state a priority, rather than fabricating a weakness to act on.
+  if (compounding.length > 0) {
+    // "by design" asserts an intention behind the lean. The point of this
+    // sentence is that the lean is character rather than fault, and that
+    // survives without claiming anyone designed it.
+    return 'This system leans clearly in one direction — that lean is its character, not a gap to fix. If you want to move it, name the quality you want more of.';
   }
-
-  if (suggestions.length > 0) return suggestions.join(' ');
 
   return 'Without stronger trait data on the components, the best next step depends on what you feel is missing. Name the quality you want more of, and the analysis can get more specific.';
 }
@@ -10188,6 +12904,28 @@ interface ComponentAxisProfile {
  * Resolve axis leanings for each component in the system.
  * Prefers explicit primaryAxes → numeric trait inference → brand text inference.
  */
+/**
+ * Does this profile carry axis EVIDENCE, or only the shape of it?
+ *
+ * `classifyComponentAxes` gives an unresolved component four `neutral` axes so
+ * that downstream code has something to read. But `neutral` is a sonic claim —
+ * "this component sits at the middle of the axis" — and it is indistinguishable
+ * from a measured neutral once it leaves that function. A fabricated
+ * "Zorblax ZX1 5 watt SET" therefore acquired the behaviour string
+ * "neutral, controlled", an interaction effect, and a place in
+ * "…reinforce the same direction", all from a product that does not exist.
+ *
+ * `source: 'inferred'` already marked exactly this state and was never
+ * consulted. Nothing new is recorded here; the marker is simply believed.
+ *
+ * The identity stays in the graph — the listener owns the thing and named it,
+ * and its ROLE is real evidence about the chain's shape. What it may not do is
+ * contribute sonic character, because none was ever established.
+ */
+export function carriesAxisEvidence(profile: { source: string }): boolean {
+  return profile.source !== 'inferred';
+}
+
 function classifyComponentAxes(components: SystemComponent[]): ComponentAxisProfile[] {
   return components.map((c) => {
     // 1. Product with primaryAxes or numeric traits — use resolveProductAxes
@@ -10633,10 +13371,44 @@ function buildSystemChain(components: SystemComponent[], rawMessage: string): Me
     });
   }
 
+  /* Post-parse validation (review 2026-08-05). Parsed names reached the chain
+   * banner unchecked, so "…a Marantz PM6007. Should I upgrade my DAC?" showed
+   * a component called `Marantz PM6007. Should I`, and "a Rega Brio integrated
+   * amplifier" showed `Rega` plus a phantom `integrated amplifier`. The
+   * assessment was then computed on that chain. Clean interrogative debris and
+   * withhold bare category words; withheld names are returned so the caller
+   * can ask rather than drop them silently. */
+  /*
+   * ONE PROJECTION (P0, 2026-08-26). `roles` was mapped from `sorted` while
+   * `names` was mapped from the validated SURVIVORS of `sorted`. When
+   * validation withheld a name (a phantom bare-category component from the
+   * parser, say), the roles array kept the withheld slot and every later
+   * component read its neighbour's role — which is how a loudspeaker rendered
+   * as AMPLIFIER. Names and roles are now projections of one surviving list
+   * and cannot disagree in length or order.
+   */
+  const surviving: Array<{ name: string; role: SystemComponent['role'] }> = [];
+  const withheld: string[] = [];
+  const seenSurvivors = new Set<string>();
+  for (const c of sorted) {
+    const single = validateChainNames([c.displayName]);
+    if (single.needsClarification.length) {
+      for (const w of single.needsClarification) if (!withheld.includes(w)) withheld.push(w);
+      continue;
+    }
+    const cleaned = single.names[0];
+    if (!cleaned) continue;
+    const k = cleaned.toLowerCase();
+    if (seenSurvivors.has(k)) continue;
+    seenSurvivors.add(k);
+    surviving.push({ name: cleaned, role: c.role });
+  }
+
   return {
-    fullChain,
-    roles: sorted.map((c) => canonicalRole(c.role)),
-    names: sorted.map((c) => c.displayName),
+    fullChain: fullChain ? validateChainNames(fullChain).names : fullChain,
+    roles: surviving.map((c) => canonicalRole(c.role)),
+    names: surviving.map((c) => c.name),
+    unverifiedComponents: withheld.length ? withheld : undefined,
   };
 }
 
@@ -10653,18 +13425,22 @@ function buildIntroSummary(
   const names = components.map((c) => c.displayName);
   const count = names.length;
 
-  // Build character phrase from system axes
+  // Build character phrase from system axes — plain listener language,
+  // never internal trait vocabulary.
   const traits: string[] = [];
-  if (system.warm_bright === 'warm') traits.push('tonal density');
-  if (system.warm_bright === 'bright') traits.push('transient speed');
-  if (system.smooth_detailed === 'detailed') traits.push('microdetail');
-  if (system.smooth_detailed === 'smooth') traits.push('musical flow');
-  if (system.elastic_controlled === 'elastic') traits.push('elasticity');
-  if (system.elastic_controlled === 'controlled') traits.push('stability');
-  if (system.scale_intimacy === 'scale') traits.push('spatial scale');
+  if (system.warm_bright === 'warm') traits.push('warmth and body');
+  if (system.warm_bright === 'bright') traits.push('speed and clarity');
+  if (system.smooth_detailed === 'detailed') traits.push('fine detail');
+  if (system.smooth_detailed === 'smooth') traits.push('ease and flow');
+  if (system.elastic_controlled === 'elastic') traits.push('rhythmic life');
+  if (system.elastic_controlled === 'controlled') traits.push('grip and composure');
+  if (system.scale_intimacy === 'scale') traits.push('scale and space');
 
+  const traitList = traits.length > 1
+    ? traits.slice(0, -1).join(', ') + ', and ' + traits[traits.length - 1]
+    : traits[0];
   const traitPhrase = traits.length > 0
-    ? `prioritising ${traits.join(' and ')}`
+    ? `voiced toward ${traitList}`
     : 'with no strong lean in any single direction';
 
   // Reference-tier systems get an elevated opening
@@ -10692,10 +13468,10 @@ function buildIntroSummary(
     const characters = stacked.filter((s) => s.classification === 'system_character');
 
     if (imbalances.length > 0) {
-      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system leans toward ${imbalances[0].label} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system leans toward ${listenerPropertyLabel(imbalances[0].label)} across multiple stages — this shapes both its strengths and its primary limitation.${intentNote}`;
     }
     if (characters.length > 0) {
-      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system shares a consistent lean toward ${characters[0].label} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
+      return `${tierPrefix}${traitPhrase}.${deliberateNote} The system shares a consistent lean toward ${listenerPropertyLabel(characters[0].label)} — this defines the system's sonic identity rather than limiting it.${intentNote}`;
     }
   }
 
@@ -10703,11 +13479,28 @@ function buildIntroSummary(
 }
 
 /**
- * Assess whether a system shows signs of deliberate, coherent assembly.
+ * Assess whether a system's components are voiced in a consistent direction.
  *
- * Signals: components from different brands sharing axis alignment,
- * mix of specialist/boutique brands (not all one brand), presence of
- * uncommon or second-hand-market components, and philosophical consistency.
+ * This used to be `deliberateness`, and it emitted:
+ *
+ *   "This is a coherent, deliberately assembled system that likely punches
+ *    above its price tier."
+ *
+ * One sentence carrying three different claims. The first — that the
+ * components share a direction — is licensed by the axis evidence this
+ * function reads. The second asserts why the listener bought them, which
+ * nothing here can know: multi-brand ownership plus axis alignment is equally
+ * consistent with taste, advice, budget, or what happened to be available
+ * used. The third is a rank claim about market position, computed from a
+ * price-tier count, and market position is not what `brandScale` and
+ * `priceTier` were built to establish.
+ *
+ * Only the first survives. Coherence is an observation about the components
+ * and stays; intent and rank are removed and are NOT replaced with a
+ * differently-worded compliment — the sentence gets shorter, not softer.
+ *
+ * The name is retained so the `DeliberatenessSignal` consumers keep compiling;
+ * what it reports is now coherence, and the flag reads as such.
  */
 function assessSystemDeliberateness(
   components: SystemComponent[],
@@ -10745,20 +13538,11 @@ function assessSystemDeliberateness(
     return { isDeliberate: false, note: '' };
   }
 
-  // Assess whether the system likely punches above its weight
-  // (specialist/boutique components at mid-fi price points)
-  const midFiCount = components.filter(
-    (c) => c.product?.priceTier === 'mid-fi' || c.product?.priceTier === 'budget',
-  ).length;
-  const punchesAbove = midFiCount >= 1 && hasSpecialistBrands;
-
-  const parts: string[] = ['This is a coherent, deliberately assembled system'];
-  if (punchesAbove) {
-    parts[0] += ' that likely punches above its price tier';
-  }
-  parts[0] += '.';
-
-  return { isDeliberate: true, note: parts.join(' ') };
+  // The observation, and only the observation: these components lean the same
+  // way. Whether that was intended, and where the system sits in the market,
+  // are separate claims requiring separate evidence — see the marketPosition
+  // note on `PriceTier` in catalog-taxonomy.ts.
+  return { isDeliberate: true, note: 'The components share a consistent voicing direction.' };
 }
 
 /**
@@ -10791,7 +13575,7 @@ function inferListenerIntent(
 
   // Warmth + smoothness → tonal immersion, fatigue resistance
   if (hasWarmth && hasSmoothness) {
-    return 'The system prioritises tonal richness, harmonic density, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.';
+    return 'The system prioritises tonal richness, body, and sustained musical flow. This profile favours long-session engagement and fatigue resistance over analytical separation.';
   }
 
   // Control + detail → precision, transparency
@@ -10843,6 +13627,10 @@ function deriveSonicProperties(axes: PrimaryAxisLeanings, traits?: Record<string
   return props;
 }
 
+// Internal stacked-trait labels — downstream reasoning keys off these
+// strings (positive-trait guards, example lookups), so they must stay
+// stable. User-facing prose translates them via listenerPropertyLabel;
+// never print these raw.
 const STACKED_LABELS: Record<SonicProperty, string> = {
   high_speed: 'transient speed',
   low_stored_energy: 'low stored energy',
@@ -10956,27 +13744,27 @@ function classifyStackedTrait(
  * one for system imbalance (notes the trade-off risk).
  */
 const CHARACTER_EXPLANATIONS: Record<SonicProperty, string> = {
-  high_speed: 'Transient speed and articulation are the dominant sonic trait here — the system prioritises fast, rhythmically engaging presentation.',
-  low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
+  high_speed: 'Transient speed and articulation are the dominant sonic trait here — the system favours a fast, rhythmically engaging presentation.',
+  low_stored_energy: 'Several components favour speed over weight, which tends to produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
   high_density: 'The system leans into tonal richness and midrange body — immersive, harmonically saturated, physically present.',
-  high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
-  low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
-  high_detail: 'Resolution and transparency run through the system — revealing, micro-detailed, honest with recordings.',
+  high_damping: 'Control and damping repeat at several stages. Composure under load should be excellent, though dynamic expression may feel reined in.',
+  low_density: 'Several components lean toward a lighter midrange. The system may lack tonal body and weight on acoustic material.',
+  high_detail: 'Resolution and transparency run through the system — revealing, finely detailed, honest with recordings.',
   high_smoothness: 'Musical flow and liquidity are the prevailing character — effortless, non-fatiguing, easy to listen to for hours.',
   high_elasticity: 'Rhythmic energy and dynamic expression are a shared emphasis — alive, punchy, musically engaging.',
-  high_control: 'Control emphasis stacks across the system. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+  high_control: 'Grip and control run through every stage. Stability is excellent, though the presentation may feel overdamped on music that wants to breathe.',
 };
 
 const IMBALANCE_EXPLANATIONS: Record<SonicProperty, string> = {
-  high_speed: 'Transient speed stacks beyond typical balance. Excellent articulation, but tonal density and midrange body may be noticeably reduced.',
-  low_stored_energy: 'Multiple low-stored-energy components produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
-  high_density: 'The system stacks tonal density beyond typical balance — rich midrange, but transient precision and spatial separation may be constrained.',
-  high_damping: 'Stacked control and damping. Composure under load is excellent, but dynamic expression and elasticity may feel suppressed.',
-  low_density: 'Multiple components contribute thin midrange character. The system may lack tonal body and weight on acoustic material.',
-  high_detail: 'Detail emphasis stacks beyond typical balance. Microdetail retrieval is strong, but lesser recordings may sound unforgiving.',
-  high_smoothness: 'Smoothness stacks beyond typical balance. Musical flow is excellent, but transient edges and fine detail may be softened.',
-  high_elasticity: 'Dynamic energy stacks beyond typical balance. Rhythmic engagement is strong, but composure on complex passages may be limited.',
-  high_control: 'Control emphasis stacks across the system. Stability and grip are excellent, but the presentation may feel overdamped or mechanical.',
+  high_speed: 'Speed and articulation repeat at every stage. Expect excellent articulation, though tonal weight and midrange body may be noticeably reduced.',
+  low_stored_energy: 'Several components favour speed over weight, which tends to produce fast, articulate sound. Extended listening may feel lean on harmonically dense material.',
+  high_density: 'Tonal richness repeats at every stage — a rich, full midrange, though transient precision and separation between instruments may be constrained.',
+  high_damping: 'Control and damping repeat at several stages. Composure under load should be excellent, though dynamic expression may feel reined in.',
+  low_density: 'Several components lean toward a lighter midrange. The system may lack tonal body and weight on acoustic material.',
+  high_detail: 'Resolution repeats at every stage. Fine detail should be strong, but lesser recordings may sound unforgiving.',
+  high_smoothness: 'Smoothness repeats at every stage. Musical flow is the reward, but transient edges and fine detail may be softened.',
+  high_elasticity: 'Dynamic energy repeats at every stage. Rhythmic engagement is strong, but composure on complex passages may be limited.',
+  high_control: 'Grip and control run through every stage. Stability is excellent, though the presentation may feel overdamped on music that wants to breathe.',
 };
 
 function detectStackedTraits(
@@ -10986,6 +13774,10 @@ function detectStackedTraits(
   // Collect sonic properties per component
   const propMap = new Map<SonicProperty, string[]>();
   for (let i = 0; i < components.length; i++) {
+    // Stacking IS reinforcement reasoning — two components said to share a
+    // property. A component whose properties are synthetic defaults cannot be
+    // one of the two, or the system reads its own placeholder back as agreement.
+    if (!carriesAxisEvidence(profiles[i])) continue;
     const props = deriveSonicProperties(profiles[i].axes, components[i].product?.traits);
     for (const p of props) {
       if (!propMap.has(p)) propMap.set(p, []);
@@ -11042,11 +13834,16 @@ function assessVoicingCoherence(
 ): VoicingCoherenceResult {
   const none: VoicingCoherenceResult = { isCoherent: false, sharedTraits: [], tradeoffs: [], alignedAxisCount: 0 };
 
-  // Need at least 2 components with known axis profiles
+  // Need at least 2 components with known axis profiles.
+  // The evidence check is explicit rather than implied by the non-neutral test
+  // below: an inferred profile happens to be all-neutral today, so it fails
+  // that test by coincidence, and coherence is too load-bearing a conclusion
+  // to rest on a coincidence.
   const withAxes = profiles.filter(p =>
-    p.axes.warm_bright !== 'neutral' ||
-    p.axes.smooth_detailed !== 'neutral' ||
-    p.axes.elastic_controlled !== 'neutral',
+    carriesAxisEvidence(p) && (
+      p.axes.warm_bright !== 'neutral' ||
+      p.axes.smooth_detailed !== 'neutral' ||
+      p.axes.elastic_controlled !== 'neutral'),
   );
   if (withAxes.length < 2) return none;
 
@@ -11130,6 +13927,13 @@ interface ConstraintCandidate {
   category: ConstraintCategory;
   explanation: string;
   severity: number; // higher = more constraining
+  // Doctrine D-11 (Explanatory Licensing): true only when the candidate is
+  // backed by an identified interaction / constraint / mismatch (e.g. a power
+  // mismatch, a capability mismatch) rather than a component's intrinsic
+  // character or a solo trait threshold. Only a licensed candidate may be the
+  // PRIMARY diagnosis; unlicensed candidates may inform the assessment body but
+  // never independently determine the bottleneck. Absent ⇒ unlicensed.
+  licensed?: boolean;
 }
 
 function detectPrimaryConstraint(
@@ -11138,6 +13942,7 @@ function detectPrimaryConstraint(
   stacked: MemoStackedTraitInsight[],
   system: PrimaryAxisLeanings,
   coherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoPrimaryConstraint | undefined {
   const candidates: ConstraintCandidate[] = [];
 
@@ -11158,10 +13963,21 @@ function detectPrimaryConstraint(
         .filter((sc) => sc.role.includes('speak') || sc.role.includes('headphone'))
         .map((sc) => sc.displayName),
     );
+    // Phase 2A objective 6 — transparency gate: a component whose catalog
+    // entry declares a zero-contribution design goal cannot be the tonal
+    // cause of a system-level lean. Blaming it here would contradict the
+    // engine's own knowledge (e.g. Benchmark AHB2). Such components are
+    // excluded from stacked-bias attribution; per-component constraints
+    // with real trait evidence below remain unaffected.
+    const transparencyNames = new Set(
+      components
+        .filter((sc) => isTransparencyDeclared(sc.product))
+        .map((sc) => sc.displayName),
+    );
     const frequency = new Map<string, number>();
     for (const s of imbalanceTraits) {
       for (const name of s.contributors) {
-        if (!speakerNames.has(name)) {
+        if (!speakerNames.has(name) && !transparencyNames.has(name)) {
           frequency.set(name, (frequency.get(name) ?? 0) + 1);
         }
       }
@@ -11176,7 +13992,7 @@ function detectPrimaryConstraint(
       candidates.push({
         componentName: topContributor,
         category: 'stacked_bias',
-        explanation: `The ${topContributor} is reinforcing the system's lean toward ${dominant.label} — addressing it would open up the most room for improvement.`,
+        explanation: `The ${topContributor} is reinforcing the system's lean toward ${listenerPropertyLabel(dominant.label)} — addressing it would open up the most room for improvement.`,
         severity: imbalanceTraits.length * 2 + 1,
       });
     }
@@ -11188,17 +14004,23 @@ function detectPrimaryConstraint(
     const axes = profiles[i].axes;
     const traits = c.product?.traits;
     const role = c.role.toLowerCase();
+    // Phase 2A objective 6 — transparency-declared components carry low
+    // warmth/density/damping numbers BY DESIGN (the entry says the unit
+    // adds nothing). Those definitional values are not tonal deficiencies;
+    // suppress the trait-derived tonal rules for them. Physical rules
+    // (power match, portable-in-speaker-system) still apply.
+    const transparentByDesign = isTransparencyDeclared(c.product);
 
     // DAC limitations — low tonal density, low flow, limited scale/authority,
     // portable-in-desktop context, delta-sigma glare risk
     if (role === 'dac' || role.includes('dac')) {
       let severity = 0;
       const issues: string[] = [];
-      if (traits && (traits.tonal_density ?? 0.5) <= 0.4) {
+      if (!transparentByDesign && traits && (traits.tonal_density ?? 0.5) <= 0.4) {
         severity += 3;
         issues.push('limited tonal density');
       }
-      if (traits && (traits.flow ?? 0.5) < 0.4) {
+      if (!transparentByDesign && traits && (traits.flow ?? 0.5) < 0.4) {
         severity += 2;
         issues.push('limited musical flow');
       }
@@ -11224,6 +14046,10 @@ function detectPrimaryConstraint(
           category: 'dac_limitation',
           explanation: `The DAC is holding back the system — ${issues.join(', ')}. Everything downstream inherits its limitations.`,
           severity,
+          // D-11: only the portable-DAC-in-a-speaker-system signal is a licensed
+          // capability mismatch; the tonal-density / flow / composure thresholds
+          // are intrinsic character and cannot independently license a diagnosis.
+          licensed: isPortable && hasSpeakers,
         });
       }
     }
@@ -11242,7 +14068,7 @@ function detectPrimaryConstraint(
           issues.push('dynamic grip may be insufficient for demanding speakers');
         }
       }
-      if (axes.elastic_controlled === 'controlled' && system.elastic_controlled === 'controlled') {
+      if (!transparentByDesign && axes.elastic_controlled === 'controlled' && system.elastic_controlled === 'controlled') {
         severity += 2;
         issues.push('overdamping risk — may suppress dynamic expression');
       }
@@ -11329,7 +14155,7 @@ function detectPrimaryConstraint(
   // are available, calculates estimated max clean SPL and flags
   // strained or mismatched pairings. Severity is high because power
   // mismatch is more fundamental than axis-based constraints.
-  const powerMatch = assessPowerMatch(components);
+  const powerMatch = assessPowerMatch(components, manufacturerEvidence);
   if (powerMatch.compatibility === 'mismatched' && powerMatch.ampName && powerMatch.speakerName) {
     const splNote = powerMatch.estimatedMaxCleanSPL != null
       ? ` Estimated max clean SPL is ~${Math.round(powerMatch.estimatedMaxCleanSPL)} dB — well below comfortable listening levels for dynamic music.`
@@ -11339,6 +14165,7 @@ function detectPrimaryConstraint(
       category: 'power_match',
       explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) cannot adequately drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamics will compress significantly, bass control will suffer, and the system will run out of headroom at moderate listening levels. Either more amplifier power or higher-efficiency speakers would resolve this.`,
       severity: 9,
+      licensed: true, // D-11: power/sensitivity mismatch is an identified interaction
     });
   } else if (powerMatch.compatibility === 'strained' && powerMatch.ampName && powerMatch.speakerName) {
     const splNote = powerMatch.estimatedMaxCleanSPL != null
@@ -11349,19 +14176,26 @@ function detectPrimaryConstraint(
       category: 'power_match',
       explanation: `The ${powerMatch.ampName} (${powerMatch.ampPowerWatts}W) is working hard to drive the ${powerMatch.speakerName} (${powerMatch.speakerSensitivityDb} dB sensitivity).${splNote} Dynamic compression on peaks is likely, and the amp may lose composure on complex passages. More headroom — either through amplifier power or speaker efficiency — would improve dynamic expression.`,
       severity: 6,
+      licensed: true, // D-11: power/sensitivity mismatch is an identified interaction
     });
   }
 
-  // Return highest severity — minimum threshold of 2 prevents
-  // minor design trade-offs from being elevated to "primary constraint"
+  // Doctrine D-11 (Explanatory Licensing): the PRIMARY diagnosis must be licensed
+  // by an identified interaction / constraint / mismatch. A component's intrinsic
+  // character or measured tendency (a solo trait threshold — dac tonal density,
+  // spatial scale, stacked tonal bias) may inform the assessment body but may NOT
+  // independently determine the bottleneck. We therefore select the
+  // highest-severity *licensed* candidate; when none exists there is NO primary
+  // bottleneck — we never fall back to the least-bad component. The minimum
+  // severity floor of 2 is preserved.
   candidates.sort((a, b) => b.severity - a.severity);
-  if (candidates.length === 0 || candidates[0].severity < 2) return undefined;
+  const licensedPrimary = candidates.find((c) => c.licensed && c.severity >= 2);
+  if (!licensedPrimary) return undefined;
 
-  const top = candidates[0];
   return {
-    componentName: top.componentName,
-    category: top.category,
-    explanation: top.explanation,
+    componentName: licensedPrimary.componentName,
+    category: licensedPrimary.category,
+    explanation: licensedPrimary.explanation,
   };
 }
 
@@ -11394,6 +14228,24 @@ function detectPrimaryConstraint(
 function buildComponentSourceReferences(
   c: SystemComponent,
 ): import('./advisory-response').SourceReference[] {
+  // F4 hotfix (private beta, 2026-05-18):
+  //   Per-component source aggregation was the escape path that left
+  //   reviewer publications (6moons, Twittering Machines, Darko.Audio,
+  //   etc.) visible on system-assessment Component Contributions in
+  //   production. The aggregation pulled from product.sourceReferences,
+  //   EDITORIAL_SOURCES, and brand-profile reviewerQuotes — all of
+  //   which are now excluded from the runtime path under the F4
+  //   reviewer-data exclusion rule.
+  //
+  //   Returns [] unconditionally; the original aggregation body is
+  //   preserved below behind `if (false)` so the producer can be
+  //   re-evaluated post-beta alongside any new source/attribution
+  //   approach.
+  void c;
+  return [];
+
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
   const refs: import('./advisory-response').SourceReference[] = [];
   const seen = new Set<string>();
   const keyOf = (source: string, url?: string) =>
@@ -11414,7 +14266,7 @@ function buildComponentSourceReferences(
 
   // 1. Direct product.sourceReferences (preserve url + title)
   if (c.product?.sourceReferences) {
-    for (const sr of c.product.sourceReferences) {
+    for (const sr of c.product.sourceReferences!) {
       tryPush({ source: sr.source, note: sr.note, url: sr.url, title: sr.title });
     }
   }
@@ -11444,12 +14296,12 @@ function buildComponentSourceReferences(
     ? findBrandProfileByName(c.product.brand)
     : undefined;
   if (fullBrandProfile?.reviewerQuotes) {
-    for (const q of fullBrandProfile.reviewerQuotes) {
+    for (const q of fullBrandProfile.reviewerQuotes!) {
       const parenMatch = q.source.match(/\(([^)]+)\)\s*$/);
       const publication = (parenMatch?.[1] ?? q.source).trim();
       if (!isWhitelistedSource(publication)) continue;
       const reviewer = parenMatch
-        ? q.source.slice(0, parenMatch.index).trim()
+        ? q.source.slice(0, parenMatch!.index).trim()
         : '';
       const note = reviewer
         ? `${reviewer} on ${brandLabel}`
@@ -11459,6 +14311,8 @@ function buildComponentSourceReferences(
   }
 
   return refs;
+  } // end if (false) — F4 hotfix dormant block
+  return [];
 }
 
 function buildComponentAssessments(
@@ -11473,6 +14327,26 @@ function buildComponentAssessments(
     const strengths: string[] = [];
     const weaknesses: string[] = [];
     const designTradeoffs: string[] = [];
+
+    // A component we could not identify gets a reading that says exactly that.
+    // Falling through would mine its placeholder axes for strengths and
+    // weaknesses — the shape of a verdict with nothing underneath it.
+    if (!carriesAxisEvidence(profiles[i])) {
+      return {
+        name: c.displayName,
+        role: c.role,
+        summary: `${c.displayName} — not identified in our catalog, so no sonic `
+          + `characteristics are claimed for it.`,
+        strengths: [],
+        weaknesses: [],
+        // 'balanced' is the only VerdictKind that asserts nothing. 'keeper'
+        // would be a recommendation and 'upgrade_candidate' a criticism; both
+        // are judgments, and no evidence here supports either.
+        verdict: 'Its position in the chain is recorded as you described it.',
+        verdictKind: 'balanced' as const,
+        links: componentLinks?.get(c.displayName) ?? [],
+      };
+    }
 
     // ── Elite product detection ──
     // Products at this tier represent intentional design philosophy — their
@@ -11502,7 +14376,7 @@ function buildComponentAssessments(
       strengths.push(isDac ? 'Organic conversion character' : isAmp ? 'Easy, unforced musical delivery' : 'Musical flow and ease');
     }
     if (axes.smooth_detailed === 'detailed') {
-      strengths.push(isDac ? 'Conversion-stage microdetail and transparency' : isAmp ? 'Circuit transparency — reveals source differences' : isSpeaker ? 'Driver resolution and crossover transparency' : 'Microdetail retrieval and transparency');
+      strengths.push(isDac ? 'Conversion-stage fine detail and transparency' : isAmp ? 'Circuit transparency — reveals source differences' : isSpeaker ? 'Driver resolution and crossover transparency' : 'Fine-detail retrieval and transparency');
     }
     if (axes.elastic_controlled === 'elastic') {
       strengths.push(isDac ? 'Dynamic timing agility in the conversion stage' : isAmp ? 'Current delivery responds to musical dynamics' : isSpeaker ? 'Driver excursion and dynamic expression' : 'Elasticity and dynamic expression');
@@ -11945,8 +14819,8 @@ function selectUpgradeOptions(
     if (p.primaryAxes) {
       const axisLabels: Record<string, Record<string, string>> = {
         warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
-        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
-        elastic_controlled: { elastic: 'Dynamic elasticity', controlled: 'Grip and stability' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater fine-detail retrieval' },
+  elastic_controlled: { elastic: 'Dynamic elasticity', controlled: 'Grip and stability' },
       };
       for (const [axis, val] of Object.entries(p.primaryAxes)) {
         if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
@@ -12171,7 +15045,7 @@ function selectUpgradeOptions(
       summary: p.description.split('.')[0] + '.',
       pros,
       cons: cons.length > 0 ? cons : undefined,
-      imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
+      imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
       topologyLine: topologyLine || undefined,
       whatYoullHear: whatYoullHear.length > 0 ? whatYoullHear.slice(0, 3) : undefined,
       technicalRationale: technicalRationale.length > 0 ? technicalRationale.slice(0, 3) : undefined,
@@ -12295,8 +15169,8 @@ function selectDirectionalOptions(
     if (p.primaryAxes) {
       const axisLabels: Record<string, Record<string, string>> = {
         warm_bright: { warm: 'Warmer tonal balance', bright: 'Faster transients and clarity' },
-        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater microdetail retrieval' },
-        elastic_controlled: { elastic: 'Dynamic elasticity and flow', controlled: 'Grip and stability' },
+        smooth_detailed: { smooth: 'Musical flow and ease', detailed: 'Greater fine-detail retrieval' },
+  elastic_controlled: { elastic: 'Dynamic elasticity and flow', controlled: 'Grip and stability' },
       };
       for (const [axis, val] of Object.entries(p.primaryAxes)) {
         if (val && val !== 'neutral' && axisLabels[axis]?.[val]) {
@@ -12348,7 +15222,7 @@ function selectDirectionalOptions(
       priceNote,
       summary: p.description.split('.')[0] + '.',
       pros,
-      imageUrl: p.imageUrl ?? getProductImage(p.brand, p.name),
+      imageUrl: resolveProductImageStrict(p.brand, p.name, p.imageUrl),
       topologyLine: topologyLine || undefined,
       whatYoullHear: whatYoullHear.length > 0 ? whatYoullHear.slice(0, 3) : undefined,
       technicalRationale: technicalRationale.length > 0 ? technicalRationale.slice(0, 3) : undefined,
@@ -12379,8 +15253,16 @@ function buildUpgradePaths(
   systemAxes?: import('./axis-types').PrimaryAxisLeanings,
   listenerPriorities?: import('./memo-findings').ListenerPriority[],
   desires?: DesireSignal[],
+  intentStance?: IntentStance,
 ): MemoUpgradePath[] {
   const paths: MemoUpgradePath[] = [];
+  // Recommendation = Judgment × User Intent. Defined here so it is available
+  // to the bottleneck-promotion logic below even when the caller did not
+  // supply one (absent intent → all axes null → hasIntent false).
+  const stance: IntentStance = intentStance ?? {
+    warm_bright: null, smooth_detailed: null,
+    elastic_controlled: null, airy_closed: null, hasIntent: false,
+  };
 
   // ── Path 1: Bottleneck (Highest Impact) ──
   if (constraint) {
@@ -12407,28 +15289,95 @@ function buildUpgradePaths(
       const bottleneckIdx = components.findIndex((c) => c.displayName === constraint.componentName);
       const role = bottleneckIdx >= 0 ? canonicalRole(components[bottleneckIdx].role) : constraint.componentName;
       const axes = bottleneckIdx >= 0 ? profiles[bottleneckIdx].axes : undefined;
+      const roleSingular = role.toLowerCase().endsWith('s') && !role.toLowerCase().endsWith('ss')
+        ? role.toLowerCase().slice(0, -1) : role.toLowerCase();
 
-      // What the upgrade should introduce
+      // ── P2 (FM-2) — intent-aware target direction ──
+      // The legacy heuristic always pushed the trait OPPOSITE the bottleneck's
+      // lean (warm → "transient speed"), asserting a move toward neutral as
+      // universally better. Under Recommendation = Judgment × User Intent, a
+      // counter-direction target is only suggested when the user's intent on
+      // that axis actually opposes the system's lean. With no opposing intent,
+      // no direction is asserted.
       const targets: string[] = [];
+      // Whether the user wants the very character this component creates, and —
+      // when so — which trait that is. leanWord/counterWord are set ONLY by the
+      // axis that actually aligns, so the demotion prose names the right trait.
+      let alignsWithLean = false;
+      let leanWord = '';
+      let counterWord = '';
+      const align = (lean: string, counter: string) => {
+        alignsWithLean = true;
+        if (!leanWord) { leanWord = lean; counterWord = counter; }
+      };
       if (axes) {
-        if (axes.warm_bright === 'bright') targets.push('tonal density');
-        if (axes.warm_bright === 'warm') targets.push('transient speed');
-        if (axes.smooth_detailed === 'smooth') targets.push('microdetail');
-        if (axes.smooth_detailed === 'detailed') targets.push('musical flow');
-        if (axes.elastic_controlled === 'controlled') targets.push('elasticity');
-        if (axes.elastic_controlled === 'elastic') targets.push('stability');
+        if (axes.warm_bright === 'warm') {
+          if (stance.warm_bright === 'bright') targets.push('transient speed');
+          else if (stance.warm_bright === 'warm') align('warmth', 'transient speed');
+        }
+        if (axes.warm_bright === 'bright') {
+          if (stance.warm_bright === 'warm') targets.push('tonal density');
+          else if (stance.warm_bright === 'bright') align('clarity', 'tonal density');
+        }
+        if (axes.smooth_detailed === 'smooth') {
+          if (stance.smooth_detailed === 'detailed') targets.push('microdetail');
+          else if (stance.smooth_detailed === 'smooth') align('ease', 'microdetail');
+        }
+        if (axes.smooth_detailed === 'detailed') {
+          if (stance.smooth_detailed === 'smooth') targets.push('musical flow');
+          else if (stance.smooth_detailed === 'detailed') align('detail', 'musical flow');
+        }
+        if (axes.elastic_controlled === 'controlled') {
+          if (stance.elastic_controlled === 'elastic') targets.push('elasticity');
+          else if (stance.elastic_controlled === 'controlled') align('control', 'elasticity');
+        }
+        if (axes.elastic_controlled === 'elastic') {
+          if (stance.elastic_controlled === 'controlled') targets.push('stability');
+          else if (stance.elastic_controlled === 'elastic') align('dynamic elasticity', 'stability');
+        }
       }
-      const targetPhrase = targets.length > 0
-        ? `A replacement with stronger ${targets.join(' and ')} would shift the system's balance meaningfully.`
-        : 'A change here would shift the system\'s fundamental character.';
 
-      paths.push({
-        rank: 1,
-        label: `${role} Upgrade`,
-        impact: 'Highest Impact',
-        rationale: `${constraint.explanation} ${targetPhrase}`,
-        options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
-      });
+      // ── P3 (FM-6) — intent-aware bottleneck promotion ──
+      // Bottleneck DETECTION is observer-invariant (unchanged). What changes is
+      // PROMOTION into a recommendation. A preference-relative constraint
+      // (an accidental tonal/textural lean) should not be promoted to the
+      // imperative "fix this first" headline when the user actually WANTS that
+      // lean — doing so labels their preference as a defect. Capability
+      // constraints (power, scale, drive, resolution ceilings) are not
+      // preference-relative and stay "Highest Impact" regardless of intent.
+      const prefRelative =
+        constraint.category === 'stacked_bias' || constraint.category === 'tonal_imbalance';
+
+      if (prefRelative && alignsWithLean) {
+        // Intent aligns with the lean → demote from the imperative "fix this
+        // first / change direction" headline. The component is part of what
+        // delivers the trait the user wants, so it is not the liability the
+        // system's structure makes it look like. Any move here should DEEPEN
+        // that trait (a higher-tier component in the same voice), never trade
+        // it away — so this is an optional, same-direction path, not a
+        // recommended change of direction.
+        paths.push({
+          rank: 1,
+          label: `${role} Upgrade`,
+          impact: 'Optional Direction',
+          rationale: `The ${roleSingular} is part of what gives this system its ${leanWord} — the quality you said you're after — so it isn't the liability the system's structure makes it look like. It does cap ${counterWord}, but chasing that would trade away the ${leanWord} you want. If you ever go further here, look for a higher-tier ${roleSingular} that deepens ${leanWord} rather than a change in the system's direction.`,
+          options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
+        });
+      } else {
+        const targetPhrase = targets.length > 0
+          ? `A replacement with stronger ${targets.join(' and ')} would move the system toward what you're after.`
+          : (prefRelative && !stance.hasIntent
+            ? 'Which way to take it depends on what you want more of — name the quality and this path sharpens.'
+            : `A more capable ${roleSingular} would raise the system's ceiling here.`);
+
+        paths.push({
+          rank: 1,
+          label: `${role} Upgrade`,
+          impact: 'Highest Impact',
+          rationale: `${constraint.explanation} ${targetPhrase}`,
+          options: selectUpgradeOptions(`${role} Upgrade`, components, targets),
+        });
+      }
     }
   }
 
@@ -12526,7 +15475,7 @@ function buildUpgradePaths(
         rank: paths.length + 1,
         label: 'System Rebalancing',
         impact: paths.length === 0 ? 'Highest Impact' : 'Moderate Impact',
-        rationale: `Multiple components reinforce ${insight.label.replace(/_/g, ' ')}, narrowing the system's range. Introducing something with contrasting character would open up the palette. ${insight.explanation}`,
+        rationale: `Multiple components reinforce ${listenerPropertyLabel(insight.label)}, narrowing the system's range. Introducing something with contrasting character would open up the palette. ${insight.explanation}`,
         options: directionalOptions,
       });
     } else if (directionalOptions.length > 0) {
@@ -12535,7 +15484,7 @@ function buildUpgradePaths(
         rank: paths.length + 1,
         label: 'System Direction',
         impact: 'Moderate Impact',
-        rationale: `Your system leans ${insight.label.replace(/_/g, ' ')} across multiple components. These options take a different architectural approach — trading some of what you have in surplus for qualities your system currently underserves.`,
+        rationale: `Your system leans toward ${listenerPropertyLabel(insight.label)} across multiple components. These options take a different architectural approach — trading some of what you have in surplus for qualities your system currently underserves.`,
         options: directionalOptions,
       });
     }
@@ -12639,6 +15588,20 @@ function buildUpgradePaths(
     p.strategyIntent = frame.strategyIntent;
   }
 
+  // ── P3 (FM-6) — keep the strategy frame consistent with demotion ──
+  // frameStrategy() derives a gain-based label from the tradeoff, which on an
+  // intent-aligned demoted path would re-assert the very counter-direction the
+  // user does NOT want (e.g. "Enhance detail and precision · trading some
+  // warmth" on a warm system whose owner asked for warmth). Override it to a
+  // preserve-the-character frame so the path title matches its "Optional
+  // Direction" rationale instead of contradicting it.
+  for (const p of paths) {
+    if (p.impact === 'Optional Direction') {
+      p.strategyLabel = 'Build on the character you want';
+      p.strategyIntent = 'You already have the character you asked for — any change here should deepen it, not redirect the system.';
+    }
+  }
+
   // Deduplicate strategy labels across paths
   deduplicateStrategies(
     paths.filter((p): p is typeof p & { strategyLabel: string; strategyIntent: string } =>
@@ -12691,7 +15654,7 @@ export function buildExplanation(
       const relevant = s.contributors.some((c) => role.includes(c.toLowerCase()));
       if (!relevant) continue;
 
-      const trait = s.label.replace(/_/g, ' ');
+      const trait = listenerPropertyLabel(s.label);
       if (s.classification === 'system_character') {
         lines.push(`${s.contributors.join(' and ')} share a ${trait} tendency — this is a system signature, not a flaw.`);
       } else {
@@ -12829,6 +15792,232 @@ function reconcileAssessmentOutputs(
   return { keeps: reconciledKeeps, sequence };
 }
 
+// ── Phase 2A: knowledge-evidence extraction ─────────────────────────
+//
+// Distils catalog product knowledge into compact evidence the narrative
+// composer can use in place of generic axis vocabulary, and matches
+// stored interaction observations against the ACTUAL components in the
+// chain. Extraction only — every output is a presentation input; the
+// reasoning pipeline is unchanged except for the transparency gate.
+
+/** Compact engineering descriptor from a product's architecture + character. */
+function engineeringNoteFor(p: Product | undefined): string | null {
+  if (!p) return null;
+  const arch = (p.architecture ?? '').trim();
+  if (!arch || /^(unknown|n\/a)$/i.test(arch)) return null;
+  // Join comma-clauses until ~60 chars — keeps "Class AB, 80W/ch" while
+  // dropping trailing marketing clauses.
+  const clauses = arch.split(/,\s*/);
+  let note = '';
+  for (const cl of clauses) {
+    const next = note ? `${note}, ${cl}` : cl;
+    if (next.length > 60) break;
+    note = next;
+  }
+  if (!note) note = clauses[0].slice(0, 60);
+  // Append the strongest character tendency when it fits — turns "FPGA"
+  // into "FPGA — exceptional transient resolution".
+  const char = p.tendencies?.character?.[0]?.tendency?.split(/[.;]/)[0]?.trim();
+  if (
+    char && char.length <= 60 && note.length + char.length <= 105 &&
+    !note.toLowerCase().includes(char.toLowerCase().slice(0, 12))
+  ) {
+    return `${note} — ${char.charAt(0).toLowerCase()}${char.slice(1)}`;
+  }
+  return note;
+}
+
+function extractComponentEngineering(
+  components: SystemComponent[],
+): { name: string; note: string }[] {
+  const out: { name: string; note: string }[] = [];
+  for (const c of components) {
+    const note = engineeringNoteFor(c.product);
+    if (note) out.push({ name: c.displayName, note });
+  }
+  return out;
+}
+
+/**
+ * Whether a catalog entry explicitly declares a transparency /
+ * zero-contribution design goal (e.g. Benchmark AHB2). Such components
+ * must not be blamed for a system-level tonal lean without stronger,
+ * component-specific evidence (Phase 2A objective 6).
+ */
+function isTransparencyDeclared(p: Product | undefined): boolean {
+  if (!p) return false;
+  const hay = [
+    p.description,
+    p.notes,
+    p.architecture,
+    ...(p.tendencies?.character?.map((t) => t.tendency) ?? []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /zero contribution|adds? (essentially |virtually )?no(thing| coloration| distortion)|designed to add nothing|wire with gain|pass(es)? (the )?signal through unchanged|lowest noise and distortion|measures (dead )?flat/.test(hay);
+}
+
+type PairingEvidenceEntry = {
+  components: string[];
+  sentence: string;
+  valence: 'positive' | 'caution';
+};
+
+function pairingRoleFamily(role: string): 'speaker' | 'amp' | 'dac' | 'source' | 'other' {
+  const r = (role || '').toLowerCase();
+  if (/speaker|headphone|monitor/.test(r)) return 'speaker';
+  if (/amp|integrated/.test(r)) return 'amp';
+  if (r === 'dac') return 'dac';
+  if (/streamer|source|turntable|transport/.test(r)) return 'source';
+  return 'other';
+}
+
+const PAIRING_FAMILY_WORDS: Record<string, RegExp> = {
+  speaker: /\bspeakers?\b|\bmonitors?\b|\bheadphones?\b/,
+  amp: /\bamplif|\bamps?\b/,
+  dac: /\bdacs?\b|\bconversion\b/,
+  source: /\bsources?\b|\bstreamers?\b|\bfront.?end/,
+};
+
+/**
+ * Match stored interaction observations against the actual chain.
+ * Named-partner matches are strongest; condition-class matches require
+ * both a role-family word AND an axis/topology agreement with the real
+ * partner. Conservative by design — a wrong pairing claim costs more
+ * trust than a missing one earns.
+ */
+function matchPairingEvidence(
+  components: SystemComponent[],
+  profiles: ComponentAxisProfile[],
+  systemAxes: PrimaryAxisLeanings,
+): PairingEvidenceEntry[] {
+  const scored: (PairingEvidenceEntry & { strength: number })[] = [];
+  const seen = new Set<string>();
+  const axesOf = (name: string) => profiles.find((p) => p.name === name)?.axes;
+
+  for (const a of components) {
+    const interactions = a.product?.tendencies?.interactions ?? [];
+    for (const i of interactions) {
+      const cond = (i.condition ?? '').toLowerCase();
+      const effect = (i.effect ?? '').trim();
+      if (!cond || !effect) continue;
+      const valence: 'positive' | 'caution' = i.valence === 'caution' ? 'caution' : 'positive';
+
+      // 1. Named partner — condition mentions a chain component directly.
+      let matched: SystemComponent | undefined;
+      let strength = 0;
+      for (const b of components) {
+        if (b === a) continue;
+        const brand = (b.product?.brand ?? b.displayName.split(/\s+/)[0] ?? '').toLowerCase();
+        const nameTokens = (b.product?.name ?? b.displayName)
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((t) => t.length >= 4);
+        if ((brand.length >= 3 && cond.includes(brand)) || nameTokens.some((t) => cond.includes(t))) {
+          matched = b;
+          strength = 3;
+          break;
+        }
+      }
+
+      // 2. Condition-class match — role-family word + axis/topology agreement.
+      if (!matched) {
+        for (const b of components) {
+          if (b === a) continue;
+          const fam = pairingRoleFamily(b.role);
+          const famRe = PAIRING_FAMILY_WORDS[fam];
+          if (!famRe || !famRe.test(cond)) continue;
+          const bAxes = axesOf(b.displayName);
+          const bMeta = ((b.product?.architecture ?? '') + ' ' + (b.product?.topology ?? '')).toLowerCase();
+          const dbReq = cond.match(/(\d{2})\s*db\s*\+/);
+          let ok = false;
+          if (dbReq) {
+            const db = b.product?.sensitivity_db;
+            ok = db != null ? db >= parseInt(dbReq[1], 10) : /high-efficiency/.test(bMeta);
+          } else if (/high[- ]efficiency|\befficient\b/.test(cond)) {
+            ok = /high-efficiency/.test(bMeta) || (b.product?.sensitivity_db ?? 0) >= 90;
+          } else if (/\bwarm\b|\bdense\b|\brich\b/.test(cond)) {
+            ok = bAxes?.warm_bright === 'warm';
+          } else if (/revealing|bright|\blean\b|analytical/.test(cond)) {
+            ok = bAxes?.warm_bright === 'bright' || bAxes?.smooth_detailed === 'detailed';
+          } else if (/\btube\b|\bvalve\b/.test(cond)) {
+            ok = /tube|set\b|push-pull|valve/.test(bMeta);
+          }
+          if (ok) {
+            matched = b;
+            strength = 2;
+            break;
+          }
+        }
+      }
+
+      // 3. System-level condition ("in systems already warm/lean").
+      let systemLevel = false;
+      if (!matched && /\bsystems?\b/.test(cond)) {
+        if (/\bwarm\b|\bdense\b/.test(cond)) systemLevel = systemAxes.warm_bright === 'warm';
+        else if (/\blean\b|\bbright\b|\bfast\b/.test(cond)) {
+          systemLevel = systemAxes.warm_bright === 'bright' || systemAxes.smooth_detailed === 'detailed';
+        }
+        if (systemLevel) strength = 1;
+      }
+
+      if (!matched && !systemLevel) continue;
+      const key = `${a.displayName}|${cond}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const effectLC = effect.charAt(0).toLowerCase() + effect.slice(1);
+      const condDisplay = i.condition.trim();
+      const sentence =
+        valence === 'positive'
+          ? `The ${a.displayName} ${condDisplay} is a documented match: ${effectLC}.`
+          : `One documented caution — the ${a.displayName} ${condDisplay}: ${effectLC}.`;
+      scored.push({
+        components: matched ? [a.displayName, matched.displayName] : [a.displayName],
+        sentence,
+        valence,
+        strength,
+      });
+    }
+  }
+
+  // 4. Named cross-mentions in description/notes/pairingNotes prose —
+  // catches curated pairing lore outside the structured interactions.
+  for (const a of components) {
+    const prose = [a.product?.description, a.product?.notes, a.brandProfile?.pairingNotes]
+      .filter(Boolean)
+      .join(' ');
+    if (!prose) continue;
+    for (const b of components) {
+      if (b === a) continue;
+      const brand = (b.product?.brand ?? '').toLowerCase();
+      if (brand.length < 3) continue;
+      if ((a.product?.brand ?? '').toLowerCase() === brand) continue;
+      const hit = prose.split(/(?<=[.!?])\s+/).find((s) => s.toLowerCase().includes(brand));
+      if (!hit) continue;
+      const key = `${a.displayName}|prose|${brand}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const trimmed = hit.trim().replace(/\s+/g, ' ');
+      if (trimmed.length > 180) continue;
+      scored.push({
+        components: [a.displayName, b.displayName],
+        sentence: trimmed.endsWith('.') ? trimmed : `${trimmed}.`,
+        valence: 'positive',
+        strength: 2.5,
+      });
+    }
+  }
+
+  return scored
+    .sort((x, y) =>
+      x.valence !== y.valence ? (x.valence === 'positive' ? -1 : 1) : y.strength - x.strength,
+    )
+    .slice(0, 3)
+    .map(({ components: cs, sentence, valence }) => ({ components: cs, sentence, valence }));
+}
+
 // ── MemoFindings extraction ─────────────────────────
 //
 // Maps pipeline outputs to the structured MemoFindings contract.
@@ -12851,6 +16040,7 @@ function extractMemoFindings(
   perComponentLinks?: Map<string, { label: string; url: string; kind?: 'reference' | 'dealer' | 'review'; region?: string }[]>,
   precomputedListenerPriorities?: ListenerPriority[],
   voicingCoherence?: VoicingCoherenceResult,
+  manufacturerEvidence: EvidenceItem[] = [],
 ): MemoFindings {
   // ── Per-component findings ──
   const componentVerdicts: ComponentFindings[] = components.map((c, i) => {
@@ -13023,7 +16213,9 @@ function extractMemoFindings(
       systemAxes.scale_intimacy !== 'neutral',
     ].filter(Boolean).length;
     if (nonNeutralAxes >= 1) deliberatenessSignals.push('consistent_axis_alignment');
-    if (deliberateness.note.includes('punches above')) deliberatenessSignals.push('punches_above_tier');
+    // 'punches_above_tier' is no longer emitted. It was a rank claim derived
+    // from a price-tier count, and market position needs evidence built for
+    // that purpose — see the marketPosition note in catalog-taxonomy.ts.
   }
 
   // ── Listener priorities (controlled tags) ──
@@ -13062,9 +16254,35 @@ function extractMemoFindings(
   const activeDACInference = inferActiveDAC(components);
 
   // ── Amp/speaker power-match assessment ──
-  const powerMatchAssessment = assessPowerMatch(components);
+  const powerMatchAssessment = assessPowerMatch(components, manufacturerEvidence);
+
+  // ── Knowledge evidence (Phase 2A) ──
+  const componentEngineering = extractComponentEngineering(components);
+  const pairingEvidence = matchPairingEvidence(components, profiles, systemAxes);
+  const transparencyDeclared = components
+    .filter((c) => isTransparencyDeclared(c.product))
+    .map((c) => c.displayName);
+
+  // ── Room-sensitivity insight (Phase 2B) ──
+  // First speaker whose entry declares placement sensitivity. Prefer the
+  // sentence that mentions the room — that is the actionable part.
+  let roomSensitivityNote: MemoFindings['roomSensitivityNote'];
+  for (const c of components) {
+    const ps = c.product?.placementSensitivity;
+    if (!ps || ps.level === 'low' || !ps.notes) continue;
+    const sentences = ps.notes.split(/(?<=[.!?])\s+/);
+    const pick = sentences.find((s) => /room/i.test(s)) ?? sentences[0];
+    if (pick && pick.trim().length <= 160) {
+      roomSensitivityNote = { component: c.displayName, note: pick.trim(), level: ps.level };
+      break;
+    }
+  }
 
   return {
+    componentEngineering,
+    pairingEvidence,
+    transparencyDeclared,
+    roomSensitivityNote,
     componentNames: components.map((c) => c.displayName),
     systemChain: {
       roles: chain.roles,
@@ -13072,6 +16290,30 @@ function extractMemoFindings(
       fullChain: chain.fullChain,
     },
     systemAxes,
+    // Tonal-signature unification (2026-08-13): the single numeric
+    // aggregation both the signature prose and the artifact graph consume.
+    // Roles MUST come from `components`, which is index-parallel to
+    // `profiles`. `chain.roles` is the same roles re-ordered into
+    // signal-chain order (source → amp → speakers), so zipping the two
+    // silently applies each component's weight to a different component.
+    // That inverted the FRANCE assessment: the speaker's 3.0 weight landed
+    // on the streamer and elastic_controlled read +0.2 (BALANCED) where the
+    // components actually give -0.8 (ELASTIC). Founder-caught by ear,
+    // 2026-08-13. The categorical aggregation above already does this
+    // correctly — this call was the odd one out.
+    // Licensed profiles only — this feeds both the tonal-signature prose and
+    // the artifact graph, so a synthetic neutral here draws a system a degree
+    // more balanced than the evidence supports. Axes and roles are filtered as
+    // one, since the aggregation zips them.
+    systemAxisNumeric: (() => {
+      const licensed = profiles
+        .map((p, i) => ({ p, role: components[i].role }))
+        .filter(({ p }) => carriesAxisEvidence(p));
+      return synthesiseSystemAxisNumeric(
+        licensed.map(({ p }) => p.axes),
+        licensed.map(({ role }) => role),
+      );
+    })(),
     perComponentAxes: profiles.map((p) => ({
       name: p.name,
       axes: p.axes,
@@ -13123,7 +16365,15 @@ function inferListenerPriorityTags(
       priorities.push('tonal_density');
     }
   }
-  if (system.warm_bright === 'bright') {
+  // Transient speed is a timing signature (elastic + detailed leading edges),
+  // not a tonal one. Bright remains a sufficient trigger, but a neutral system
+  // that is both elastic and detailed is genuinely fast too — so speed must not
+  // depend on a 'bright' tonal classification (avoids reintroducing a hidden
+  // brightness dependency for the Timing-Led archetype).
+  if (
+    system.warm_bright === 'bright' ||
+    (system.elastic_controlled === 'elastic' && system.smooth_detailed === 'detailed')
+  ) {
     priorities.push('transient_speed');
   }
   if (system.smooth_detailed === 'detailed') {
@@ -13184,18 +16434,24 @@ function buildKeyObservation(
   // Harmonic-density: warm + smooth
   const harmonicDensity = system.warm_bright === 'warm'
     && (system.smooth_detailed === 'smooth' || system.smooth_detailed === 'neutral');
-  // Studio-neutral: all neutral or near-neutral
+  // Studio-neutral: all neutral or near-neutral. Consistency gate
+  // (launch condition 2026-07-19): a "neutrality and transparency" claim
+  // must also hold at the component level — when any component leans
+  // warm, the System read will speak of warmth and this observation
+  // would flatly contradict it on the same screen (MVP review SA-04/05).
+  const anyComponentWarm = profiles.some((p) => p.axes.warm_bright === 'warm');
   const studioNeutral = system.warm_bright === 'neutral'
     && system.smooth_detailed === 'neutral'
-    && system.elastic_controlled === 'neutral';
+    && system.elastic_controlled === 'neutral'
+    && !anyComponentWarm;
   // Control-first: controlled + detailed
   const controlFirst = system.elastic_controlled === 'controlled'
     && system.smooth_detailed === 'detailed';
 
-  if (timingFirst) philosophyTraits.push('timing accuracy', 'low stored energy');
-  if (harmonicDensity) philosophyTraits.push('harmonic richness', 'tonal density');
+  if (timingFirst) philosophyTraits.push('timing accuracy', 'speed');
+  if (harmonicDensity) philosophyTraits.push('harmonic richness', 'tonal weight');
   if (studioNeutral) philosophyTraits.push('neutrality', 'transparency');
-  if (controlFirst) philosophyTraits.push('precision', 'analytical control');
+  if (controlFirst) philosophyTraits.push('precision', 'control');
   if (system.elastic_controlled === 'elastic') philosophyTraits.push('dynamic elasticity');
 
   // ── Desire-informed layer ──
@@ -13218,12 +16474,17 @@ function buildKeyObservation(
     const characters = stacked.filter((s) => s.classification === 'system_character');
     let stackedNote = '';
     if (imbalances.length > 0) {
-      stackedNote = ` The system leans toward ${imbalances[0].label}, which deepens this character but narrows the system's range.`;
+      stackedNote = ` The system leans toward ${listenerPropertyLabel(imbalances[0].label)}, which deepens this character but narrows the system's range.`;
     } else if (characters.length > 0) {
-      stackedNote = ` The system shares a consistent ${characters[0].label} emphasis — this reinforces the system's identity.`;
+      stackedNote = ` The system shares a consistent lean toward ${listenerPropertyLabel(characters[0].label)} — this reinforces the system's identity.`;
     }
 
-    return `Your component choices suggest a preference for equipment emphasising **${philo}**. ${brandNames.join(', ')} share this design philosophy.${stackedNote} Future upgrades should preserve this approach — swapping in components with a fundamentally different design priority would destabilise what the system does well.`;
+    // Was "Your component choices suggest a preference for equipment
+    // emphasising X" — an inference about the listener from what they own.
+    // The licensed fact is about the components: these makers share a design
+    // philosophy. Whether the listener sought that out is unknown, and the
+    // upgrade guidance that follows does not depend on knowing it.
+    return `${brandNames.join(', ')} share a design philosophy emphasising **${philo}**.${stackedNote} Future upgrades that preserve this approach preserve what the system does well — swapping in components with a fundamentally different design priority would destabilise it.`;
   }
 
   // ── Balanced fallback ──
@@ -13231,10 +16492,10 @@ function buildKeyObservation(
     const imbalances = stacked.filter((s) => s.classification === 'system_imbalance');
     const characters = stacked.filter((s) => s.classification === 'system_character');
     if (imbalances.length > 0) {
-      return `Despite broadly balanced axis positions, the system stacks ${imbalances[0].label} across multiple components. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
+      return `Despite broadly balanced axis positions, the system stacks ${listenerPropertyLabel(imbalances[0].label)} across multiple components. This is worth monitoring — it can be a deliberate strength or an emerging limitation depending on listening priorities. Targeted component changes can adjust this without rebuilding the system.`;
     }
     if (characters.length > 0) {
-      return `The system shares a consistent ${characters[0].label} emphasis across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
+      return `The system shares a consistent lean toward ${listenerPropertyLabel(characters[0].label)} across components. This is a defining feature of the system's sonic identity — not a limitation. Future upgrades should preserve this character.`;
     }
   }
 
@@ -13946,7 +17207,12 @@ const COMPLAINT_MAP: Record<string, {
 /** Extract the primary complaint word from user text. */
 function extractComplaint(text: string): string | null {
   const lower = text.toLowerCase();
-  // Check for explicit complaint words, ordered by specificity
+  // Check for explicit complaint words, ordered by specificity.
+  // WORD-BOUNDARY matching (D7, 2026-08-11): substring includes()
+  // invented complaints from innocent words — 'thin' inside "anything",
+  // 'lean' inside "cleaner", 'hard' inside "hardware" — and the
+  // fabricated symptom then drove a full diagnosis of a system whose
+  // owner reported no problem at all.
   const complaintWords = [
     'fatiguing', 'clinical', 'analytical', 'sterile',
     'forward', 'strident', 'brittle',
@@ -13954,7 +17220,7 @@ function extractComplaint(text: string): string | null {
     'lean', 'hard', 'aggressive',
   ];
   for (const word of complaintWords) {
-    if (lower.includes(word)) return word;
+    if (new RegExp(`\\b${word}\\b`).test(lower)) return word;
   }
   // "lacks X" / "lacking X" → map quality deficit to a complaint adjective
   const lacksMatch = lower.match(/\black(?:s|ing)\s+(?:in\s+)?(\w+)/);
@@ -14047,6 +17313,13 @@ function extractComplaint(text: string): string | null {
 export function buildSystemDiagnosis(
   currentMessage: string,
   subjectMatches: SubjectMatch[],
+  /**
+   * Stage PB2.4 — optional accumulated listener profile. Prepends a
+   * one-sentence framing paragraph to the diagnosis prose when
+   * confidence is sufficient. Does not change complaint detection,
+   * remedy mapping, or follow-up angle.
+   */
+  listenerProfile?: ListenerPreferenceProfile | null,
 ): ConsultationResponse | null {
   // 1. Extract complaint
   const complaint = extractComplaint(currentMessage);
@@ -14066,13 +17339,43 @@ export function buildSystemDiagnosis(
   // 3. Look up system components
   const componentNames: string[] = [];
   const componentCharacters: string[] = [];
+  const resolvedProducts: (typeof ALL_PRODUCTS)[number][] = [];
 
-  for (const match of subjectMatches) {
+  // Product-kind matches resolve first so their brands are known before
+  // brand-kind matches are considered (Mission 4, 2026-08-10: "chord
+  // qutest into a naim nait 50 with kef ls50 meta" rendered as "Qutest +
+  // Chord + KEF + Naim" — the Qutest's own brand counted again as a
+  // separate component).
+  const orderedMatches = [
+    ...subjectMatches.filter((m) => m.kind !== 'brand'),
+    ...subjectMatches.filter((m) => m.kind === 'brand'),
+  ];
+
+  for (const match of orderedMatches) {
     if (match.parenthetical) continue;
     const matchLower = match.name.toLowerCase();
 
+    // A brand mention that is already represented by a resolved product is
+    // the same physical component, not an additional one.
+    if (match.kind === 'brand' && resolvedProducts.some(
+      (p) => p.brand.toLowerCase() === matchLower
+        || p.brand.toLowerCase().startsWith(matchLower)
+        || matchLower.startsWith(p.brand.toLowerCase()),
+    )) {
+      continue;
+    }
+
+    // Model-aware resolution first (D7, 2026-08-11): the brand-prefix
+    // shortcut below resolved "leben cs600x" to the FIRST Leben product
+    // in catalog order — the CS300 — substituting a sibling model into
+    // the diagnosis echo, while "pontus ii" failed exact-name matching
+    // entirely (catalog name "Pontus II 12th-1") and fell to a
+    // title-cased fallback with its brand re-added as a phantom extra
+    // component. findCatalogProduct is the alias-aware, score-based
+    // resolver the rest of the module already uses.
+    const modelResolved = match.kind !== 'brand' ? findCatalogProduct(match.name) : null;
     // Try product-level match first, then brand-level (allow partial brand match)
-    const product = ALL_PRODUCTS.find(
+    const product = modelResolved ?? ALL_PRODUCTS.find(
       (p) => p.name.toLowerCase() === matchLower
         || p.brand.toLowerCase() === matchLower
         || p.brand.toLowerCase().startsWith(matchLower)
@@ -14083,6 +17386,7 @@ export function buildSystemDiagnosis(
       const displayName = match.kind === 'brand' ? product.brand : product.name;
       if (!componentNames.includes(displayName)) {
         componentNames.push(displayName);
+        resolvedProducts.push(product);
         // Extract a brief character note
         if (hasTendencies(product.tendencies)) {
           const chars = product.tendencies.character.slice(0, 2);
@@ -14129,8 +17433,18 @@ export function buildSystemDiagnosis(
   // Follow-up question — stays diagnostic, with optional shopping transition
   const shoppingOffer = ' I can suggest specific components to try.';
   let followUp: string;
-  if (mapping.followUpAngle === 'source') {
+  // Do not ask for the source when the user already named one (Mission 4,
+  // 2026-08-10: a Chord Qutest owner was asked "What source are you
+  // using?" in the same breath as their Qutest was diagnosed). Fall back
+  // to the listening-habits question — existing approved copy — instead.
+  const sourceKnown = resolvedProducts.some((p) => {
+    const cat = (p.category ?? '').toLowerCase();
+    return cat.includes('dac') || cat.includes('streamer') || cat.includes('turntable') || cat.includes('source');
+  });
+  if (mapping.followUpAngle === 'source' && !sourceKnown) {
     followUp = 'What source are you using (DAC, streamer, turntable)? That\'s the first place I\'d look.' + shoppingOffer;
+  } else if (mapping.followUpAngle === 'source' && sourceKnown) {
+    followUp = 'What are your listening habits — typical volume, session length, music types? That helps me calibrate.' + shoppingOffer;
   } else if (mapping.followUpAngle === 'room') {
     followUp = 'Can you describe your room — size, surfaces, treatment? That\'s the biggest variable here.' + shoppingOffer;
   } else {
@@ -14138,9 +17452,15 @@ export function buildSystemDiagnosis(
   }
 
   // Assemble
-  const fullDiagnosis = systemNote
+  const baseDiagnosis = systemNote
     ? `${opening}\n\n${systemNote}\n\n${pathsText}`
     : `${opening}\n\n${pathsText}`;
+
+  // PB2.4 — prepend listener-aware framing to the diagnosis prose.
+  const diagFraming = buildListenerFraming(listenerProfile, 'diagnosis');
+  const fullDiagnosis = diagFraming
+    ? `${diagFraming}\n\n${baseDiagnosis}`
+    : baseDiagnosis;
 
   return {
     subject: `${systemLabel} — ${complaint}`,

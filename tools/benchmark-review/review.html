@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audio XX — Benchmark Review</title>
+<style>
+  :root { --paper:#FCF8EE; --ink:#1B1A18; --muted:#6B6862; --accent:#A8231B; --hairline:rgba(27,26,24,.14); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.55 Georgia,'Times New Roman',serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:1.5rem 2rem 4rem; }
+  header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:1px solid var(--hairline); padding-bottom:.75rem; margin-bottom:1.25rem; }
+  h1 { font-size:1.05rem; margin:0; letter-spacing:.02em; }
+  .meta { font:12px/1.4 system-ui,sans-serif; color:var(--muted); text-align:right; }
+  .progress { font:13px system-ui,sans-serif; color:var(--muted); margin:0 0 .4rem; }
+  .bar { height:3px; background:var(--hairline); margin-bottom:1.25rem; }
+  .bar i { display:block; height:100%; background:var(--accent); transition:width .2s; }
+  .promptcard { background:#fff; border:1px solid var(--hairline); border-radius:4px; padding:1rem 1.2rem; margin-bottom:1rem; }
+  .pid { font:600 11px system-ui,sans-serif; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:.35rem; }
+  .ptext { font-size:1.15rem; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.1rem; }
+  .col { background:#fff; border:1px solid var(--hairline); border-radius:4px; padding:1rem 1.2rem; min-height:180px; max-height:52vh; overflow-y:auto; }
+  .col h2 { font:600 11px system-ui,sans-serif; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 .6rem; position:sticky; top:-1rem; background:#fff; padding:.35rem 0; }
+  .col pre { white-space:pre-wrap; font:inherit; margin:0; }
+  .fail { color:var(--accent); font:600 13px system-ui,sans-serif; border:1px dashed var(--accent); padding:.6rem .8rem; border-radius:4px; }
+  .controls { display:flex; flex-wrap:wrap; gap:1.6rem; align-items:flex-start; background:#fff; border:1px solid var(--hairline); border-radius:4px; padding:1rem 1.2rem; }
+  .group { font:12px system-ui,sans-serif; color:var(--muted); }
+  .group b { display:block; font-size:11px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:.4rem; }
+  .seg { display:inline-flex; border:1px solid var(--hairline); border-radius:4px; overflow:hidden; }
+  .seg button { border:0; background:#fff; padding:.45rem .9rem; font:13px system-ui,sans-serif; cursor:pointer; color:var(--ink); border-right:1px solid var(--hairline); }
+  .seg button:last-child { border-right:0; }
+  .seg button.on { background:var(--ink); color:#fff; }
+  .seg button.on.bad { background:var(--accent); }
+  textarea { width:340px; min-height:64px; border:1px solid var(--hairline); border-radius:4px; padding:.5rem .7rem; font:14px/1.5 Georgia,serif; background:#fff; resize:vertical; }
+  nav { display:flex; align-items:center; gap:.8rem; margin-top:1.1rem; }
+  nav button, .export button { border:1px solid var(--hairline); background:#fff; border-radius:4px; padding:.5rem 1.1rem; font:13px system-ui,sans-serif; cursor:pointer; }
+  nav button:hover, .export button:hover { border-color:var(--ink); }
+  .savemark { font:12px system-ui,sans-serif; color:var(--muted); }
+  .export { margin-left:auto; display:flex; gap:.6rem; }
+  .jump { font:12px system-ui,sans-serif; color:var(--muted); margin-left:.6rem; }
+  .jump input { width:3.2em; border:1px solid var(--hairline); border-radius:3px; padding:.25rem .3rem; font:inherit; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Audio XX — Benchmark Review</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+  <div class="progress" id="progress"></div>
+  <div class="bar"><i id="barfill" style="width:0%"></i></div>
+
+  <div class="promptcard">
+    <div class="pid" id="pid"></div>
+    <div class="ptext" id="ptext"></div>
+  </div>
+
+  <div class="cols">
+    <div class="col"><h2>Audio XX</h2><div id="axx"></div></div>
+    <div class="col"><h2 id="baselineLabel">OpenAI Baseline</h2><div id="base"></div></div>
+  </div>
+
+  <div class="controls">
+    <div class="group"><b>Launch readiness</b>
+      <span class="seg" id="readySeg">
+        <button data-v="ready">Ready</button>
+        <button data-v="not_ready" class="badbtn">Not Ready</button>
+      </span>
+    </div>
+    <div class="group"><b>Vs baseline, Audio XX is…</b>
+      <span class="seg" id="cmpSeg">
+        <button data-v="better">Better</button>
+        <button data-v="same">Same</button>
+        <button data-v="worse" class="badbtn">Worse</button>
+      </span>
+    </div>
+    <div class="group"><b>Comments</b>
+      <textarea id="comment" placeholder="Anything worth remembering about this response…"></textarea>
+    </div>
+  </div>
+
+  <nav>
+    <button id="prev">← Previous</button>
+    <button id="next">Next →</button>
+    <span class="jump">Go to <input id="jump" inputmode="numeric"> / <span id="total"></span></span>
+    <span class="savemark" id="savemark"></span>
+    <div class="export">
+      <button id="expJson">Export JSON</button>
+      <button id="expCsv">Export CSV</button>
+    </div>
+  </nav>
+</div>
+
+<script src="review-data.js"></script>
+<script>
+(function () {
+  const DATA = window.REVIEW_DATA;
+  if (!DATA) { document.body.innerHTML = '<p style="padding:2rem;font-family:system-ui">review-data.js not found — run <code>node tools/benchmark-review/prepare.mjs</code> first.</p>'; return; }
+  const rows = DATA.rows, meta = DATA.meta;
+  const KEY = 'axx-benchmark-review-v1';
+  const store = JSON.parse(localStorage.getItem(KEY) || '{}');
+  let i = Math.min(Number(localStorage.getItem(KEY + ':pos') || 0), rows.length - 1);
+
+  document.getElementById('meta').textContent =
+    `${meta.sourceBenchmark} @ ${meta.audioxxCommit.slice(0,7)} · Audio XX: ${meta.audioxxModel} · Baseline: ${meta.baselineModel} · generated ${meta.generatedAt.slice(0,16).replace('T',' ')}`;
+  document.getElementById('total').textContent = rows.length;
+
+  const save = () => { localStorage.setItem(KEY, JSON.stringify(store)); localStorage.setItem(KEY + ':pos', String(i));
+    const el = document.getElementById('savemark'); el.textContent = 'saved'; setTimeout(() => { el.textContent = ''; }, 900); };
+  const rec = (id) => (store[id] = store[id] || { ready: null, comparison: null, comment: '' });
+  const reviewed = () => rows.filter((r) => { const s = store[r.id]; return s && (s.ready || s.comparison || (s.comment && s.comment.trim())); }).length;
+
+  function paintSeg(segId, value) {
+    document.querySelectorAll('#' + segId + ' button').forEach((b) => {
+      b.classList.toggle('on', b.dataset.v === value);
+      b.classList.toggle('bad', b.classList.contains('on') && b.classList.contains('badbtn'));
+    });
+  }
+
+  function render() {
+    const r = rows[i], s = rec(r.id);
+    document.getElementById('pid').textContent = `${i + 1} / ${rows.length} · ${r.id} · ${r.category}${r.audioxxGenerated ? ' · audio xx side generated via knowledge-lane prompt' : ''}`;
+    document.getElementById('ptext').textContent = r.prompt;
+    document.getElementById('axx').innerHTML = r.audioxx
+      ? '<pre></pre>' : `<div class="fail">GENERATION FAILED: ${r.audioxxError || 'no response captured'}</div>`;
+    if (r.audioxx) document.querySelector('#axx pre').textContent = r.audioxx;
+    document.getElementById('base').innerHTML = r.baseline
+      ? '<pre></pre>' : `<div class="fail">GENERATION FAILED: ${r.baselineError || 'no response captured'}</div>`;
+    if (r.baseline) document.querySelector('#base pre').textContent = r.baseline;
+    paintSeg('readySeg', s.ready); paintSeg('cmpSeg', s.comparison);
+    document.getElementById('comment').value = s.comment || '';
+    document.getElementById('progress').textContent = `Reviewed ${reviewed()} of ${rows.length}`;
+    document.getElementById('barfill').style.width = (reviewed() / rows.length * 100) + '%';
+    document.getElementById('jump').value = i + 1;
+  }
+
+  document.getElementById('readySeg').addEventListener('click', (e) => {
+    if (!e.target.dataset.v) return; const s = rec(rows[i].id);
+    s.ready = s.ready === e.target.dataset.v ? null : e.target.dataset.v; save(); render();
+  });
+  document.getElementById('cmpSeg').addEventListener('click', (e) => {
+    if (!e.target.dataset.v) return; const s = rec(rows[i].id);
+    s.comparison = s.comparison === e.target.dataset.v ? null : e.target.dataset.v; save(); render();
+  });
+  document.getElementById('comment').addEventListener('input', (e) => { rec(rows[i].id).comment = e.target.value; save(); });
+
+  const go = (n) => { i = Math.max(0, Math.min(rows.length - 1, n)); save(); render(); window.scrollTo(0, 0); };
+  document.getElementById('prev').onclick = () => go(i - 1);
+  document.getElementById('next').onclick = () => go(i + 1);
+  document.getElementById('jump').addEventListener('change', (e) => go(Number(e.target.value) - 1));
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft') go(i - 1);
+    if (e.key === 'ArrowRight') go(i + 1);
+  });
+
+  const download = (name, text, type) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type }));
+    a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  };
+  document.getElementById('expJson').onclick = () => {
+    const out = { meta, exportedAt: new Date().toISOString(),
+      results: rows.map((r) => ({ id: r.id, category: r.category, prompt: r.prompt, ...(store[r.id] || { ready: null, comparison: null, comment: '' }) })) };
+    download('benchmark-review.json', JSON.stringify(out, null, 2), 'application/json');
+  };
+  document.getElementById('expCsv').onclick = () => {
+    const esc = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const lines = ['id,category,ready,comparison,comment,prompt'];
+    for (const r of rows) { const s = store[r.id] || {};
+      lines.push([r.id, r.category, s.ready ?? '', s.comparison ?? '', esc(s.comment ?? ''), esc(r.prompt)].join(','));
+    }
+    download('benchmark-review.csv', lines.join('\n'), 'text/csv');
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>

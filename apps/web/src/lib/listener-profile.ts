@@ -935,26 +935,66 @@ const TRAIT_LABELS: Record<ProfileTraitKey, string> = {
 };
 
 /**
+ * Map desire-signal quality names (extractDesires vocabulary) onto
+ * profile trait keys, for reconciling the CURRENT turn's explicit
+ * requests with the accumulated profile (D6, 2026-08-11).
+ */
+const DESIRE_QUALITY_TO_TRAIT: Record<string, ProfileTraitKey> = {
+  warmth: 'warmth', body: 'warmth',
+  detail: 'clarity', clarity: 'clarity', resolution: 'clarity', transparency: 'clarity',
+  flow: 'flow', smoothness: 'flow',
+  rhythm: 'rhythm', pace: 'rhythm', energy: 'rhythm',
+  density: 'tonal_density', richness: 'tonal_density',
+  space: 'spatial_depth', air: 'spatial_depth', soundstage: 'spatial_depth',
+  dynamics: 'dynamics', impact: 'dynamics', punch: 'dynamics',
+};
+
+/**
  * Build a concise 1–2 sentence taste reflection from the listener profile.
  * Designed to sit above product recommendations — not in decisive mode.
  * Returns null if insufficient data.
+ *
+ * `currentDesires` (D6, 2026-08-11): the CURRENT turn's explicit desire
+ * signals. The accumulated profile is inference; the present request is
+ * evidence. Live failure: a clarity-leaning profile answered "i want a
+ * warm but detailed integrated" with "You prioritize clarity and detail
+ * … over … warmth and body" — naming the explicitly requested quality
+ * as a depriority. A currently-desired trait never appears in the
+ * depriority list and joins the stated priorities.
  */
-export function buildTasteReflection(profile: ListenerProfile): string | null {
+export function buildTasteReflection(
+  profile: ListenerProfile,
+  currentDesires?: Array<{ quality: string; direction: 'more' | 'less' }>,
+): string | null {
   if (profile.confidence < 0.15) return null;
+
+  const currentTraits = new Set<ProfileTraitKey>();
+  for (const d of currentDesires ?? []) {
+    if (d.direction !== 'more') continue;
+    const trait = DESIRE_QUALITY_TO_TRAIT[d.quality.toLowerCase()];
+    if (trait) currentTraits.add(trait);
+  }
 
   const sorted = PROFILE_KEYS
     .map((key) => ({ key, value: profile.inferredTraits[key] }))
-    .filter((t) => t.value > 0.15)
-    .sort((a, b) => b.value - a.value);
+    .filter((t) => t.value > 0.15 || currentTraits.has(t.key))
+    .sort((a, b) => {
+      // Explicit current-turn desires outrank accumulated inference.
+      const aCur = currentTraits.has(a.key) ? 1 : 0;
+      const bCur = currentTraits.has(b.key) ? 1 : 0;
+      if (aCur !== bCur) return bCur - aCur;
+      return b.value - a.value;
+    });
 
   if (sorted.length === 0) return null;
 
   // Top priorities (what the listener values)
   const priorities = sorted.slice(0, 3).map((t) => TRAIT_LABELS[t.key]);
 
-  // Depriorities (low or zero traits — what the listener cares less about)
+  // Depriorities (low or zero traits — what the listener cares less
+  // about). Never a trait the current message explicitly asked for.
   const lowTraits = PROFILE_KEYS
-    .filter((key) => profile.inferredTraits[key] <= 0.1)
+    .filter((key) => profile.inferredTraits[key] <= 0.1 && !currentTraits.has(key))
     .map((key) => TRAIT_LABELS[key]);
   const depriority = lowTraits.length > 0 ? lowTraits.slice(0, 2) : null;
 
@@ -1336,7 +1376,15 @@ export function buildSystemPairingIntro(
   const anchorCharacter = topAnchorTraits.map((t) => EXPERT_SHORT_MAP[t.key] ?? t.key).join(' and ');
 
   // Determine pairing direction based on whether the listener wants more of the same or balance
-  const listenerTopTraits = getTopTraits(profile.inferredTraits, 2);
+  // Guard (Product Quality Phase 2): getTopTraits has no minimum threshold,
+  // so an all-zero profile returned its first two declaration-order keys —
+  // rendering a FABRICATED taste claim ("your taste points toward continuity
+  // and phrasing and transient speed") built from no user data at all. Only
+  // real trait mass (mirrors inferDirection's 0.15 floor) may speak for the
+  // listener; with none, this intro must not be written.
+  const listenerTopTraits = getTopTraits(profile.inferredTraits, 2)
+    .filter((t) => t.value > 0.15);
+  if (listenerTopTraits.length === 0) return null;
   const overlapCount = listenerTopTraits.filter((lt) =>
     topAnchorTraits.some((at) => at.key === lt.key),
   ).length;

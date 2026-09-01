@@ -2,6 +2,7 @@ import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
+import { trackServer } from '@/product/analytics-server';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -39,6 +40,9 @@ export const authOptions: NextAuthOptions = {
               data: { userId: user.id },
             });
             console.log('[auth] Auto-registered user:', user.id);
+            // Funnel (M5): server-side is the only place that knows a
+            // NEW account was created (vs a returning sign-in).
+            trackServer('account_created');
           } else {
             if (!user.password) {
               console.log('[auth] User has no password:', user.id);

@@ -1,0 +1,18 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/mikebrown/audio-xx/audio-xx
+
+ ✓ apps/web/src/product/__tests__/analytics.test.ts (9 tests) 6ms
+ ✓ apps/web/src/product/__tests__/catalog-index.test.ts (9 tests) 78ms
+ ✓ apps/web/src/product/__tests__/build-to-assessment.test.ts (10 tests) 996ms
+   ✓ sharing metadata (M4) — a pasted link unfurls as the assessment > artifact metadata carries the verdict as title and the system in the description 806ms
+ ✓ apps/web/src/product/__tests__/billing.test.ts (11 tests) 7640ms
+ ✓ apps/web/src/product/__tests__/entitlement.test.ts (19 tests) 6545ms
+ ✓ apps/web/src/product/__tests__/assessment-history.test.ts (10 tests) 6634ms
+ ✓ apps/web/src/product/__tests__/save-system.test.ts (12 tests) 6663ms
+
+ Test Files  7 passed (7)
+      Tests  80 passed (80)
+   Start at  14:38:46
+   Duration  11.20s (transform 3.88s, setup 0ms, collect 12.86s, tests 28.56s, environment 2ms, prepare 1.85s)
+

@@ -1,0 +1,45 @@
+### A mainstream mid-fi
+INPUT: Assess my system: Bluesound Node, Hegel H190, KEF LS50 Meta
+VERDICT: The amplifier is steering the whole system.
+CREDIT: Bluesound Node | Hegel H190 | KEF
+  • The Hegel H190 is reinforcing the system's lean toward tight damping and control — addressing it would open up the most room for improvement.
+  • You hear it as the system leaning hard in one direction — what should be a strength has become an excess the speaker can’t talk out of.
+REC: "I’d start with the amplifier."
+### B BBC-tradition restraint
+INPUT: Assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus
+VERDICT: Nothing here needs changing.
+CREDIT: Chord Qutest | Naim SuperNait 3 | Harbeth Super HL5 Plus
+  • Chord Qutest and Naim SuperNait 3 resolve cleanly; Harbeth Super HL5 Plus keeps the result musical rather than analytical. None of that is an accident — the chain upstream has been chosen so nothing fights what the speaker is trying to do.
+  • Why it hangs together: on ease vs. resolution, 2 of the 3 components lean the same way (detailed). That agreement is what a coherent system sounds like — each stage carrying the direction forward instead of correcting the one before.
+  • Each component is doing what it was chosen for, and nothing is asking it to do more.
+REC: "Leave it alone."
+### C high-efficiency tube
+INPUT: Assess my system: Denafrips Ares II, Leben CS600X, Klipsch Forte IV
+VERDICT: The DAC is steering the whole system.
+CREDIT: Ares Ii | Leben CS600X | Klipsch
+  • System-wide warmth bias without counterbalance.
+  • You hear it as the chain pushed past what the weakest link can support.
+REC: "I’d start with the DAC."
+!! R3: no category-specific heard-consequence line for "tonal_imbalance"; using default.
+### D detail-forward reference
+INPUT: Assess my system: Topping D90SE, Benchmark AHB2, Focal Utopia
+VERDICT: The DAC is holding the system back.
+CREDIT: Topping D90SE | Benchmark AHB2 | Focal
+  • The DAC is holding back the system — limited tonal density.
+  • You hear it as the source setting the system’s ceiling — less of the tonal body and inner detail the rest of the chain is capable of resolving.
+REC: "I’d start with the DAC."
+### E bottleneck DAC + horn
+INPUT: Assess my system: Chord Qutest, Naim SuperNait 3, Klipsch La Scala
+VERDICT: The DAC is holding the system back.
+CREDIT: Chord Qutest | Naim SuperNait 3 | Klipsch
+  • The DAC is holding back the system — limited tonal density.
+  • You hear it as the source setting the system’s ceiling — less of the tonal body and inner detail the rest of the chain is capable of resolving.
+REC: "I’d start with the DAC."
+### F planar + solid state
+INPUT: Assess my system: Chord Qutest, Parasound A21, Magnepan 1.7i
+VERDICT: The DAC is holding the system back.
+CREDIT: Chord Qutest | Magnepan 1.7i | Parasound
+  • The DAC is holding back the system — limited tonal density.
+  • You hear it as the source setting the system’s ceiling — less of the tonal body and inner detail the rest of the chain is capable of resolving.
+REC: "I’d start with the DAC."
+!! Component name corrupted in engine output: names[2]="Parasound" carries a foreign brand token ("parasound"); rendered from input "Parasound".

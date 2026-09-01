@@ -10,14 +10,66 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  profile   Profile?
-  systems   System[]
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  profile      Profile?
+  systems      System[]
+  subscription Subscription?
+  resetTokens  PasswordResetToken[]
 
   @@map("users")
+}
+
+// ── Password recovery (pre-beta item 3) ─────────────────────────────────
+// Single-use, time-boxed reset tokens. Only the SHA-256 hash of the token
+// is stored — a database leak cannot be replayed as a reset link. Rows are
+// additive-only (additive Turso migration, same process as M5 billing).
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ── Billing (MVP M5 — My Systems subscription) ──────────────────────────
+// One row per user, created at first checkout. Server-side authority for
+// entitlement; synchronised from verified Stripe webhooks. No card data
+// is ever stored. Absence of a row + expired trial = expired state.
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique @map("user_id")
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String    @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  /** Stripe status: active | past_due | canceled | incomplete | … */
+  status               String
+  /** Paid-through instant; access to protected actions runs to here. */
+  currentPeriodEnd     DateTime? @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  /** Stripe event.created of the newest applied event — guards against
+   *  out-of-order webhook delivery. */
+  lastEventAt          DateTime? @map("last_event_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@map("subscriptions")
+}
+
+// Webhook idempotency ledger: a Stripe event id is processed at most once.
+model ProcessedStripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@map("processed_stripe_events")
 }
 
 model Profile {
@@ -55,13 +107,55 @@ model System {
   room       String?                                                    // room description or acoustics notes
   primaryUse String?           @map("primary_use")                     // e.g. "critical listening", "background music"
   tendencies String?           @default("{}") @map("tendencies")       // JSON or plain-text system character summary
+  // Canonical engine input this system was saved from (MVP M2). The
+  // assessment URL is the system's canonical identity; this column is
+  // its normalized text form and drives duplicate detection per user.
+  canonicalText String?        @map("canonical_text")
   createdAt  DateTime          @default(now()) @map("created_at")
   updatedAt  DateTime          @updatedAt @map("updated_at")
   components SystemComponent[]
   snapshots  PreferenceSnapshot[]
+  assessments AssessmentSnapshot[]
 
   @@map("systems")
 }
+
+// ── Assessment snapshots (MVP M2 — My Systems) ─────────────────────────
+// Immutable record of the assessment exactly as rendered at save time.
+// Engine evolution never rewrites history: re-assessing appends a new row.
+model AssessmentSnapshot {
+  id            String   @id @default(cuid())
+  /**
+   * Unguessable capability for View/Print. The DB id is never a URL.
+   *
+   * NULLABLE rather than defaulted: a UNIQUE column with a constant default
+   * admits exactly one row, so `@default("")` made the second snapshot fail to
+   * insert. SQLite permits many NULLs in a unique index, which is what lets
+   * pre-existing rows coexist with tokenised ones.
+   */
+  viewToken     String?  @unique @map("view_token")
+  /** Minted ONLY by an explicit Share. Null = never shared. */
+  shareToken    String?  @unique @map("share_token")
+  /** Nullable: an anonymous listener may create, view and print a snapshot. */
+  systemId      String?  @map("system_id")
+  system        System?  @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  userId        String?  @map("user_id")
+  /** Legacy: canonical engine input. Retained for old rows; never read by the
+   *  artifact, because carrying the input is what made re-derivation possible. */
+  systemText    String   @map("system_text") @default("")
+  /** Legacy: synthesized ArtifactPayload. Superseded by snapshotJson. */
+  payloadJson   String   @map("payload_json") @default("")
+  /** The frozen AssessmentSnapshotV1 — the authoritative rendered state. */
+  snapshotJson  String   @map("snapshot_json") @default("")
+  /** Schema of snapshotJson, e.g. "axx.assessment.v1". */
+  schemaVersion String   @map("schema_version") @default("")
+  engineVersion String   @map("engine_version")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([systemId])
+  @@map("assessment_snapshots")
+}
+
 
 model Component {
   id               String            @id @default(cuid())

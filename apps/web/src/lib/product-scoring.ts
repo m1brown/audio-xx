@@ -220,6 +220,11 @@ function scoreArchitectureAffinity(
 function scoreSystemCoherence(
   product: Product,
   systemProfile: SystemProfile,
+  /** LISTEN FIRST: traits the user explicitly asked for this turn. An
+   *  explicit 'up' suspends the counterbalance penalty/bonus for that axis —
+   *  the adviser may argue with a stated preference (in prose), but the
+   *  scorer must not silently overrule it. */
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): number {
   let score = 0;
   const tp = product.tendencyProfile;
@@ -230,8 +235,11 @@ function scoreSystemCoherence(
     else score += 0.5;
   }
 
-  // Warm system interactions
-  if (systemProfile.systemCharacter === 'warm') {
+  // Warm system interactions. LISTEN FIRST: when the user explicitly asked
+  // for more tonal density this turn, the counterbalance pair is suspended —
+  // this fixed 1.0-point swing was silently overruling the stated request
+  // (production: "warm, full-bodied" asked, neutral pick delivered).
+  if (systemProfile.systemCharacter === 'warm' && statedTraits?.tonal_density !== 'up') {
     if (resolveTraitValue(tp, product.traits, 'tonal_density') >= 0.7) score -= 0.5;
     if (resolveTraitValue(tp, product.traits, 'clarity') >= 0.7) score += 0.5;
   }
@@ -251,44 +259,20 @@ function scoreSystemCoherence(
 
 // ── Reviewer acclaim ─────────────────────────────────
 //
-// Products reviewed by trusted, independent audio publications
-// receive a small scoring bonus. This surfaces community-loved
-// gear over spec-sheet winners.
+// F4 gate (private beta, 2026-05-18):
+//   Reviewer-derived data must not inform live product scoring.
+//   The historical TRUSTED_REVIEWERS bonus is disabled. The function
+//   signature is preserved so the call site in scoreProduct() remains
+//   stable; it now always contributes 0.
 //
-// Trusted sources are independent reviewers/publications known
-// for subjective, listening-first evaluation:
+//   The previous implementation awarded up to +0.5 per product based
+//   on matches against a hardcoded list of reviewer publications. This
+//   is reviewer-derived recommendation logic and is excluded from the
+//   runtime path under the F4 reviewer-data exclusion rule.
 
-const TRUSTED_REVIEWERS = new Set([
-  'darko.audio',
-  '6moons',
-  'twittering machines',
-  'the audiophiliac',
-  'stereophile',
-  'british audiophile',
-  'hifi huff',
-  'srajan ebaen',        // 6moons editor
-  'john darko',
-  'steve guttenberg',    // Audiophiliac
-  'herb reichert',       // Stereophile
-]);
-
-/** Small bonus per trusted reviewer, capped at 0.5. */
-function scoreReviewerAcclaim(product: Product): number {
-  if (!product.sourceReferences || product.sourceReferences.length === 0) return 0;
-
-  let count = 0;
-  for (const ref of product.sourceReferences) {
-    const srcLower = ref.source.toLowerCase();
-    for (const reviewer of TRUSTED_REVIEWERS) {
-      if (srcLower.includes(reviewer)) {
-        count++;
-        break;
-      }
-    }
-  }
-
-  // 0.15 per trusted source, capped at 0.5
-  return Math.min(count * 0.15, 0.5);
+/** Disabled under F4 — reviewer acclaim must not influence scoring. */
+function scoreReviewerAcclaim(_product: Product): number {
+  return 0;
 }
 
 // ── Public API ────────────────────────────────────────
@@ -301,6 +285,7 @@ export function scoreProduct(
   userTraits: Record<string, SignalDirection>,
   budgetAmount: number | null,
   systemProfile: SystemProfile,
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): number {
   let score = 0;
 
@@ -311,7 +296,7 @@ export function scoreProduct(
   }
 
   score += scoreArchitectureAffinity(product, userTraits);
-  score += scoreSystemCoherence(product, systemProfile);
+  score += scoreSystemCoherence(product, systemProfile, statedTraits);
   score += scoreReviewerAcclaim(product);
 
   // ── Cultural-significance counter-weight (2026-05-11) ───
@@ -355,6 +340,7 @@ export function rankProducts(
   systemProfile: SystemProfile,
   constraints?: HardConstraints,
   listenerProfile?: ListenerProfile,
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): ScoredProduct[] {
   // Budget filter — hard constraint, no stretch allowance.
   // Used-market pricing qualifies a product only if the new price
@@ -402,6 +388,13 @@ export function rankProducts(
       candidates = candidates.filter((p) =>
         !p.topology || !constraints.excludeTopologies.includes(p.topology),
       );
+    }
+
+    // Brand exclusion (M5-F3, 2026-08-11): "not the wharfedales" →
+    // rejected brands are gates with the same standing as "no tubes".
+    if (constraints.excludeBrands && constraints.excludeBrands.length > 0) {
+      const excluded = new Set(constraints.excludeBrands.map((b) => b.toLowerCase()));
+      candidates = candidates.filter((p) => !excluded.has(p.brand.toLowerCase()));
     }
 
     // Topology requirement: "class AB only" → only class-ab-solid-state
@@ -486,7 +479,7 @@ export function rankProducts(
 
   const scored = candidates
     .map((product) => {
-      let score = scoreProduct(product, userTraits, budgetAmount, systemProfile);
+      let score = scoreProduct(product, userTraits, budgetAmount, systemProfile, statedTraits);
 
       // Apply taste penalties (soft scoring, not hard removal)
       if (listenerProfile && listenerProfile.confidence >= 0.1) {

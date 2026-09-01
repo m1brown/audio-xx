@@ -21,6 +21,7 @@ import type { SonicArchetype } from './archetype';
 import type { PrimaryAxisLeanings } from './axis-types';
 import { hasTendencies, selectDefaultTendencies, hasRisk, getEmphasizedTraits, getLessEmphasizedTraits, hasExplainableProfile, resolveTraitValue } from './sonic-tendencies';
 import { resolveArchetype, archetypeFitNote } from './design-archetypes';
+import { extractDesires, type DesireSignal } from './intent';
 
 /** Short labels for archetype context in shopping summaries. */
 const ARCHETYPE_LABELS: Record<SonicArchetype, string> = {
@@ -196,6 +197,10 @@ export interface HardConstraints {
    *  designs (user said "tube DAC" / "valve DAC"). DAC topology is a separate
    *  dimension from amp topology — this lives outside requireTopologies. */
   requireDacTubeStage?: boolean;
+  /** Brands to exclude (M5-F3, 2026-08-11): "not the wharfedales",
+   *  "no klipsch". A rejected recommendation is a hard filter with the
+   *  same standing as "no tubes". Lowercased brand names. */
+  excludeBrands?: string[];
 }
 
 // ── Selection mode ────────────────────────────────────
@@ -375,6 +380,25 @@ export interface ShoppingContext {
   detected: boolean;
   mode: ShoppingMode;
   category: ShoppingCategory;
+  /**
+   * TYPED IMMUTABLE CONSTRAINT — the product class explicitly named in the
+   * CURRENT utterance ("what other streamers would you recommend?"). When set,
+   * it must win over any carried-forward fallback/lock, and every recommendation
+   * and educational block must conform to it (enforced by validateShoppingCategory).
+   * Undefined when the user named no class this turn.
+   */
+  requestedCategory?: ShoppingCategory;
+  /**
+   * LISTEN FIRST (Product Quality Phase 2) — sonic preferences the user
+   * explicitly stated in the CURRENT message ("I like a warm, full-bodied
+   * sound"). Extracted client-side by extractDesires, so they survive the
+   * /api/evaluate fallback that empties ExtractedSignals. A stated preference
+   * is the starting point of the recommendation: it sets direction, suppresses
+   * the taste question and the "missing: sonic preferences" gap, and — when it
+   * conflicts with the system's existing lean — licenses an explain-the-tension
+   * sentence instead of a silent override.
+   */
+  statedPreferences?: import('./intent').DesireSignal[];
   /** Finer classification within category. */
   subcategory?: ShoppingSubcategory;
   /** When the user asks for multiple categories ("amp and dac"), the
@@ -384,6 +408,23 @@ export interface ShoppingContext {
   budgetAmount: number | null;
   /** Lower bound from "over $X", "above $X", "between $X and $Y" phrasing. */
   budgetFloor?: number | null;
+  /** Colloquial affordability signal with no numeric budget — "won't
+   *  blow up my budget", "affordable", "budget-friendly". Caps the
+   *  candidate pool at the affordability ceiling and activates the
+   *  esoteric-product penalty, WITHOUT fabricating a numeric budget
+   *  (budgetAmount stays null so no "$X" appears in copy, and the
+   *  budget gap-question still gets asked). Launch QA NT-09: this
+   *  phrasing anchored on a $20,000 Shindo Cortese. */
+  budgetConscious?: boolean;
+  /** User explicitly asked for cost-no-object gear ("high-end", "reference",
+   *  "money no object"). Lifts the cold-query mainstream anchor ceiling. */
+  prestigeIntent?: boolean;
+  /** Query names a low-sensitivity/planar partner (Magnepan, LRS, LS50) —
+   *  low-watt SET amplifiers are physically implausible picks. */
+  lowSensitivityPartner?: boolean;
+  /** Explicit IEM / in-ear request (REC-1, 2026-08-12) — constrains
+   *  headphone selection to subcategory 'iem'. */
+  iemRequested?: boolean;
   tasteProvided: boolean;
   systemProvided: boolean;
   systemProfile: SystemProfile;
@@ -489,7 +530,41 @@ function buildCategoryPatterns(
  * "for <category>" and "<category> recommendations" work equally well for
  * any product taxonomy.
  */
+/**
+ * HEAD NOUN BEFORE "for" WINS over the partner named after it.
+ *
+ * "best speakers for a job amplifier" asks for SPEAKERS; the amplifier is
+ * context. The "for <category>" patterns read the noun AFTER "for" as the
+ * request — right for "recommendations for speakers" (no category precedes
+ * it), inverted for a partner phrase. Founder-reported 2026-08-13: a speaker
+ * request returned three amplifiers, and symmetrically "best amp for my
+ * speakers" resolved to speaker.
+ *
+ * This is the rule the routing doctrine's X1 case already states — the
+ * request head noun outranks trailing context — applied generally rather
+ * than only where a specific pattern happened to cover it. Consulted BOTH in
+ * the priority scan and in the requestedCategory resolution, which carried
+ * this as documented limitation G3.
+ *
+ * Bounded to 40 chars so a match cannot leap across sentences.
+ */
+const HEAD_NOUN_BEFORE_FOR: Array<[RegExp, ShoppingCategory]> = [
+  [/\b(?:iems?|in[- ]?ear\s+monitors?|earphones?|earbuds?)\b[^.?!]{0,40}?\bfor\s+/i, 'headphone'],
+  [/\bheadphones?\b[^.?!]{0,40}?\bfor\s+/i, 'headphone'],
+  [/\bspeakers?\b[^.?!]{0,40}?\bfor\s+/i, 'speaker'],
+  [/\bdacs?\b[^.?!]{0,40}?\bfor\s+/i, 'dac'],
+  [/\b(?:amps?|amplifiers?|integrated(?:\s+amp(?:lifier)?)?|power\s*amps?|preamps?)\b[^.?!]{0,40}?\bfor\s+/i, 'amplifier'],
+  [/\b(?:turntables?|record\s+players?)\b[^.?!]{0,40}?\bfor\s+/i, 'turntable'],
+  [/\b(?:streamers?|transports?)\b[^.?!]{0,40}?\bfor\s+/i, 'streamer'],
+];
+
 const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
+  // ── IEM / in-ear vocabulary is headphone territory (REC-1, 2026-08-12).
+  // Listed FIRST: "in-ear monitors" contains "monitors", which four
+  // speaker-keyword sites treat as loudspeakers — the founder-observed
+  // failure returned Harbeth/DeVore loudspeaker cards for an explicit
+  // in-ear monitor request. The qualified form always wins.
+  [/\biems?\b(?!\s*(?:amp|amplifier|dac))|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b(?!\s*(?:amp|amplifier))/i, 'headphone'],
   // ── Leading-negation: "not speakers, amps" — the POST-negation word wins.
   // Listed first so it outranks a bare "speakers" that appears before "amps".
   [/\bnot\s+(?:an?\s+)?speakers?\b.{0,30}\b(?:amps?|amplifiers?|integrated)\b/i, 'amplifier'],
@@ -505,6 +580,8 @@ const CATEGORY_PRIORITY_PATTERNS: Array<[RegExp, ShoppingCategory]> = [
   [/\b(?:amps?|amplifiers?)\s+not\s+(?:an?\s+)?(?:speaker|dac|headphone|streamer|turntable)/i, 'amplifier'],
   [/\bdacs?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|headphone|streamer|turntable)/i, 'dac'],
   [/\bheadphones?\s+not\s+(?:an?\s+)?(?:amp|amplifier|speaker|dac|streamer|turntable)/i, 'headphone'],
+
+  ...HEAD_NOUN_BEFORE_FOR,
 
   // ── "for <category>": "for speakers" / "for the amp" / "for a new dac"
   [/\bfor\s+(?:an?\s+|the\s+|some\s+|my\s+|a\s+new\s+)?speakers?\b/i, 'speaker'],
@@ -640,6 +717,21 @@ const BUILD_KEYWORDS = [
 
 // ── Budget detection ──────────────────────────────────
 
+/**
+ * Lifestyle/consumer speaker phrasings the component-hi-fi catalog does
+ * not cover (GTM Bug 1). Shared with detectIntent so both the shopping
+ * gate and the intent router see the same definition: shopping declines
+ * these, intent routes them to the knowledge lane for a natural answer.
+ */
+export const LIFESTYLE_SPEAKER_PATTERN =
+  // Launch gate 2026-07-19: extended beyond Bluetooth speakers to every
+  // query class the component-hi-fi catalog cannot serve — activity
+  // headphones (gym/running), all-in-one record players, and phono
+  // stages (no phono category exists). Shopping declines these; the
+  // knowledge lane answers them honestly (a $6,000 open-back planar for
+  // the gym is the exact trust-destroyer this pattern prevents).
+  /\b(?:bluetooth|portable|smart|party)\s+speakers?\b|\bspeakers?\s+with\s+bluetooth\b|\b(?:sonos|jbl\s+(?:charge|flip|xtreme)|ue\s+boom)\b|\b(?:headphones?|earbuds?|iems?)\s+for\s+(?:the\s+)?(?:gym|running|jogging|work(?:ing)?[\s-]?outs?|exercise|commut\w+)\b|\b(?:gym|running|workout)\s+(?:headphones?|earbuds?)\b|\b(?:record\s+players?|turntables?)\s+with\s+built[\s-]?in\s+speakers?\b|\ball[\s-]?in[\s-]?one\s+(?:record\s+player|turntable)\b|\bphono\s+(?:pre[\s-]?amp(?:lifier)?|stage|pre)\b/i;
+
 const BUDGET_PATTERNS = [
   /\$\s?\d/,
   /\d+\s*dollars/i,
@@ -721,6 +813,43 @@ const TOPOLOGY_ALIASES: Record<string, string[]> = {
 };
 
 /** Extract hard constraints from accumulated user text. */
+/** Lazily built lowercase brand vocabulary from the product catalogs
+ *  (M5-F3). Multi-word brands contribute their full name; matching is
+ *  word-bounded and plural-tolerant at the call site. */
+let KNOWN_BRAND_WORDS: string[] | null = null;
+function getKnownBrandWords(): string[] {
+  if (KNOWN_BRAND_WORDS === null) {
+    const set = new Set<string>();
+    for (const p of [...DAC_PRODUCTS, ...SPEAKER_PRODUCTS, ...AMPLIFIER_PRODUCTS]) {
+      set.add(p.brand.toLowerCase());
+    }
+    KNOWN_BRAND_WORDS = [...set];
+  }
+  return KNOWN_BRAND_WORDS;
+}
+
+/**
+ * Detect brand exclusions in user text (M5-F3, 2026-08-11): "not the
+ * wharfedales", "no klipsch please", "anything but focal", "avoid
+ * harbeth". Matched against catalog brand names, word-bounded and
+ * plural-tolerant ("the wharfedales" excludes Wharfedale). A brand
+ * named WITHOUT an exclusion verb is never excluded (control-pinned).
+ * Shared by extractHardConstraints (filtering) and detectIntent
+ * (routing) so the two layers always agree.
+ */
+export function extractBrandExclusions(text: string): string[] {
+  const lower = text.toLowerCase();
+  const excluded: string[] = [];
+  for (const brand of getKnownBrandWords()) {
+    const re = new RegExp(
+      String.raw`\b(?:no|not|don'?t\s+want|without|exclude|avoid|skip|anything\s+but|besides|other\s+than)\s+(?:the\s+)?${brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:e?s)?\b`,
+      'i',
+    );
+    if (re.test(lower) && !excluded.includes(brand)) excluded.push(brand);
+  }
+  return excluded;
+}
+
 function extractHardConstraints(text: string): HardConstraints {
   const lower = text.toLowerCase();
   const excludeTopologies: string[] = [];
@@ -738,6 +867,10 @@ function extractHardConstraints(text: string): HardConstraints {
       }
     }
   }
+
+  // ── Brand exclusions (M5-F3, 2026-08-11): "not the wharfedales",
+  // "no klipsch please", "anything but focal", "avoid harbeth".
+  const excludeBrands = extractBrandExclusions(lower);
 
   // ── Requirement patterns: "class ab amps", "in class ab", "only class ab"
   const requireRe = /\b(?:in|only|just|strictly|specifically)\s+(?:class[\s-]?(?:a\b(?![\s/]*b)|ab|a\s*\/\s*b|d)|tube[s]?|solid[\s-]?state|hybrid)/gi;
@@ -802,7 +935,7 @@ function extractHardConstraints(text: string): HardConstraints {
     || /\bdac\s+with\s+(?:a\s+)?(?:tube|valve)\s+(?:output|stage|buffer)\b/i.test(lower)
     || /\btube[-\s]?output\s+dac\b/i.test(lower);
 
-  return { excludeTopologies, requireTopologies, newOnly, usedOnly, requireDacTubeStage };
+  return { excludeTopologies, requireTopologies, newOnly, usedOnly, requireDacTubeStage, excludeBrands };
 }
 
 // ── Semantic preference extraction ──────────────────────
@@ -1103,7 +1236,7 @@ const LIMITING_KEYWORDS = [
 
 const BUDGET_AMOUNT_PATTERNS = [
   /\$\s?(\d{1,6}(?:,\d{3})*)/,                      // $1000 or $1,500
-  /(\d{1,6}(?:,\d{3})*)\s*dollars/i,                 // 1000 dollars
+  /(\d{1,6}(?:,\d{3})*)\s*(?:dollars|bucks)\b/i,     // 1000 dollars, 800 bucks
   /budget\s*(?:of|around|is|=|:)?\s*\$?(\d{1,6}(?:,\d{3})*)/i,  // budget is 2000, budget: 2000, budget of 1500
   /under\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /up\s+to\s+\$?(\d{1,6}(?:,\d{3})*)/i,
@@ -1112,12 +1245,83 @@ const BUDGET_AMOUNT_PATTERNS = [
   /i\s+have\s+\$?(\d{1,6}(?:,\d{3})*)/i,
   /(\d{1,6}(?:,\d{3})*)\s+total\b/i,                // 2000 total
   /limit\s+(?:of\s+)?\$?(\d{1,6}(?:,\d{3})*)/i,    // limit of 2000
+  // Colloquial ceilings (Mission 3, 2026-08-10) — measured misses:
+  /\babout\s+\$?(\d{1,6}(?:,\d{3})*)\b/i,           // about 2500
+  /\bno\s+more\s+than\s+\$?(\d{1,6}(?:,\d{3})*)\b/i, // no more than 1200
+  /\b(\d{1,6}(?:,\d{3})*)\s*(?:max|tops)\b/i,        // 2000 max
+  // Bare number after "for" — 3+ digits (or comma form) so "for 2"
+  // channel/room talk is never read as money.
+  /\bfor\s+\$?(\d{1,3}(?:,\d{3})+|\d{3,6})\b/i,      // for 2000, for 2,000
+  // Budget-revision verbs (D2, 2026-08-11) — "make it 2500",
+  // "change it to 3000". 3+ digits so "make it 2" is never money.
+  /\b(?:make\s+it|change\s+(?:it\s+)?to|bump\s+(?:it\s+)?(?:up\s+)?to|raise\s+(?:it\s+)?to|drop\s+(?:it\s+)?to|let'?s\s+say)\s+\$?(\d{1,3}(?:,\d{3})+|\d{3,6})\b/i,
 ];
+
+// Spelled-out amounts — "two grand", "a grand", "2 grand", "two thousand".
+// Normalized to "$N" BEFORE pattern scanning so every downstream pattern
+// (under/around/for/max…) composes with them. "grand piano" is an
+// instrument, not a budget.
+const SPELLED_SMALL_NUMBERS: Record<string, number> = {
+  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+  // Teens carry "N hundred" phrasings — "fifteen hundred" (D2, 2026-08-11).
+  eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+};
+function normalizeSpelledAmounts(text: string): string {
+  return text
+    .replace(
+      /\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d{1,2}(?:\.\d{1,2})?)\s+grand\b(?!\s+piano)/gi,
+      (_m, n: string) => {
+        const base = SPELLED_SMALL_NUMBERS[n.toLowerCase()] ?? parseFloat(n);
+        return isNaN(base) ? _m : `$${Math.round(base * 1000)}`;
+      },
+    )
+    .replace(
+      /\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+thousand\b/gi,
+      (_m, n: string) => `$${SPELLED_SMALL_NUMBERS[n.toLowerCase()]! * 1000}`,
+    )
+    // "fifteen hundred" / "twelve hundred" → $1500 / $1200 (D2).
+    .replace(
+      /\b(eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|two|three|four|five|six|seven|eight|nine)\s+hundred\b/gi,
+      (_m, n: string) => `$${SPELLED_SMALL_NUMBERS[n.toLowerCase()]! * 100}`,
+    );
+}
+
+/**
+ * Does any subject name reference a product from the given recommendation
+ * list? (D9, 2026-08-11.) Used by the page's shopping-refinement lock: a
+ * product question mid-shopping stays a refinement only when it names a
+ * product the shopping answer actually showed ("thoughts on the chord
+ * qutest" after the Qutest card). A novel external product ("have you
+ * heard anything about the aiyima a07?") is a genuine product question
+ * and must break out — the explicit-subject-wins principle.
+ *
+ * Matching is case-insensitive containment in either direction, so
+ * "qutest" matches "Chord Qutest" and "denafrips" matches
+ * "Denafrips Ares 15th".
+ */
+export function mentionsRecommendedProduct(
+  subjectNames: string[],
+  recentProductNames: string[],
+): boolean {
+  if (subjectNames.length === 0 || recentProductNames.length === 0) return false;
+  const recent = recentProductNames.map((n) => n.toLowerCase());
+  return subjectNames.some((raw) => {
+    const s = raw.toLowerCase().trim();
+    if (s.length < 3) return false;
+    return recent.some((r) => r.includes(s) || s.includes(r));
+  });
+}
 
 // "k" suffix patterns — "$5k", "5k", "$2.5k", "2.5k dollars" etc.
 // Handled separately because the multiplier needs special treatment in parseBudgetAmount.
 const K_SUFFIX_PATTERN = /\$\s?(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
-const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
+// Anchors include budget-REVISION verbs ("make it 3k", "change it to 2k",
+// "let's say 3k") — D2 2026-08-11: the retraction turn "actually make it 3k"
+// parsed no amount, so the shopping machine re-asked the budget the user
+// had just stated.
+const K_SUFFIX_PATTERN_NO_DOLLAR = /(?:under|around|about|for|up\s+to|budget\s+(?:of\s+|around\s+|is\s+|=\s*|:\s*)?|spend|limit\s+(?:of\s+)?|make\s+it|change\s+(?:it\s+)?to|bump\s+(?:it\s+)?(?:up\s+)?to|raise\s+(?:it\s+)?to|drop\s+(?:it\s+)?to|let'?s\s+say|say)\s*(\d{1,4}(?:\.\d{1,2})?)\s*k\b/gi;
 
 /**
  * Extract the most recent numeric budget amount from user text.
@@ -1156,11 +1360,13 @@ export function parseBudgetFloor(text: string): number | null {
   }
 
   // "over $X" / "above $X" / "more than $X" / "north of $X" / "starting at $X"
+  // "NO more than $X" is a ceiling, not a floor — strip it before scanning.
+  const floorText = text.replace(/\bno\s+more\s+than\s+\$?\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\b/gi, '');
   const overPatterns: RegExp[] = [
     /(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
   ];
   for (const re of overPatterns) {
-    const m = text.match(re);
+    const m = floorText.match(re);
     if (m) {
       const v = toAmount(m[1]);
       if (v !== null) return v;
@@ -1185,6 +1391,10 @@ function parseRangeUpper(text: string): number | null {
   const rangePatterns: RegExp[] = [
     /between\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s+(?:and|to|-|–|—)\s+\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
     /\$\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)\s*(?:to|-|–|—)\s*\$?\s?(\d[\d,]*(?:\.\d{1,2})?\s*k?)/i,
+    // Dollar-less range — "1500 to 2000 range" (Mission 3, 2026-08-10).
+    // Each side must be a k-suffixed number or 3+ digits, and the range
+    // must not be a spec ("100 to 200 watts" is power, not money).
+    /\b(\d{1,2}(?:\.\d{1,2})?\s*k|\d{1,3}(?:,\d{3})+|\d{3,6})\s*(?:to|-|–|—)\s*(\d{1,2}(?:\.\d{1,2})?\s*k|\d{1,3}(?:,\d{3})+|\d{3,6})(?!\s*(?:watts?|wpc|hz|khz|ohms?|hours?|days?|years?|%))/i,
   ];
   for (const re of rangePatterns) {
     const m = text.match(re);
@@ -1197,11 +1407,50 @@ function parseRangeUpper(text: string): number | null {
   return null;
 }
 
+/**
+ * Floor below which a parsed "budget" is treated as a malformed parse rather
+ * than a real constraint. Lowered from $50 to $10 on 2026-08-13: the original
+ * comment read "No hi-fi budget is under $50", which was true when the
+ * catalogue started at $80 — but entry-tier IEMs now start at $19, and a $25
+ * IEM budget is an ordinary request. It was silently dropped, so "IEMs under
+ * $25" returned the $1,799 flagship. $10 still rejects the junk the guard was
+ * written for ($0 from "0k", $1 from "$1e9"); anything real below catalogue
+ * coverage is answered by the coverage-gap note instead of being ignored.
+ */
+const MIN_PLAUSIBLE_BUDGET = 10;
+
 export function parseBudgetAmount(text: string): number | null {
+  // Spelled amounts first, so "two grand" composes with every pattern below.
+  text = normalizeSpelledAmounts(text);
+
+  // Whole-message bare amount (D2, 2026-08-11): a message that IS an
+  // amount — "3k", "$3k", "2.5k", "3000" — is a budget answer. This is
+  // the canonical reply to "what's your budget?" and previously parsed
+  // null, looping the question. Requires the full trimmed message to be
+  // only the amount, so model numbers inside prose never trip it.
+  const minPlausible = (n: number): number | null => (n < MIN_PLAUSIBLE_BUDGET ? null : n);
+  const whole = text.trim().match(/^\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*k[\s?.!]*$/i);
+  if (whole) return minPlausible(Math.round(parseFloat(whole[1]) * 1000));
+  const wholeNum = text.trim().match(/^\$?\s?(\d{1,3}(?:,\d{3})+|\d{3,6})[\s?.!]*$/);
+  if (wholeNum) return minPlausible(parseInt(wholeNum[1].replace(/,/g, ''), 10));
+
+  // "<amount> budget" — "a 5000 budget", "5k budget", "2000 budget".
+  // Founder-reported 2026-08-13: "help me find a system with a 5000 budget"
+  // parsed to NO budget at all, so nothing constrained the answer. The
+  // dollar-prefixed form ("$5000 budget") already worked; the bare number
+  // before the word "budget" did not.
+  const budgetSuffix = text.match(/(?:^|\s)\$?\s?(\d{1,3}(?:,\d{3})+|\d{1,6})(?:\.\d{1,2})?\s*(k)?\s*(?:dollar|usd|euro|eur|pound|gbp)?\s*budget\b/i);
+  if (budgetSuffix) {
+    const n = parseFloat(budgetSuffix[1].replace(/,/g, ''));
+    return minPlausible(budgetSuffix[2] ? Math.round(n * 1000) : Math.round(n));
+  }
+
   // "over $X" / "above $X" / "more than $X" → no upper cap.
   // We must check this BEFORE the generic numeric scan, otherwise the dollar
   // amount in "over $10000" gets picked up as a ceiling.
-  if (/\b(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?\d/i.test(text)) {
+  // "NO more than $X" is the opposite — a ceiling — and must not trip this.
+  if (/\b(?:over|above|more\s+than|greater\s+than|north\s+of|starting\s+at|at\s+least|minimum\s+(?:of\s+)?)\s*\$?\s?\d/i.test(text)
+    && !/\bno\s+more\s+than\b/i.test(text)) {
     // If it's *also* a range ("between $X and over $Y"), fall through to range handling.
     // Otherwise return null — the floor lives in parseBudgetFloor.
     if (!/between\s+\$?\d/i.test(text) && !/\$\s?\d[\d,]*(?:\.\d{1,2})?\s*k?\s*(?:to|-|–|—)\s*\$?\s?\d/i.test(text)) {
@@ -1213,7 +1462,14 @@ export function parseBudgetAmount(text: string): number | null {
   const rangeUpper = parseRangeUpper(text);
   if (rangeUpper !== null) return rangeUpper;
 
+  // "Last mention wins" is POSITION-based (D2, 2026-08-11): the amount
+  // appearing latest in the text is the user's most recent statement.
+  // The previous implementation kept the last match of the last PATTERN,
+  // so "under $1000, actually make it $500" resolved to 1000 — the
+  // pattern iteration order overrode the revision. Track the match
+  // position and keep the amount from the greatest one.
   let lastAmount: number | null = null;
+  let lastPos = -1;
 
   // 1. Check "k" suffix patterns first — "$5k" → 5000, "$2.5k" → 2500
   for (const kPattern of [K_SUFFIX_PATTERN, K_SUFFIX_PATTERN_NO_DOLLAR]) {
@@ -1221,8 +1477,9 @@ export function parseBudgetAmount(text: string): number | null {
     let match: RegExpExecArray | null;
     while ((match = kPattern.exec(text)) !== null) {
       const parsed = parseFloat(match[1]);
-      if (!isNaN(parsed)) {
+      if (!isNaN(parsed) && match.index >= lastPos) {
         lastAmount = Math.round(parsed * 1000);
+        lastPos = match.index;
       }
     }
   }
@@ -1233,8 +1490,9 @@ export function parseBudgetAmount(text: string): number | null {
     let match: RegExpExecArray | null;
     while ((match = globalPattern.exec(text)) !== null) {
       const parsed = parseInt(match[1].replace(/,/g, ''), 10);
-      if (!isNaN(parsed)) {
+      if (!isNaN(parsed) && match.index > lastPos) {
         lastAmount = parsed;
+        lastPos = match.index;
       }
     }
   }
@@ -1251,6 +1509,12 @@ export function parseBudgetAmount(text: string): number | null {
       if (kAmount >= 100) lastAmount = kAmount;
     }
   }
+
+  // Minimum-plausibility guard (M5 failure injection, 2026-08-11):
+  // malformed inputs parsed to nonsense budgets — "0k" → $0, "$1e9" → $1
+  // (the exponent read as prose). The guard exists to reject junk, not
+  // small budgets.
+  if (lastAmount !== null && lastAmount < MIN_PLAUSIBLE_BUDGET) return null;
 
   return lastAmount;
 }
@@ -1463,6 +1727,24 @@ function detectTurntableDependencies(text: string): CategoryDependency[] {
 
 // ── Detection ─────────────────────────────────────────
 
+/**
+ * Does `longer` carry a model designation that `shorter` does not?
+ *
+ * Variant names differ from their base by a designator with a recognisable
+ * shape: roman numerals (II, III), mk-suffixes (MkII, mk3), bare numbers (2),
+ * or short alphanumerics (TT2, D90). Ordinary words — "dac", "chord",
+ * "amplifier" — are not designators, so phrasing noise still matches.
+ */
+const MODEL_DESIGNATOR = /^(?:[ivx]+|mk\s*[\divx]*|\d+[a-z]*|[a-z]{1,3}\d+[a-z]*)$/i;
+
+export function hasExtraModelToken(longer: string, shorter: string): boolean {
+  const shorterTokens = new Set(shorter.split(/\s+/).filter(Boolean));
+  return longer
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((token) => !shorterTokens.has(token) && MODEL_DESIGNATOR.test(token));
+}
+
 export function detectShoppingIntent(
   userText: string,
   signals: ExtractedSignals,
@@ -1477,6 +1759,33 @@ export function detectShoppingIntent(
   fallbackCategory?: ShoppingCategory,
 ): ShoppingContext {
   const lower = userText.toLowerCase();
+
+  // 0. Lifestyle-speaker guard (GTM Bug 1, 2026-07-05). "what's the best
+  //    bluetooth speaker?" matched the generic speaker category and was
+  //    answered with passive hi-fi floorstanders (DeVore O/96) — the
+  //    catalog contains no Bluetooth/portable/smart speakers at all.
+  //    These queries must not enter the shopping lane; detectIntent
+  //    routes the same phrasings to the knowledge lane, which answers
+  //    the consumer question honestly and naturally.
+  if (LIFESTYLE_SPEAKER_PATTERN.test(userText)) {
+    return {
+      detected: false,
+      mode: 'specific-component',
+      category: 'general',
+      budgetMentioned: false,
+      budgetAmount: null,
+      tasteProvided: false,
+      systemProvided: false,
+      systemProfile: DEFAULT_SYSTEM_PROFILE,
+      useCaseProvided: false,
+      preserveProvided: false,
+      limitingProvided: false,
+      dependencies: [],
+      roomContext: null,
+      constraints: { excludeTopologies: [], requireTopologies: [], newOnly: false, usedOnly: false },
+      semanticPreferences: { weights: [], wantsBigScale: false, wantsSmallScale: false, energyLevel: null, musicHints: [], specialistHints: [] },
+    };
+  }
 
   // 1. Intent
   // INTENT_KEYWORDS uses string matching which requires '$' in budget phrases.
@@ -1513,6 +1822,8 @@ export function detectShoppingIntent(
   // Cable modifiers must be detected first to prevent "speaker cable"
   // from matching the 'speaker' keyword in CATEGORY_PATTERNS.
   let category: ShoppingCategory = 'general';
+  let requestedCategory: ShoppingCategory | undefined;
+  let statedPreferences: DesireSignal[] | undefined;
   let subcategory: ShoppingSubcategory = undefined;
   const isCableRequest = CABLE_MODIFIER_PATTERNS.some((p) => p.test(userText));
   if (isCableRequest) {
@@ -1550,6 +1861,58 @@ export function detectShoppingIntent(
         }
       }
     }
+    // TYPED IMMUTABLE CONSTRAINT: an explicit product-class REQUEST in the
+    // CURRENT message must win over any carried-forward fallback/lock. Scoped
+    // narrowly to avoid re-introducing the stale-keyword bug the lock prevents:
+    //   - only the current `latestMessage` (never accumulated allUserText);
+    //   - only request-shaped phrasing ("recommend/suggest/looking for/other/
+    //     another/which/what … <category>"), NOT an incidental mention
+    //     ("the turntable sounds bright") — that stays suppressed by the lock.
+    // Fixes: "what other streamers would you recommend?" was force-relabelled to
+    // a stale 'dac' lock because noun-first requests aren't caught as switches.
+    if (latestMessage) {
+      const utter = latestMessage.toLowerCase();
+      const isRequest = /\b(recommend|recommendation|suggest|suggestion|looking for|other|another|more|which|what|any|options?|alternatives?)\b/.test(utter);
+      if (isRequest) {
+        // Qualified-compound disambiguation FIRST (REC-1, 2026-08-12):
+        // "in-ear monitors" contains 'monitors', which the plain keyword
+        // scan below reads as loudspeakers — the founder-observed failure.
+        // ONLY the IEM compound is consulted here; broader priority
+        // patterns ("for my headphones") must NOT outrank the request
+        // head noun (golden gate X1: "recommend a DAC for my headphones"
+        // is a DAC request).
+        const iemCompound = /\biems?\b(?!\s*(?:amp|amplifier|dac))|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b(?!\s*(?:amp|amplifier))/i.test(utter);
+        if (iemCompound) {
+          requestedCategory = 'headphone';
+        } else if (HEAD_NOUN_BEFORE_FOR.some(([re]) => re.test(utter))) {
+          // Resolves documented limitation G3: the request head noun before
+          // "for" outranks a partner category named after it.
+          requestedCategory = HEAD_NOUN_BEFORE_FOR.find(([re]) => re.test(utter))![1];
+        } else {
+        // Mirror the base detector's CATEGORY_PATTERNS scan order so an explicit
+        // request resolves to the SAME class the detector would pick — this
+        // order encodes head-final compound knowledge ("headphone amp" is an
+        // amplifier, not headphones). KNOWN LIMITATION (backlog, G3): a category
+        // named in a SEPARATE trailing clause ("...to feed my DAC") is not
+        // distinguished from the request head noun; see routing-doctrine.md.
+        for (const pat of CATEGORY_PATTERNS) {
+          if (pat._patterns.some((re) => re.test(utter))) { requestedCategory = pat.category; break; }
+        }
+        }
+      }
+      if (requestedCategory) category = requestedCategory;
+    }
+
+    // LISTEN FIRST: capture sonic preferences stated in the CURRENT message.
+    // extractDesires is deterministic and in-process, so this survives the
+    // /api/evaluate fallback that empties ExtractedSignals — the production
+    // failure where "I like a warm, full-bodied sound" was simultaneously
+    // acknowledged and reported missing.
+    {
+      const desires = extractDesires(latestMessage ?? userText);
+      if (desires.length > 0) statedPreferences = desires;
+    }
+
     // Fall back: prefer carried-forward category over scanning allUserText.
     // This prevents stale category keywords in historical messages from
     // overriding the user's active category (e.g. user discussed DACs
@@ -1633,6 +1996,20 @@ export function detectShoppingIntent(
   const budgetMentioned = BUDGET_PATTERNS.some((re) => re.test(userText));
   const budgetAmount = parseBudgetAmount(userText);
   const budgetFloor = parseBudgetFloor(userText);
+  const budgetConscious = budgetAmount === null
+    && /\b(?:wo?n'?t\s+(?:blow\s+up|break|bust)\s+(?:the|my)\s+(?:budget|bank)|break(?:ing)?\s+the\s+bank|affordable|budget[-\s]friendly|on\s+a\s+(?:tight\s+)?budget|budget\s+(?:\w+\s+){0,2}?(?:dacs?|amps?|amplifiers?|speakers?|headphones?|iems?|earphones?|earbuds?|turntables?|streamers?|cans)\b|not\s+(?:too|super|crazy|very)\s+expensive|inexpensive|cheap(?:er|ish)?|reasonably\s+priced|entry[-\s]level|wo?n'?t\s+cost\s+a\s+fortune|without\s+spending\s+a\s+fortune|bargains?|good\s+deals?|best\s+deals?)\b/i.test(userText);
+  // Prestige cue — the user explicitly asked for cost-no-object gear.
+  // Lifts the cold-query mainstream ceiling in product selection.
+  const prestigeIntent =
+    /\bhigh[\s-]?end\b|\breference\b|\bstatement\b|\bflagship\b|\bendgame\b|\bsummit[\s-]?fi\b|cost\s+(?:is\s+)?no\s+object|money'?s?\s+no\s+object|\bbest\s+regardless\b|\bno\s+budget\s+limit\b/i.test(userText);
+  // Low-sensitivity/planar partner named in an amplifier search — SET and
+  // low-watt amps are physically wrong for these loads (launch gate).
+  const lowSensitivityPartner =
+    /\bmagnepans?\b|\bmaggies\b|\blrs\+?\b|\bplanar\s+speakers?\b|\bls\s?50s?\b/i.test(userText);
+  // Explicit IEM / in-ear request (REC-1, 2026-08-12): constrains
+  // headphone selection to the IEM form factor.
+  const iemRequested =
+    /\biems?\b|\bin[- ]?ear\s+monitors?\b|\bin[- ]?ears\b|\bearbuds?\b|\bearphones?\b/i.test(userText);
   const tasteProvided = signals.symptoms.length >= 2;
   const hasActiveSystem = Array.isArray(activeSystemComponents) && activeSystemComponents.length > 0;
   const systemProvided = hasActiveSystem || SYSTEM_KEYWORDS.some((kw) => lower.includes(kw));
@@ -1665,11 +2042,17 @@ export function detectShoppingIntent(
     detected,
     mode,
     category,
+    requestedCategory,
+    statedPreferences,
     subcategory,
     secondaryCategory,
     budgetMentioned: budgetMentioned || budgetFloor !== null,
     budgetAmount,
     budgetFloor,
+    budgetConscious,
+    prestigeIntent,
+    lowSensitivityPartner,
+    iemRequested,
     tasteProvided,
     systemProvided,
     systemProfile,
@@ -2032,7 +2415,10 @@ export function getStatedGaps(
 ): GapDimension[] {
   const gaps: GapDimension[] = [];
 
-  if (!isTasteSufficient(signals)) gaps.push('taste');
+  // LISTEN FIRST: a preference stated in the current message IS taste —
+  // never report "missing: sonic preferences" (or ask the taste question)
+  // after the user just told us what they like.
+  if (!isTasteSufficient(signals) && !(ctx.statedPreferences?.length)) gaps.push('taste');
   // Build-a-system users have no existing system — asking for one is wrong.
   // Only flag system as a gap when the user actually indicated they have one.
   // Fresh shopping inputs ("I want speakers") should not be asked about their system.
@@ -2097,6 +2483,11 @@ export interface ProductExample {
   id?: string;
   name: string;
   brand: string;
+  /** Form factor / feature tag ("IEM", "over-ear, wireless"). Rendered as a
+   *  chip beside the name — never concatenated INTO the name, which made the
+   *  product read as machine output ("Aria 2 [IEM]") and broke catalog
+   *  lookups downstream (founder-reported, 2026-08-13). */
+  formFactorLabel?: string;
   price: number;
   /** ISO 4217 currency code. Defaults to 'USD' when omitted. */
   priceCurrency?: string;
@@ -2291,6 +2682,11 @@ export interface ShoppingAnswer {
   productExamples: ProductExample[];
   watchFor: string[];
   systemNote?: string;
+  /** Set when the category is servable but the catalogue has nothing inside
+   *  the stated budget. The answer carries an explicit explanation in
+   *  `systemNote`, so callers must NOT treat the empty product list as an
+   *  empty shell to be replaced by a generative fallback. */
+  coverageGap?: { category: string; budget: number; catalogueFloor?: number };
   /** True when the recommendation is based on incomplete context — refinable. */
   provisional?: boolean;
   /** Which context dimensions are missing — shown as caveats on provisional answers. */
@@ -2578,13 +2974,174 @@ import type { Product } from './products/dacs';
 import { SPEAKER_PRODUCTS } from './products/speakers';
 import { AMPLIFIER_PRODUCTS } from './products/amplifiers';
 import { HEADPHONE_PRODUCTS, type HeadphoneProduct } from './products/headphones';
+import { getEbaySearchUrl } from './ebay-links';
 import { selectTurntableExamples } from './products/turntables';
 import { rankProducts, type ScoredProduct, AMPLIFIER_ARCHITECTURE_TENDENCIES, type ArchitectureTendency } from './product-scoring';
+import { hasFamilyImagery } from './product-images';
 import type { ListenerProfile } from './listener-profile';
 import { findCatalogProduct, resolveProductAlias } from './listener-profile';
 import { tagProductArchetype } from './archetype';
 import { topTraits, type TasteProfile as UserTasteProfile, type ProfileTraitKey } from './taste-profile';
 import type { ReasoningResult } from './reasoning';
+
+// ── Final answer validator (fail-closed licensed-category gate) ──────────
+//
+// The routing layer resolves the licensed category BEFORE an answer is built
+// (see `requestedCategory` in detectShoppingIntent + the page category-lock).
+// This validator is the LAST line of defense: a pure, deterministic check that
+// the composed answer actually conforms to the class the user is entitled to.
+// It fails closed — the caller must NOT render an answer with any hard
+// violation; it withholds and re-routes instead of emitting a mis-directed one.
+//
+// Founder invariant (streamer→DAC production failure): "When the user
+// explicitly requests a product class, that class is a typed, immutable
+// constraint. Every educational block and recommendation must conform to it."
+
+/** Map a catalog Product.category to the top-level ShoppingCategory it belongs
+ *  to. Returns null when the mapping is ambiguous/curated (e.g. 'other') so the
+ *  validator SKIPS it rather than raising a false violation. */
+function catalogCategoryToShopping(cat: string | undefined): ShoppingCategory | null {
+  if (!cat) return null;
+  switch (cat) {
+    case 'dac':
+    case 'standalone-dac':
+    case 'portable-dac':
+    case 'dac-amp':
+    case 'dac-preamp':
+      return 'dac';
+    case 'amplifier':
+    case 'integrated-amp':
+    case 'power-amp':
+    case 'preamp':
+      return 'amplifier';
+    case 'speaker':
+    case 'floorstanding':
+    case 'standmount':
+    case 'bookshelf':
+      return 'speaker';
+    case 'headphone':
+    case 'headphone-amp':
+    case 'iem':
+      return 'headphone';
+    case 'streamer':
+    case 'transport':
+    case 'network-player':
+      return 'streamer';
+    case 'turntable':
+    case 'cartridge':
+    case 'phono':
+      return 'turntable';
+    default:
+      return null; // 'other' / unknown — not verifiable, do not flag
+  }
+}
+
+export type ShoppingViolationCode =
+  | 'category-mismatch' // resolved category != explicitly licensed category
+  | 'preamble-mismatch' // educational preamble label != resolved category
+  | 'product-out-of-class' // a recommended product is a different class
+  | 'system-component-dropped'; // active system entirely unacknowledged
+
+export interface ShoppingAnswerValidation {
+  ok: boolean;
+  /** Violations that MUST prevent rendering the answer as-is (fail closed). */
+  hard: Array<{ code: ShoppingViolationCode; detail: string }>;
+  /** Advisory-quality issues — logged, but not a reason to withhold. */
+  soft: Array<{ code: ShoppingViolationCode; detail: string }>;
+  /** Product examples with any out-of-class member removed. When this is empty
+   *  but the input had products, the whole answer must be withheld. */
+  conformingProducts: ProductExample[];
+}
+
+/**
+ * Validate a composed shopping answer against the licensed category.
+ * Pure and deterministic — safe to unit-test and to call on the render path.
+ */
+export function validateShoppingAnswer(
+  ctx: ShoppingContext,
+  answer: ShoppingAnswer,
+  activeSystemComponents: string[] = [],
+): ShoppingAnswerValidation {
+  const hard: ShoppingAnswerValidation['hard'] = [];
+  const soft: ShoppingAnswerValidation['soft'] = [];
+
+  // The licensed class is the explicitly-requested category when the user named
+  // one this turn; otherwise the resolved category carries the constraint.
+  const licensed = ctx.requestedCategory;
+  const enforced: ShoppingCategory = licensed ?? ctx.category;
+
+  // (A) Licensed-class coherence: an explicit request MUST equal the resolved
+  //     category. If they diverge, retrieval + education were built for the
+  //     wrong class — the exact streamer→DAC failure. Fail closed.
+  if (licensed && ctx.category !== licensed) {
+    hard.push({
+      code: 'category-mismatch',
+      detail: `licensed=${licensed} but resolved category=${ctx.category}`,
+    });
+  }
+
+  // (B) Educational preamble label must match the resolved category. The
+  //     preamble is keyed off ctx.category via CATEGORY_LABELS, so a mismatch
+  //     means the composed answer's own category field drifted. Fail closed.
+  const expectedLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
+  if (answer.category !== expectedLabel) {
+    hard.push({
+      code: 'preamble-mismatch',
+      detail: `answer.category="${answer.category}" expected="${expectedLabel}"`,
+    });
+  }
+
+  // (C) Every recommended product must belong to the enforced class. Products
+  //     whose catalog class is unverifiable (curated lists, 'other') are left
+  //     untouched — we only remove genuine cross-class members.
+  const conformingProducts: ProductExample[] = [];
+  if (enforced !== 'general') {
+    for (const p of answer.productExamples ?? []) {
+      const hit =
+        findCatalogProduct(p.id ?? p.name) ??
+        findCatalogProduct(`${p.brand} ${p.name}`) ??
+        findCatalogProduct(p.name);
+      const pClass = catalogCategoryToShopping((hit as { category?: string } | null)?.category);
+      if (pClass && pClass !== enforced) {
+        hard.push({
+          code: 'product-out-of-class',
+          detail: `${p.brand} ${p.name} is ${pClass}, licensed ${enforced}`,
+        });
+        continue; // drop the offender from the conforming set
+      }
+      conformingProducts.push(p);
+    }
+  } else {
+    conformingProducts.push(...(answer.productExamples ?? []));
+  }
+
+  // (D) Active-system component silently dropped. Narrow, log-only (soft): only
+  //     when an explicit multi-component system exists AND not a single one of
+  //     its components is acknowledged anywhere in the answer prose. This is an
+  //     advisory-quality signal, not a class violation — never withhold on it.
+  if (activeSystemComponents.length >= 2) {
+    const haystack = [
+      answer.systemNote ?? '',
+      answer.bestFitDirection ?? '',
+      ...(answer.whyThisFits ?? []),
+      ...(answer.productExamples ?? []).map((p) => `${p.brand} ${p.name} ${p.fitNote ?? ''}`),
+    ]
+      .join(' ')
+      .toLowerCase();
+    const anyAcknowledged = activeSystemComponents.some((c) => {
+      const token = c.trim().toLowerCase();
+      return token.length >= 3 && haystack.includes(token);
+    });
+    if (!anyAcknowledged) {
+      soft.push({
+        code: 'system-component-dropped',
+        detail: `active system [${activeSystemComponents.join(', ')}] unacknowledged in answer`,
+      });
+    }
+  }
+
+  return { ok: hard.length === 0, hard, soft, conformingProducts };
+}
 
 /**
  * Extract the key opening phrase from a tendency description.
@@ -2819,7 +3376,10 @@ const USED_MARKET_SITES: Array<{ name: string; baseUrl: string; region: 'global'
   { name: 'HiFi Shark', baseUrl: 'https://www.hifishark.com', region: 'global', buildSearch: (q) => `https://www.hifishark.com/search?q=${encodeURIComponent(q)}` },
   { name: 'Audiogon', baseUrl: 'https://www.audiogon.com', region: 'north-america', buildSearch: (q) => `https://www.audiogon.com/listings?query=${encodeURIComponent(q)}` },
   { name: 'US Audio Mart', baseUrl: 'https://www.usaudiomart.com', region: 'north-america', buildSearch: (q) => `https://www.usaudiomart.com/classifieds?query=${encodeURIComponent(q)}` },
-  { name: 'eBay', baseUrl: 'https://www.ebay.com', region: 'global', buildSearch: (q) => `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(q)}` },
+  // eBay host + EPN tagging come from ebay-links → affiliate-config
+  // (env-driven). baseUrl stays as a display string; the actual link
+  // host is whatever EBAY_HOST resolves to at request time.
+  { name: 'eBay', baseUrl: 'https://www.ebay.com', region: 'global', buildSearch: (q) => getEbaySearchUrl(q) },
 ];
 
 /**
@@ -2988,6 +3548,7 @@ function buildSystemDelta(
   // reviewer-voice form, no hedges ("may", "could"), no filler.
 
   let generalIdx = 0;
+  let deficitIdx = 0;
   for (const trait of productWeaknesses) {
     const label = TRAIT_LABELS[trait];
     if (!label) continue;
@@ -2998,9 +3559,18 @@ function buildSystemDelta(
       continue;
     }
 
-    // Product weakness in an area the system already lacks
+    // Product weakness in an area the system already lacks. Editorial voice,
+    // rotated so stacked cards don't repeat the same construction — the old
+    // single form ("leaves the X deficit in the surrounding setup untouched")
+    // read as engine vocabulary and appeared twice per card in production.
     if (systemChar.deficient.includes(trait)) {
-      tradeoffs.push(`leaves the ${label} deficit in the surrounding setup untouched`);
+      const deficitForms = [
+        `won't add the ${label} the rest of the system is missing`,
+        `the system's shortfall in ${label} stays as it is`,
+        `if you're hoping it fixes the system's ${label}, it won't`,
+      ];
+      tradeoffs.push(deficitForms[deficitIdx % deficitForms.length]);
+      deficitIdx++;
       continue;
     }
 
@@ -3047,15 +3617,34 @@ function buildSystemDelta(
     ? systemProfile.systemCharacter
     : undefined;
 
+  // Product Quality Phase 2: the posture sentence must answer "why THIS
+  // product in this system" — the old forms depended only on sysLabel, so
+  // every card in a shortlist carried the identical sentence (production
+  // observation). Each branch now leads with the product's own character;
+  // same-philosophy collisions are resolved by the shortlist-level de-dup
+  // pass in selectProductExamples. "Chain" → "system" (editorial rule).
+  const PHILOSOPHY_VOICE: Record<string, string> = {
+    warm: 'Its warm voicing',
+    analytical: 'Its precision-first voicing',
+    neutral: 'Its even-handed balance',
+    energy: 'Its energetic presentation',
+  };
+  const voice = PHILOSOPHY_VOICE[product.philosophy ?? ''];
   if (sysLabel && improvements.length > 0 && tradeoffs.length > 0) {
-    // Both sides of the ledger exist → frame as a balanced posture claim.
-    whyFitsSystem = `Pairs with a ${sysLabel}-leaning chain: the gains below land in areas the chain has room for, the trade-offs sit where the chain can absorb them.`;
+    // Both sides of the ledger exist → balanced posture, product-led.
+    whyFitsSystem = voice
+      ? `${voice} meets a ${sysLabel}-leaning system where it has room to move — the gains land in open territory, and the trade-offs fall where the system can carry them.`
+      : `In a ${sysLabel}-leaning system, the gains land in open territory and the trade-offs fall where the system can carry them.`;
   } else if (sysLabel && improvements.length > 0) {
-    // Gains only → frame as additive fit.
-    whyFitsSystem = `Slots into a ${sysLabel}-leaning chain without eroding what the chain already does well.`;
+    // Gains only → additive fit, product-led.
+    whyFitsSystem = voice
+      ? `${voice} adds to a ${sysLabel}-leaning system without unsettling what it already does well.`
+      : `Adds to a ${sysLabel}-leaning system without unsettling what it already does well.`;
   } else if (sysLabel && tradeoffs.length > 0) {
-    // Trade-offs only → frame as tension-aware fit.
-    whyFitsSystem = `Sits in a ${sysLabel}-leaning chain with visible trade-offs — read them before committing.`;
+    // Trade-offs only → tension-aware fit.
+    whyFitsSystem = voice
+      ? `${voice} sits in tension with this ${sysLabel}-leaning system — weigh the trade-offs before committing.`
+      : `Sits in tension with this ${sysLabel}-leaning system — weigh the trade-offs before committing.`;
   }
   // If sysLabel is unknown, leave whyFitsSystem undefined. The card layer
   // skips "What this changes" rather than invent a generic fallback.
@@ -3620,14 +4209,16 @@ function buildSoundProfile(product: Product): string[] {
   // differentiate products in the same set without naming others.
   const archSentence = buildArchitectureSentence(product);
 
-  // Priority 2: curated character tendencies — supplement with detail
+  // Priority 2: curated character tendencies — supplement with detail.
+  // Every bullet (generated or curated) passes the fact-consistency guard:
+  // a claim contradicting the catalog spec is dropped, never rendered.
   if (hasTendencies(product.tendencies)) {
     const selected = selectDefaultTendencies(product.tendencies.character, 3);
     if (selected.length > 0) {
       const curated = selected.map((t) => capitalizeFirst(t.tendency));
       // Lead with architecture sentence, supplement with first curated tendency
-      if (archSentence) return [archSentence, ...curated.slice(0, 2)];
-      return curated;
+      if (archSentence) return dropContradictoryClaims(product, [archSentence, ...curated.slice(0, 2)]);
+      return dropContradictoryClaims(product, curated);
     }
   }
 
@@ -3721,7 +4312,15 @@ function buildArchitectureSentence(product: Product): string | undefined {
   if (topo.includes('set') || arch.includes('single-ended triode')) {
     return 'Single-ended triode — second-harmonic richness and midrange luminosity at low power.';
   }
-  if (topo.includes('class-a') || arch.includes('class a') || arch.includes('class-a')) {
+  // Class AB must be excluded BEFORE the Class A check — 'class-ab' contains
+  // the substring 'class-a', which put the "Pure Class A bias" sentence on
+  // Class AB amplifiers in production (Rotel A11 Tribute card contradiction —
+  // same substring-match family as the 'ess' bug documented above). Class AB
+  // deliberately has no architecture sentence of its own: the spec line
+  // already states the class, and restating it as "how it sounds" says
+  // nothing — the philosophy fallback below gives a licensed sound claim.
+  const isClassAB = topo.includes('class-ab') || arch.includes('class ab') || arch.includes('class-ab');
+  if (!isClassAB && (topo.includes('class-a') || arch.includes('class a') || arch.includes('class-a'))) {
     return 'Pure Class A bias — effortless transients with no crossover artifacts or compression.';
   }
   if (topo.includes('push-pull') || arch.includes('push-pull')) {
@@ -3748,6 +4347,60 @@ function capitalizeFirst(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+// ── Card fact consistency (Product Quality Phase 2 — facts are sacred) ──
+//
+// Every factual claim on a recommendation card must agree with the catalog's
+// topology/architecture for that product. When prose (generated OR curated)
+// contradicts the spec, the claim is DROPPED — omission over confident error.
+// A contradiction reaching a rendered card is a release blocker (Gate C tier).
+
+/** Returns the reasons a text's claims contradict the product's catalog facts. */
+export function cardFactViolations(product: Product, text: string): string[] {
+  const t = text.toLowerCase();
+  const topo = product.topology?.toLowerCase() ?? '';
+  const arch = product.architecture?.toLowerCase() ?? '';
+  const spec = `${topo} ${arch}`;
+  const violations: string[] = [];
+
+  const specClassAB = spec.includes('class-ab') || spec.includes('class ab');
+  const specClassA = !specClassAB && (spec.includes('class-a') || spec.includes('class a'));
+  const specClassD = spec.includes('class-d') || spec.includes('class d');
+  const specTube = spec.includes('tube') || spec.includes('valve') || spec.includes('triode');
+  const specSolidState = spec.includes('solid-state') || spec.includes('solid state');
+  const specHybrid = spec.includes('hybrid');
+  const specPushPull = spec.includes('push-pull');
+
+  if (/pure class a\b|class a bias|class-a bias/.test(t) && !specClassA) {
+    violations.push('claims Class A; catalog says otherwise');
+  }
+  if (/class d\b|class-d\b/.test(t) && !specClassD) {
+    violations.push('claims Class D; catalog says otherwise');
+  }
+  if (/single-ended triode|\bSET topology\b/i.test(text) && specPushPull) {
+    violations.push('claims single-ended triode; catalog says push-pull');
+  }
+  if (/\btube\b|\bvalve\b/.test(t) && specSolidState && !specTube && !specHybrid) {
+    violations.push('claims tube; catalog says solid-state');
+  }
+  if (/solid[- ]state/.test(t) && specTube && !specSolidState && !specHybrid) {
+    violations.push('claims solid-state; catalog says tube');
+  }
+  return violations;
+}
+
+/** Drop any card text whose claims contradict the product's catalog facts. */
+function dropContradictoryClaims(product: Product, texts: string[]): string[] {
+  return texts.filter((s) => {
+    const v = cardFactViolations(product, s);
+    if (v.length > 0) {
+      console.warn('[card-facts] dropped contradictory claim for %s %s: %s (%s)',
+        product.brand, product.name, s, v.join('; '));
+      return false;
+    }
+    return true;
+  });
+}
+
 /**
  * Select up to 3 product examples for the given category, scored
  * against user traits and budget. Returns empty array if no
@@ -3769,6 +4422,16 @@ const PROFILE_TO_PRODUCT_TRAIT: Record<ProfileTraitKey, string> = {
  * Maps arrow quality names to product trait keys.
  * Kept intentionally small — the bonus is a nudge, not a replacement.
  */
+/** LISTEN FIRST: map current-turn stated preferences to trait directions. */
+function statedTraitsFromCtx(ctx: ShoppingContext): Record<string, 'up' | 'down'> | undefined {
+  const out: Record<string, 'up' | 'down'> = {};
+  for (const d of ctx.statedPreferences ?? []) {
+    const key = DIRECTION_TRAIT_MAP[d.quality];
+    if (key) out[key] = d.direction === 'less' ? 'down' : 'up';
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 const DIRECTION_TRAIT_MAP: Record<string, string> = {
   warmth: 'tonal_density',
   density: 'tonal_density',
@@ -3845,6 +4508,15 @@ function selectProductExamples(
   symptoms?: string[],
   /** Lower price bound from "over $X" / "between $X and $Y" expressions. */
   budgetFloor?: number | null,
+  /** Colloquial affordability signal — see ShoppingContext.budgetConscious. */
+  budgetConscious?: boolean,
+  /** Explicit cost-no-object cue — see ShoppingContext.prestigeIntent. */
+  prestigeIntent?: boolean,
+  /** Query names a low-sensitivity/planar partner — see ShoppingContext. */
+  lowSensitivityPartner?: boolean,
+  iemRequested?: boolean,
+  /** LISTEN FIRST: traits explicitly stated this turn — suspends counterbalance scoring on those axes. */
+  statedTraits?: Record<string, 'up' | 'down'>,
 ): ProductExample[] {
   // ── Turntable: illustrative examples with full card data ──
   if (category === 'turntable') {
@@ -3871,7 +4543,7 @@ function selectProductExamples(
   // Headphones use a dedicated selection path because the catalog
   // includes portable-use metadata that supplements trait scoring.
   if (category === 'headphone') {
-    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning);
+    return selectHeadphoneExamples(userTraits, budgetAmount, systemProfile, tasteProfile, reasoning, iemRequested, budgetConscious);
   }
 
   // ── Streamer: inline illustrative examples ─────────
@@ -4085,7 +4757,64 @@ function selectProductExamples(
     console.log('[budget-floor] catalog %d → %d (floor=$%d)', beforeCount, catalog.length, budgetFloor);
   }
 
-  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile);
+  const ranked = rankProducts(catalog, userTraits, budgetAmount, systemProfile, constraints, listenerProfile, statedTraits);
+
+  // ── Soft affordability ceiling ─────────────────────────
+  // The user signaled budget-consciousness without a number ("won't blow
+  // up my budget"). Prestige-priced products leave the pool before role
+  // assignment so the anchor cannot be a $20,000 pick (Launch QA NT-09).
+  // Keeps the unfiltered pool if the category has too few products under
+  // the ceiling to form a useful recommendation set.
+  if (budgetConscious && budgetAmount === null) {
+    const AFFORDABLE_CEILING = 3000;
+    const affordable = ranked.filter((e) => typeof e.product.price === 'number' && e.product.price <= AFFORDABLE_CEILING);
+    if (affordable.length >= 3) {
+      ranked.length = 0;
+      ranked.push(...affordable);
+    }
+  } else if (budgetAmount === null && (budgetFloor === null || budgetFloor === undefined) && !prestigeIntent) {
+    // ── Mainstream default ceiling (launch gate 2026-07-19) ──
+    // A cold query with NO budget signal in either direction ("I want a
+    // tube amp", "amp for kef ls50 pls") must not anchor on statement-
+    // priced gear — a stranger's first message answered with a $20,000
+    // Shindo is the calibrated trust-destroyer. Same soft mechanism as
+    // the affordability ceiling, higher limit; an explicit prestige cue
+    // ("high-end", "cost no object") lifts it entirely.
+    const DEFAULT_ANCHOR_CEILING = 6000;
+    const mainstream = ranked.filter((e) => typeof e.product.price === 'number' && e.product.price <= DEFAULT_ANCHOR_CEILING);
+    if (mainstream.length >= 3) {
+      ranked.length = 0;
+      ranked.push(...mainstream);
+    }
+  }
+
+  // ── Pairing power-plausibility filter (launch gate 2026-07-19) ──
+  // When the user names a low-sensitivity / planar partner for an
+  // amplifier search (Magnepan, LRS, planars, LS50), low-watt SET
+  // amplifiers are physically wrong regardless of budget or taste.
+  // Hard filter — two honest picks beat three with an absurd one.
+  if (category === 'amplifier' && lowSensitivityPartner) {
+    const powerPlausible = ranked.filter((e) => {
+      const topo = ((e.product as { topology?: string }).topology ?? '').toLowerCase();
+      const watts = (e.product as { power_watts?: number }).power_watts;
+      if (topo.includes('set') || topo.includes('single-ended')) return false;
+      if (typeof watts === 'number' && watts < 40) return false;
+      return true;
+    });
+    // M5-F4 (2026-08-11): the old `>= 2` guard silently DROPPED this
+    // physics filter exactly when constraint conflicts thinned the
+    // plausible set — a 15W push-pull tube was recommended as the
+    // primary pick for a Magnepan LRS+ ("tube, no heat, $1500") with no
+    // conflict flagged. A physics constraint never yields to a ranking
+    // convenience guard: apply the filter whenever ANY plausible
+    // candidate exists; when none exists the conflict is certain and
+    // the caller surfaces it (see powerMismatchNote in
+    // buildShoppingAnswer).
+    if (powerPlausible.length >= 1) {
+      ranked.length = 0;
+      ranked.push(...powerPlausible);
+    }
+  }
 
   // Apply taste profile bonus — small boost for products aligned with stored taste
   if (tasteProfile && tasteProfile.confidence > 0.2) {
@@ -4331,7 +5060,7 @@ function selectProductExamples(
   // commercially available, widely reviewed, non-niche designs rank higher.
   // This prevents products like Yamamoto from appearing in "van halen + $5000"
   // flows where the user expects mainstream-accessible recommendations.
-  if (budgetAmount !== null) {
+  if (budgetAmount !== null || budgetConscious) {
     const ESOTERIC_PENALTY = 0.5;
     // Check if user explicitly wants boutique/niche gear
     const userWantsNiche = semanticPreferences
@@ -4638,6 +5367,26 @@ function selectProductExamples(
       : hasSparseSignals
         ? selectDiverseByTopology(ranked, poolSize, budgetAmount)
         : ranked.slice(0, poolSize);
+    // Launch gate 2026-07-19: guarantee traditional-marketType presence
+    // in every default-mode pool. Top-N truncation was starving the
+    // broad-first anchor gate downstream — when the top scorers are all
+    // boutique, the credibility re-sort had nothing to work with and a
+    // cold "I want a tube amp" (or "best DAC under 1000") anchored on
+    // nonTraditional gear. Budget ceiling is respected when set. Skipped
+    // when the listener has expressed brand preferences — a stated liked
+    // brand is a stronger signal than the cold-query credibility default.
+    const hasBrandPreference = (listenerProfile?.likedBrands?.length ?? 0) > 0;
+    const traditionalInPool = top.filter((sp) => sp.product.marketType === 'traditional').length;
+    if (!hasBrandPreference && traditionalInPool < 2) {
+      const missing = ranked
+        .filter((sp) =>
+          sp.product.marketType === 'traditional'
+          && !top.includes(sp)
+          && (budgetAmount === null || typeof sp.product.price !== 'number' || sp.product.price <= budgetAmount),
+        )
+        .slice(0, 2 - traditionalInPool);
+      top = [...top, ...missing];
+    }
   }
 
   // ── Liked-brand over-budget injection (post-pool) ────────
@@ -4669,6 +5418,31 @@ function selectProductExamples(
   const currentNames = new Set(
     (currentComponentNames ?? []).map((n) => n.toLowerCase()),
   );
+
+  /**
+   * Does a product name match one the user gave as their current component?
+   *
+   * Exact matches are unambiguous. The containment check exists because
+   * `currentNames` holds raw user text, which carries phrasing noise — someone
+   * who owns a Chord Hugo may type "chord hugo dac".
+   *
+   * Containment alone was wrong: "chord hugo tt2".includes("chord hugo") is
+   * true, so recommending the Hugo TT2 to a Hugo owner stamped the
+   * recommendation as their CURRENT component. The same held for Ares vs
+   * Ares II, or Bifrost vs Bifrost 2 — a variant is a different product.
+   *
+   * So containment is accepted only when the extra words are not a model
+   * designation. Those are recognisable in shape: roman numerals, mk-suffixes,
+   * bare numbers, and short alphanumerics like "tt2".
+   */
+  function matchesCurrentComponent(productName: string, fullProductName: string): boolean {
+    if (currentNames.has(fullProductName) || currentNames.has(productName)) return true;
+    return [...currentNames].some((cn) => {
+      if (cn.includes(productName)) return !hasExtraModelToken(cn, productName);
+      if (fullProductName.includes(cn)) return !hasExtraModelToken(fullProductName, cn);
+      return false;
+    });
+  }
 
   // ── Budget realism computation ──────────────────────
   // Classify each product's price realism relative to stated budget.
@@ -4833,6 +5607,51 @@ function selectProductExamples(
       }
     }
 
+    // ── Image-availability preference (applies to ALL surfaced slots) ──
+    //
+    // 2026-07-01 followup to Mike's rule "as a rule better not to pull a
+    // product without a picture if possible." The July-1 morning pass
+    // (Rule 4 inside anchorEligible below) only protected the Primary
+    // card. Alternative / contrast / wildcard slots still received
+    // whatever came next in the ranked pool, which meant TotalDAC
+    // d1-twelve MK2 and MHDT Orchid — both catalog-image-less — kept
+    // rendering as placeholders in the visible shortlist.
+    //
+    // Fix: apply the same partition to `eligible` itself, before role
+    // assignment. If ≥ 2 with-image candidates exist, restrict the
+    // whole shortlist pool to them. If image coverage is thinner than
+    // that (rare — mostly niche categories with sparse curated
+    // overlays), fall back to the full pool rather than shrink the
+    // shortlist to 0-1 cards. The threshold matches Rule 4's below —
+    // one for Primary, one for Alt.
+    {
+      const hasImage = (p: Ranked): boolean =>
+        !!(p.imageUrl && p.imageUrl.trim().length > 0)
+        // Pool filtering, not rendering. Asks whether the catalog has
+        // photography for this product's family; what actually renders is
+        // decided exactly by `getProductImage`.
+        || hasFamilyImagery(p.brand, p.name);
+      // Launch gate 2026-07-19: credibility outranks thumbnails.
+      // Traditional-marketType candidates stay in the pool even without
+      // a curated image — dropping them was handing the anchor to
+      // boutique gear purely because the boutiques had photos.
+      const withImage = eligible.filter((p) => hasImage(p) || p.marketType === 'traditional');
+      const withoutImage = eligible.length - withImage.length;
+      if (withImage.length >= 2 && withoutImage > 0) {
+        console.log('[eligible-filter] image-availability preference applied to shortlist pool', {
+          before: eligible.length,
+          withImage: withImage.length,
+          withoutImage,
+        });
+        eligible = withImage;
+      } else if (withoutImage > 0) {
+        console.log('[eligible-filter] image-availability rule skipped — thin coverage', {
+          withImage: withImage.length,
+          withoutImage,
+        });
+      }
+    }
+
     // ──────────────────────────────────────────────────────
     // ANCHOR ELIGIBILITY: filter impractical products from anchor pool.
     // Excluded products remain in `eligible` for contrast/wildcard roles.
@@ -4881,6 +5700,52 @@ function selectProductExamples(
       if (anchorEligible.length === 0) {
         console.warn('[anchor-filter] all candidates excluded — falling back to full eligible pool');
         anchorEligible = eligible;
+      }
+
+      // ── Rule 4: Prefer anchors that have a resolvable product image.
+      //
+      // Mike's July-1 QA note: "as a rule better not to pull a product
+      // without a picture if possible." The Primary recommendation card
+      // is the loudest visual element in a shopping response — anchoring
+      // it on a product that only renders a category placeholder icon
+      // (no catalog imageUrl, no curated overlay) weakens the whole
+      // card even when the sonic fit is right.
+      //
+      // Fix: partition the anchor pool by image availability. If the
+      // with-image sub-pool has at least two candidates (so we still
+      // have room for a Primary + a Close alternative), use it as the
+      // anchor pool. If image coverage is thin, fall back to the full
+      // pool rather than force an empty selection.
+      //
+      // Products without images stay in `eligible` so they can still
+      // fill contrast / wildcard / additional-options slots below the
+      // anchor. This only affects who gets the Primary card.
+      {
+        const hasImage = (p: Ranked): boolean =>
+          !!(p.imageUrl && p.imageUrl.trim().length > 0)
+          // Pool filtering, not rendering. Asks whether the catalog has
+        // photography for this product's family; what actually renders is
+        // decided exactly by `getProductImage`.
+        || hasFamilyImagery(p.brand, p.name);
+
+        // Launch gate 2026-07-19: traditional candidates survive the
+        // image preference — see the eligible-filter note above.
+        const withImage = anchorEligible.filter((p) => hasImage(p) || p.marketType === 'traditional');
+        const withoutImage = anchorEligible.length - withImage.length;
+
+        if (withImage.length >= 2 && withoutImage > 0) {
+          console.log('[anchor-filter] image-availability preference applied', {
+            before: anchorEligible.length,
+            withImage: withImage.length,
+            withoutImage,
+          });
+          anchorEligible = withImage;
+        } else if (withoutImage > 0) {
+          console.log('[anchor-filter] image-availability rule skipped — thin coverage', {
+            withImage: withImage.length,
+            withoutImage,
+          });
+        }
       }
     }
 
@@ -5357,9 +6222,7 @@ function selectProductExamples(
   const results = top.map(({ product }) => {
     // Check if this product matches a current system component
     const fullName = `${product.brand} ${product.name}`.toLowerCase();
-    const isCurrent = currentNames.has(fullName)
-      || currentNames.has(product.name.toLowerCase())
-      || [...currentNames].some((cn) => cn.includes(product.name.toLowerCase()) || fullName.includes(cn));
+    const isCurrent = matchesCurrentComponent(product.name.toLowerCase(), fullName);
 
     return {
       id: product.id,
@@ -5406,6 +6269,37 @@ function selectProductExamples(
       primaryAxes: product.primaryAxes,
     } as ProductExample;
   });
+
+  // ── No two cards explain themselves the same way ────────
+  // Shortlist-level guard (Product Quality Phase 2): when two products share
+  // a philosophy, buildSystemDelta can emit the same posture sentence. The
+  // duplicate is rewritten with an alternate construction rather than
+  // rendered twice — repeated prose is what makes cards read as generated.
+  {
+    const seenWhy = new Set<string>();
+    const ALT_FORMS = [
+      (name: string, prev: string) => prev.replace(/^Its /, `The ${name}'s `),
+      (_name: string, prev: string) => `Read alongside the pick above: ${prev.charAt(0).toLowerCase()}${prev.slice(1)}`,
+    ];
+    let altIdx = 0;
+    for (const ex of results) {
+      const w = ex.systemDelta?.whyFitsSystem;
+      if (!w) continue;
+      if (seenWhy.has(w)) {
+        const rewritten = ALT_FORMS[altIdx % ALT_FORMS.length](ex.name, w);
+        altIdx++;
+        if (!seenWhy.has(rewritten)) {
+          ex.systemDelta!.whyFitsSystem = rewritten;
+          seenWhy.add(rewritten);
+        } else {
+          // Cannot vary further without inventing content — omit rather than repeat.
+          ex.systemDelta!.whyFitsSystem = undefined;
+        }
+      } else {
+        seenWhy.add(w);
+      }
+    }
+  }
 
   // ── Final budget safety net ────────────────────────────
   // Strip any product that somehow ended up above budget (e.g. via
@@ -5784,16 +6678,42 @@ function selectHeadphoneExamples(
   systemProfile: SystemProfile,
   tasteProfile?: UserTasteProfile,
   reasoning?: ReasoningResult,
+  iemRequested?: boolean,
+  /** Colloquial affordability signal ("cheap", "budget", "affordable") with
+   *  no number attached. The generic ranked path applies an affordability
+   *  ceiling for this; headphones early-return before reaching it, so the
+   *  ceiling was never applied here — "cheap iems" answered with the $1,799
+   *  Solaris (founder-reported, 2026-08-13). */
+  budgetConscious?: boolean,
 ): ProductExample[] {
   // Get the full user text from the reasoning context or use empty
   // For now we read portable intent from the products themselves
-  const allProducts = HEADPHONE_PRODUCTS as HeadphoneProduct[];
+  //
+  // IEM form-factor constraint (REC-1, 2026-08-12): an explicit IEM /
+  // in-ear request constrains the pool to subcategory 'iem' BEFORE any
+  // budget or ranking step. Explicit category wins over catalog
+  // availability — if no tagged IEM existed the pool would go empty and
+  // the honest degraded path answers; over-ears are never silently
+  // substituted for an in-ear request.
+  const allProducts = (iemRequested
+    ? (HEADPHONE_PRODUCTS as HeadphoneProduct[]).filter((p) => (p as { subcategory?: string }).subcategory === 'iem')
+    : (HEADPHONE_PRODUCTS as HeadphoneProduct[]));
 
   // Budget filter — use generous range for headphones
   let budgetFiltered: HeadphoneProduct[];
   if (budgetAmount !== null) {
     const ceiling = budgetAmount * 1.15; // 15% grace
     budgetFiltered = allProducts.filter((p) => p.price <= ceiling);
+  } else if (budgetConscious) {
+    // Affordability ceiling for personal audio. The generic path uses $3,000,
+    // which is meaningless here — it would still anchor "cheap IEMs" on a
+    // $1,799 pick. $250 was the first attempt and still answered "cheap" with
+    // $250 AirPods: the top of the band rather than what the word means.
+    // $150 covers the entry IEM band and entry over-ears. Same soft guard as
+    // the generic path: keep the unfiltered pool if too few survive.
+    const PERSONAL_AUDIO_AFFORDABLE_CEILING = 150;
+    const affordable = allProducts.filter((p) => p.price <= PERSONAL_AUDIO_AFFORDABLE_CEILING);
+    budgetFiltered = affordable.length >= 3 ? affordable : allProducts;
   } else {
     budgetFiltered = allProducts;
   }
@@ -5889,11 +6809,12 @@ function selectHeadphoneExamples(
     else if (hp?.headphoneMeta.formFactor === 'over-ear') metaParts.push('over-ear');
     if (hp?.headphoneMeta.wireless) metaParts.push('wireless');
     if (hp?.headphoneMeta.anc) metaParts.push('ANC');
-    const metaLabel = metaParts.length > 0 ? ` [${metaParts.join(', ')}]` : '';
+    const metaLabel = metaParts.length > 0 ? metaParts.join(', ') : undefined;
 
     return {
       id: product.id,
-      name: `${product.name}${metaLabel}`,
+      name: product.name,
+      formFactorLabel: metaLabel,
       brand: product.brand,
       price: product.price,
       priceCurrency: product.priceCurrency,
@@ -6013,7 +6934,7 @@ function buildRefinementPrompts(
 ): string[] {
   const prompts: string[] = [];
   if (gaps.includes('taste')) {
-    prompts.push('Do you prefer more tonal density and warmth, or more precision and transient speed?');
+    prompts.push('Do you prefer more warmth and body, or more precision and transient speed?');
   }
   if (gaps.includes('system')) {
     const catParts = category === 'dac'
@@ -6152,6 +7073,16 @@ function buildUserContextNote(
  *   4. What to watch for
  *   5. System note (if system context was provided)
  */
+/** Catalogue pool for a shopping category — used for coverage-gap reporting
+ *  and the sonic-landscape guide. Empty for categories with no product file. */
+function fullCatalogFor(category: string): Array<{ price?: number }> {
+  return category === 'dac' ? (DAC_PRODUCTS as Array<{ price?: number }>)
+    : category === 'speaker' ? (SPEAKER_PRODUCTS as Array<{ price?: number }>)
+    : category === 'amplifier' ? (AMPLIFIER_PRODUCTS as Array<{ price?: number }>)
+    : category === 'headphone' ? (HEADPHONE_PRODUCTS as Array<{ price?: number }>)
+    : [];
+}
+
 export function buildShoppingAnswer(
   ctx: ShoppingContext,
   signals: ExtractedSignals,
@@ -6171,7 +7102,15 @@ export function buildShoppingAnswer(
   /** Brand constraint from user query (e.g., "denafrips" from "denafrips dacs under 1000"). */
   brandConstraint?: string,
 ): ShoppingAnswer {
-  const traits = signals.traits;
+  // LISTEN FIRST: stated preferences reach ranking even when /api/evaluate
+  // fell back to empty signals (the extractor split behind the production
+  // "acknowledged warmth, ranked without it" failure). Stated values never
+  // overwrite an extracted signal — they fill the gaps.
+  const traits: Record<string, SignalDirection> = { ...signals.traits };
+  for (const d of ctx.statedPreferences ?? []) {
+    const key = DIRECTION_TRAIT_MAP[d.quality];
+    if (key && !(key in traits)) traits[key] = d.direction === 'less' ? 'down' : 'up';
+  }
   const categoryLabel = CATEGORY_LABELS[ctx.category] ?? 'component';
 
   // Find the best-matching taste profile
@@ -6202,6 +7141,7 @@ export function buildShoppingAnswer(
   // a tasteLabel, so we check for a matched profile OR stored profile OR
   // reasoning-level archetype as evidence of *any* signal.
   const hasAnyTaste = hasTasteSignal
+    || !!(ctx.statedPreferences?.length) // LISTEN FIRST: stated this turn
     || (tasteProfile && tasteProfile.confidence > 0.15)
     || !!reasoning?.taste.archetype;
   const directed = hasBudget && hasCategory && hasAnyTaste;
@@ -6211,8 +7151,11 @@ export function buildShoppingAnswer(
   const hasRef = (engagedProductNames ?? []).length > 0;
   const hasDislikesSignal = !!(listenerProfile
     && (listenerProfile.dislikedBrands.length > 0 || listenerProfile.dislikedProducts.length > 0));
-  // Direction signal: any non-neutral trait counts
-  const hasDir = Object.values(signals.traits).some((v) => v === 'up' || v === 'down');
+  // Direction signal: any non-neutral trait counts. LISTEN FIRST: a
+  // preference stated this turn IS a direction signal — without this, the
+  // taste question could still render after the user answered it.
+  const hasDir = Object.values(signals.traits).some((v) => v === 'up' || v === 'down')
+    || !!(ctx.statedPreferences?.length);
   // Specialist signal: user expressed SET/horn/high-efficiency/low-power intent
   const hasSpecialist = ctx.semanticPreferences.specialistHints.length > 0;
 
@@ -6324,7 +7267,7 @@ export function buildShoppingAnswer(
 
   // 4. Product examples (only when catalog exists + budget known)
   // Pass reasoning for directional bias — existing scoring is preserved.
-  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor);
+  let productExamples = selectProductExamples(ctx.category, traits, ctx.budgetAmount, ctx.systemProfile, ctx.dependencies, tasteProfile, reasoning, activeSystemComponents, ctx.roomContext, engagedProductNames, ctx.constraints, ctx.semanticPreferences, listenerProfile, selectionMode, previousAnchor, recentProductNames, brandConstraint, signals.symptoms, ctx.budgetFloor, ctx.budgetConscious, ctx.prestigeIntent, ctx.lowSensitivityPartner, ctx.iemRequested, statedTraitsFromCtx(ctx));
 
   // ── Budget floor filter ───────────────────────────────
   // When the user specifies "over $X" or "between $X and $Y", remove
@@ -6362,7 +7305,63 @@ export function buildShoppingAnswer(
 
   // 6. System note — references user context when available
   const userContextNote = buildUserContextNote(ctx, signals, matchedProfile, reasoning);
-  const systemNote = userContextNote
+  // Power-mismatch honesty (M5-F4, 2026-08-11): a low-sensitivity /
+  // planar partner was named for an amplifier search, and the surviving
+  // picks either shrank to near-nothing or still include low-watt
+  // designs (possible when the whole plausible set was empty). Name the
+  // conflict instead of presenting the picks as a clean fit.
+  let powerMismatchNote: string | undefined;
+  if (ctx.category === 'amplifier' && ctx.lowSensitivityPartner) {
+    const anyImplausible = productExamples.some((ex) => {
+      const p = AMPLIFIER_PRODUCTS.find((x) => x.name === ex.name) as { topology?: string; power_watts?: number } | undefined;
+      if (!p) return false;
+      const topo = (p.topology ?? '').toLowerCase();
+      return topo.includes('set') || topo.includes('single-ended')
+        || (typeof p.power_watts === 'number' && p.power_watts < 40);
+    });
+    if (anyImplausible || productExamples.length <= 1) {
+      powerMismatchNote = 'The speaker you named is a low-sensitivity planar load — it needs substantial power and current to produce real dynamics. Within your stated constraints, no amplifier here satisfies both the load and every other requirement at once; low-power tube designs in particular cannot drive it with authority. Treat these options as a reason to relax one constraint — the load, the topology, or the budget — rather than as a settled fit.';
+    }
+  }
+  // Coverage-gap honesty (founder-reported, 2026-08-13): an explicit
+  // category plus a budget the catalogue cannot serve produced a framing
+  // sentence and then nothing at all — which reads as broken rather than
+  // as the honest limit it is. REC-1's invariant says never substitute a
+  // neighbouring category to fill the gap; this says explain the silence.
+  // Same shape as powerMismatchNote above: name the constraint that cannot
+  // be met instead of presenting an empty answer as an answer.
+  let coverageGapNote: string | undefined;
+  let coverageGap: ShoppingAnswer['coverageGap'];
+  if (productExamples.length === 0 && typeof ctx.budgetAmount === 'number' && ctx.budgetAmount > 0) {
+    const pool: Array<{ price?: number }> =
+      ctx.category === 'headphone'
+        ? (HEADPHONE_PRODUCTS as Array<{ price?: number; subcategory?: string }>).filter(
+            (p) => !ctx.iemRequested || p.subcategory === 'iem',
+          )
+        : (fullCatalogFor(ctx.category) as Array<{ price?: number }>);
+    const prices = pool.map((p) => p.price).filter((n): n is number => typeof n === 'number' && n > 0);
+    const cheapest = prices.length > 0 ? Math.min(...prices) : undefined;
+    // A coverage gap is specifically "the catalogue has nothing at this
+    // price" — cheapest > budget. An empty shortlist for any other reason
+    // (trait fit, hard constraints, diversity rules) is a selection outcome,
+    // not a coverage limit, and must NOT be reported as one: saying "no
+    // speaker under $4,000" when the catalogue is full of them would be a
+    // false claim. Caught by the QA-8 gate before shipping.
+    if (cheapest !== undefined && cheapest <= ctx.budgetAmount) {
+      coverageGapNote = undefined;
+      coverageGap = undefined;
+    } else {
+    const what = ctx.iemRequested ? 'in-ear monitor' : categoryLabel.toLowerCase();
+    coverageGap = { category: ctx.category, budget: ctx.budgetAmount, catalogueFloor: cheapest };
+    coverageGapNote = cheapest
+      ? `No ${what} in this catalogue falls under $${ctx.budgetAmount.toLocaleString()} — coverage starts at $${cheapest.toLocaleString()}. That is a limit of what I carry, not a judgement that nothing worthwhile exists at that price. Raise the ceiling, or name a model you are considering, and I can say something useful about it.`
+      : `I do not carry any ${what} at that price. That is a limit of what I cover, not a judgement about the products themselves — name a model you are considering and I can look at it directly.`;
+    }
+  }
+
+  const systemNote = coverageGapNote
+    ?? powerMismatchNote
+    ?? userContextNote
     ?? (ctx.systemProvided
       ? `This direction makes more sense if the rest of the chain is not already biased in the same way. A ${categoryLabel} change will shift the overall balance — listen for whether the qualities you value are preserved.`
       : undefined);
@@ -6405,6 +7404,48 @@ export function buildShoppingAnswer(
     refinementPrompts,
   };
 
+  // LISTEN FIRST — expert disagreement, never silent override. When the user
+  // explicitly asked for MORE of a quality the system already supplies in
+  // abundance, the adviser says so and explains the direction, instead of
+  // quietly optimizing for the opposite (the production failure: "warm,
+  // full-bodied" requested, neutral pick delivered with no acknowledgment).
+  {
+    const sysChar = SYSTEM_CHARACTER_TRAITS[ctx.systemProfile.systemCharacter];
+    const statedUp = (ctx.statedPreferences ?? []).filter((d) => d.direction !== 'less');
+    const tensionPref = sysChar
+      ? statedUp.find((d) => {
+          const key = DIRECTION_TRAIT_MAP[d.quality];
+          return !!key && sysChar.saturated.includes(key);
+        })
+      : undefined;
+    if (tensionPref) {
+      const q = tensionPref.quality.replace(/_/g, ' ');
+      bestFitDirection = `You asked for more ${q} — and your system already leans that way. Rather than stacking more of the same, I'd preserve the ${q} you enjoy while adding what the system is short on; the picks below follow that logic. If you'd rather lean further into ${q}, take the alternative flagged for it.`;
+    }
+  }
+
+  // A coverage gap answers with one true sentence and nothing else. The
+  // recommendation scaffolding ("These suggestions represent different design
+  // philosophies", "Why this fits you", trade-offs) describes a shortlist that
+  // does not exist — the "empty shell" the earlier knowledge-lane fallback was
+  // written to avoid. Restraint doctrine: say the true thing, then stop.
+  if (coverageGap) {
+    return {
+      category: categoryLabel,
+      budget: ctx.budgetAmount ?? null,
+      preferenceSummary: '',
+      bestFitDirection: '',
+      whyThisFits: [],
+      productExamples: [],
+      watchFor: [],
+      systemNote: coverageGapNote,
+      coverageGap,
+      // No refinement question: the note already names the two useful moves
+      // (raise the ceiling, or name a model), so a generic prompt would be
+      // one more sentence that isn't doing work.
+    };
+  }
+
   return {
     category: categoryLabel,
     budget: ctx.budgetAmount,
@@ -6414,6 +7455,7 @@ export function buildShoppingAnswer(
     productExamples,
     watchFor,
     systemNote,
+    coverageGap,
     provisional,
     statedGaps: provisional ? gaps : undefined,
     synthesisBrief,

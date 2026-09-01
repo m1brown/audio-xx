@@ -1,0 +1,46 @@
+J1_anonymous_builder
+   EVENT builder_started 
+   EVENT landing_viewed 
+   EVENT assessment_rendered {'source': 'builder', 'signed_in': False}
+   EVENT copy_link_clicked 
+    __clipboard_write http://localhost:3000/artifact?system=Assess%20my%20system%3
+   EVENT print_clicked 
+    __window_print_called 
+   EVENT save_started {'signed_in': False}
+J1_finalUrl = http://localhost:3000/artifact?system=Assess%20my%20system%3A%20Chord%20Qutest%2C%20Naim%20SuperNait%203%2C%20Harbeth%20Super%20HL5%20Plus
+J2_anonymous_composer
+   EVENT landing_viewed 
+   EVENT composer_started 
+   EVENT assessment_rendered {'source': 'composer'}
+J3_save_lifecycle
+   EVENT sign_in_completed {'source': 'signin'}
+   EVENT assessment_rendered {'source': 'direct', 'signed_in': True}
+   EVENT save_started {'signed_in': True}
+   EVENT first_system_saved 
+   EVENT assessment_rendered {'source': 'direct', 'signed_in': True}
+   EVENT save_started {'signed_in': True}
+   EVENT additional_system_saved 
+   EVENT save_started {'signed_in': False}
+   EVENT identical_assessment_declined 
+   EVENT assessment_rendered {'source': 'direct', 'signed_in': True}
+   EVENT my_systems_viewed {'state': 'trial'}
+J4_boundary
+   EVENT sign_in_completed {'source': 'signin'}
+   EVENT my_systems_viewed {'state': 'expired'}
+   EVENT subscription_prompt_viewed {'state': 'expired', 'action': 'manage'}
+   EVENT my_systems_viewed {'state': 'expired'}
+   EVENT subscription_prompt_viewed {'state': 'expired', 'action': 'manage'}
+   EVENT assessment_rendered {'source': 'direct', 'signed_in': True}
+   EVENT save_started {'signed_in': True}
+   EVENT trial_action_blocked {'action': 'save'}
+   EVENT subscription_prompt_viewed {'state': 'expired', 'action': 'save'}
+   EVENT checkout_started {'action': 'save'}
+   EVENT checkout_cancelled 
+J5_dedupe_reload
+   EVENT landing_viewed 
+   EVENT landing_viewed 
+J6_vendor_failure
+   EVENT assessment_rendered {'source': 'direct', 'signed_in': False}
+   EVENT copy_link_clicked 
+    __clipboard_write http://localhost:3000/artifact?system=Assess%20my%20system%3
+J6_assertions = {'verdictRendered': True, 'copyFeedback': True, 'pageErrors': []}

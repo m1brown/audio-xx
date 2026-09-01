@@ -1,9 +1,24 @@
-import { describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import {
   shouldShowAmazonLink,
   getAmazonSearchUrl,
   getAffiliateTag,
 } from '../amazon-links';
+
+// 2026-05-19: amazon-links now reads its tag from
+// AMAZON_AFFILIATE_TAG via affiliate-config. The tests below
+// explicitly set the env var so they exercise the configured
+// state (the asserted contract: when tag IS configured, URLs
+// include `tag=<value>`). Untagged behavior is asserted in
+// public-beta-copy-and-affiliate-discipline.test.ts.
+const ORIG_AMAZON_TAG = process.env.AMAZON_AFFILIATE_TAG;
+beforeEach(() => {
+  process.env.AMAZON_AFFILIATE_TAG = 'audioxx20-20';
+});
+afterEach(() => {
+  if (ORIG_AMAZON_TAG === undefined) delete process.env.AMAZON_AFFILIATE_TAG;
+  else process.env.AMAZON_AFFILIATE_TAG = ORIG_AMAZON_TAG;
+});
 
 describe('Amazon Links', () => {
   describe('shouldShowAmazonLink', () => {
@@ -49,13 +64,13 @@ describe('Amazon Links', () => {
       expect(url).toContain('amazon.com/s');
       expect(url).toContain('k=Schiit+Bifrost+2%2F64');
       expect(url).toContain('i=electronics');
-      expect(url).toContain('tag=audioxx-20');
+      expect(url).toContain('tag=audioxx20-20');
     });
 
     it('generates a search URL with name only', () => {
       const url = getAmazonSearchUrl('H190');
       expect(url).toContain('k=H190');
-      expect(url).toContain('tag=audioxx-20');
+      expect(url).toContain('tag=audioxx20-20');
     });
 
     it('URL-encodes special characters', () => {
@@ -71,7 +86,7 @@ describe('Amazon Links', () => {
 
   describe('getAffiliateTag', () => {
     it('returns the configured tag', () => {
-      expect(getAffiliateTag()).toBe('audioxx-20');
+      expect(getAffiliateTag()).toBe('audioxx20-20');
     });
   });
 });
