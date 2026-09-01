@@ -222,12 +222,25 @@ export function buildTurnContext(
     });
   };
 
-  if (proposedSystem && proposedSystem.components.length >= 2 && !restatesSaved(proposedSystem)) {
+  /*
+   * THE INVARIANT, applied at the source (production blocker, 2026-09-01):
+   * a restatement of the active saved system is NOT a proposal. Nulling it
+   * HERE means every consumer agrees at once — the save-suggestion chip
+   * cannot offer a degraded duplicate ("You described a system: Dcs, ARC"),
+   * the saved-system injection guards do not treat the restatement as new
+   * equipment, and the canonical record stays authoritative. A single
+   * component that matches nothing saved keeps the whole inline chain, as
+   * before: SAVED STRUCTURED STATE > NATURAL-LANGUAGE REPARSE, but only
+   * for what the listener has not actually changed.
+   */
+  const effectiveProposedSystem = proposedSystem && restatesSaved(proposedSystem) ? null : proposedSystem;
+
+  if (effectiveProposedSystem && effectiveProposedSystem.components.length >= 2) {
     // User explicitly stated a system in this message — use it,
     // regardless of whether a saved system exists.
     activeSystem = {
-      name: proposedSystem.suggestedName,
-      components: proposedSystem.components.map((c) => ({
+      name: effectiveProposedSystem.suggestedName,
+      components: effectiveProposedSystem.components.map((c) => ({
         name: c.name,
         brand: c.brand,
         category: c.category,
@@ -251,7 +264,7 @@ export function buildTurnContext(
     // The page.tsx orchestrator stores the most recent inline detection
     // on audioState.proposedSystem until the user explicitly accepts or
     // dismisses it. We honour that persistence here: while a non-dismissed
-    // proposedSystem exists, it takes precedence over saved/draft systems
+    // effectiveProposedSystem exists, it takes precedence over saved/draft systems
     // for subsequent turns. The user's freshly-stated system stays active
     // for the rest of the conversation.
     audioState.proposedSystem
@@ -296,7 +309,7 @@ export function buildTurnContext(
   if (systemSource === 'saved' || systemSource === 'draft') {
     confidence = 'high';
   } else if (systemSource === 'inline') {
-    confidence = (proposedSystem?.components.length ?? 0) >= 3 ? 'high' : 'moderate';
+    confidence = (effectiveProposedSystem?.components.length ?? 0) >= 3 ? 'high' : 'moderate';
   } else if (subjectMatches.length >= 2) {
     confidence = 'moderate';
   }
@@ -319,9 +332,9 @@ export function buildTurnContext(
   if (process.env.NODE_ENV === 'development') {
     console.log('[TurnContext] subjects:', subjects);
     console.log('[TurnContext] subjectMatches:', subjectMatches.map((m) => `${m.kind}:${m.name}`));
-    if (proposedSystem) {
-      console.log('[TurnContext] proposed:', proposedSystem.suggestedName,
-        '| components:', proposedSystem.components.map((c) => normalizeDisplayName(c.brand, c.name)));
+    if (effectiveProposedSystem) {
+      console.log('[TurnContext] proposed:', effectiveProposedSystem.suggestedName,
+        '| components:', effectiveProposedSystem.components.map((c) => normalizeDisplayName(c.brand, c.name)));
     }
     console.log('[TurnContext] confidence:', confidence);
   }
@@ -333,7 +346,7 @@ export function buildTurnContext(
     desires,
     preferenceSignals,
     listenerProfile,
-    proposedSystem,
+    proposedSystem: effectiveProposedSystem,
     activeSystem,
     activeProfile,
     confidence,
