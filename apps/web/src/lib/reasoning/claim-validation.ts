@@ -94,6 +94,21 @@ function preFlags(answer: string, contextBlock: string): string {
   const conditioned = (contextBlock.match(/^- \[INDEPENDENT LISTENING[^\n]*; condition: [^\n]+$/gm) ?? [])
     .slice(0, 20);
   const parts: string[] = [];
+  /*
+   * FIGURES REQUIRING ADJUDICATION — deterministic mutated-spec net. Any
+   * number in the draft that appears nowhere in the evidence package is
+   * either the model's arithmetic (fine when reconstructible) or a mutated
+   * figure; the checker must adjudicate each explicitly. This closed the
+   * one recall gap the checker-model gate found (a shifted sensitivity
+   * figure slipping through one run in three).
+   */
+  const ctxNums = new Set((contextBlock.match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/[,.]+$/, '')));
+  const strayNums = [...new Set((answer.match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/[,.]+$/, '')))]
+    .filter((n) => !ctxNums.has(n) && n.length > 1);
+  if (strayNums.length) {
+    parts.push('FIGURES IN THE DRAFT WITH NO SOURCE IN THE PACKAGE (each must be adjudicated: licensed arithmetic from package figures, or a mutated_spec violation): '
+      + strayNums.slice(0, 12).join('; '));
+  }
   if (names.size) {
     parts.push('NAMED PRODUCTS WITH NO EVIDENCE IN THE PACKAGE (any product-specific character claim about these is a violation): '
       + [...names].slice(0, 12).join('; '));

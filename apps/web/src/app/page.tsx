@@ -695,6 +695,19 @@ export default function Home() {
     components: Array<{ displayName: string; role: string }>;
     hypothetical: { candidate: string; incumbent: string } | null;
   } | null>(null);
+  /** Founder-cohort eligibility, decided SERVER-side (REASONING_LANE_USERS).
+   *  Fetched once; false until the server says otherwise. The build-time
+   *  flag remains the local-QA switch; this is the production cohort path. */
+  const laneEligibleRef = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/reasoning-lane', { method: 'GET' })
+      .then((r) => (r.ok ? r.json() : { eligible: false }))
+      .then((j) => { if (!cancelled) laneEligibleRef.current = j?.eligible === true; })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const laneActive = () => REASONING_LANE_ENABLED || laneEligibleRef.current;
 
   /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
   const onboardingContextRef = useRef<{
@@ -1210,7 +1223,7 @@ export default function Home() {
       // evidence WITH reasoning, instead of quoting paragraphs (preview
       // battery: the net intercepted "Should I replace the Rossini…" before
       // the lane could reason about it).
-      const laneWillOwnTurn = REASONING_LANE_ENABLED
+      const laneWillOwnTurn = laneActive()
         && convStateRef.current.mode === 'system_assessment'
         && (laneStateRef.current?.components.length ?? 0) >= 2;
       if (!laneWillOwnTurn && standingReviewEarly.length > 0 && isReviewDirectedFollowUp(submittedText)) {
@@ -1872,7 +1885,7 @@ export default function Home() {
              * Wave-2 behavior is byte-identical. Any failure falls through
              * to the deterministic path below.
              */
-            if (REASONING_LANE_ENABLED && laneStateRef.current
+            if (laneActive() && laneStateRef.current
               && laneStateRef.current.components.length >= 2) {
               try {
                 /*
