@@ -67,6 +67,11 @@ Given the LICENSED EVIDENCE PACKAGE and a DRAFT ANSWER, list every sentence in t
 
 For each violation output a JSON object {"type", "sentence", "rewrite"}. The rewrite must be the SAME sentence weakened just enough to be licensed — attach the condition, restore the relative frame, hedge to class-level, or state that the application holds nothing — and must never add facts, figures, or strength. Use rewrite null only when no weakening can save the sentence (it should be removed).
 
+PRECISION RULES (added after live false-positive review):
+- A sentence that itself STATES the absence or limits of evidence ("no independent evidence is held for X's bass behaviour") is never a violation — it is the discipline working.
+- A claim with a matching evidence item of the same strength is licensed AS WRITTEN: do not hedge it further, and do not soften "praised for" into "noted for" when the package holds the praise.
+- Only flag what genuinely exceeds the package.
+
 Output ONLY a JSON array (possibly empty). No commentary.`;
 
 /**

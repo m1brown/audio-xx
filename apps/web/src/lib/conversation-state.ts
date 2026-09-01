@@ -610,8 +610,13 @@ export function isCounterfactualTurn(text: string): boolean {
 export function isSystemDirectedAssessmentTurn(text: string): boolean {
   if (isCounterfactualTurn(text)) return true;
   if (/\b(?:better|good|worse)\s+match\b|\bmatch\s+for\s+(?:this|it|my)\b/i.test(text)) return true;
-  const deictic = /\b(?:this|that|it|those|my\s+(?:system|setup|chain)|the\s+(?:system|setup|chain))\b|\bwould\s+i\b/i;
-  const judgment = /\b(?:improve|upgrad\w*|better|worse|help|change|match|fit|worth|lose|gain)\b|\bhold\w*\s+back\b/i;
+  // "Compare the Leben CS600 and the Hegel H590." mid-assessment is a
+  // comparison WITHIN the system conversation — product-token comparisons
+  // stay with the assessment rather than resetting to the cold comparison
+  // intake (preview battery, C7-T3).
+  if (/\bcompar/i.test(text) && /\b[a-z]+[a-z-]*\s*[a-z]*\d/i.test(text)) return true;
+  const deictic = /\b(?:this|that|it|those|mine|my\s+(?:system|setup|chain)|the\s+(?:system|setup|chain)|the\s+(?:two|three|four|first|second|third))\b|\bwould\s+i\b/i;
+  const judgment = /\b(?:improve|upgrad\w*|better|worse|help|change|match|fit|worth|lose|gain|compar\w*|choose|choice|assume)\b|\bhold\w*\s+back\b/i;
   if (deictic.test(text) && judgment.test(text)) return true;
   /*
    * A terse fragment question mid-assessment ("too much amp?", "worth

@@ -1205,7 +1205,15 @@ export default function Home() {
      */
     {
       const standingReviewEarly = convStateRef.current.facts.lastSystemReview ?? [];
-      if (standingReviewEarly.length > 0 && isReviewDirectedFollowUp(submittedText)) {
+      // With the governed lane on and armed, the review-anchored net stands
+      // down: the lane answers direction questions from the same review
+      // evidence WITH reasoning, instead of quoting paragraphs (preview
+      // battery: the net intercepted "Should I replace the Rossini…" before
+      // the lane could reason about it).
+      const laneWillOwnTurn = REASONING_LANE_ENABLED
+        && convStateRef.current.mode === 'system_assessment'
+        && (laneStateRef.current?.components.length ?? 0) >= 2;
+      if (!laneWillOwnTurn && standingReviewEarly.length > 0 && isReviewDirectedFollowUp(submittedText)) {
         const anchoredEarly = composeReviewAnchoredAnswer(submittedText, standingReviewEarly);
         if (anchoredEarly) {
           dispatch({ type: 'ADD_USER_MESSAGE' });
@@ -1867,12 +1875,23 @@ export default function Home() {
             if (REASONING_LANE_ENABLED && laneStateRef.current
               && laneStateRef.current.components.length >= 2) {
               try {
-                const recentTurns = messages.slice(-10).map((m) => ({
-                  role: m.role === 'user' ? 'user' : 'assistant',
-                  content: m.role === 'user'
-                    ? (('content' in m ? String((m as { content?: unknown }).content ?? '') : ''))
-                    : (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n'),
-                })).filter((t) => t.content.trim().length > 0);
+                /*
+                 * RAW recent turns — the referent substrate. A user turn is
+                 * its text; an assistant turn is its actual content when it
+                 * has one (lane answers, notes), else the standing review's
+                 * opening. Substituting the review for EVERY assistant turn
+                 * blinded the model to its own prior answers, and "the
+                 * second one" stopped resolving (preview battery, C1-T6).
+                 */
+                const recentTurns = messages.slice(-10).map((m) => {
+                  const own = 'content' in m ? String((m as { content?: unknown }).content ?? '') : '';
+                  return {
+                    role: m.role === 'user' ? 'user' : 'assistant',
+                    content: m.role === 'user'
+                      ? own
+                      : (own || (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n')),
+                  };
+                }).filter((t) => t.content.trim().length > 0);
                 const res = await fetchWithTimeout('/api/reasoning-lane', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },

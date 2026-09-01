@@ -92,13 +92,19 @@ export async function POST(req: NextRequest) {
       contextBlock: serialized,
       conversationText: [...recentTurns.map((t) => t.content), question].join('\n'),
       apiKey,
-      model: getModel(),
+      // The checker is a constrained adjudication task; a lighter model may
+      // serve it. Default unchanged — this knob exists for latency work.
+      model: process.env.REASONING_VALIDATOR_MODEL ?? getModel(),
     });
 
     return NextResponse.json({
       answer: validated.answer,
       validation: {
-        violations: validated.violations.map((v) => ({ type: v.type })),
+        violations: validated.violations.map((v) => ({
+          type: v.type,
+          sentence: v.sentence.slice(0, 300),
+          rewrite: v.rewrite === null ? null : v.rewrite.slice(0, 300),
+        })),
         repaired: validated.repaired,
         unchecked: validated.unchecked,
       },

@@ -400,3 +400,9 @@ describe('the conversation-rendered assessment carries the counterfactual frame'
     expect(review).toContain('your saved system itself is unchanged');
   });
 });
+
+describe('preview-integration additions to the system-directed predicate', () => {
+  for (const q of ['No, compared with mine.', 'Assume that one for a minute.', 'Which of the three would you choose?']) {
+    it(`"${q}" → system-directed`, () => expect(isSystemDirectedAssessmentTurn(q)).toBe(true));
+  }
+});
