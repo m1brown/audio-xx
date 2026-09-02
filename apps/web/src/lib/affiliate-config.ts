@@ -115,6 +115,37 @@ export function getEbayCampaignId(): string | undefined {
 }
 
 /**
+ * Which affiliate programs are actually configured for this deployment.
+ *
+ * A NAMED PROJECTION of the getters above, not a second source of state.
+ * It exists because every public surface needs the same three answers, and
+ * each one deriving them separately is precisely how the footer and the
+ * Affiliate Disclosure page came to contradict each other: the footer
+ * computed `!!(amazon || ebay)` from config while the page hardcoded a
+ * sentence. A disclosure that names a program we are not enrolled in — or
+ * denies one we are — is the failure this prevents.
+ *
+ * `any` is deliberately identical to the footer's inline expression; a lock
+ * test pins the two together across all four configurations.
+ *
+ * Returns booleans only. No identifier ever leaves this module.
+ */
+export interface AffiliateState {
+  /** Amazon Associates: a store ID is configured, so `tag=` is appended. */
+  amazon: boolean;
+  /** eBay Partner Network: a campaign ID is configured, so `campid=` is appended. */
+  ebay: boolean;
+  /** At least one program is active. */
+  any: boolean;
+}
+
+export function getAffiliateState(): AffiliateState {
+  const amazon = !!getAmazonAffiliateTag();
+  const ebay = !!getEbayCampaignId();
+  return { amazon, ebay, any: amazon || ebay };
+}
+
+/**
  * Returns the optional EPN custom tracking ID configured for this
  * deployment, or undefined when no value is set. `getEbaySearchUrl`
  * appends `customid=<value>` only when this returns a defined value
