@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getAffiliateState } from '@/lib/affiliate-config';
 
 export const metadata = {
   title: 'Privacy Policy',
@@ -6,6 +7,17 @@ export const metadata = {
 };
 
 export default function PrivacyPage() {
+  // Same source of truth as the footer and the Affiliate Disclosure page.
+  // The affiliate paragraphs below described Amazon unconditionally, which is
+  // a claim that silently becomes false the moment configuration changes —
+  // the defect this policy would otherwise reproduce.
+  const { amazon, ebay, any } = getAffiliateState();
+  const marketplaces = [amazon ? 'Amazon.com' : null, ebay ? 'eBay' : null]
+    .filter(Boolean) as string[];
+  const marketplaceList = marketplaces.length === 2
+    ? `${marketplaces[0]} and ${marketplaces[1]}`
+    : marketplaces[0];
+
   return (
     <div style={{ maxWidth: 600 }}>
       <h1>Privacy Policy</h1>
@@ -50,14 +62,23 @@ export default function PrivacyPage() {
       </p>
 
       <h2>Affiliate links</h2>
-      <p className="mb-1">
-        Some product links on this site are affiliate links, including links to
-        Amazon.com. When you click an affiliate link and make a purchase, we may
-        earn a small commission at no additional cost to you. Affiliate
-        relationships do not influence which products are recommended or how
-        they are ranked. For more details, see
-        our <Link href="/affiliate-disclosure">Affiliate Disclosure</Link>.
-      </p>
+      {any ? (
+        <p className="mb-1">
+          Some product links on this site are affiliate links, including links
+          to {marketplaceList}. When you click an affiliate link and make a
+          purchase, we may earn a small commission at no additional cost to
+          you. Affiliate relationships do not influence which products are
+          recommended or how they are ranked. For more details, see
+          our <Link href="/affiliate-disclosure">Affiliate Disclosure</Link>.
+        </p>
+      ) : (
+        <p className="mb-1">
+          Product links on this site are not affiliate links and carry no
+          affiliate tracking. Audio&thinsp;XX earns no commission when you
+          follow one. For more details, see
+          our <Link href="/affiliate-disclosure">Affiliate Disclosure</Link>.
+        </p>
+      )}
 
       <h2>Third-party services</h2>
       <p className="mb-1">
@@ -91,10 +112,18 @@ export default function PrivacyPage() {
           an assessment&rsquo;s web address contains the system description you
           entered, so that text can appear in an error report.
         </li>
-        <li>
-          <strong>Amazon Associates</strong> — affiliate links. Receives a
-          referral tag when you follow a shopping link.
-        </li>
+        {amazon && (
+          <li>
+            <strong>Amazon Associates</strong> — affiliate links. Receives a
+            referral tag when you follow a shopping link.
+          </li>
+        )}
+        {ebay && (
+          <li>
+            <strong>eBay Partner Network</strong> — affiliate links. Receives a
+            campaign identifier when you follow a used-market search link.
+          </li>
+        )}
       </ul>
       <p className="mb-1">
         Sign-in is handled in Audio&thinsp;XX itself using the NextAuth.js
