@@ -11,26 +11,27 @@ export default function AffiliateDisclosurePage() {
       <h1>Affiliate Disclosure</h1>
 
       <p className="mb-1">
-        Audio&thinsp;XX currently earns <strong>no commission</strong> from any
-        link on this site. Every product, manufacturer, and used-market link is
-        provided purely as a convenience.
+        Some links on Audio&thinsp;XX are <strong>affiliate links</strong>. When
+        you follow one and make a purchase, Audio&thinsp;XX may earn a small
+        commission at no additional cost to you. Commission plays no part in
+        what is recommended.
       </p>
 
       <h2>How it works today</h2>
       <p className="mb-1">
         Product cards link to manufacturer pages and to used-market searches
-        (eBay, HiFi Shark, Audiogon). None of these links carry affiliate
-        tracking, and Audio&thinsp;XX receives nothing if you make a purchase.
+        (eBay, HiFi Shark, Audiogon). Some outbound shopping links — including
+        Amazon — carry an affiliate tracking parameter, which is how a purchase
+        is attributed to Audio&thinsp;XX. Manufacturer and dealer links carry no
+        tracking.
       </p>
 
       <h2>If that changes</h2>
       <p className="mb-1">
-        Audio&thinsp;XX may in future participate in affiliate programs (such
-        as Amazon Associates or the eBay Partner Network) to support the site.
-        If and when affiliate links become active, this page and the site
-        footer will say so plainly, and the principles below will continue to
-        apply unchanged: commercial participation does not affect our
-        recommendations — not today, and not then.
+        If affiliate participation ends, or extends to further programs, this
+        page and the site footer will say so plainly. The principles below
+        apply unchanged either way: commercial participation does not affect
+        our recommendations.
       </p>
 
       <h2>Independence</h2>
@@ -63,9 +64,11 @@ export default function AffiliateDisclosurePage() {
 
       <h2>Other relationships</h2>
       <p className="mb-1">
-        Audio&thinsp;XX currently participates in no affiliate program and has
-        no commercial relationship with any manufacturer, dealer, or
-        marketplace. This page will be updated if that changes.
+        Audio&thinsp;XX participates in the Amazon Associates program. Beyond
+        affiliate participation, Audio&thinsp;XX has no commercial relationship
+        with any manufacturer, dealer, or marketplace — no sponsorship, no paid
+        placement, no fee for coverage. This page will be updated if that
+        changes.
       </p>
 
       <div className="mt-2">
