@@ -1507,7 +1507,11 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
-    power_watts: 225,
+    // 125W/ch is the MAKER'S rating (archived jobsys.com products page,
+    // web.archive.org capture 2016-03-09 — the same source the evidence
+    // store quotes). The entry previously said 225W: the MODEL NUMBER
+    // written as the wattage (launch-blocker P1, 2026-09-03).
+    power_watts: 125,
     availability: 'discontinued',
     typicalMarket: 'used',
     usedPriceRange: { low: 700, high: 1400 },
@@ -1558,14 +1562,14 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       elasticity: 0.7,
     },
     description:
-      'The original Goldmund-derived minimalist power amp that started the JOB phenomenon. 225W into 8Ω from a tiny chassis. Ultra-fast, ultra-clean, and shockingly dynamic for its size and used price. A legendary overachiever on the used market.',
+      'The original Goldmund-derived minimalist power amp that started the JOB phenomenon. Rated 125W per channel by the maker, from a tiny chassis. Ultra-fast, ultra-clean, and shockingly dynamic for its size and used price. A legendary overachiever on the used market.',
     retailer_links: [
       { label: 'Used market', url: 'https://www.hifishark.com/search?q=job+225' },
     ],
     tendencies: {
       confidence: 'founder_reference',
       character: [
-        { domain: 'dynamics', tendency: 'explosive dynamic authority from a tiny chassis — 225W of clean, fast power', basis: 'founder_reference' },
+        { domain: 'dynamics', tendency: 'explosive dynamic authority from a tiny chassis — 125W per channel of clean, fast power', basis: 'founder_reference' },
         { domain: 'timing', tendency: 'lightning-fast transients — the shortest signal path design philosophy at work', basis: 'founder_reference' },
         { domain: 'tonality', tendency: 'lean, transparent, and honest — no warmth added, no density embellished', basis: 'founder_reference' },
       ],
@@ -2431,14 +2435,17 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
     name: 'Telos 590 NextGen II',
     price: 26000,
     category: 'amplifier',
-    architecture: 'Class AB, fully analog, high-bandwidth, 225W @ 8Ω',
+    architecture: 'Class AB, fully analog, high-bandwidth, 215W @ 8Ω',
     subcategory: 'integrated-amp',
     priceTier: 'reference',
     brandScale: 'luxury',
     region: 'europe',
     country: 'CH',
     topology: 'class-ab-solid-state',
-    power_watts: 225,
+    // 215W into 8 ohms per the published specifications (What Hi-Fi /
+    // StereoNET reviews of the NextGen II). Previously 225W — the same
+    // model-number-as-wattage error class as the JOB 225 (2026-09-03).
+    power_watts: 215,
     archetypes: { primary: 'precision_explicit', secondary: 'rhythmic_propulsive' },
     primaryAxes: {
       warm_bright: 'bright',
@@ -2485,7 +2492,7 @@ export const AMPLIFIER_PRODUCTS: Product[] = [
       glare_risk: 0.4,
     },
     description:
-      'Swiss reference integrated from Goldmund\'s high-end Telos line. 225W of clean, precise, highly controlled power. Neutral to slightly dry — prioritises speed, dynamics, and transparency over tonal warmth. Exceptional grip and authority. The Telos line represents Goldmund\'s serious audio engineering, far above the budget JOB sub-brand.',
+      'Swiss reference integrated from Goldmund\'s high-end Telos line. 215W of clean, precise, highly controlled power. Neutral to slightly dry — prioritises speed, dynamics, and transparency over tonal warmth. Exceptional grip and authority. The Telos line represents Goldmund\'s serious audio engineering, far above the budget JOB sub-brand.',
     retailer_links: [
       { label: 'Goldmund', url: 'https://www.goldmund.com/' },
     ],

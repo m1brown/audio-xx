@@ -21,6 +21,7 @@
  */
 export type ProductCategory =
   | 'speaker'
+  | 'subwoofer'
   | 'amplifier'
   | 'dac'
   | 'streamer'
