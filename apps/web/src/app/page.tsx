@@ -3378,6 +3378,18 @@ export default function Home() {
           const factCandidates = orderedComponents
             .filter((c) => corroborated.includes(c.displayName) || c.product || c.brandProfile)
             .map((c) => c.displayName);
+          /*
+           * Components OUTSIDE the corroboration/catalog boundary still get a
+           * READ-ONLY fact lookup (launch-blocker cleanup, 2026-09-03). The
+           * eligibility filter exists to keep ACQUISITION away from
+           * unverified identities — but facts already admitted to the store
+           * under the exact typed key passed admission once and must render.
+           * Without this, the entire mass-market tier showed "no published
+           * specifications" while the store held its maker facts.
+           */
+          const readOnlyCandidates = orderedComponents
+            .map((c) => c.displayName)
+            .filter((n) => !factCandidates.includes(n));
           if (factCandidates.length > 0) {
             const factsDeadline = new Promise<'deadline'>((r) =>
               setTimeout(() => r('deadline'), FACTS_BUDGET_MS));
@@ -3393,7 +3405,22 @@ export default function Home() {
                 return Array.isArray(j?.facts) ? j.facts : [];
               } catch { return []; }
             }));
-            const factsSettled = await Promise.race([factLookups, factsDeadline]);
+            const readOnlyLookups = Promise.all(readOnlyCandidates.map(async (name) => {
+              try {
+                const r = await fetch('/api/manufacturer-facts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name, mode: 'read' }),
+                });
+                if (!r.ok) return [];
+                const j = await r.json();
+                return Array.isArray(j?.facts) ? j.facts : [];
+              } catch { return []; }
+            }));
+            const factsSettled = await Promise.race([
+              Promise.all([factLookups, readOnlyLookups]).then(([a, b]) => [...a, ...b]),
+              factsDeadline,
+            ]);
             manufacturerEvidence = factsSettled === 'deadline'
               ? []
               : (factsSettled as Array<Array<Record<string, unknown>>>).flat();
