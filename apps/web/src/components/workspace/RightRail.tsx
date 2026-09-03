@@ -144,10 +144,16 @@ export default function RightRail({
               </div>
             )}
             <div>
+              {/* Separator is deliberately non-directional (P1, 2026-09-03):
+                  this list is stored MEMBERSHIP in entered order, and the
+                  arrow it used to carry asserted a signal-flow ordering the
+                  listener never supplied (France II rendered as
+                  "JOB → WLM → Eversolo → Chord Hugo"). A component list is
+                  preferable to false topology. */}
               {activeSystemComponents.map((c, i) => (
                 <span key={i}>
                   {i > 0 && (
-                    <span style={{ color: RAIL.faint, margin: '0 0.35rem' }}>→</span>
+                    <span style={{ color: RAIL.faint, margin: '0 0.35rem' }}>·</span>
                   )}
                   <span>{c}</span>
                 </span>

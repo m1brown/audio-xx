@@ -39,6 +39,7 @@ import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
 import { interfaceConclusions } from './interface-conclusions';
+import { analyzeConversionPath } from '../assessment/conversion-path';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
 import type { SonicRelation } from '../evidence/relational-synthesis';
@@ -67,6 +68,13 @@ export interface SystemReviewInput {
    * section, and says so in its limits rather than reaching for prose.
    */
   synthesis?: SonicSynthesis;
+  /**
+   * The listener's own words, when the caller has them. Used ONLY to detect
+   * explicitly stated connections and exclusions ("Hugo isn't being used"),
+   * which outrank any structural inference. Absent on frozen-snapshot paths;
+   * conversion-path ambiguity is still detected structurally without it.
+   */
+  rawQuery?: string;
 }
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
@@ -577,7 +585,13 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * first. They are also the ones that changed most: three of these
    * interfaces were reported as unresolved until the figures were fetched.
    */
-  const conclusions = interfaceConclusions(input.components, input.dossiers);
+  // Conversion-path authority (P1, 2026-09-03): computed once, consumed by the
+  // interface layer here and by the experiment/clarification blocks below.
+  // Known components do not imply a known signal path — see conversion-path.ts.
+  const conv = analyzeConversionPath(input.components, input.dossiers, input.rawQuery);
+  const conclusions = interfaceConclusions(input.components, input.dossiers, {
+    conversionPathAmbiguous: conv.ambiguous,
+  });
   const interfaceParas: string[] = conclusions.map((c) => c.statement);
   const engineeringCoherent = conclusions.length >= 2
     && conclusions.every((c) => c.status === 'established' && c.favourable !== false);
@@ -1241,17 +1255,29 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * is made or implied, and the recommendation only fires when the richer
    * corroboration-based experiment above had nothing to say.
    */
-  if (next.length === 0) {
-    const srcComp = input.components.find((c) =>
-      ['streamer_dac', 'dac', 'streamer'].includes((c.role ?? '').toLowerCase()));
-    const ampComp = input.components.find((c) =>
-      ['integrated', 'amplifier'].includes((c.role ?? '').toLowerCase()));
-    const ampView = ampComp && input.dossiers.find((d) => d.displayName === ampComp.displayName);
-    const ampConverts = !!(ampView && lines(ampView).some((l) =>
-      /d\/a|dac|onboard.*conversion|digital.*input/i.test(l.value) && /conver|d\/a|dac/i.test(l.value)));
-    if (srcComp && ampComp && ampConverts && srcComp !== ampComp) {
-      const srcName = canonicalDisplayName(srcComp.displayName);
-      const ampName = canonicalDisplayName(ampComp.displayName);
+  /*
+   * ── CONVERSION-PATH AUTHORITY (P1, 2026-09-03) ──
+   *
+   * Identity does not license topology. The paragraph below compares a
+   * source's conversion against an amplifier's onboard conversion — a
+   * relationship-dependent recommendation — so it may fire only when that
+   * two-stage reading is the system's one natural interpretation. With a
+   * dedicated external DAC also in the chain (France II: Eversolo, Chord
+   * Hugo, JOB INTegrated) there was no single natural path, yet the
+   * first-match role lookup used here silently dropped the Hugo and asserted
+   * a path the listener never supplied. Stages now come from
+   * analyzeConversionPath — evidence- and role-licensed, all of them, not the
+   * first match — and when materially different paths exist and the listener
+   * has not stated one, the review preserves the ambiguity and asks once,
+   * naturally, instead of guessing (see the block after this one).
+   */
+  if (next.length === 0 && !conv.ambiguous) {
+    const srcStage = conv.stages.find((s) => s.kind === 'source_with_dac');
+    const ampStage = conv.stages.find((s) => s.kind === 'amp_with_dac');
+    const noDedicated = conv.stages.every((s) => s.kind !== 'dedicated_dac');
+    if (srcStage && ampStage && noDedicated) {
+      const srcName = canonicalDisplayName(srcStage.name);
+      const ampName = canonicalDisplayName(ampStage.name);
       next.push(
         `One structural fact is worth acting on before any purchase: this chain `
         + `contains two conversion stages — the ${srcName} performs D/A conversion, `
@@ -1264,6 +1290,22 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `should live in this system — and neither costs anything.`,
       );
     }
+  }
+  if (conv.ambiguous) {
+    const stageNames = conv.stages.map((s) => (s.kind === 'amp_with_dac'
+      ? `the ${canonicalDisplayName(s.name)}’s onboard conversion`
+      : `the ${canonicalDisplayName(s.name)}`));
+    const listed = stageNames.length > 1
+      ? `${stageNames.slice(0, -1).join(', ')} and ${stageNames[stageNames.length - 1]}`
+      : stageNames[0];
+    next.push(
+      `One thing this component list does not tell me is where digital-to-analogue `
+      + `conversion actually happens: ${listed} ${stageNames.length > 1 ? 'are all' : 'is'} `
+      + `capable of performing it, and which one sits in the signal path depends on `
+      + `how they are connected — something I will not guess from a component list. `
+      + `Any advice about the conversion stage would change with that answer, so `
+      + `before offering it: how are you connecting them?`,
+    );
   }
 
   /*

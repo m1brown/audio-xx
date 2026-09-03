@@ -3523,6 +3523,10 @@ export default function Home() {
               components: reviewComponents,
               synthesis: synthesiseChain(reviewComponents),
               dossiers: dossierViews,
+              // The listener's own words, so explicitly stated connections and
+              // exclusions ("the Hugo isn't being used") outrank structural
+              // conversion-path inference (P1, 2026-09-03).
+              rawQuery: assessmentResult.query,
               driveFinding: provisional.systemSignature ?? undefined,
               driveQualification: provisional.qualification,
               // The coverage statement is already inside `philosophy`, which
@@ -3606,6 +3610,7 @@ export default function Home() {
                 name: c.displayName, role: c.role,
               })),
               componentDossiers: dossierViews,
+              rawQuery: assessmentResult.query,
             });
             // The snapshot's review is the one the listener actually reads;
             // follow-up continuity answers from the same text.
@@ -3772,7 +3777,12 @@ export default function Home() {
         // no consumer reads it. On path: the chat-side dispatch consumes it
         // via synthesizeArtifact() to render the v2 editorial artifact.
         if (ASSESSMENT_ARTIFACT_V2_ENABLED) {
-          deterministicAdvisory.__rawAssessment = assessmentResult;
+          // The listener's own words travel WITH the result: stated
+          // connections and exclusions ("the Hugo isn't being used") must
+          // reach the same composer every surface renders through, or the
+          // conversation asks a conversion-path question the listener already
+          // answered (P1, 2026-09-03).
+          deterministicAdvisory.__rawAssessment = { ...assessmentResult, query: accumulatedText };
         }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
 
@@ -3789,6 +3799,9 @@ export default function Home() {
             actionVerdict: assessmentResult.response?.actionVerdict,
             componentDossiers: assessmentResult.response?.componentDossiers,
             statedSubstitution: assessmentResult.findings?.statedSubstitution,
+            // This branch's result shape carries no `query`; the turn's raw
+            // text is the same message buildSystemAssessment consumed.
+            rawQuery: accumulatedText,
           });
           trackEvent('unmatched_model', { model: 'PROBE-w3', reason: 'probe' });
           convStateRef.current.facts.lastSystemReview = canonicalSnap.systemReview ?? [];

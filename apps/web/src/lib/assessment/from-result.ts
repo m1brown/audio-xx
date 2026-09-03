@@ -73,5 +73,10 @@ export function authoritativeAssessment(
     // (Wave 2, 2026-08-30).
     statedSubstitution: (result.findings as { statedSubstitution?: { incumbent: string; candidate: string } } | undefined)
       ?.statedSubstitution,
+    // Read defensively: some result shapes carry the listener's message as
+    // `query` (the carrier at the conversation surface spreads it on). Used
+    // only for stated-connection/exclusion detection in the conversion-path
+    // authority check (P1, 2026-09-03); absent, detection is structural only.
+    rawQuery: (result as { query?: string }).query,
   });
 }

@@ -340,6 +340,19 @@ function headroomConclusion(
 export function interfaceConclusions(
   components: Array<{ displayName: string; role: string }>,
   dossiers: DossierView[],
+  opts?: {
+    /**
+     * Conversion-path authority (P1, 2026-09-03): with more than one
+     * DAC-capable stage and no listener-stated connection, WHICH source
+     * feeds the analogue chain is not established. The single-slot `find`
+     * below would silently pick the first role match (dropping, e.g., an
+     * explicitly supplied Chord Hugo) and assert interfaces along a path
+     * nobody supplied. When the caller reports ambiguity, source-adjacent
+     * interfaces are not composed; amp→speaker remains, because that
+     * relationship does not depend on the conversion path.
+     */
+    conversionPathAmbiguous?: boolean;
+  },
 ): InterfaceConclusion[] {
   const find = (...roles: string[]) => {
     const c = components.find((x) => roles.includes((x.role ?? '').toLowerCase()));
@@ -347,7 +360,8 @@ export function interfaceConclusions(
     return { name: c.displayName, dossier: dossiers.find((d) => d.displayName === c.displayName) };
   };
 
-  const source = find('dac', 'streamer_dac', 'streamer', 'source');
+  const pathUnknown = opts?.conversionPathAmbiguous === true;
+  const source = pathUnknown ? undefined : find('dac', 'streamer_dac', 'streamer', 'source');
   const preamp = find('preamplifier', 'preamp');
   const amp = find('amplifier', 'integrated');
   const speaker = find('speaker');
