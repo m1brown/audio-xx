@@ -43,6 +43,11 @@ const BRAND_CATEGORY_MAP: Record<string, ProductCategory> = {
   tannoy: 'speaker', magnepan: 'speaker', 'martin logan': 'speaker', quad: 'speaker',
   wlm: 'speaker', 'cube audio': 'speaker', hornshoppe: 'speaker',
   qualio: 'speaker', totem: 'speaker', modalakustik: 'speaker',
+  // Subwoofer specialists (Launch 20, 2026-09-03): a powered sub is a
+  // normal member of the modern US system (SVS/RSL in a third of observed
+  // real builds) and must parse as its own role, never as a second
+  // "speaker" that trips the duplicate-role gate.
+  svs: 'subwoofer', rel: 'subwoofer', rythmik: 'subwoofer', rsl: 'subwoofer',
   // Amplifiers
   'pass labs': 'amplifier', 'first watt': 'amplifier', naim: 'amplifier',
   luxman: 'amplifier', accuphase: 'amplifier', parasound: 'amplifier',
@@ -547,6 +552,7 @@ export function detectSystemDescription(
         if (/\bintegrated\b/.test(hTail2)) hintCat = 'integrated';
         else if (/\bpre-?amp/.test(hTail2)) hintCat = 'amplifier';
         else if (/\bamp(?:lifier)?s?\b/.test(hTail2)) hintCat = 'amplifier';
+        else if (/\bsubwoofers?\b/.test(hTail2)) hintCat = 'subwoofer';
         else if (/\bspeakers?\b/.test(hTail2)) hintCat = 'speaker';
         else if (/\bdac\b/.test(hTail2)) hintCat = 'dac';
         else if (/\bstreamer\b/.test(hTail2)) hintCat = 'streamer';
@@ -627,6 +633,7 @@ export function detectSystemDescription(
           if (/\bintegrated\b/.test(eTail)) embCat = 'integrated';
           else if (/\bpre-?amp/.test(eTail)) embCat = 'amplifier';
           else if (/\bamp(?:lifier)?s?\b/.test(eTail)) embCat = 'amplifier';
+          else if (/\bsubwoofers?\b/.test(eTail)) embCat = 'subwoofer';
           else if (/\bspeakers?\b/.test(eTail)) embCat = 'speaker';
           else if (/\bdac\b/.test(eTail)) embCat = 'dac';
           else if (/\bstreamer\b/.test(eTail)) embCat = 'streamer';
@@ -763,6 +770,7 @@ export function detectSystemDescription(
       else if (/\bintegrated\b/.test(descTail)) explicitCategory = 'integrated';
       else if (/\b(?:power\s+)?amp(?:lifier)?s?\b/.test(descTail)
         && !/\bpre-?amp/.test(descTail)) explicitCategory = 'amplifier';
+      else if (/\bsubwoofers?\b|\bsubs?\b/.test(descTail)) explicitCategory = 'subwoofer';
       else if (/\b(?:loud)?speakers?\b/.test(descTail)) explicitCategory = 'speaker';
       else if (/\bstreamer\b/.test(descTail) && /\bdac\b/.test(descTail)) explicitCategory = 'streamer_dac';
       else if (/\bdac\b/.test(descTail)) explicitCategory = 'dac';
@@ -802,7 +810,7 @@ export function detectSystemDescription(
       const segLower = seg.toLowerCase();
       if (components.some((c) => [c.brand, c.name].some((t) => t && t.length >= 3
         && !isBareCategory(t) && segLower.includes(t.toLowerCase())))) continue;
-      const ROLE_TAIL = /\s+(cd\s+player|loud?speakers?|monitors?|speakers?|power\s+amps?|amplifiers?|amps?|integrateds?|preamps?|pre-amps?|dacs?|streamers?|turntables?|sources?)\.?\s*$/i;
+      const ROLE_TAIL = /\s+(cd\s+player|loud?speakers?|monitors?|speakers?|subwoofers?|subs?|power\s+amps?|amplifiers?|amps?|integrateds?|preamps?|pre-amps?|dacs?|streamers?|turntables?|sources?)\.?\s*$/i;
       const rm = ROLE_TAIL.exec(seg);
       if (!rm) continue;
       const namePart = seg.slice(0, rm.index).trim()
@@ -816,7 +824,8 @@ export function detectSystemDescription(
         || (tokens.length >= 2 && tokens.every((t) => /^[A-Z]/.test(t)));
       if (!modelish) continue;
       const roleWord = rm[1].toLowerCase();
-      const cat: ProductCategory = /speaker|monitor/.test(roleWord) ? 'speaker'
+      const cat: ProductCategory = /subwoofer|sub\b|subs\b/.test(roleWord) ? 'subwoofer'
+        : /speaker|monitor/.test(roleWord) ? 'speaker'
         : /integrated/.test(roleWord) ? 'integrated'
         : /pre/.test(roleWord) ? 'amplifier'
         : /amp/.test(roleWord) ? 'amplifier'

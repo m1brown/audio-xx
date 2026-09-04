@@ -182,6 +182,8 @@ export function snapshotFromCanonical(
     /** The engine's own findings, read ONLY for licensed relationships. */
     findings?: unknown;
     statedSubstitution?: { incumbent: string; candidate: string };
+    /** Listener's words, for stated-connection detection only (P1 2026-09-03). */
+    rawQuery?: string;
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -235,6 +237,7 @@ export function snapshotFromCanonical(
     driveQualification: undefined,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
+    rawQuery: meta.rawQuery,
   });
   if (cam.reading.engineering.length) {
     sections.push({ label: 'Engineering', paragraphs: cam.reading.engineering });
@@ -322,6 +325,8 @@ export function snapshotFromProvisional(
     /** The coverage statement, when the assessment carried one. */
     coverageNote?: string;
     componentDossiers?: DossierView[];
+    /** Listener's words, for stated-connection detection only (P1 2026-09-03). */
+    rawQuery?: string;
   },
 ): AssessmentSnapshotV1 {
   const basisFor = new Map(
@@ -412,6 +417,7 @@ export function snapshotFromProvisional(
     driveQualification: response.qualification,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
+    rawQuery: meta.rawQuery,
   });
 
   const snap: AssessmentSnapshotV1 = {
