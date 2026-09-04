@@ -3982,7 +3982,28 @@ export default function Home() {
       || (effectiveMode === 'shopping' && shoppingAnswerCount > 0)
       || effectiveMode === 'diagnosis';
     if (!consultationGuarded && (effectiveMode === 'consultation' || isBrandComparison || isGearWithSubjects)) {
-      const consultResult = buildConsultationResponse(submittedText, turnCtx.subjectMatches);
+      /*
+       * The comparison consumes the ESTABLISHED system context (2026-09-04):
+       * the active saved/draft system when one exists, else the components
+       * this conversation's own assessment just identified (laneStateRef) —
+       * so "the Klipschs" resolves to the listener's RP-600M II rather than
+       * a brand-representative model, and no follow-up claims not to know a
+       * system assessed one turn earlier. Minimum handoff, this conversation
+       * only — not a memory system.
+       */
+      const comparisonSystemContext = (turnCtx.activeSystem?.components?.length
+        ? {
+          components: turnCtx.activeSystem.components.map((c) => ({
+            displayName: c.name.toLowerCase().startsWith(c.brand.toLowerCase())
+              ? c.name : `${c.brand} ${c.name}`,
+            role: String(c.role ?? ''),
+          })),
+        }
+        : laneStateRef.current?.components?.length
+          ? { components: laneStateRef.current.components }
+          : undefined);
+      const consultResult = buildConsultationResponse(
+        submittedText, turnCtx.subjectMatches, comparisonSystemContext);
       if (consultResult) {
         // Build the advisory once so we can both dispatch it and lift its
         // source attributions/links into the active-comparison state for

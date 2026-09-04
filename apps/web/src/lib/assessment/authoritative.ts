@@ -47,6 +47,12 @@ import type { AssessmentSnapshotV1 } from '../artifact/snapshot';
 import type { DossierView } from '../evidence/dossier-presentation';
 import { causalCoverage, type InterfaceCoverage } from '../artifact/causal-coverage';
 import { verdictFromEvidence } from '../relational-explain';
+import {
+  deriveActiveRoles, interfaceMateriality, demoteBypassedEvidence,
+  type ActiveRoleModel,
+} from './active-roles';
+import { governedTonalSignature } from './governed-signature';
+import type { PrimaryAxisLeanings } from '../axis-types';
 
 export interface LicenceInput {
   /** Components in chain order, with roles — no role means no interface. */
@@ -68,6 +74,20 @@ export interface LicenceInput {
    * should state clearly. Coverage-derived relations are unioned with them.
    */
   engineRelations?: Array<{ kind: 'reinforcement' | 'constraint'; axis: string }>;
+  /**
+   * The listener's own words, for active-role derivation only: stated
+   * connections and exclusions govern which functions are active or bypassed
+   * (P1 invariant, extended 2026-09-04). Optional; role derivation degrades
+   * to structural analysis without it.
+   */
+  rawQuery?: string;
+  /**
+   * Per-component axis knowledge, for the governed sound-profile graph.
+   * When present, the tonal signature is re-derived under the governed
+   * inference rule (active functions only, leverage-weighted) instead of
+   * being stripped — see governed-signature.ts.
+   */
+  perComponentAxes?: Array<{ name: string; axes: PrimaryAxisLeanings }>;
 }
 
 /**
@@ -189,6 +209,14 @@ export function composeUnresolved(
   rows: InterfaceCoverage[],
   /** Interfaces another evidence source already settled. */
   engineCovered = false,
+  /**
+   * Active-role model, when the caller has one: unresolved interfaces are
+   * then WEIGHTED BY CAUSAL IMPORTANCE rather than listed equally. A gap
+   * at a low-leverage interface (a transport whose conversion stage is
+   * bypassed) is summarised in one clause instead of standing beside the
+   * amplifier/loudspeaker interface as if it mattered as much.
+   */
+  model?: ActiveRoleModel,
 ): string | undefined {
   /*
    * An interface another source settled is not unresolved.
@@ -201,9 +229,21 @@ export function composeUnresolved(
    * sources disagreeing about what is known is a real thing to fix, not a
    * thing to print.
    */
-  const open = rows.filter((r) => r.state === 'unresolved'
+  const openAll = rows.filter((r) => r.state === 'unresolved'
     && !(engineCovered && r.relationScope === 'power_load'));
-  if (open.length === 0) return undefined;
+  const open = model
+    ? openAll.filter((r) => interfaceMateriality(model, r.from, r.to) !== 'low')
+    : openAll;
+  const lowRows = model
+    ? openAll.filter((r) => interfaceMateriality(model, r.from, r.to) === 'low')
+    : [];
+  const lowClause = lowRows.length > 0
+    ? ` Unresolved figures at low-leverage interfaces (${lowRows
+      .map((r) => `${r.from} to ${r.to}`).join('; ')}) are recorded but do not bear on `
+      + `this assessment — the functions involved are bypassed or carry little of the `
+      + `system's audible character as configured.`
+    : '';
+  if (open.length === 0) return lowClause ? lowClause.trim() : undefined;
 
   const byCause = new Map<string, InterfaceCoverage[]>();
   for (const r of open) {
@@ -228,7 +268,7 @@ export function composeUnresolved(
   }
 
   return `What this assessment could not establish, and the reason in each case — `
-    + parts.join(' ');
+    + parts.join(' ') + lowClause;
 }
 
 /**
@@ -261,6 +301,13 @@ export function licenseAssessment(
   input: LicenceInput,
 ): AssessmentSnapshotV1 {
   const rows = coverageFor(input);
+  // Active roles for causal weighting and the governed sound profile. Derived
+  // from the same components/dossiers/words the rest of the gate reads.
+  const roleModel = deriveActiveRoles(
+    input.components.map((c) => ({ displayName: c.name, role: c.role ?? '' })),
+    input.dossiers,
+    input.rawQuery,
+  );
   const established = [
     ...rows.map((r) => r.relation).filter((r): r is NonNullable<typeof r> => !!r),
     ...(input.engineRelations ?? []),
@@ -296,7 +343,7 @@ export function licenseAssessment(
     ? verdictFromEvidence(undefined, established, gap)
     : snapshot.verdict || verdictFromEvidence(undefined, established, gap);
 
-  const unresolved = composeUnresolved(rows, engineCovered);
+  const unresolved = composeUnresolved(rows, engineCovered, roleModel);
   /*
    * The unresolved statement belongs with the LIMITS, not after the closing
    * question. Appended at the end it landed beneath "here is what would help",
@@ -345,6 +392,11 @@ export function licenseAssessment(
         ? (snapshot.verdict || verdict)
         : verdictFromEvidence(undefined, [], gap),
       systemReview,
+      // Role-governed relevance (2026-09-04): a transport-only component's
+      // analogue-stage figures stop LEADING its card. Demoted, never removed.
+      componentDossiers: snapshot.componentDossiers
+        ? demoteBypassedEvidence(snapshot.componentDossiers, roleModel)
+        : snapshot.componentDossiers,
     };
   }
 
@@ -381,6 +433,9 @@ export function licenseAssessment(
     ...snapshot,
     verdict,
     systemReview,
+    componentDossiers: snapshot.componentDossiers
+      ? demoteBypassedEvidence(snapshot.componentDossiers, roleModel)
+      : snapshot.componentDossiers,
     sections: constrained ? snapshot.sections : [],
     recommendation: constrained ? snapshot.recommendation : undefined,
     cost: constrained ? snapshot.cost : undefined,
@@ -394,6 +449,27 @@ export function licenseAssessment(
     actionVerdict: constrained ? snapshot.actionVerdict : undefined,
     standfirst: undefined,
     recognition: undefined,
-    tonalSignature: undefined,
+    /*
+     * THE SOUND-PROFILE GRAPH, RE-LICENSED (2026-09-04).
+     *
+     * The unconditional strip removed the Tonal Signature because
+     * aggregating per-component catalog axes had no established rule. The
+     * rule now exists as a GOVERNED INFERENCE (governed-signature.ts):
+     * active functions only, weighted by causal leverage in the
+     * instantiated signal path, plotted coarsely, absent where the
+     * evidence does not reach. A trait-lane signature is still never
+     * carried over; the graph is DERIVED here or not shown at all.
+     */
+    tonalSignature: input.perComponentAxes
+      ? governedTonalSignature(input.perComponentAxes, roleModel, {
+        evidencedComponents: new Set(input.dossiers
+          .filter((d) => d.primary.length + d.secondary.length > 0)
+          .map((d) => d.displayName)),
+        // The same scope rule readableAxisState applies on the trait lane: a
+        // power constraint makes dynamics/control unreadable; tonal balance
+        // continues to publish.
+        constrainedAxes: constrained ? ['elastic_controlled', 'smooth_detailed'] : [],
+      })
+      : undefined,
   };
 }

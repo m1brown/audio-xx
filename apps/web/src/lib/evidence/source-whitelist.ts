@@ -26,11 +26,25 @@
 
 export type SourceTier = 'preferred' | 'acceptable';
 
+/**
+ * What KIND of source this is — a classification, never a hierarchy.
+ *
+ * Expert-system threshold (2026-09-04): credible video reviewers with direct
+ * listening experience are serious listening evidence. A video channel's
+ * observation is weighed exactly as a written publication's — by exact-
+ * product experience, directness, specificity and corroboration — and the
+ * character layer counts both equally toward convergence. There is no
+ * written-publication-over-video weighting anywhere, by design.
+ */
+export type SourceKind = 'publication' | 'video_channel';
+
 export interface WhitelistedSource {
   /** Publication name — must match sourceReferences entries exactly. */
   name: string;
   /** Tier 1 (preferred) or Tier 2 (acceptable). */
   tier: SourceTier;
+  /** Classification only — see SourceKind. Absent means 'publication'. */
+  kind?: SourceKind;
   /** Short description of editorial perspective. */
   perspective: string;
   /** URL for the publication homepage. */
@@ -194,8 +208,56 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
   {
     name: 'The Audiophiliac',
     tier: 'acceptable',
+    kind: 'video_channel',
     perspective: 'Steve Guttenberg — accessible, experience-first reviews. Good for entry and mid-level gear.',
     url: 'https://www.youtube.com/@Audiophiliac',
+  },
+
+  /*
+   * ── Video reviewers (added 2026-09-04, expert-system threshold) ──
+   *
+   * Priority known sources with direct listening experience across the
+   * mainstream and value segments the written press underserves. Each is an
+   * identified reviewer whose observation is admitted AS an attributed
+   * listening observation — never a universal fact — and weighted by the
+   * same criteria as any publication. This is a starting roster, not an
+   * eternal closed list: unlisted credible sources are admissible through
+   * the page-verified path in the acquisition layer.
+   */
+  {
+    name: 'Darko Audio (video)',
+    tier: 'preferred',
+    kind: 'video_channel',
+    perspective: 'John Darko’s video channel — the same system-aware, modern editorial voice as the site.',
+    url: 'https://www.youtube.com/@DarkoAudio',
+  },
+  {
+    name: 'CheapAudioMan',
+    tier: 'acceptable',
+    kind: 'video_channel',
+    perspective: 'Randy — value-focused, direct listening across budget and mid-fi gear. Strong on real-world system matching at accessible prices.',
+    url: 'https://www.youtube.com/@cheapaudioman',
+  },
+  {
+    name: 'OCD HiFi Guy',
+    tier: 'acceptable',
+    kind: 'video_channel',
+    perspective: 'Mikey (OCD Mikey) — dealer-experienced, opinionated, direct comparisons and setup-sensitive listening notes.',
+    url: 'https://www.youtube.com/@OCDHiFiGuy',
+  },
+  {
+    name: 'Thomas & Stereo',
+    tier: 'acceptable',
+    kind: 'video_channel',
+    perspective: 'Long-form owner-perspective reviews with stated associated equipment; strong on speakers and amplification pairing.',
+    url: 'https://www.youtube.com/@ThomasStereo',
+  },
+  {
+    name: 'A British Audiophile',
+    tier: 'acceptable',
+    kind: 'video_channel',
+    perspective: 'Tarun — methodical, level-matched comparative listening with named reference systems and conditions.',
+    url: 'https://www.youtube.com/@ABritishAudiophile',
   },
   {
     name: 'Headphone.guru',
@@ -210,6 +272,33 @@ export const SOURCE_WHITELIST: WhitelistedSource[] = [
     url: 'https://www.head-fi.org/',
   },
 ];
+
+// ── Categorical exclusions ─────────────────────────────
+
+/**
+ * Sources that may NEVER be used as evidence, displayed, quoted or linked —
+ * regardless of how they are discovered or classified. This is the ONE
+ * categorical source exclusion (founder policy, 2026-07-31, restated
+ * 2026-09-04): 6moons. Previously enforced only by absence from the
+ * whitelist; with the retrieval universe broadened beyond the registry,
+ * absence is no longer enforcement, so the exclusion is explicit and is
+ * consulted on every admission path including the unlisted-source path.
+ */
+const EXCLUDED_SOURCE_NAMES = ['6moons'];
+const EXCLUDED_SOURCE_HOSTS = ['6moons.com'];
+
+/** True when a source name or URL belongs to a categorically excluded source. */
+export function isExcludedSource(nameOrUrl: string | undefined): boolean {
+  if (!nameOrUrl) return false;
+  const v = nameOrUrl.toLowerCase();
+  if (EXCLUDED_SOURCE_NAMES.some((n) => v.includes(n))) return true;
+  try {
+    const host = new URL(nameOrUrl).host.toLowerCase().replace(/^www\./, '');
+    return EXCLUDED_SOURCE_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+  } catch {
+    return EXCLUDED_SOURCE_HOSTS.some((h) => v.includes(h));
+  }
+}
 
 // ── Lookup structures ──────────────────────────────────
 
@@ -237,6 +326,10 @@ const HOST_TO_PUBLICATION: Map<string, string> = (() => {
   const m = new Map<string, string>();
   const strip = (h: string) => h.toLowerCase().replace(/^www\./, '');
   for (const entry of SOURCE_WHITELIST) {
+    // A video channel's host is youtube.com — shared by every channel, so it
+    // identifies NONE of them. Channels resolve by canonical NAME only; the
+    // domain check still confirms the URL is a YouTube address.
+    if (entry.kind === 'video_channel') continue;
     try { m.set(strip(new URL(entry.url).host), entry.name); } catch { /* skip */ }
     for (const alt of entry.alternateDomains ?? []) m.set(strip(alt), entry.name);
   }

@@ -28,10 +28,27 @@ const MODEL = process.env.OPENAI_SEARCH_MODEL ?? 'gpt-4o';
 /** Approved publications, named for the model exactly as the registry names them. */
 const APPROVED = SOURCE_WHITELIST.map((s) => `${s.name} (${new URL(s.url).host})`).join('; ');
 
-const INSTRUCTIONS = `You locate published reviews of a named audio product and report what they observed.
+const INSTRUCTIONS = `You locate published reviews and credible listening coverage of a named audio product and report what was observed.
 
-ONLY these publications count. Ignore every other source, including forums, dealers, retailers, aggregators and any publication not on this list:
+SEARCH BROADLY. Relevant evidence lives in established audio publications,
+specialist publications, historical reviews of discontinued products, credible
+YouTube reviewers with direct listening experience, designer interviews and
+show reports. Do not confine yourself to a fixed list of outlets.
+
+PRIORITY KNOWN SOURCES (search these first when relevant, but they are a
+starting roster, not a boundary):
 ${APPROVED}
+
+CATEGORICALLY EXCLUDED: 6moons (6moons.com). Never report anything from it,
+under any framing.
+
+A source outside the priority roster is acceptable when it is a real,
+identifiable outlet or reviewer with direct experience of the product: name it
+exactly, give the real URL, and identify the reviewer. Admission is decided
+downstream — your job is accurate discovery and attribution, not gatekeeping.
+Skip anonymous forum chatter, dealer/retailer copy and aggregator rehashes.
+For a YouTube review, "publication" is the channel name and "sourceUrl" is the
+video URL.
 
 Return ONLY this JSON, no prose, no markdown fences:
 {
@@ -72,8 +89,8 @@ Rules:
 - One observation per distinct claim. A single review usually yields several.
 - NO scores, ratings, star counts, rankings or overall summaries. Report what
   was observed, not how good it was judged to be.
-- If no approved publication has reviewed this product, return found:false with
-  an empty array. That is a correct and useful answer.`;
+- If no credible source has covered this product, return found:false with an
+  empty array. That is a correct and useful answer.`;
 
 export async function POST(req: NextRequest) {
   const started = Date.now();

@@ -22,7 +22,7 @@
  */
 
 import {
-  canonicalPublicationName, publicationForHost,
+  canonicalPublicationName, publicationForHost, getSourceEntry, isExcludedSource,
 } from './source-whitelist';
 import {
   admitReviewObservation, compareProductIdentity,
@@ -77,7 +77,14 @@ export interface ReviewCandidate {
  */
 export function resolveCandidatePublication(
   candidate: ReviewCandidate,
-): { publication: string } | { reason: RejectedCandidate['reason']; detail?: string } {
+): { publication: string; unlisted?: boolean }
+  | { reason: RejectedCandidate['reason']; detail?: string } {
+  // The categorical exclusion is checked before anything else: 6moons is
+  // never admissible on any path, including the unlisted one.
+  if (isExcludedSource(candidate.publication) || isExcludedSource(candidate.sourceUrl)) {
+    return { reason: 'publication_unresolvable', detail: '6moons is categorically excluded' };
+  }
+
   const byHost = candidate.sourceUrl ? publicationForHost(candidate.sourceUrl) : undefined;
   const byName = candidate.publication ? canonicalPublicationName(candidate.publication) : undefined;
 
@@ -88,6 +95,23 @@ export function resolveCandidatePublication(
   // here and is then rejected by admission's own domain check.
   if (byHost) return { publication: byHost };
   if (byName) return { publication: byName };
+
+  /*
+   * UNLISTED, NOT UNRESOLVABLE (expert-system threshold, 2026-09-04).
+   *
+   * A named source with a real https URL outside the registry is a
+   * CLASSIFICATION outcome, not a rejection: retrieval is broad; the
+   * registry classifies; admission licenses. The unlisted path carries a
+   * stricter anchor downstream — the page itself must be fetched and must
+   * establish the product before admission (`pageVerified`) — so a source
+   * the registry cannot vouch for is vouched for by its own first-party
+   * content or not at all.
+   */
+  const name = candidate.publication?.trim();
+  const url = candidate.sourceUrl?.trim() ?? '';
+  if (name && /^https:\/\//i.test(url)) {
+    return { publication: name, unlisted: true };
+  }
   return { reason: 'publication_unresolvable', detail: candidate.publication ?? candidate.sourceUrl };
 }
 
@@ -109,9 +133,19 @@ export async function establishBrandFromPage(
   sourceUrl: string,
   expectedBrand: string,
   fetcher: typeof fetch = fetch,
+  opts?: {
+    /**
+     * Unlisted-source verification (2026-09-04): fetch a page OUTSIDE the
+     * registry to check whether it establishes the product first-hand. The
+     * categorical exclusion still applies — an excluded host is never
+     * fetched, never established.
+     */
+    allowUnlistedHost?: boolean;
+  },
 ): Promise<'established' | 'absent' | 'conflict'> {
-  // Only ever fetched from an approved publication's own host.
-  if (!publicationForHost(sourceUrl)) return 'absent';
+  if (isExcludedSource(sourceUrl)) return 'absent';
+  // Registry hosts by default; unlisted hosts only when explicitly verifying.
+  if (!publicationForHost(sourceUrl) && !opts?.allowUnlistedHost) return 'absent';
   const brand = expectedBrand.trim().toLowerCase();
   if (!brand) return 'absent';
 
@@ -181,6 +215,28 @@ export async function admitAndStore(
       }
       : undefined;
 
+    /*
+     * UNLISTED SOURCES ARE PAGE-VERIFIED OR NOT ADMITTED (2026-09-04).
+     *
+     * For a source the registry cannot vouch for, the page itself is the
+     * anchor: fetched first-hand, it must establish the product's own
+     * identity tokens. A model's claim that some site reviewed this product
+     * is not attribution until the site's own content confirms it.
+     */
+    const unlisted = 'unlisted' in resolved && resolved.unlisted === true;
+    let pageVerified: boolean | undefined;
+    if (unlisted) {
+      pageVerified = (await establishBrandFromPage(
+        c.sourceUrl ?? '', canonicalProductName, pageFetcher, { allowUnlistedHost: true },
+      )) === 'established';
+      if (!pageVerified) {
+        rejected.push({ productName: c.productName, publication: resolved.publication,
+          sourceUrl: c.sourceUrl, reason: 'publication_not_approved',
+          detail: 'unlisted source page did not establish this product' });
+        continue;
+      }
+    }
+
     const observation: Partial<ReviewObservation> = {
       productKey,
       productName: c.productName?.trim(),
@@ -195,6 +251,12 @@ export async function admitAndStore(
       direction: c.direction,
       condition,
       appliesAcrossVariants: c.appliesAcrossVariants === true,
+      // Classification travels with the observation so provenance can show
+      // what kind of source this was — never a weighting.
+      sourceKind: unlisted
+        ? 'unlisted'
+        : (getSourceEntry(resolved.publication)?.kind ?? 'publication'),
+      pageVerified,
       retrievedAt: now,
     };
 

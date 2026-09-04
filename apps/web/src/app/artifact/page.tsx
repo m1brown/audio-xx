@@ -68,7 +68,14 @@ export async function generateMetadata(
   const p = rendered.payload;
   const licensed = authoritativeAssessment(rendered.raw);
   const title = (licensed?.verdict ?? p.verdict).replace(/\.\s*$/, '');
-  const description = (licensed?.systemReview?.[0] ?? '').slice(0, 200)
+  // The description names the SYSTEM. The review's first paragraph is now the
+  // verdict lead (answer-first, 2026-09-04), which names the primary
+  // relationship but not every component — a link preview should tell the
+  // reader whose system this is, so the chain leads and the verdict follows.
+  const chain = (licensed?.components ?? []).map((c) => c.name).join(' · ');
+  const description = (
+    chain ? `${chain} — ${(licensed?.systemReview?.[0] ?? '')}` : (licensed?.systemReview?.[0] ?? '')
+  ).slice(0, 200)
     || (p.componentCredit?.length ? p.componentCredit.join(' · ') : 'An Audio XX system assessment');
   return {
     title,

@@ -3311,6 +3311,10 @@ export function buildBrandComparison(
   // to profileX.names[0]. Both null and undefined are treated the same.
   displayNameA?: string | null,
   displayNameB?: string | null,
+  // Established system context, when this conversation has one (2026-09-04):
+  // the comparison then speaks to the listener's actual system instead of
+  // disclaiming knowledge of it one turn after assessing it.
+  systemContext?: ComparisonSystemContext,
 ): ConsultationResponse {
   const payload = buildInitialComparisonPayload(profileA, profileB, queryText, displayNameA, displayNameB);
 
@@ -3331,10 +3335,30 @@ export function buildBrandComparison(
     console.warn('[comparison-output] validation errors:', outputValidation.errors);
   }
 
+  /*
+   * CONTEXT-AWARE COMPARISON (2026-09-04). With an established system in
+   * hand, the stranger's disclaimer is false and is replaced by the system
+   * the conversation already knows. The claims themselves are unchanged —
+   * this corrects only the false statement about what Audio XX knows.
+   */
+  let comparisonSummary = rendered.comparisonSummary;
+  if (systemContext && systemContext.components.length > 0) {
+    const chain = systemContext.components.map((c) => c.displayName).join(', ');
+    comparisonSummary = comparisonSummary.replace(
+      /Without knowing your system and priorities, either could be the right choice\./g,
+      `In your system — ${chain} — either could be the right choice, depending on your priorities.`,
+    );
+  }
+
   return {
     subject: payload.subject,
-    comparisonSummary: rendered.comparisonSummary,
-    comparisonImages: buildComparisonImages(payload.sideA.name, payload.sideB.name, queryText),
+    comparisonSummary,
+    // The image sides resolve from the same identity the comparison speaks
+    // about: an owned-model display name resolves to THAT product, so the
+    // visual cannot anchor on a brand representative the user does not own
+    // (exact-model grounding, 2026-09-04).
+    comparisonImages: buildComparisonImages(
+      displayNameA ?? payload.sideA.name, displayNameB ?? payload.sideB.name, queryText),
     sourceReferences: buildComparisonStructuredSources(profileA, profileB),
     followUp: rendered.followUp,
   };
@@ -3454,6 +3478,26 @@ function resolveComparisonSubject(
   // simply "Chord" — misleading. The current approach is honest
   // editorial selection: pick a recognizable, well-curated product per
   // brand and label it as such.
+  /*
+   * EXACT-MODEL GROUNDING (2026-09-04): a side label that names a SPECIFIC
+   * model may never be silently replaced by a different model. The
+   * representative fallback exists for brand-only sides ("Chord vs
+   * Denafrips"); when the label carries model tokens beyond the brand and no
+   * catalog product matches them, the honest render is the named identity
+   * with no image — no image is preferable to the wrong image, and the
+   * wrong MODEL is worse than either.
+   */
+  const labelBrand = [...new Set(ALL_PRODUCTS.map((p) => p.brand))]
+    .filter((b) => brandMatches(b))
+    .sort((x, y) => y.length - x.length)[0];
+  if (labelBrand && norm(labelBrand) !== normalizedLabel
+    && normalizedLabel.startsWith(norm(labelBrand))) {
+    const modelPart = sideLabel.replace(new RegExp(`^\\s*${labelBrand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), '').trim();
+    if (modelPart.length > 0) {
+      return { brand: labelBrand, name: modelPart, imageUrl: undefined };
+    }
+  }
+
   const repName = brandRepresentativeProductName(sideLabel);
   if (repName) {
     const rep = ALL_PRODUCTS.find((p) =>
@@ -4613,11 +4657,27 @@ function buildUnknownBrandResponse(brandName: string): ConsultationResponse {
  * @param currentMessage   - the user's message text
  * @param subjectMatches   - optional subject matches with brand/product kind tags
  */
+/**
+ * The established system context a comparison must not forget (2026-09-04).
+ *
+ * Once an assessment has identified the listener's components, an immediate
+ * follow-up comparison must consume that context rather than behave as a
+ * stranger: a question about "the Klipschs" from someone whose assessed
+ * system contains a Klipsch RP-600M II is a question about THAT model, and
+ * "without knowing your system" one turn after assessing it is false. This
+ * is deliberately the minimum handoff — components and roles, this
+ * conversation only — not a memory redesign.
+ */
+export interface ComparisonSystemContext {
+  components: Array<{ displayName: string; role?: string }>;
+}
+
 export function buildConsultationResponse(
   currentMessage: string,
   subjectMatches?: SubjectMatch[],
+  systemContext?: ComparisonSystemContext,
 ): ConsultationResponse | null {
-  const result = buildConsultationResponseCore(currentMessage, subjectMatches);
+  const result = buildConsultationResponseCore(currentMessage, subjectMatches, systemContext);
   return applyOneSidedComparisonHonesty(result, currentMessage);
 }
 
@@ -4693,6 +4753,7 @@ function applyOneSidedComparisonHonesty(
 function buildConsultationResponseCore(
   currentMessage: string,
   subjectMatches?: SubjectMatch[],
+  systemContext?: ComparisonSystemContext,
 ): ConsultationResponse | null {
   // 1. Brand-level comparison — "Chord vs Denafrips" (both tagged as brands)
   if (subjectMatches && subjectMatches.length >= 2) {
@@ -4700,6 +4761,25 @@ function buildConsultationResponseCore(
     if (brandMatches.length >= 2) {
       const a = brandMatches[0];
       const b = brandMatches[1];
+      /*
+       * EXACT-MODEL GROUNDING (2026-09-04). A brand-only side that matches a
+       * component in the established system resolves to the OWNED MODEL, not
+       * to the brand's curated representative. "The Klipschs" from a listener
+       * whose assessed system holds an RP-600M II anchored the comparison —
+       * header, image and evidence — on a Heresy IV they do not own. Related-
+       * model evidence remains legal, but it must be invoked explicitly,
+       * never silently substituted for the model in the user's system.
+       */
+      const ownedModelFor = (brandName: string): string | undefined => {
+        const bl = brandName.toLowerCase().trim();
+        const hit = systemContext?.components.find((c) => {
+          const dl = c.displayName.toLowerCase();
+          return dl.startsWith(`${bl} `) || dl.includes(` ${bl} `) || dl === bl;
+        });
+        return hit?.displayName;
+      };
+      const ownedA = ownedModelFor(a.name);
+      const ownedB = ownedModelFor(b.name);
       // Stage 12.2: substring-match lookup that ALSO reports which alias
       // the matcher selected. The matched alias is threaded into the
       // rendered display so a query for "first watt" renders as
@@ -4713,7 +4793,8 @@ function buildConsultationResponseCore(
       if (profileA && profileB) {
         return buildBrandComparison(
           profileA, profileB, currentMessage,
-          matchA?.matchedAlias, matchB?.matchedAlias,
+          ownedA ?? matchA?.matchedAlias, ownedB ?? matchB?.matchedAlias,
+          systemContext,
         );
       }
 
@@ -4738,11 +4819,12 @@ function buildConsultationResponseCore(
         // For the catalog-derived branch, the user's queried alias
         // (a.name / b.name) IS the display we want — the catalog summary
         // doesn't carry alias arrays.
-        const displayA = matchA?.matchedAlias ?? a.name;
-        const displayB = matchB?.matchedAlias ?? b.name;
+        const displayA = ownedA ?? matchA?.matchedAlias ?? a.name;
+        const displayB = ownedB ?? matchB?.matchedAlias ?? b.name;
         return buildBrandComparison(
           summaryA, summaryB, currentMessage,
           displayA, displayB,
+          systemContext,
         );
       }
     }
@@ -8694,6 +8776,20 @@ function distinctInputComponentSegments(rawMessage: string): string[] {
     if (distinct.some((kept) => samePhysicalComponent(
       { brand: '', name: kept }, { brand: '', name: seg },
     ))) continue;
+    /*
+     * A SUBSET MENTION IS THE SAME MENTION (2026-09-04). Path descriptions
+     * repeat a component under a shorter name — "… into the Chord Hugo,
+     * Hugo into the JOB …" — and "Hugo" is not a fifth component, it is the
+     * fourth one again. A segment whose identity tokens are wholly contained
+     * in an already-kept segment adds no new physical component. Two REAL
+     * siblings never token-subset each other (their model tokens differ), so
+     * this cannot merge distinct equipment.
+     */
+    const segTokens = giTokens(seg);
+    if (segTokens.size > 0 && distinct.some((kept) => {
+      const keptTokens = giTokens(kept);
+      return [...segTokens].every((t) => keptTokens.has(t));
+    })) continue;
     distinct.push(seg);
   }
   return distinct;
@@ -8740,6 +8836,21 @@ function countMeaningfulSegments(rawMessage: string): string[] {
       /^\s*(?:speakers?|amp(?:lifier)?|integrated|dac|streamer|streaming|pre[- ]?amp(?:lifier)?|source|turntable|tone\s*arm|cartridge|phono|headphones?)\s*:/i,
       '',
     );
+    /*
+     * CONNECTION LANGUAGE IS NOT A COMPONENT (2026-09-04). A listener who
+     * states their signal path — "Eversolo DMP-A6 digital out into the Chord
+     * Hugo, Hugo into the JOB INTegrated analogue input, driving WLM Diva
+     * Monitors" — is describing TOPOLOGY, exactly what the conversion-path
+     * clarification asks for. The `into` split leaves port phrases ("digital
+     * out", "analogue input") and connector gerunds ("driving …") on the
+     * segments, and counting them inflated the expected total so the very
+     * answer to the clarification produced ANOTHER clarification. Ports and
+     * verbs of connection are stripped from the segment; the component
+     * identity is what remains.
+     */
+    seg = seg
+      .replace(/\b(?:digital|analog(?:ue)?|line|usb|coax(?:ial)?|optical|balanced|unbalanced|xlr|rca|phono|spdif|aes|i2s)[\s-]*(?:out(?:put)?s?|in(?:put)?s?)\b/gi, ' ')
+      .replace(/^\s*(?:driving|feeding|running|powering|connected\s+to|then(?:\s+to)?|to)\s+/i, ' ');
     const norm = seg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (!norm || norm.length < 2) continue;
     if (GI_ROLE_LABEL_ONLY.test(norm)) continue;

@@ -300,6 +300,13 @@ export function snapshotFromCanonical(
     dossiers: meta.componentDossiers ?? [],
     traitAuthored: true,
     engineRelations: engineRelationsFrom(meta.findings),
+    rawQuery: meta.rawQuery,
+    // Per-component axis knowledge, read off the findings the engine already
+    // carries — the licence layer derives the governed sound profile from it
+    // (active functions only, leverage-weighted) or shows no graph at all.
+    perComponentAxes: (meta.findings as {
+      perComponentAxes?: Array<{ name: string; axes: import('../axis-types').PrimaryAxisLeanings }>;
+    } | undefined)?.perComponentAxes,
   });
 }
 
@@ -463,6 +470,7 @@ export function snapshotFromProvisional(
     components: meta.components,
     dossiers: meta.componentDossiers ?? [],
     traitAuthored: false,
+    rawQuery: meta.rawQuery,
     // The inference lane records what it established; those are licensed
     // relationships and are exactly what the verdict must be composed from.
     engineRelations: (response.systemRelations ?? [])

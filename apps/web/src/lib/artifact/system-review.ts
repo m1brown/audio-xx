@@ -39,7 +39,8 @@ import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
 import { interfaceConclusions } from './interface-conclusions';
-import { analyzeConversionPath } from '../assessment/conversion-path';
+import { deriveActiveRoles, interfaceMateriality, LEVERAGE_WEIGHT } from '../assessment/active-roles';
+import { deriveSystemThesis, composeVerdictLead, type SystemThesis } from '../assessment/system-thesis';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
 import type { SonicRelation } from '../evidence/relational-synthesis';
@@ -159,6 +160,8 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   /** Index at which the closing NEXT-QUESTION material begins. */
   nextIndex?: number;
   unresolved: string[];
+  /** The validated judgment the prose expresses — see system-thesis.ts. */
+  thesis?: SystemThesis;
 } {
   /*
    * THESIS → EXPLANATION → LIMITS → NEXT QUESTION.
@@ -585,10 +588,13 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * first. They are also the ones that changed most: three of these
    * interfaces were reported as unresolved until the figures were fetched.
    */
-  // Conversion-path authority (P1, 2026-09-03): computed once, consumed by the
-  // interface layer here and by the experiment/clarification blocks below.
-  // Known components do not imply a known signal path — see conversion-path.ts.
-  const conv = analyzeConversionPath(input.components, input.dossiers, input.rawQuery);
+  // Conversion-path authority (P1, 2026-09-03) extended to the ACTIVE-ROLE
+  // model (expert-system threshold, 2026-09-04): what each component is
+  // actually DOING here, what the established topology bypasses, and how much
+  // sonic leverage each active function carries. Known components do not
+  // imply a known signal path; known capability does not imply active use.
+  const roleModel = deriveActiveRoles(input.components, input.dossiers, input.rawQuery);
+  const conv = roleModel.conversion;
   const conclusions = interfaceConclusions(input.components, input.dossiers, {
     conversionPathAmbiguous: conv.ambiguous,
   });
@@ -766,8 +772,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * paragraph then asserted Audio XX held no listening evidence for two
      * components it had just quoted four publications on.
      */
-    const blocked = input.synthesis.relations.filter((r) => r.kind === 'not_established');
-    const missing = input.synthesis.uncharacterised;
+    /*
+     * ── GAPS ARE WEIGHTED BY CAUSAL IMPORTANCE, NEVER COUNTED (2026-09-04) ──
+     *
+     * "8 of the relationships in this chain cannot be assessed" measured the
+     * ontology, not the assessment: it counted every pairwise relationship as
+     * equally important, so a gap about a bypassed conversion stage carried
+     * the same weight as a gap at the amplifier/loudspeaker interface. The
+     * limits now ask which unresolved relationships actually MATTER to the
+     * listener's question — a gap concerning a transport-only source or a
+     * bypassed circuit is recorded as immaterial rather than allowed to
+     * suppress the system-level reading.
+     */
+    const lvW = (name: string) => {
+      const r = roleModel.roles.find((x) => x.name === name);
+      return r ? LEVERAGE_WEIGHT[r.leverage] : 0.4;
+    };
+    const missingAll = input.synthesis.uncharacterised;
+    const missing = missingAll.filter((n) => lvW(n) >= 0.4);
+    const missingLow = missingAll.filter((n) => lvW(n) < 0.4);
+    const blocked = input.synthesis.relations.filter((r) => r.kind === 'not_established'
+      && interfaceMateriality(roleModel, r.upstreamName, r.downstreamName) !== 'low');
     if (missing.length > 0) {
       const names = missing.length === 1
         ? `the ${missing[0]}`
@@ -777,14 +802,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `That is a gap in published coverage, not a judgement about `
         + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
         + `are either in publications Audio XX does not draw on or are of different models. `
-        + `Because of it, ${blocked.length === 1 ? 'one relationship in this chain cannot'
-          : blocked.length > 1 ? `${blocked.length} of the relationships in this chain cannot`
-            : 'none of the component-to-component relationships in this chain can'} `
-        + `be assessed from listening evidence at all, and any statement about how `
-        + `${names} ${missing.length === 1 ? 'colours' : 'colour'} what reaches the `
-        + `loudspeakers would be invention. A published `
+        + `${blocked.length > 0
+          ? `The ${blocked.length === 1 ? 'relationship' : 'relationships'} it leaves open `
+            + `${blocked.length === 1 ? 'is the one' : 'are the ones'} that would most sharpen this `
+            + `assessment, and any statement about how ${names} `
+            + `${missing.length === 1 ? 'colours' : 'colour'} what reaches the loudspeakers would be invention. `
+          : ''}A published `
         + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
         + `publication would change more of this assessment than any other single piece of evidence.`,
+      );
+    }
+    if (missingLow.length > 0) {
+      const low = roleModel.roles.filter((r) => missingLow.includes(r.name));
+      const names = missingLow.length === 1
+        ? `the ${missingLow[0]}`
+        : `the ${missingLow.slice(0, -1).join(', the ')} and the ${missingLow[missingLow.length - 1]}`;
+      limits.push(
+        `Listening evidence about ${names} matters less here than it would in another `
+        + `system: ${low.map((r) => (r.activeFunction === 'digital_transport'
+          ? `the ${r.name} serves as digital transport in this configuration, and ${r.rationale}`
+          : `the ${r.name}'s role in this configuration carries limited sonic leverage`)).join('; ')}. `
+        + `That gap is recorded, and it does not bear on the system-level reading above.`,
       );
     }
   }
@@ -1309,6 +1347,28 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
+   * ── THE SYSTEM THESIS, DERIVED BEFORE THE PROSE DECIDES ANYTHING ──
+   *
+   * (Expert-system threshold, 2026-09-04.) The judgment is computed as a
+   * typed structure — categorical, conclusion-specific, honestly classed as
+   * established / observed / inferred — and the verdict paragraph EXPRESSES
+   * it. The review leads with the answer the listener came for; the evidence
+   * report stays underneath it, never in place of it. When not even governed
+   * inference is licensed, there is no lead and the review states its
+   * evidence position as before — the thesis never manufactures a verdict.
+   */
+  const systemThesis = deriveSystemThesis({
+    components: input.components,
+    dossiers: input.dossiers,
+    model: roleModel,
+    conclusions,
+    synthesis: input.synthesis,
+    driveFinding: input.driveFinding,
+  });
+  const verdictLead = composeVerdictLead(systemThesis);
+  if (verdictLead) thesis.unshift(verdictLead);
+
+  /*
    * ORDERED BY WHAT MATTERS, not by what was computed first.
    *
    * The quantitative amplifier-to-loudspeaker analysis is the strongest thing
@@ -1342,10 +1402,14 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    */
   const sections: ReviewSection[] = [
     { label: 'The assessment', paragraphs: thesis },
-    {
-      label: 'Why it works',
-      paragraphs: [...synergyParas, ...observationParas],
-    },
+    { label: 'Why it works', paragraphs: synergyParas },
+    /*
+     * LIKELY CHARACTER stands apart from WHY IT WORKS (2026-09-04): the
+     * relations argue the pairing; the attributed observations describe what
+     * the system will plausibly sound like. Answer-first hierarchy — verdict,
+     * argument, character, engineering, action, unknowns.
+     */
+    { label: 'Likely character', paragraphs: observationParas },
     {
       label: 'Engineering check',
       paragraphs: engineeringCoherent
@@ -1365,6 +1429,6 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // `nextIndex` marks where caller-inserted LIMITS material belongs. The
   // unknown region now closes the document, so that place is its end.
   return {
-    paragraphs: out, sections, unresolved, nextIndex: out.length,
+    paragraphs: out, sections, unresolved, nextIndex: out.length, thesis: systemThesis,
   };
 }

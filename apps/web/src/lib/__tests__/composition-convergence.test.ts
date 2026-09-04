@@ -65,9 +65,17 @@ const PATHS: Array<[string, string, boolean]> = [
 describe('every entry path composes the same review skeleton', () => {
   const composed = PATHS.map(([label, raw, s]) => [label, composePath(raw, s)] as const);
 
-  it('thesis is the first substantive sentence on every path', () => {
+  it('the verdict leads, and the thesis follows it, on every path', () => {
+    /*
+     * Superseded pin (expert-system threshold, 2026-09-04): the review now
+     * ANSWERS FIRST. The categorical judgment with its confidence is the
+     * first sentence a reader meets; the ambition/coherence thesis that used
+     * to open the document follows it. Same material, answer-first order.
+     */
     for (const [label, d] of composed) {
-      expect(d.paragraphs[0], label).toMatch(/^This is an exceptionally ambitious/);
+      expect(d.paragraphs[0], label)
+        .toMatch(/^(Excellent|Strong|Promising|Mixed|Uncertain|Poorly) /);
+      expect(d.paragraphs.join('\n'), label).toMatch(/This is an exceptionally ambitious/);
     }
   });
 

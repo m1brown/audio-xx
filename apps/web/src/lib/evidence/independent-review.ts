@@ -25,7 +25,7 @@
  *   only part a listener could act on.
  */
 
-import { getSourceEntry, isWhitelistedSource } from './source-whitelist';
+import { getSourceEntry, isWhitelistedSource, isExcludedSource } from './source-whitelist';
 import { identifyingTokens } from '../entity-corroboration';
 import { CLASS_TIER, type EvidenceItem } from './evidence-types';
 
@@ -97,6 +97,21 @@ export interface ReviewObservation {
    * variants. Relaxes the variant check; never inferred by us.
    */
   appliesAcrossVariants?: boolean;
+  /**
+   * Source classification (2026-09-04): 'publication' | 'video_channel' for
+   * registry sources; 'unlisted' for a credible source outside the registry
+   * admitted through the page-verified path. Classification, never a
+   * hierarchy — the character layer weighs all three by the observation's
+   * own qualities (exactness, directness, specificity, corroboration).
+   */
+  sourceKind?: 'publication' | 'video_channel' | 'unlisted';
+  /**
+   * Set by the ACQUISITION layer only, from first-party page content: the
+   * source page itself was fetched and establishes this product's identity.
+   * Required for unlisted-source admission — a model's say-so about an
+   * unregistered source is not attribution until the page confirms it.
+   */
+  pageVerified?: boolean;
   retrievedAt: number;
 }
 
@@ -332,14 +347,40 @@ export function admitReviewObservation(
   const no = (reason: RejectionReason, detail?: string): AdmissionVerdict =>
     ({ admitted: false, reason, detail });
 
-  // 6moons is excluded by its absence from the whitelist, which is the
-  // enforcement rather than a special case.
-  if (!observation.publication || !isWhitelistedSource(observation.publication)) {
+  /*
+   * RETRIEVAL UNIVERSE ≠ EVIDENCE CLASSIFICATION ≠ ASSERTION LICENCE
+   * (expert-system threshold, 2026-09-04).
+   *
+   * The registry is a CLASSIFICATION of known sources, not the boundary of
+   * the discoverable world. Three admission paths:
+   *
+   *   EXCLUDED   — 6moons, categorically, on name or URL. Never admitted,
+   *                whatever else is true. The one categorical exclusion.
+   *   REGISTRY   — publications and video channels alike, on the terms this
+   *                gate has always applied (own-domain URL, attribution,
+   *                exact identity). No written-over-video hierarchy exists.
+   *   UNLISTED   — a source outside the registry is admissible when the
+   *                acquisition layer has VERIFIED its page first-hand
+   *                (`pageVerified`) and full attribution is present. What a
+   *                source being unlisted changes is its classification
+   *                (`sourceKind: 'unlisted'`, carried in provenance) — not
+   *                whether real, checkable evidence may be seen at all.
+   */
+  if (!observation.publication?.trim()) {
     return no('publication_not_approved', observation.publication);
   }
+  if (isExcludedSource(observation.publication) || isExcludedSource(observation.sourceUrl)) {
+    return no('publication_not_approved', '6moons is categorically excluded');
+  }
   if (!observation.sourceUrl) return no('malformed_source_url');
-  if (!isPublicationDomain(observation.sourceUrl, observation.publication)) {
-    return no('source_not_publication_domain', observation.sourceUrl);
+  if (isWhitelistedSource(observation.publication)) {
+    if (!isPublicationDomain(observation.sourceUrl, observation.publication)) {
+      return no('source_not_publication_domain', observation.sourceUrl);
+    }
+  } else if (observation.pageVerified !== true) {
+    // Unlisted and unverified: fail closed. The page itself is the anchor
+    // for a source the registry cannot vouch for.
+    return no('publication_not_approved', observation.publication);
   }
   if (!observation.observationType
     || !OBSERVATION_TYPES.includes(observation.observationType)) {

@@ -209,10 +209,20 @@ describe('CONTROL 3 — Magnepan preserves its constraint', () => {
     expect(snap.operatingCondition).toBeUndefined();
   });
 
-  it('still publishes no axis-derived tonal signature', () => {
-    // A power constraint licenses guidance about power. It licenses nothing
-    // about tonal character, so the graph goes regardless of the verdict.
-    expect(snap.tonalSignature).toBeUndefined();
+  it('the constraint silences the axes it governs in the sound profile', () => {
+    /*
+     * Superseded pin (expert-system threshold, 2026-09-04): the sound
+     * profile is restored as a GOVERNED INFERENCE — leverage-weighted over
+     * active, evidenced components. The scope rule survives intact: a power
+     * constraint makes dynamics and control unreadable, so those axes may
+     * never publish here. Tonal balance continues to publish where the
+     * evidence qualifies (the same rule readableAxisState always applied on
+     * the trait lane), marked as inference, never as measurement.
+     */
+    for (const a of snap.tonalSignature ?? []) {
+      expect(['elastic_controlled', 'smooth_detailed']).not.toContain(a.axis);
+      expect((a as { basis?: string }).basis).toBe('inferred');
+    }
   });
 });
 
@@ -311,6 +321,14 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
     expect(gateImports).toEqual([
       '../artifact/snapshot', '../evidence/dossier-presentation',
       '../artifact/causal-coverage', '../relational-explain',
+      // Expert-system threshold (2026-09-04): the gate weighs unresolved
+      // interfaces by causal materiality and derives the governed sound
+      // profile. Both are pure derivations over material already in the
+      // licence input — active-roles (roles/leverage from frozen components
+      // and dossiers), governed-signature (leverage-weighted aggregation of
+      // per-component axis knowledge, or nothing), and the axis type. None
+      // reads a catalog, calls an engine or model, or touches a network.
+      './active-roles', './governed-signature', '../axis-types',
     ]);
     expect(gate).not.toMatch(/llm-system-inference|consultation|assessment-pipeline/);
     // `relational-explain` is where the verdict composer now lives, and it
@@ -358,13 +376,20 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       // Arithmetic over two published figures the snapshot has already frozen.
       // Reads no catalog, no engine, no network — the same terms as the rest.
       './interface-conclusions',
-      // Conversion-path authority (P1, 2026-09-03): a pure predicate over the
-      // frozen components, dossiers and the listener's own words, deciding
-      // whether the conversion path is established or ambiguous. It asserts
-      // no topology, reads no catalog, calls no engine, and its only import
-      // is a type. Deciding what a review may NOT claim is the opposite of
-      // reassessment — it is the licensing rule applied to relationships.
-      '../assessment/conversion-path',
+      // Active roles (expert-system threshold, 2026-09-04) subsumes the
+      // conversion-path authority module: a pure derivation over the frozen
+      // components, dossiers and the listener's own words — which functions
+      // are active, which the established topology bypasses, and how much
+      // causal leverage each carries. It asserts no topology of its own,
+      // reads no catalog, calls no engine; its imports are conversion-path
+      // (pure, type-only dossier import) and a type.
+      '../assessment/active-roles',
+      // The system thesis: a typed judgment DERIVED from material the review
+      // already computed (conclusions, coverage, synthesis, roles) — pure
+      // structuring of licensed conclusions with their epistemic class and
+      // confidence attached. Deriving what the prose may say from what is
+      // already established is licensing, not reassessment.
+      '../assessment/system-thesis',
       // Market evidence: verified prices and range positions, both frozen
       // data. Reads no catalog, no engine, no network.
       '../evidence/system-class',
