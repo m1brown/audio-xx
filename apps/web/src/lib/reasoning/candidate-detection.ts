@@ -141,7 +141,17 @@ function typedSpanFor(turnText: string, resolvedName: string): string | null {
   const trim = (span: string) => {
     let out = span;
     for (;;) {
-      const next = out.replace(/^(?:a|an|the|about|my|his|her|their|your|this|that|to|with|for|of|on|and|or)\s+/i, '');
+      /*
+       * Leading function words are not identity. The original list carried
+       * only determiners/prepositions, so a sentence-initial auxiliary was
+       * glued into the product name: "Would Wharfedale Lintons be an
+       * upgrade…" detected the candidate "Would Wharfedale Lintons", whose
+       * store key matches nothing — and Audio XX then told the listener the
+       * specifications of a stocked product were unknown (follow-up
+       * grounding P1, 2026-09-04). Auxiliaries and question words join the
+       * strip list; no product identity begins with one.
+       */
+      const next = out.replace(/^(?:a|an|the|about|my|his|her|their|your|this|that|to|with|for|of|on|and|or|would|should|could|can|will|shall|might|must|may|do|does|did|is|are|was|were|if|whether|maybe|perhaps|how|what|when|why|also|then|so|but)\s+/i, '');
       if (next === out) return out;
       out = next;
     }

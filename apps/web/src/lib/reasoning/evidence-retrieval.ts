@@ -59,6 +59,17 @@ export async function retrieveEvidenceFor(
   const items: EvidenceItem[] = [];
   const storeKey = productKeyFor(displayName);
   const obsKey = observationKeyFor(displayName);
+  /*
+   * Ordinary-plural fallback (follow-up grounding P1, 2026-09-04): listeners
+   * write "the Lintons" for the Wharfedale Linton, and the store key is the
+   * singular registration — an exact-key miss then told the listener the
+   * specifications of a stocked product were unknown. Stripping one trailing
+   * "s" from the LAST token, only on a miss and only from a token long
+   * enough that no model designation is corrupted (SVS, HD-800S untouched),
+   * is morphology, not identity substitution — the identity table applies
+   * the same rule when matching its alias pool.
+   */
+  const singularKey = (k: string) => k.replace(/([a-z]{3,}[a-rt-z])s$/, '$1');
 
   // Catalog identity — price and tier as distinct evidence types.
   const p = (findProductByComponentName as unknown as (n: string) => Record<string, unknown> | null)(displayName);
@@ -79,7 +90,11 @@ export async function retrieveEvidenceFor(
   }
 
   // Held manufacturer facts (store) — classified per source at read time.
-  for (const f of await readFacts(storeKey, opts.now ?? Date.now())) {
+  let heldFacts = await readFacts(storeKey, opts.now ?? Date.now());
+  if (heldFacts.length === 0 && singularKey(storeKey) !== storeKey) {
+    heldFacts = await readFacts(singularKey(storeKey), opts.now ?? Date.now());
+  }
+  for (const f of heldFacts) {
     const att = (f as { attribution?: { sourceUrl?: string; quotedText?: string } }).attribution;
     items.push({
       class: att?.sourceUrl && isMakerPublished(att.sourceUrl, displayName)
@@ -90,10 +105,15 @@ export async function retrieveEvidenceFor(
   }
 
   // Authored product facts (curated, provenance-carrying).
-  items.push(...authoredItemsFor(obsKey));
+  // The same plural fallback applies to the authored/observation stores:
+  // they register under the singular identity too.
+  const obsKeyEffective = authoredItemsFor(obsKey).length > 0
+    || seedObservationsFor(obsKey).length > 0 || singularKey(obsKey) === obsKey
+    ? obsKey : singularKey(obsKey);
+  items.push(...authoredItemsFor(obsKeyEffective));
 
   // Admitted independent listening observations, condition attached.
-  for (const o of seedObservationsFor(obsKey)) {
+  for (const o of seedObservationsFor(obsKeyEffective)) {
     const oo = o as { publication?: string; claim?: string; condition?: { description?: string } };
     if (!oo.claim) continue;
     items.push({
@@ -131,8 +151,32 @@ export async function retrieveCandidateEvidence(
    * An AMBIGUOUS candidate retrieves nothing: attaching any product's
    * evidence would be the silent substitution the discipline forbids. The
    * ambiguity itself is what the model must see.
+   *
+   * ONE exception, and it is the identity-upgrade rule this module already
+   * states: the store's productKey is a governed registration, and holding
+   * evidence under the LISTENER'S EXACT TYPED KEY (or its ordinary plural)
+   * establishes the identity. "Wharfedale Lintons" was marked ambiguous by
+   * a catalog near-miss (catalog says "Linton Heritage") while the store
+   * held maker facts registered as "wharfedale linton" — and the lane then
+   * told the listener the specifications of a stocked product were unknown
+   * (follow-up grounding P1, 2026-09-04). The key is derived only from the
+   * listener's own words, so nothing is substituted: a bare brand or an
+   * excluded-sibling mention matches no registration and stays ambiguous.
+   * Passing resolution 'unknown' (not 'exact') keeps the fuzzy catalog
+   * match detached; the existing upgrade rule then classifies from what the
+   * stores actually hold.
    */
   if (c.resolution === 'ambiguous') {
+    const typedKey = productKeyFor(c.displayName);
+    const singular = typedKey.replace(/([a-z]{3,}[a-rt-z])s$/, '$1');
+    const held = (await readFacts(typedKey, opts.now ?? Date.now())).length > 0
+      || (singular !== typedKey
+        && (await readFacts(singular, opts.now ?? Date.now())).length > 0);
+    if (held) {
+      return retrieveEvidenceFor(c.displayName, {
+        role: opts.role, resolution: 'unknown', identityNote: c.identityNote, now: opts.now,
+      });
+    }
     return {
       displayName: c.displayName, role: opts.role,
       identity: 'ambiguous', identityNote: c.identityNote, items: [],
