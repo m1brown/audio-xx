@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-09-04 | A8: first assertion · A7: type definition + one test | [2026-09-04.md](./2026-09-04.md) |
 | 2026-09-03 | A8: behavioral regression harness · A7: confidence semantics lock-in | [2026-09-03.md](./2026-09-03.md) |
 | 2026-09-02 | A8: behavioral regression harness · A7: confidence semantics lock-in | [2026-09-02.md](./2026-09-02.md) |
 | 2026-09-01 | A8: behavioral regression harness · A7: confidence semantics lock-in | [2026-09-01.md](./2026-09-01.md) |
