@@ -1354,13 +1354,32 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * no constraint may stand — a supported problem always outranks comfort,
    * and a system with no licensed finding gets no manufactured reassurance.
    */
+  /*
+   * RECOMMENDATION SCOPE <= LICENSED CONCLUSION SCOPE (2026-09-06).
+   *
+   * The first version of this lead said "I wouldn't change anything yet." —
+   * a system-wide leave-alone recommendation licensed by nothing wider than
+   * a power finding. A positive conclusion about one relationship licenses
+   * an action about THAT relationship; the absence of a detected constraint
+   * is not evidence that none exists. The lead therefore names the ground it
+   * stands on, composed from the findings actually established: the drive
+   * finding licenses restraint about amplifier power; established favourable
+   * interface conclusions license restraint about those interfaces; nothing
+   * here composes a global reassurance, because no licence at this authority
+   * point is system-wide.
+   */
   const constraintStands = input.constraintPresent === true
     || conclusions.some((c) => c.status === 'established' && c.favourable === false);
-  const positiveFinding = !!input.driveFinding
-    || conclusions.some((c) => c.status === 'established' && c.favourable !== false);
-  if (!constraintStands && positiveFinding) {
+  const favourableInterfaces = conclusions.some(
+    (c) => c.status === 'established' && c.favourable !== false);
+  const scopes: string[] = [];
+  if (input.driveFinding) scopes.push('amplifier power');
+  if (favourableInterfaces && !input.driveFinding) {
+    scopes.push('the electrical interfaces the published figures settle');
+  }
+  if (!constraintStands && scopes.length > 0) {
     next.unshift(
-      `I wouldn't change anything yet.`
+      `I wouldn't make a change based on ${scopes.join(' or ')}.`
       + (conv.ambiguous
         ? ` The most informative next step costs nothing: establishing how the signal `
           + `actually flows through your components.`

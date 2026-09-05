@@ -5,9 +5,10 @@
  * EVIDENCE DETAIL, using only conclusions production already licensed:
  *
  *   - the strongest licensed judgment opens THE ASSESSMENT;
- *   - WHAT I WOULD DO opens with the recommendation, and restraint
- *     ("I wouldn't change anything yet") is licensed only by a positive
- *     finding with no standing constraint — never manufactured;
+ *   - WHAT I WOULD DO opens with the recommendation, and restraint is
+ *     SCOPED TO ITS LICENCE ("I wouldn't make a change based on amplifier
+ *     power") — a finding about one relationship never composes global
+ *     reassurance, and a standing constraint suppresses the lead entirely;
  *   - internal accounting language ("N relationships in this chain cannot
  *     be assessed") never reaches the listener;
  *   - topology ambiguity, clarification, and every qualification behave
@@ -58,9 +59,15 @@ describe('1 — France II, ambiguous topology', () => {
     expect(bySection['The assessment']?.[0]).toBe(DRIVE);
   });
 
-  it('WHAT I WOULD DO opens with the restrained recommendation', () => {
-    expect(bySection['What I would do']?.[0]).toMatch(/^I wouldn't change anything yet\./);
+  it('WHAT I WOULD DO opens with a recommendation scoped to its licence', () => {
+    expect(bySection['What I would do']?.[0])
+      .toMatch(/^I wouldn't make a change based on amplifier power\./);
     expect(bySection['What I would do']?.[0]).toMatch(/establishing how the signal/);
+  });
+
+  it('composes no global reassurance from a scoped licence', () => {
+    const all = d.paragraphs.join('\n');
+    expect(all).not.toMatch(/wouldn't change anything|leave the system alone|no upgrade is needed|nothing here needs changing/i);
   });
 
   it('still asks the connection question and invents no topology', () => {
@@ -86,7 +93,7 @@ describe('2 — France II, topology explicitly supplied', () => {
     const all = d.paragraphs.join('\n');
     expect(all).not.toMatch(/how are you connecting them\?/);
     expect(d.paragraphs[0]).toBe(DRIVE);
-    expect(all).toMatch(/I wouldn't change anything yet\./);
+    expect(all).toMatch(/I wouldn't make a change based on amplifier power\./);
     // With the path established, the lead does not tell the listener to
     // establish it.
     expect(all).not.toMatch(/establishing how the signal/);
@@ -108,8 +115,9 @@ describe('3 — simple mainstream system stays frictionless', () => {
   it('no conversion interrogation, licensed restraint only', () => {
     const all = d.paragraphs.join('\n');
     expect(all).not.toMatch(/how are you connecting them\?/);
-    // Restraint IS licensed here (favourable drive finding, no constraint).
-    expect(all).toMatch(/I wouldn't change anything yet\./);
+    // Restraint IS licensed here — but only at the scope of the finding.
+    expect(all).toMatch(/I wouldn't make a change based on amplifier power\./);
+    expect(all).not.toMatch(/wouldn't change anything/);
     expect(all).not.toMatch(/establishing how the signal/);
   });
 });
@@ -127,7 +135,7 @@ describe('4 — sparse evidence manufactures nothing', () => {
 
   it('no action lead, no verdict, from absence of evidence', () => {
     const all = d.paragraphs.join('\n');
-    expect(all).not.toMatch(/I wouldn't change anything yet\./);
+    expect(all).not.toMatch(/I wouldn't make a change based on|wouldn't change anything/);
     expect((d.sections ?? []).find((s) => s.label === 'The assessment')).toBeUndefined();
   });
 });
@@ -143,8 +151,9 @@ describe('5 — a supported constraint outranks comfort', () => {
     constraintPresent: true,
   });
 
-  it('never says "I wouldn\'t change anything yet" under a constraint', () => {
-    expect(d.paragraphs.join('\n')).not.toMatch(/I wouldn't change anything yet\./);
+  it('composes no restraint lead of any scope under a constraint', () => {
+    expect(d.paragraphs.join('\n'))
+      .not.toMatch(/I wouldn't make a change based on|wouldn't change anything/);
   });
 
   it('the constraint judgment still leads the assessment', () => {
