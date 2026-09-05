@@ -3527,6 +3527,9 @@ export default function Home() {
               // exclusions ("the Hugo isn't being used") outrank structural
               // conversion-path inference (P1, 2026-09-03).
               rawQuery: assessmentResult.query,
+              // A standing engine constraint outranks the restrained action lead.
+              constraintPresent: (provisional.systemRelations ?? [])
+                .some((r: { kind?: string }) => r.kind === 'constraint'),
               driveFinding: provisional.systemSignature ?? undefined,
               driveQualification: provisional.qualification,
               // The coverage statement is already inside `philosophy`, which

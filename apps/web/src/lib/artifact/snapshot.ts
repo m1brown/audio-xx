@@ -238,6 +238,8 @@ export function snapshotFromCanonical(
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
     rawQuery: meta.rawQuery,
+    // A standing engine constraint outranks the restrained action lead.
+    constraintPresent: engineRelationsFrom(meta.findings).some((r) => r.kind === 'constraint'),
   });
   if (cam.reading.engineering.length) {
     sections.push({ label: 'Engineering', paragraphs: cam.reading.engineering });
@@ -418,6 +420,8 @@ export function snapshotFromProvisional(
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
     rawQuery: meta.rawQuery,
+    // A standing engine constraint outranks the restrained action lead.
+    constraintPresent: (response.systemRelations ?? []).some((r) => r.kind === 'constraint'),
   });
 
   const snap: AssessmentSnapshotV1 = {
