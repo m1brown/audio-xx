@@ -75,6 +75,14 @@ export interface SystemReviewInput {
    * conversion-path ambiguity is still detected structurally without it.
    */
   rawQuery?: string;
+  /**
+   * True when the ENGINE established a constraint (a power mismatch, a
+   * demonstrated bottleneck). The restrained action lead ("I wouldn't change
+   * anything yet") is licensed only in its absence — a supported problem must
+   * lead the action section, never be soothed under it (editorial hierarchy,
+   * 2026-09-06).
+   */
+  constraintPresent?: boolean;
 }
 
 const lines = (d: DossierView): DossierLine[] => [...d.primary, ...d.secondary];
@@ -766,7 +774,17 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
      * paragraph then asserted Audio XX held no listening evidence for two
      * components it had just quoted four publications on.
      */
-    const blocked = input.synthesis.relations.filter((r) => r.kind === 'not_established');
+    /*
+     * ── UNCERTAINTY IS STATED IN THE LISTENER'S TERMS, NOT THE GRAPH'S ──
+     *
+     * (Editorial hierarchy, 2026-09-06.) This paragraph used to count:
+     * "8 of the relationships in this chain cannot be assessed" — an
+     * accurate description of internal evidence state with no decision
+     * value for the reader. The same licensed content is now stated as
+     * what it MEANS: which conclusions the held evidence supports, and
+     * which it cannot support. No claim is strengthened or weakened —
+     * only the accounting language is gone.
+     */
     const missing = input.synthesis.uncharacterised;
     if (missing.length > 0) {
       const names = missing.length === 1
@@ -777,12 +795,14 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `That is a gap in published coverage, not a judgement about `
         + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
         + `are either in publications Audio XX does not draw on or are of different models. `
-        + `Because of it, ${blocked.length === 1 ? 'one relationship in this chain cannot'
-          : blocked.length > 1 ? `${blocked.length} of the relationships in this chain cannot`
-            : 'none of the component-to-component relationships in this chain can'} `
-        + `be assessed from listening evidence at all, and any statement about how `
-        + `${names} ${missing.length === 1 ? 'colours' : 'colour'} what reaches the `
-        + `loudspeakers would be invention. A published `
+        + (input.driveFinding
+          ? `The published figures are enough to settle the power question above; they are `
+            + `not enough to establish how this combination sounds, and Audio XX will not `
+            + `guess at voicing it has no evidence for. `
+          : `Because of it, any statement about how ${names} `
+            + `${missing.length === 1 ? 'colours' : 'colour'} what reaches the `
+            + `loudspeakers would be invention. `)
+        + `A published `
         + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
         + `publication would change more of this assessment than any other single piece of evidence.`,
       );
@@ -1171,6 +1191,21 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
+   * ── THE ASSESSMENT OPENS WITH THE JUDGMENT (editorial hierarchy, 2026-09-06) ──
+   *
+   * The strongest licensed conclusion most systems have is the engine's own
+   * drive/power finding — yet the composer never placed it in the thesis
+   * slot, so whether a reader met it first depended on rendering accidents
+   * (the snapshot verdict line standing in when no assessment section
+   * existed). When the synthesis has produced no opening of its own, the
+   * drive finding IS the assessment and leads it. Nothing new is claimed:
+   * this is the same licensed sentence, moved to where a reader decides.
+   */
+  if (thesis.length === 0 && input.driveFinding) {
+    thesis.push(input.driveFinding);
+  }
+
+  /*
    * ── WHAT I WOULD DO — the recommendation ──
    *
    * The step the product was refusing to take. Describe→Explain→Evaluate is
@@ -1305,6 +1340,31 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       + `how they are connected — something I will not guess from a component list. `
       + `Any advice about the conversion stage would change with that answer, so `
       + `before offering it: how are you connecting them?`,
+    );
+  }
+
+  /*
+   * ── ACTION LEADS WITH THE RECOMMENDATION (editorial hierarchy, 2026-09-06) ──
+   *
+   * WHAT I WOULD DO used to open with an experiment or a clarification —
+   * process before position. When the evidence supports restraint, restraint
+   * is stated first, in four words, and everything else follows as the way
+   * to act on it. The licence is real and narrow: a positive finding must
+   * exist (the drive conclusion or an established favourable interface) and
+   * no constraint may stand — a supported problem always outranks comfort,
+   * and a system with no licensed finding gets no manufactured reassurance.
+   */
+  const constraintStands = input.constraintPresent === true
+    || conclusions.some((c) => c.status === 'established' && c.favourable === false);
+  const positiveFinding = !!input.driveFinding
+    || conclusions.some((c) => c.status === 'established' && c.favourable !== false);
+  if (!constraintStands && positiveFinding) {
+    next.unshift(
+      `I wouldn't change anything yet.`
+      + (conv.ambiguous
+        ? ` The most informative next step costs nothing: establishing how the signal `
+          + `actually flows through your components.`
+        : ''),
     );
   }
 
