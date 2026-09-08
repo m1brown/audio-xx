@@ -90,10 +90,20 @@ const COMMERCIAL_FIRST_PATTERNS: RegExp[] = [
 //   - exactly one h1 in any rendered state (SEO / accessibility outline)
 //   - the visible primary-entry copy stays free of reviewer-aggregator
 //     and commercial-first framing.
+// 2026-09-07 HOMEPAGE CLARITY PATCH (dealer feedback: goal not
+// immediately clear). The cover h1 is now the positioning proposition;
+// the standfirst states the user job; a capability signage line and a
+// WHAT-CAN-I-ASK example block make the interaction concrete. Same
+// invariants, new copy.
 const HOMEPAGE_ENTRY_COPY = [
-  'Notes on Your System',
-  'Audio XX is a system-level listening advisor for',
-  'It explains how your components work together, identifies real bottlenecks, and tells you when nothing needs changing.',
+  'Understand your system before you change it.',
+  'Audio XX assesses your components as a system',
+  'which changes are actually worth considering.',
+  'Save your system',
+  'Test changes',
+  'Upgrade with confidence',
+  'Is my amplifier holding back my speakers?',
+  'Is there actually anything I should change?',
   'Or describe it in your own words',
   'Prefer to read first? See an example assessment',
 ];
@@ -115,7 +125,7 @@ describe('Homepage heading + primary-entry copy (single source of the page headi
     // Cover headline.
     const cover = h1Blocks.find((b) => !b.includes('audioxx-hero-wordmark'));
     expect(cover, 'the cover h1 must be present').toBeDefined();
-    expect(cover).toContain('Notes on Your System');
+    expect(cover).toContain('Understand your system before you change it.');
   });
 
   it('renders exactly one <h1> per state so SEO / accessibility outline is preserved', () => {
@@ -134,7 +144,7 @@ describe('Homepage heading + primary-entry copy (single source of the page headi
     expect(coverGateIdx, 'cover block gate must exist').toBeGreaterThan(-1);
     // The headline also appears in the cover design comment; search from
     // the gate so the assertion targets the rendered JSX occurrence.
-    const coverH1Idx = pageSource.indexOf('Notes on Your System', coverGateIdx);
+    const coverH1Idx = pageSource.indexOf('Understand your system before you change it.', coverGateIdx);
     expect(coverH1Idx, 'cover headline must follow the !hasMessages gate').toBeGreaterThan(coverGateIdx);
   });
 

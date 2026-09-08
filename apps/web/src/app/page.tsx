@@ -6480,12 +6480,12 @@ export default function Home() {
               letterSpacing: '-0.02em',
               margin: '0 0 1.5rem',
               color: EDITORIAL.ink,
-              maxWidth: '16ch',
+              maxWidth: '18ch',
               textAlign: 'left' as const,
               textWrap: 'balance' as React.CSSProperties['textWrap'],
             }}
           >
-            Notes on Your System
+            Understand your system before you change it.
           </h1>
           <p
             style={{
@@ -6500,11 +6500,33 @@ export default function Home() {
               textWrap: 'pretty' as React.CSSProperties['textWrap'],
             }}
           >
-            Audio XX is a system-level listening advisor for{' '}
-            <span style={{ whiteSpace: 'nowrap' }}>hi-fi</span> enthusiasts.
-            It explains how your components work together, identifies real
-            bottlenecks, and tells you when nothing needs changing.
+            Audio XX assesses your components as a system — what works,
+            what limits it, and which changes are actually worth considering.
           </p>
+
+          {/* ── Capability signage (homepage clarity patch, 2026-09-07) ──
+           *  One line, set like the rubrics: the three things a visitor can
+           *  DO here, in the order they happen. Signage, not a feature grid —
+           *  the dealer feedback was that the goal wasn't immediately clear,
+           *  and this is the smallest possible answer to "what do I do here?" */}
+          <div
+            style={{
+              fontFamily: 'var(--face-grotesque)',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase' as const,
+              color: EDITORIAL.inkMuted,
+              marginTop: '1.6rem',
+              textAlign: 'left' as const,
+            }}
+          >
+            <span style={{ whiteSpace: 'nowrap' }}>Save your system</span>
+            {'  ·  '}
+            <span style={{ whiteSpace: 'nowrap' }}>Test changes</span>
+            {'  ·  '}
+            <span style={{ whiteSpace: 'nowrap' }}>Upgrade with confidence</span>
+          </div>
 
           {/* ── Active system credit line ── */}
           {(() => {
@@ -6663,6 +6685,42 @@ export default function Home() {
             }}
           >
             Or describe it in your own words
+          </div>
+
+          {/* ── WHAT CAN I ASK (homepage clarity patch, 2026-09-07) ──
+           *  Comprehension, not chrome: the saved system is something the
+           *  listener can interrogate, and these four lines show the register
+           *  of question it answers. Editorial examples, deliberately not
+           *  clickable — the composer they sit above is the real thing. */}
+          <div
+            style={{
+              margin: '0.4rem 0 1.4rem',
+              display: 'flex',
+              flexDirection: 'column' as const,
+              gap: '0.45rem',
+              maxWidth: '46ch',
+            }}
+          >
+            {[
+              'Is my amplifier holding back my speakers?',
+              'Would this component work better in my system?',
+              'Should I upgrade the DAC or the speakers first?',
+              'Is there actually anything I should change?',
+            ].map((q) => (
+              <p
+                key={q}
+                style={{
+                  fontFamily: 'var(--face-text)',
+                  fontStyle: 'italic',
+                  fontSize: '0.98rem',
+                  lineHeight: 1.5,
+                  color: EDITORIAL.inkMuted,
+                  margin: 0,
+                }}
+              >
+                “{q}”
+              </p>
+            ))}
           </div>
 
           {/* Composer follows below (rendered once for both states; styling
