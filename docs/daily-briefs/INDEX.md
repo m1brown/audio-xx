@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-09-08 | A8: one routing assertion committed · A7: confidence type + one test | [2026-09-08.md](./2026-09-08.md) |
 | 2026-09-07 | Diagnose stall · A8: one assertion committed | [2026-09-07.md](./2026-09-07.md) |
 | 2026-09-04 | A8: first assertion · A7: type definition + one test | [2026-09-04.md](./2026-09-04.md) |
 | 2026-09-03 | A8: behavioral regression harness · A7: confidence semantics lock-in | [2026-09-03.md](./2026-09-03.md) |
