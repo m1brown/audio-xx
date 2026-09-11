@@ -1089,10 +1089,24 @@ export function extractSubjectMatches(text: string): SubjectMatch[] {
     if (idx > 0) {
       const before = lower[idx - 1];
       if (/[a-z]/.test(before)) return false; // letter immediately before
+      /*
+       * A MATCH MAY NOT BEGIN OR END INSIDE A DIGIT RUN (P1, 2026-09-11).
+       *
+       * Digits are word boundaries so "hugo2" still finds the Hugo — but a
+       * model number's digits are its identity, not its edge. The curated
+       * name "a3" matched INSIDE a listener's "Dynaco A35" because the '5'
+       * counted as a boundary, and production assessed a phantom catalog
+       * product the listener never named. "A3" is not a prefix of "A35" any
+       * more than "dave" is a substring of "saved": when the characters on
+       * both sides of the edge are digits, the number continues and the
+       * match is inside it.
+       */
+      if (/[0-9]/.test(before) && /[0-9]/.test(lower[idx])) return false;
     }
     if (end < lower.length) {
       const after = lower[end];
       if (/[a-z]/.test(after)) return false; // letter immediately after
+      if (/[0-9]/.test(after) && /[0-9]/.test(lower[end - 1])) return false;
     }
     return true;
   }

@@ -160,6 +160,18 @@ export function composeSystemReview(input: SystemReviewInput): string[] {
  * A refusal with a stated cause is an observability signal: "incompatible
  * evidence conditions" is actionable where "insufficient evidence" is not.
  */
+/**
+ * Does this finding actually speak about amplifier power or the electrical
+ * figures? `driveFinding` is an overloaded carrier — power judgments, tonal
+ * signatures and guard verdicts all arrive through it — and two compositions
+ * below (the power-scoped restraint lead and the "power question above"
+ * sufficiency framing) are licensed only by the first kind (P1, 2026-09-11).
+ */
+function drivePowerFinding(finding: string | undefined): boolean {
+  return typeof finding === 'string'
+    && /\b(?:amplifi\w*|power|watt\w*|sensitivit\w*|driv(?:e|es|en|ing)|impedance|dB)\b/i.test(finding);
+}
+
 export function composeSystemReviewDetailed(input: SystemReviewInput): {
   paragraphs: string[];
   /** The same material, in labelled semantic slots. Empty slots are omitted. */
@@ -795,7 +807,10 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         + `That is a gap in published coverage, not a judgement about `
         + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
         + `are either in publications Audio XX does not draw on or are of different models. `
-        + (input.driveFinding
+        // "The power question above" exists only when a power finding
+        // actually led — a guard verdict or tonal signature in
+        // `driveFinding` settled no power question (P1, 2026-09-11).
+        + (drivePowerFinding(input.driveFinding)
           ? `The published figures are enough to settle the power question above; they are `
             + `not enough to establish how this combination sounds, and Audio XX will not `
             + `guess at voicing it has no evidence for. `
@@ -1373,7 +1388,18 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   const favourableInterfaces = conclusions.some(
     (c) => c.status === 'established' && c.favourable !== false);
   const scopes: string[] = [];
-  if (input.driveFinding) scopes.push('amplifier power');
+  /*
+   * A RESTRAINT SCOPED TO AMPLIFIER POWER REQUIRES A POWER FINDING (P1,
+   * 2026-09-11). `driveFinding` carries whatever the caller holds as the
+   * leading judgment — on the provisional path that can be a guard verdict
+   * ("No system-level interaction is established…"), and on the canonical
+   * path a tonal signature. Composing "I wouldn't make a change based on
+   * amplifier power." from the mere PRESENCE of that field printed power
+   * advice for systems whose amplifier and loudspeaker figures were never
+   * held. The licence test is the finding's own subject matter: it must
+   * actually speak about power, drive, or the electrical figures.
+   */
+  if (drivePowerFinding(input.driveFinding)) scopes.push('amplifier power');
   if (favourableInterfaces && !input.driveFinding) {
     scopes.push('the electrical interfaces the published figures settle');
   }

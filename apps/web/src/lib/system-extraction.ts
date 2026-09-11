@@ -12,12 +12,99 @@
  */
 
 import type { SubjectMatch } from './intent';
-import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName, truncateAtListBoundary } from './labelled-components';
+import { reconcileWithLabels, splitUserSuppliedName, preferUserSuppliedName, truncateAtListBoundary, PROSE_LIST_SEPARATOR } from './labelled-components';
+
 import type { ProductCategory } from './catalog-taxonomy';
 import { isBareCategory } from './chain-validation';
 import type { ProposedSystem, DraftSystemComponent, AudioSessionState } from './system-types';
 import { findKnownSystemMatch, suggestKnownSystemName } from './known-systems';
 import type { KnownSystemMatch } from './known-systems';
+/*
+ * ROLE WORDS ARE ONE LEXICON (P1, 2026-09-11). Pass 3's role-tail test and
+ * the trailing-model capture must agree on what a role word is, or a role
+ * word survives inside a model name ("AV716 Reciever") on one path while
+ * segmenting correctly on another. "Receiver" — an entire product category —
+ * was missing outright, and the ei/ie transposition is tolerated because
+ * hobbyists write "reciever" often enough that the lexicon, not the
+ * listener, should absorb it. Role words aid segmentation and role
+ * inference; they never contaminate product identity.
+ */
+const ROLE_WORDS_SRC = String.raw`cd\s+player|loud?speakers?|monitors?|speakers?|subwoofers?|subs?|power\s+amps?|amplifiers?|amps?|integrateds?|preamps?|pre-amps?|rec(?:ei|ie)vers?|dacs?|streamers?|turntables?|sources?`;
+const ROLE_TAIL_RE = new RegExp(String.raw`\s+(${ROLE_WORDS_SRC})\.?\s*$`, 'i');
+/** "speakers are Dynaco A35" — the role word leads and the copula binds it. */
+const ROLE_LEAD_RE = new RegExp(String.raw`^(${ROLE_WORDS_SRC})\s+(?:is|are)\s+(.+)$`, 'i');
+
+/*
+ * THE LISTENER'S MODEL DESIGNATION AFTER A MATCHED NAME (P1, 2026-09-11).
+ *
+ * Three extraction paths each carried their own trailing-token regex and
+ * morphology veto, and the veto rejected ordinary designation words: "WiiM
+ * Pro Plus" assessed as the WiiM Pro because "Plus" is neither digit-bearing
+ * nor ALL-CAPS — a silent identity mutation, since Pro and Pro Plus are
+ * different products — and "dCS Rossini Apex" lost its model entirely
+ * because a letters-only designation failed every test. One helper now
+ * captures the run and applies one acceptance rule:
+ *
+ *   - tokens are word-like; a lowercase token anchors only when it carries
+ *     a digit ("av716", "d70"), so ambient prose never reads as a model;
+ *   - inside an explicit system list ("assess my system: …"), plain
+ *     lowercase continuations are admitted ("d70 pro octo") — the segment
+ *     is a designation, not prose;
+ *   - accepted when the run carries a digit, an ALL-CAPS token, model
+ *     hyphenation/plus morphology, OR is two-plus Capitalized words
+ *     ("Rossini Apex", "Pro Plus" — the Snell Type J rule, extended);
+ *   - a trailing role word describes the component and is stripped from
+ *     its designation.
+ *
+ * The run is bounded by truncateAtListBoundary and the shared separator
+ * vocabulary, so it can never cross into the next list item.
+ */
+function designationTail(rawTail: string, listContext: boolean): string {
+  const tail = truncateAtListBoundary(rawTail).split(PROSE_LIST_SEPARATOR)[0] ?? '';
+  const TOK = listContext
+    ? String.raw`[A-Za-z\d][\w\-./+]*`
+    : String.raw`(?:[A-Z\d][\w\-./+]*|[a-z][\w\-./+]*\d[\w\-./+]*)`;
+  const m = tail.match(new RegExp(
+    String.raw`^\s+((?:[A-Z\d]|[a-z][\w\-./+]*\d)[\w\-./+]*(?:\s+${TOK})*)`,
+  ));
+  if (!m) return '';
+  // English function words end a designation run — "LS50 Wireless II active
+  // speakers fed from a WiiM Ultra" is a designation followed by prose, and
+  // the prose must not ride into the identity.
+  const STOP = /^(?:a|an|the|my|is|are|was|were|from|to|via|using|through|for|by|on|in|of|or|which|that|it)$/i;
+  const runTokens: string[] = [];
+  for (const t of m[1].trim().split(/\s+/)) {
+    if (STOP.test(t)) break;
+    runTokens.push(t);
+  }
+  const candidate = runTokens.join(' ')
+    .replace(ROLE_TAIL_RE, '')
+    // Build-form qualifiers describe the component, not its designation —
+    // the same list Pass 3 strips ahead of its role word.
+    .replace(/\s+(?:tube|valve|solid[- ]state|set|300b|el34|kt88|vintage|active|powered)\s*$/i, '')
+    .replace(/[.,;:]+$/, '')
+    .trim();
+  if (!candidate) return '';
+  const tokens = candidate.split(/\s+/);
+  const hasDigit = /\d/.test(candidate);
+  const hasAllCapsToken = /\b[A-Z]{2,}\b/.test(candidate);
+  const hasModelHyphen = /[A-Za-z]-[A-Z0-9]/.test(candidate);
+  const hasPlus = /\+/.test(candidate);
+  const capitalizedRun = tokens.length >= 2 && tokens.every((t) => /^[A-Z]/.test(t));
+  // Inside an explicit system list, a Capitalized run that exhausts its
+  // list item IS the item's designation — "WiiM Pro Plus" ends in a lone
+  // "Plus", and dropping it assesses a different product than the listener
+  // owns. Only whole-item captures qualify, so prose never rides along.
+  const exhaustsListItem = listContext
+    && tail.trim() === m[1].trim()
+    && tokens.every((t) => /^[A-Z\d]/.test(t));
+  if (hasDigit || hasAllCapsToken || hasModelHyphen || hasPlus || capitalizedRun
+    || exhaustsListItem) {
+    return candidate;
+  }
+  return '';
+}
+
 
 // ── Brand → category mapping ──────────────────────────
 // Best-effort category assignment for known brands.
@@ -487,8 +574,12 @@ export function detectSystemDescription(
   // recognised brand was returning null HERE, before the leftover-segment
   // pass could even run, and three named components vanished into a generic
   // intake. Gate 4 still requires ≥2 real components to materialise.
-  const hasListShape = /\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage)
-    && /,|\band\b/i.test(currentMessage);
+  // The list-shape separator test speaks the shared vocabulary: a listener
+  // separating items with periods, semicolons or spaced slashes has listed a
+  // system exactly as much as one using commas (P1, 2026-09-11).
+  const systemListContext = /\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage);
+  const hasListShape = systemListContext
+    && PROSE_LIST_SEPARATOR.test(currentMessage);
   if (subjectMatches.length < 2 && labelledForGate.matches.length < 2 && !hasListShape) return null;
 
   // ── Build components from subject matches ──
@@ -499,6 +590,33 @@ export function detectSystemDescription(
   const components: DraftSystemComponent[] = [];
   const seen = new Set<string>();
   const coveredBrands = new Set<string>();
+
+  /*
+   * A BRAND MAY NOT CROSS A LIST BOUNDARY TO CLAIM A PRODUCT (P1,
+   * 2026-09-11). Proximity pairing measured raw character distance over the
+   * whole message, so in "NAD AV716 Reciever. TOPPING D70 Pro OCTO DAC.
+   * Dynaco A35 Speakers" the token nearest a product match in the THIRD item
+   * was the brand of the SECOND — and production displayed a component the
+   * listener never owned. The listener's separators define which words
+   * belong together; pairing is licensed within one list item, never across
+   * items. Segments are computed lazily from the same shared separator
+   * vocabulary the splits use, so the two notions of "item" cannot diverge.
+   */
+  let segmentBounds: number[] | null = null;
+  const segmentOrdinalAt = (idx: number): number => {
+    if (!segmentBounds) {
+      segmentBounds = [];
+      const scan = new RegExp(PROSE_LIST_SEPARATOR.source, 'gi');
+      let sm: RegExpExecArray | null;
+      while ((sm = scan.exec(currentMessage)) !== null) {
+        segmentBounds.push(sm.index);
+        if (sm[0].length === 0) scan.lastIndex += 1;
+      }
+    }
+    let ord = 0;
+    for (const b of segmentBounds) { if (idx > b) ord += 1; else break; }
+    return ord;
+  };
 
   // Pass 1: products (longer names sorted first to prevent substring dupes)
   const productMatches = subjectMatches
@@ -530,16 +648,11 @@ export function detectSystemDescription(
       // model. Same morphology test as the brand pass.
       let hintedName = displayName(key);
       if (typeof match.index === 'number') {
-        const hTail = truncateAtListBoundary(
-          currentMessage.slice((match.index as number) + match.name.length));
-        const hm = hTail.match(/^\s+([A-Z\d][\w\-./+]*(?:\s+[A-Z\d][\w\-./+]*)*)/);
-        if (hm) {
-          const cand = hm[1].trim().replace(/[.,;:]+$/, '');
-          if ((/\d/.test(cand) || /\b[A-Z]{2,}\b/.test(cand) || /\+/.test(cand))
-            && !/\b(?:speakers?|amp|amplifier|dac|streamer|preamp)\b/i.test(cand)) {
-            hintedName = `${hintedName} ${cand}`;
-          }
-        }
+        const cand = designationTail(
+          currentMessage.slice((match.index as number) + match.name.length),
+          systemListContext,
+        );
+        if (cand) hintedName = `${hintedName} ${cand}`;
       }
       // The listener's own trailing descriptor outranks a hint category of
       // 'other' — "Rotel A11 Tribute integrated amp" is an integrated.
@@ -547,7 +660,7 @@ export function detectSystemDescription(
       if (typeof match.index === 'number' && (hintCat === 'other' || !hintCat)) {
         const hTail2 = truncateAtListBoundary(
           currentMessage.slice((match.index as number) + match.name.length))
-          .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+          .split(PROSE_LIST_SEPARATOR)[0]
           .slice(0, 40).toLowerCase();
         if (/\bintegrated\b/.test(hTail2)) hintCat = 'integrated';
         else if (/\bpre-?amp/.test(hTail2)) hintCat = 'amplifier';
@@ -613,22 +726,17 @@ export function detectSystemDescription(
         coveredBrands.add(embeddedBrand.name.toLowerCase());
         let prodName = displayName(match.name);
         if (typeof match.index === 'number') {
-          const pTail = truncateAtListBoundary(
-            currentMessage.slice((match.index as number) + match.name.length));
-          const pm = pTail.match(/^\s+([A-Z\d][\w\-./+]*(?:\s+[A-Z\d][\w\-./+]*)*)/);
-          if (pm) {
-            const cand = pm[1].trim().replace(/[.,;:]+$/, '');
-            if ((/\d/.test(cand) || /\b[A-Z]{2,}\b/.test(cand) || /\+/.test(cand))
-              && !/\b(?:speakers?|amp|amplifier|dac|streamer|preamp)\b/i.test(cand)) {
-              prodName = `${prodName} ${cand}`;
-            }
-          }
+          const cand = designationTail(
+            currentMessage.slice((match.index as number) + match.name.length),
+            systemListContext,
+          );
+          if (cand) prodName = `${prodName} ${cand}`;
         }
         let embCat: ProductCategory = BRAND_CATEGORY_MAP[embeddedBrand.name.toLowerCase()] ?? 'other';
         if (embCat === 'other' && typeof match.index === 'number') {
           const eTail = truncateAtListBoundary(
             currentMessage.slice((match.index as number) + match.name.length))
-            .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+            .split(PROSE_LIST_SEPARATOR)[0]
             .slice(0, 40).toLowerCase();
           if (/\bintegrated\b/.test(eTail)) embCat = 'integrated';
           else if (/\bpre-?amp/.test(eTail)) embCat = 'amplifier';
@@ -645,38 +753,55 @@ export function detectSystemDescription(
           role: null,
         });
       } else {
-        // Proximity-based brand selection: among unused brands, pick the one
-        // whose source-text position is closest to this product's position.
-        // Falls back to first-available if indices are missing.
+        // Proximity-based brand selection: among unused brands IN THE SAME
+        // LIST ITEM, pick the closest to this product's position. A brand in
+        // another item is another component's brand — pairing with it is the
+        // identity-mutation class this incident exposed, so when no brand
+        // shares the product's segment the product stays brandless rather
+        // than borrowing one. Falls back to first-available only when the
+        // matcher supplied no positions at all.
         const availableBrands = subjectMatches.filter(
           (m) => m.kind === 'brand' && !m.parenthetical
             && !seen.has(`used:${m.name.toLowerCase()}`),
         );
         let brandMatch: SubjectMatch | undefined;
         if (typeof productIdx === 'number' && availableBrands.some((b) => typeof b.index === 'number')) {
+          const productSeg = segmentOrdinalAt(productIdx);
           brandMatch = availableBrands
-            .filter((b) => typeof b.index === 'number')
+            .filter((b) => typeof b.index === 'number'
+              && segmentOrdinalAt(b.index as number) === productSeg)
             .sort((a, b) => {
               const da = Math.abs((a.index as number) - productIdx);
               const db = Math.abs((b.index as number) - productIdx);
               return da - db;
-            })[0] ?? availableBrands[0];
+            })[0];
         } else {
           brandMatch = availableBrands[0];
+        }
+        // The listener's own trailing designation extends a curated match on
+        // this path too — "NAD C316BEE V2" is not the C316BEE, and "Linton
+        // 85" is the listener's designation of their Linton (P1, 2026-09-11).
+        let bareName = displayName(match.name);
+        if (typeof match.index === 'number') {
+          const cand = designationTail(
+            currentMessage.slice((match.index as number) + match.name.length),
+            systemListContext,
+          );
+          if (cand) bareName = `${bareName} ${cand}`;
         }
         if (brandMatch) {
           seen.add(`used:${brandMatch.name.toLowerCase()}`);
           coveredBrands.add(brandMatch.name.toLowerCase());
           components.push({
             brand: capitalize(brandMatch.name),
-            name: displayName(match.name),
+            name: bareName,
             category: BRAND_CATEGORY_MAP[brandMatch.name.toLowerCase()] ?? 'other',
             role: null,
           });
         } else {
           components.push({
             brand: '',
-            name: displayName(match.name),
+            name: bareName,
             category: 'other',
             role: null,
           });
@@ -719,30 +844,15 @@ export function detectSystemDescription(
     // while accepting "LS50 Meta", "Q150", "D90SE", "O/96", etc.
     let extractedModel = '';
     if (typeof match.index === 'number') {
-      // Stop at the next list item. `(?:\s+[A-Z\d][\w\-./+]*)*` lets a DIGIT
-      // start a continuation token and `[\w\-./+]*` then swallows the period,
-      // so "dCS Rossini Apex 4. Speakers: Acora QRC-2" yielded the model
-      // "Rossini Apex 4. Speakers" — one component wearing the next two items'
-      // text. See truncateAtListBoundary for why this varies by turn.
-      const tail = truncateAtListBoundary(
+      // One capture, one acceptance rule — designationTail (P1, 2026-09-11).
+      // It bounds the run at the shared list separators, admits lowercase
+      // digit-bearing tokens ("av716") and Capitalized runs ("Rossini
+      // Apex"), and strips a trailing role descriptor ("AV716 receiver")
+      // so the identity that reaches the graph is the product's own.
+      extractedModel = designationTail(
         currentMessage.slice(match.index + match.name.length),
+        systemListContext,
       );
-      const m = tail.match(/^\s+([A-Z\d][\w\-./+]+(?:\s+[A-Z\d][\w\-./+]*)*)/);
-      if (m) {
-        // A sentence-terminating full stop is punctuation, not part of the
-        // model: "ARC Reference 5." is the Reference 5. A trailing dot inside
-        // a token ("D90.2") is untouched — only a terminal one is stripped.
-        const candidate = m[1].trim().replace(/[.,;:]+$/, '');
-        const hasDigit = /\d/.test(candidate);
-        const hasAllCapsToken = /\b[A-Z]{2,}\b/.test(candidate);
-        // A hyphen joining a letter run to a capital or digit is model
-        // morphology ("Elex-R", "M-CR612") — prose does not hyphenate that
-        // way. Without this the Elex-R reduced to a bare "Rega".
-        const hasModelHyphen = /[A-Za-z]-[A-Z0-9]/.test(candidate);
-        // "+"-suffixed models ("Freya+") are model morphology too.
-        const hasPlus = /\+/.test(candidate);
-        if (hasDigit || hasAllCapsToken || hasModelHyphen || hasPlus) extractedModel = candidate;
-      }
     }
 
     /*
@@ -763,10 +873,13 @@ export function detectSystemDescription(
       // connector, comma or arrow, and never exceeds 40 characters.
       const descTail = truncateAtListBoundary(
         currentMessage.slice(match.index + match.name.length))
-        .split(/,|→|-{1,3}>|\binto\b|\bdriving\b|\bfeeding\b|\bwith\b|\band\b/i)[0]
+        .split(PROSE_LIST_SEPARATOR)[0]
         .slice(0, 40)
         .toLowerCase();
       if (/\bpre-?amp(?:lifier)?\b/.test(descTail)) explicitCategory = 'amplifier';
+      // A receiver amplifies and switches sources; in chain terms it is the
+      // integrated-amplification stage. Typo-tolerant per ROLE_TAIL_RE.
+      else if (/\brec(?:ei|ie)vers?\b/.test(descTail)) explicitCategory = 'integrated';
       else if (/\bintegrated\b/.test(descTail)) explicitCategory = 'integrated';
       else if (/\b(?:power\s+)?amp(?:lifier)?s?\b/.test(descTail)
         && !/\bpre-?amp/.test(descTail)) explicitCategory = 'amplifier';
@@ -801,20 +914,48 @@ export function detectSystemDescription(
    * component with the descriptor's category.
    */
   {
-    const segs = currentMessage.split(/[,\n]|→|-{1,3}>|\bdriving\b|\bfeeding\b|\binto\b|\bwith\b|\band\b/i);
+    const segs = currentMessage.split(PROSE_LIST_SEPARATOR);
     for (let seg of segs) {
       seg = seg.replace(/^[^:]*\b(?:system|setup|rig|chain)\b[^:]*?:/i, '')
         .replace(/^\s*(?:and|with|plus|a|an|the|my)\s+/i, '')
         .trim();
       if (seg.length < 6 || seg.length > 70) continue;
+      // A colon marks a labelled segment — the label parser's jurisdiction,
+      // with its accessory-field suppression ("speaker cables: Canare 4S11G
+      // Star Quad" is a wire, not a component). Pass 3 never reads labels.
+      if (seg.includes(':')) continue;
       const segLower = seg.toLowerCase();
       if (components.some((c) => [c.brand, c.name].some((t) => t && t.length >= 3
         && !isBareCategory(t) && segLower.includes(t.toLowerCase())))) continue;
-      const ROLE_TAIL = /\s+(cd\s+player|loud?speakers?|monitors?|speakers?|subwoofers?|subs?|power\s+amps?|amplifiers?|amps?|integrateds?|preamps?|pre-amps?|dacs?|streamers?|turntables?|sources?)\.?\s*$/i;
-      const rm = ROLE_TAIL.exec(seg);
-      if (!rm) continue;
-      const namePart = seg.slice(0, rm.index).trim()
+      /*
+       * The role word may TRAIL ("Dynaco A35 Speakers"), LEAD with a copula
+       * ("speakers are Dynaco A35"), or be ABSENT inside an explicit system
+       * list ("assess my system: … . Dynaco A35.") — all three are ordinary
+       * natural language, and a component the listener typed must never
+       * silently disappear (P1, 2026-09-11). Without a role word the
+       * component is recorded unclassified (`category: null`), which is the
+       * honest state; only an explicit list context may admit it, so prose
+       * fragments never become components.
+       */
+      let namePart: string;
+      let roleWord: string | null;
+      const rm = ROLE_TAIL_RE.exec(seg);
+      const lm = rm ? null : ROLE_LEAD_RE.exec(seg);
+      if (rm) {
+        namePart = seg.slice(0, rm.index).trim();
+        roleWord = rm[1].toLowerCase();
+      } else if (lm) {
+        namePart = lm[2].trim();
+        roleWord = lm[1].toLowerCase();
+      } else if (systemListContext) {
+        namePart = seg;
+        roleWord = null;
+      } else {
+        continue;
+      }
+      namePart = namePart
         .replace(/\s+(?:tube|valve|solid[- ]state|set|300b|el34|kt88|vintage|active|powered)\s*$/i, '')
+        .replace(/[.,;:]+$/, '')
         .trim();
       const tokens = namePart.split(/\s+/);
       if (tokens.length < 2) continue;
@@ -823,9 +964,10 @@ export function detectSystemDescription(
         // Letters-only models ("Snell Type J"): every token brand-cased.
         || (tokens.length >= 2 && tokens.every((t) => /^[A-Z]/.test(t)));
       if (!modelish) continue;
-      const roleWord = rm[1].toLowerCase();
-      const cat: ProductCategory = /subwoofer|sub\b|subs\b/.test(roleWord) ? 'subwoofer'
+      const cat: ProductCategory = roleWord === null ? 'other'
+        : /subwoofer|sub\b|subs\b/.test(roleWord) ? 'subwoofer'
         : /speaker|monitor/.test(roleWord) ? 'speaker'
+        : /rec(?:ei|ie)ver/.test(roleWord) ? 'integrated'
         : /integrated/.test(roleWord) ? 'integrated'
         : /pre/.test(roleWord) ? 'amplifier'
         : /amp/.test(roleWord) ? 'amplifier'
