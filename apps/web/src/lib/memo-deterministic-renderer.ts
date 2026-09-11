@@ -632,6 +632,22 @@ function deriveSpiderChartData(
 function deriveSystemSignature(
   findings: MemoFindings,
 ): string | undefined {
+  /*
+   * IDENTITY CONFIDENCE PRECEDES SYSTEM CONCLUSION LICENCE (P1, 2026-09-11).
+   *
+   * A chain containing a component whose identity or character was never
+   * established (`source: 'inferred'`) is a system Audio XX has not read.
+   * The aggregation below silently skipped such components and composed a
+   * system-character sentence from whatever remained — so a corrupted
+   * extraction (a real listener's three components read as a phantom plus a
+   * blob) still received a confident "Tonally balanced…" thesis. Character
+   * claimed for part of a system is character claimed for a different
+   * system; when any chain member is unestablished, the honest signature is
+   * none at all. Fully-resolved systems are untouched.
+   */
+  if (findings.perComponentAxes.some((c) => c.source === 'inferred')) {
+    return undefined;
+  }
   const axes = findings.systemAxes;
   const priorities = findings.listenerPriorities;
   const traits: string[] = [];

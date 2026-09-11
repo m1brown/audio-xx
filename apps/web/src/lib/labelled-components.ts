@@ -185,7 +185,32 @@ export function splitTurns(message: string): string[] {
  * Applied to the RAW segment, before punctuation is trimmed — once the period
  * is gone, a trailing "2" is indistinguishable from the "2" in "Ref 2".
  */
-const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)|\u001E/;
+const LIST_BOUNDARY = /\s+(?:\d{1,2}\s*[.)]|[-\u2013\u2014\u2022*\u00b7])(?=\s|$)|[.;](?=\s|$)|\s[/+](?=\s)|\u001E/;
+
+/*
+ * THE SEPARATOR VOCABULARY IS ONE VOCABULARY (P1, 2026-09-11).
+ *
+ * "NAD AV716 Reciever. TOPPING D70 Pro OCTO DAC. Dynaco A35 Speakers" reached
+ * production as ONE component plus a phantom, because every list-boundary
+ * decision — segment splitting, descriptor windows, trailing-model capture —
+ * carried its own inline regex, and none treated a sentence period as a
+ * boundary. A listener separating components with periods, semicolons,
+ * slashes or plus signs is describing a list exactly as much as one using
+ * commas; the punctuation must not decide whether their system survives.
+ *
+ * Boundary shapes, chosen so model morphology is never split:
+ *   - `[.;](?=\s|$)` — a period or semicolon is a boundary only before
+ *     whitespace/end, so "D90.2" and "Mk.II" are untouched;
+ *   - `\s[/+](?=\s)` — slash and plus separate items only when SPACED
+ *     ("A / B", "a + b"); "O/96" and "Freya+" keep their morphology;
+ *   - the comma/newline/arrow/connector-word set the splits always had.
+ *
+ * Shared with system-extraction's decision sites so the vocabularies cannot
+ * drift apart again. Non-global on purpose: String.split and [0]-windowing
+ * never rely on lastIndex, and a shared `g` regex would carry state.
+ */
+export const PROSE_LIST_SEPARATOR =
+  /[,\n;]|→|-{1,3}>|\.(?=\s|$)|\s[/+](?=\s)|\bdriving\b|\bfeeding\b|\bfed\b|\binto\b|\bwith\b|\band\b/i;
 
 /**
  * A MODEL NUMBER IS NOT A LIST MARKER, even when a period follows it.
@@ -381,6 +406,9 @@ export function splitUserSuppliedName(rawName: string): { brand: string; name: s
  * what a component is called.
  */
 export function preferUserSuppliedName(existing: string, rawName: string): string {
+  // Same designation, different casing: the listener's own casing IS the
+  // identity they typed ("dCS", not "Dcs") — theirs wins (P1, 2026-09-11).
+  if (rawName.trim().toLowerCase() === existing.trim().toLowerCase()) return rawName;
   const tokens = (v: string) => v.trim().split(/\s+/).filter(Boolean).length;
   return tokens(rawName) > tokens(existing) ? rawName : existing;
 }
