@@ -1414,6 +1414,108 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   }
 
   /*
+   * ── HOW THIS SYSTEM FITS TOGETHER — the EXPLAIN layer, first-class ──
+   *
+   * (System synergy, 2026-09-11.) The composer has always COMPUTED system
+   * relationships — the conversion path, the interface conclusions, the
+   * figures that block an interface — but their system-level meaning never
+   * reached the review: topology surfaced only as a question, and the
+   * defining amplifier↔loudspeaker relationship surfaced only as a list of
+   * unresolved figure names in the Notes verdict. This section states, in
+   * the listener's terms, what the licensed evidence establishes ABOUT THE
+   * SYSTEM: which relationship defines it, whether that relationship is
+   * settled, constrained or unassessable, why the topology matters when it
+   * is unsettled, and which missing fact blocks which decision.
+   *
+   * Licensing: everything here is read off computations that already
+   * existed — analyzeConversionPath, interfaceConclusions, the held dossier
+   * figures. The one governed inference is naming amplifier→loudspeaker as
+   * the relationship most likely to set the practical ceiling, which is an
+   * engineering commonplace about transduction and load, stated as
+   * likelihood and never as sound. No sonic claim is composed here.
+   */
+  const fits: string[] = [];
+  {
+    const ampComp = input.components.find((c) => /amp|integrated|receiver/i.test(c.role ?? ''));
+    const spkComp = input.components.find((c) => /speaker|monitor|loudspeaker/i.test(c.role ?? ''));
+
+    // Topology: why the unstated path matters, or what the stated path fixes.
+    if (conv.ambiguous) {
+      const stageNames = conv.stages.map((s) => (s.kind === 'amp_with_dac'
+        ? `the ${canonicalDisplayName(s.name)}’s onboard conversion`
+        : `the ${canonicalDisplayName(s.name)}`));
+      const listed = stageNames.length > 1
+        ? `${stageNames.slice(0, -1).join(', ')} and ${stageNames[stageNames.length - 1]}`
+        : stageNames[0];
+      fits.push(
+        `The shape of this system is not yet settled. `
+        + `${listed.charAt(0).toUpperCase()}${listed.slice(1)} `
+        + `${stageNames.length > 1 ? 'can each' : 'can'} perform digital-to-analogue `
+        + `conversion, and which one actually sits in the signal path decides where `
+        + `the system’s character originates — a different answer makes this a `
+        + `materially different system. That is a fact about connections, not about `
+        + `quality, and only you can settle it.`,
+      );
+    } else if (conv.explicit) {
+      fits.push(
+        `The signal path is established from your description, so what follows `
+        + `reasons over the connections you actually use.`,
+      );
+    }
+
+    // The defining relationship, and its actual state. A standing constraint
+    // owns this ground already — its own paragraphs explain the problem — so
+    // this composes only when no constraint stands.
+    if (ampComp && spkComp && !constraintStands) {
+      const ampN = canonicalDisplayName(ampComp.displayName);
+      const spkN = canonicalDisplayName(spkComp.displayName);
+      if (engineeringCoherent) {
+        fits.push(
+          `The relationship most likely to set this system’s practical ceiling is the `
+          + `${ampN} driving the ${spkN}, and its electrical side is settled by the `
+          + `published figures below — nothing in them stands in the way. What the `
+          + `figures cannot settle is how the combination sounds; that remains a `
+          + `listening question, not an electrical one.`,
+        );
+      } else {
+        const missing: string[] = [];
+        if (!findLine(amp?.dossier, 'power output')) missing.push(`the ${ampN}’s rated output`);
+        if (!findLine(spk?.dossier, 'sensitivity')) missing.push(`the ${spkN}’s sensitivity`);
+        if (!findLine(spk?.dossier, 'nominal impedance') && !findLine(spk?.dossier, 'impedance')) {
+          missing.push(`${!findLine(spk?.dossier, 'sensitivity') ? 'its' : `the ${spkN}’s`} nominal impedance`);
+        }
+        if (missing.length > 0) {
+          const listed = missing.length === 1 ? missing[0]
+            : `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}`;
+          fits.push(
+            `The relationship most likely to set this system’s practical ceiling is the `
+            + `${ampN} driving the ${spkN} — and it cannot be assessed yet. Whether the `
+            + `amplifier is a limiting factor here turns on ${listed}, `
+            + `${missing.length === 1 ? 'which is not' : 'none of which is'} established in the `
+            + `evidence held. That is the uncertainty that most limits this assessment: `
+            + `${missing.length === 1 ? 'that figure' : 'those figures'} would change the `
+            + `judgment more than any listening impression could.`,
+          );
+        }
+      }
+      // Settled ground that is NOT the ceiling: established favourable
+      // line-level interfaces, stated as what they mean for attention.
+      const settledLine = conclusions.filter(
+        (c) => c.status === 'established' && c.favourable !== false
+          && (c.kind === 'loading' || c.kind === 'level'));
+      if (!engineeringCoherent && settledLine.length > 0) {
+        fits.push(
+          `${settledLine.length === 1 ? 'One interface is' : 'The line-level interfaces are'} `
+          + `already settled by the published figures, and `
+          + `${settledLine.length === 1 ? 'it is' : 'they are'} unlikely to be where this `
+          + `system’s character is decided — attention belongs on the relationships above, `
+          + `not there.`,
+        );
+      }
+    }
+  }
+
+  /*
    * ORDERED BY WHAT MATTERS, not by what was computed first.
    *
    * The quantitative amplifier-to-loudspeaker analysis is the strongest thing
@@ -1425,6 +1527,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   explanation.push(
     ...synergyParas,
     ...observationParas,
+    ...fits,
     ...(engineeringCoherent
       ? engineeringLead
       : [...electricalParas, ...interfaceParas]),
@@ -1451,6 +1554,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       label: 'Why it works',
       paragraphs: [...synergyParas, ...observationParas],
     },
+    // The Explain layer, first-class: which relationships define this
+    // system and what state each is actually in (system synergy, 2026-09-11).
+    { label: 'How this system fits together', paragraphs: fits },
     {
       label: 'Engineering check',
       paragraphs: engineeringCoherent

@@ -161,7 +161,7 @@ describe('the explanation is ordered by significance, not retrieval', () => {
     for (const sec of r.sections ?? []) expect(sec.paragraphs.length).toBeGreaterThan(0);
   });
 
-  it('a sparsely evidenced system acquires no empty headings', () => {
+  it('a sparsely evidenced system acquires no empty headings — only the structural Explain', () => {
     const bare = composeSystemReviewDetailed({
       components: [
         { displayName: 'Blang 2', role: 'amplifier' },
@@ -172,7 +172,16 @@ describe('the explanation is ordered by significance, not retrieval', () => {
         { displayName: 'Frooble X', role: 'speaker', primary: [], secondary: [], gaps: [], hasDetail: false } as never,
       ],
     });
-    expect(bare.sections ?? []).toHaveLength(0);
+    // A sparse system earns exactly one section (Explain layer, 2026-09-11):
+    // the structural reading — which relationship defines the system and
+    // which missing figures block its assessment. No fabricated voicing, no
+    // empty headings; every section that renders carries real material.
+    const labels = (bare.sections ?? []).map((sec) => sec.label);
+    expect(labels).toEqual(['How this system fits together']);
+    for (const sec of bare.sections ?? []) {
+      expect(sec.paragraphs.length).toBeGreaterThan(0);
+      expect(sec.paragraphs.join(' ')).not.toMatch(/tonally|warm|bright|airy/i);
+    }
   });
 
   it('the numbers still render in full when a constraint keeps them detailed', () => {

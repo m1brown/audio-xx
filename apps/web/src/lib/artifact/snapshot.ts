@@ -233,7 +233,34 @@ export function snapshotFromCanonical(
     components: camComponents,
     synthesis: synthesiseChain(camComponents),
     dossiers: meta.componentDossiers ?? [],
-    driveFinding: cam.identity.signature,
+    /*
+     * NO UNLICENSED SIGNATURE INTO THE REVIEW (system synergy, 2026-09-11).
+     *
+     * `cam.identity.signature` is the payload STANDFIRST, which is two very
+     * different things. For a constrained system with a recognised category
+     * it is the engine's own worded judgment ("The match is the problem —
+     * not the taste.") — derived from published figures, licensed, and
+     * exactly what judgment-first should lead with. For everything else it
+     * is the axis machinery's weighted average of catalog trait priors —
+     * Describe-lane material no evidence licenses as a system judgment.
+     * Passed unconditionally, the judgment-first rule promoted "Tonally
+     * balanced, detail-forward…" to lead THE ASSESSMENT on the same page
+     * whose licensed verdict said no system-level interaction was
+     * established. The licence gate below strips signature FIELDS but runs
+     * after composition, so the leak is stopped at this input: only the
+     * constraint-category standfirsts pass. (The generic-role bottleneck
+     * standfirst is the tonal signature again, so it does not.) The
+     * provisional path is different and unchanged: its systemSignature has
+     * passed the model-character guard, a licence this lane does not have.
+     */
+    driveFinding: (() => {
+      const category = (meta.findings as {
+        bottleneck?: { category?: string } | null;
+      } | undefined)?.bottleneck?.category;
+      const licensedStandfirst = category === 'power_match'
+        || category === 'dac_limitation' || category === 'speaker_scale';
+      return licensedStandfirst ? cam.identity.signature : undefined;
+    })(),
     driveQualification: undefined,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,

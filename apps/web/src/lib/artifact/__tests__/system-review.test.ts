@@ -361,13 +361,20 @@ describe('a figure at SOME load does not license a claim about THIS load', () =>
     expect(out).not.toMatch(/do not meet/);
   });
 
-  it('produces nothing at all rather than something weaker', () => {
+  it('produces the unknown, never something weaker', () => {
     // These two dossiers hold a load-less power figure and a nominal
-    // impedance. Nothing relates them, so the correct output is no review —
-    // not a hedged sentence gesturing at a comparison that cannot be made.
-    // In production this same system DOES get a review, because Leben's
-    // dossier also holds a tube complement, and that licenses a different
-    // paragraph entirely.
-    expect(out).toBe('');
+    // impedance. Nothing relates them, so no comparison may be composed —
+    // not a hedged sentence gesturing at one. What IS licensed (Explain
+    // layer, 2026-09-11) is naming the decision the gap blocks: the
+    // amplifier↔loudspeaker relationship cannot be assessed without the
+    // loudspeaker's sensitivity. That statement uses no figure and claims
+    // no fit. In production this same system gets a fuller review, because
+    // Leben's dossier also holds a tube complement, and that licenses a
+    // different paragraph entirely.
+    const paras = out.split('\n\n').filter(Boolean);
+    expect(paras).toHaveLength(1);
+    expect(paras[0]).toMatch(/cannot be assessed yet/);
+    expect(paras[0]).toMatch(/sensitivity/);
+    expect(paras[0]).not.toMatch(/32W|watt|8-ohm|within the limits/);
   });
 });
