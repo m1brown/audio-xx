@@ -114,8 +114,8 @@ describe('sideways differs by evidence, not by generation', () => {
 
   it('its sections are drawn from the same canonical vocabulary', () => {
     const CANON = new Set([
-      'The assessment', 'Why it works', 'Engineering check',
-      'What I would do', 'What remains unknown',
+      'The assessment', 'Why it works', 'How this system fits together',
+      'Engineering check', 'What I would do', 'What remains unknown',
     ]);
     for (const sec of sideways.sections ?? []) expect(CANON.has(sec.label), sec.label).toBe(true);
   });
