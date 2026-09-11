@@ -227,7 +227,7 @@ export function causalCoverage(input: CoverageInput): InterfaceCoverage[] {
     const da = dossierOf(input, amplification.displayName);
     const db = dossierOf(input, spk.displayName);
     const output = get(da, 'power output');
-    const impedance = get(db, 'impedance');
+    const impedance = get(db, 'impedance') ?? get(db, 'nominal impedance');
     const sensitivity = get(db, 'sensitivity');
     const question = 'Does the amplifier suit this loudspeaker, and how loud will it play?';
 
