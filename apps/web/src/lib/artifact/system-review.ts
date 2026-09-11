@@ -388,7 +388,8 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // would read as padding — the review's job is to take it further.
   const electrical: string[] = [];
 
-  const impedanceLine = findLine(spk?.dossier, 'impedance');
+  const impedanceLine = findLine(spk?.dossier, 'impedance')
+    ?? findLine(spk?.dossier, 'nominal impedance');
   const handlingLine = findLine(spk?.dossier, 'power handling');
   const outputLine = findLine(amp?.dossier, 'power output');
   const driversLine = findLine(spk?.dossier, 'drivers')
@@ -1035,7 +1036,8 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         return m ? Number(m[1]) : undefined;
       })();
       const spkLoad = (() => {
-        const l = spk && findLine(spk.dossier, 'impedance');
+        const l = spk && (findLine(spk.dossier, 'impedance')
+          ?? findLine(spk.dossier, 'nominal impedance'));
         const m = l && /([\d.]+)\s*ohm/i.exec(l.value);
         return m ? Number(m[1]) : undefined;
       })();
@@ -1478,15 +1480,46 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           + `listening question, not an electrical one.`,
         );
       } else {
+        const sensLine = findLine(spk?.dossier, 'sensitivity');
+        const impLine = findLine(spk?.dossier, 'nominal impedance')
+          ?? findLine(spk?.dossier, 'impedance');
+        const pwrLine = findLine(amp?.dossier, 'power output');
         const missing: string[] = [];
-        if (!findLine(amp?.dossier, 'power output')) missing.push(`the ${ampN}’s rated output`);
-        if (!findLine(spk?.dossier, 'sensitivity')) missing.push(`the ${spkN}’s sensitivity`);
-        if (!findLine(spk?.dossier, 'nominal impedance') && !findLine(spk?.dossier, 'impedance')) {
-          missing.push(`${!findLine(spk?.dossier, 'sensitivity') ? 'its' : `the ${spkN}’s`} nominal impedance`);
+        if (!pwrLine) missing.push(`the ${ampN}’s rated output`);
+        if (!sensLine) missing.push(`the ${spkN}’s sensitivity`);
+        if (!impLine) {
+          missing.push(`${!sensLine ? 'its' : `the ${spkN}’s`} nominal impedance`);
         }
-        if (missing.length > 0) {
-          const listed = missing.length === 1 ? missing[0]
+        const listed = missing.length === 0 ? ''
+          : missing.length === 1 ? missing[0]
             : `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}`;
+        if (missing.length > 0 && sensLine && impLine) {
+          /*
+           * PARTLY ON THE RECORD (relationship-first evidence, 2026-09-11).
+           * When the loudspeaker's figures are held and the amplifier's are
+           * not (or vice versa), "cannot be assessed" understates what the
+           * evidence now settles: one side of the drive question is closed.
+           * The connective is the licensed commonplace the glossary already
+           * states — every 3dB of sensitivity doubles the power a listening
+           * level demands — applied to the maker's own figures, with no
+           * judgment adjective and no claim about sound.
+           */
+          // "4 ohms" reads as "a 4-ohm nominal load" in running prose.
+          const impProse = impLine.value.replace(/^(\d+(?:\.\d+)?)\s*ohms?$/i, '$1-ohm');
+          fits.push(
+            `The relationship most likely to set this system’s practical ceiling is the `
+            + `${ampN} driving the ${spkN}, and the ${spkN}’s side of that question is `
+            + `on the record: the maker rates it at ${sensLine.value} into a `
+            + `${impProse} nominal load. Those figures decide how much amplifier `
+            + `power a given listening level actually demands — every 3dB of `
+            + `sensitivity is a doubling — so they are doing real work here. What still `
+            + `cannot be established is ${listed}: until `
+            + `${missing.length === 1 ? 'that figure is' : 'those figures are'} on the `
+            + `record, whether the amplifier is a limiting factor remains open, and `
+            + `${missing.length === 1 ? 'it' : 'each one'} would change the judgment `
+            + `more than any listening impression could.`,
+          );
+        } else if (missing.length > 0) {
           fits.push(
             `The relationship most likely to set this system’s practical ceiling is the `
             + `${ampN} driving the ${spkN} — and it cannot be assessed yet. Whether the `

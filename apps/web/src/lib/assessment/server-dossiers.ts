@@ -18,6 +18,8 @@
  */
 import { presentDossier, type DossierView } from '../evidence/dossier-presentation';
 import { dossierFor } from '../evidence/product-dossier';
+import { AUTHORED_FACTS, AUTHORED_UNKNOWN_BY_PRODUCT } from '../evidence/relationship-facts';
+import { observationKeyFor } from '../reasoning/evidence-retrieval';
 import { readFacts } from '../evidence/manufacturer-fact-store';
 import { isMakerPublished, productKeyFor } from '../evidence/manufacturer-facts';
 import { getProductImageEntry } from '../product-images';
@@ -69,7 +71,25 @@ export async function buildServerDossiers(
     }
 
     const role = normalizeRole(c.role) ?? '';
-    const view = presentDossier(dossierFor(key, c.name, { heldSpecs, role } as never));
+    /*
+     * AUTHORED FACTS REACH THE ARTIFACT TOO (relationship-first evidence,
+     * 2026-09-11). This route built dossiers from held specs alone, so the
+     * authored record — the JOB conversion-topology fact, the family
+     * bridge, the W5 maker figures — was visible in the conversation and
+     * absent from the shared/printed assessment: the surface most likely to
+     * be read by someone other than the listener reasoned over LESS
+     * evidence. Same merge, same canonical-key remap, same unknowns as the
+     * other dossier surfaces.
+     */
+    const factKey = observationKeyFor(c.name);
+    const authoredFacts = AUTHORED_FACTS
+      .filter((f) => f.productKey === factKey || f.productKey === key)
+      .map((f) => (f.productKey !== key ? { ...f, productKey: key } : f));
+    const unknowns = AUTHORED_UNKNOWN_BY_PRODUCT[key]
+      ?? AUTHORED_UNKNOWN_BY_PRODUCT[factKey];
+    const view = presentDossier(dossierFor(key, c.name, {
+      authoredFacts, heldSpecs, role, unknowns,
+    } as never));
 
     /*
      * The governed image boundary, resolved against the CORROBORATED identity

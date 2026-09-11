@@ -14,8 +14,7 @@ import { presentDossier, type DossierView } from '@/lib/evidence/dossier-present
 import { interfaceConclusions, ohms, wattsAtStatedLoad } from '@/lib/artifact/interface-conclusions';
 import { readFacts } from '@/lib/evidence/manufacturer-fact-store';
 import { isMakerPublished, productKeyFor } from '@/lib/evidence/manufacturer-facts';
-import { FRANCE_FACTS } from '@/lib/evidence/france-product-facts';
-import { NATHAN_FACTS } from '@/lib/evidence/nathan-product-facts';
+import { AUTHORED_FACTS } from '@/lib/evidence/relationship-facts';
 import { observationKeyFor } from './evidence-retrieval';
 import type { ComputedFact } from './governed-context';
 
@@ -37,7 +36,7 @@ async function viewFor(displayName: string, role: string, now: number): Promise<
   // reference 5"); the listener types "ARC ref 5". Resolve through the same
   // governed identity table and remap, exactly as the artifact path does.
   const factKey = observationKeyFor(displayName);
-  const authoredFacts = [...FRANCE_FACTS, ...NATHAN_FACTS]
+  const authoredFacts = AUTHORED_FACTS
     .filter((f) => f.productKey === factKey)
     .map((f) => (factKey !== key ? { ...f, productKey: key } : f));
   return presentDossier(dossierFor(key, displayName, { authoredFacts, heldSpecs: held, role }));
