@@ -44,6 +44,26 @@ function resolveText(sp: ArtifactSearchParams): string {
 // Deduped per request: generateMetadata and the page share one engine run.
 const renderCached = cache((text: string) => runArtifactPipeline(text));
 
+/*
+ * ONE ASSESSMENT FOR METADATA AND PAGE (relationship-first evidence,
+ * 2026-09-11). generateMetadata licensed its verdict WITHOUT the server
+ * dossiers, so a shared link's title claimed "Boenicke W5 nominal impedance
+ * remains unresolved" while the page beneath it printed the maker's 4-ohm
+ * figure — the unfurl asserting an unknown the page resolves. The dossiers
+ * are part of the evidence the licence reads; both surfaces now read the
+ * same dossier-aware assessment, computed once per request.
+ */
+const dossiersCached = cache(async (text: string) => {
+  const rendered = renderCached(text);
+  if (!rendered) return null;
+  const chain = (rendered.raw as {
+    findings?: { systemChain?: { names?: string[]; roles?: string[] } };
+  } | null)?.findings?.systemChain;
+  return buildServerDossiers(
+    (chain?.names ?? []).map((name, i) => ({ name, role: chain?.roles?.[i] })),
+  );
+});
+
 /**
  * Sharing metadata (M4). A pasted assessment link is the product's
  * acquisition loop — it must unfurl as the assessment itself: the
@@ -66,7 +86,8 @@ export async function generateMetadata(
    * surface, and it was the last one still on the old lane.
    */
   const p = rendered.payload;
-  const licensed = authoritativeAssessment(rendered.raw);
+  const dossiers = (await dossiersCached(text)) ?? undefined;
+  const licensed = authoritativeAssessment(rendered.raw, { dossiers });
   const title = (licensed?.verdict ?? p.verdict).replace(/\.\s*$/, '');
   // The description names the SYSTEM. The review now opens with the judgment
   // (editorial hierarchy, 2026-09-06), which does not necessarily name every
@@ -141,12 +162,7 @@ export default async function ArtifactPage(
    * assessment therefore carried no component evidence at all — on the surface
    * most likely to be read by someone other than the listener who generated it.
    */
-  const chain = (rendered.raw as {
-    findings?: { systemChain?: { names?: string[]; roles?: string[] } };
-  } | null)?.findings?.systemChain;
-  const dossiers = await buildServerDossiers(
-    (chain?.names ?? []).map((name, i) => ({ name, role: chain?.roles?.[i] })),
-  );
+  const dossiers = (await dossiersCached(text)) ?? [];
 
   const assessment = authoritativeAssessment(rendered.raw, {
     dossiers,
