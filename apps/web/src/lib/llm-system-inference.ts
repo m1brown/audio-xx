@@ -646,6 +646,14 @@ export function buildProvisionalPrompt(
   reviewObservations?: Record<string, ReviewObservation[]>,
   /** Chain roles — required to tell amplifier output from any other watt figure. */
   componentRoles?: ComponentRole[],
+  /**
+   * The ONE system reasoning context, serialized (convergence, 2026-09-11):
+   * conversion-path state, application-established interface conclusions,
+   * decision-relevant gaps — the same computations the review composer
+   * consumes, so the model and the composer can never reason from different
+   * system facts. Facts and refusals only; the model interprets meaning.
+   */
+  systemContext?: string,
 ): {
   userPrompt: string;
   provenance: ComponentProvenance[];
@@ -1077,7 +1085,7 @@ export function buildProvisionalPrompt(
   const userPrompt = `The user asked: "${query}"
 
 The system chain includes: ${componentNames.join(' → ')}
-${catalogContext}${brandContext}${modelContext}${manufacturerContext}${quantityContext}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}${coverageDirective}
+${catalogContext}${brandContext}${modelContext}${manufacturerContext}${quantityContext}${systemContext ?? ''}${reviewContext}${premiseContext}${unresolvedContext}${disagreementContext}${uncorroboratedContext}${incompleteContext}${coverageDirective}
 
 When describing each component in the philosophy section:
 - Catalog-verified: reference the verified data above and assess in full.
@@ -1300,13 +1308,15 @@ export async function inferProvisionalSystemAssessment(
    * relational licensing entirely.
    */
   componentRoles?: ComponentRole[],
+  /** Serialized shared system reasoning context — see buildProvisionalPrompt. */
+  systemContext?: string,
 ): Promise<ConsultationResponse | null> {
   const {
     userPrompt, provenance, suppliedPremises, driveRelation, driveConclusion,
     driveQualification, openGap, gapQuestion, coverageNote,
   } = buildProvisionalPrompt(
     query, componentNames, knownDescriptions, unresolved, corroborated, lookupUnknown,
-    manufacturerEvidence, reviewObservations, componentRoles,
+    manufacturerEvidence, reviewObservations, componentRoles, systemContext,
   );
 
   try {
