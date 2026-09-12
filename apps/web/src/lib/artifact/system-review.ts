@@ -1585,6 +1585,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + `record, whether the amplifier actually limits this system stays an `
             + `open question.`,
           );
+        } else if (missing.length > 0 && pwrLine
+          && /into\s+\d+(?:\.\d+)?\s*ohms?/i.test(pwrLine.value)) {
+          // A load-less watt figure does not put the amplifier's side of
+          // the DRIVE question on the record — that takes output INTO a
+          // stated load (the Leben lesson: 32W at 1kHz names no ohms).
+          /*
+           * THE AMPLIFIER'S SIDE ON THE RECORD (judgment quality,
+           * 2026-09-12). The partly-on-record variant existed only for the
+           * loudspeaker side, so an amplifier whose maker figures were
+           * admitted still read as wholly unassessable. Symmetric now:
+           * whichever side the record settles is stated, and the open side
+           * is framed as the question it leaves.
+           */
+          fits.push(
+            `The first relationship I would examine here is the ${ampN} driving the `
+            + `${spkN}, and the ${ampN}’s side of that question is on the record: `
+            + `the maker rates it at ${pwrLine.value}. What still cannot be `
+            + `established is ${listed} — ${missing.length === 1 ? 'it decides' : 'they decide'} `
+            + `how much of that power a given listening level actually demands, so `
+            + `how much headroom this pairing has stays open.`,
+          );
         } else if (missing.length > 0) {
           fits.push(
             `The first relationship I would examine here is the ${ampN} driving the `

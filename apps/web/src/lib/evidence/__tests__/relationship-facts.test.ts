@@ -18,6 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { RELATIONSHIP_FACTS, RELATIONSHIP_UNKNOWN_BY_PRODUCT, AUTHORED_FACTS } from '../relationship-facts';
 import { buildServerDossiers } from '@/lib/assessment/server-dossiers';
+import { sonicLeadRequiresListening } from '../model-character-guard';
 import { composeSystemReviewDetailed } from '@/lib/artifact/system-review';
 import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 
@@ -96,7 +97,9 @@ describe('3 — one authored record on every surface', () => {
       { name: 'Dynaco A35', role: 'speaker' },
     ]);
     const gaps = ds.flatMap((d) => (d.typedGaps ?? []).map((g) => g.quantity));
-    expect(gaps).toContain('amplifier_rated_output');
+    // The AV716 rated-output need was CLOSED by acquisition (2026-09-12) —
+    // the archived maker page supplied it — so it no longer appears here.
+    expect(gaps).not.toContain('amplifier_rated_output');
     expect(gaps).toContain('speaker_load_profile');
   }, 30000);
 });
@@ -136,5 +139,95 @@ describe('5 — evidence needs stay decision-framed', () => {
         expect(u.quantity).toBeTruthy();
       }
     }
+  });
+});
+
+describe('6 — judgment-quality acquisitions (NAD AV716 / Dynaco A35)', () => {
+  const nad = RELATIONSHIP_FACTS.filter((f) => f.productKey === 'nad av716');
+  const a35 = RELATIONSHIP_FACTS.filter((f) => f.productKey === 'dynaco a35');
+
+  it('the AV716 power figure is the maker’s, archived, and calculable', () => {
+    const pwr = nad.find((f) => f.qualifier === 'power output');
+    expect(pwr?.sourceClass).toBe('maker_published');
+    expect(pwr?.specRole).toBe('amplifier_output');
+    expect(pwr?.sourceUrl).toMatch(/web\.archive\.org.*nad\.co\.uk/);
+    expect(pwr?.value).toMatch(/80W per channel into 8 ohms/);
+    expect(pwr?.quotedText).toMatch(/Continuous average power output/);
+  });
+
+  it('the A35 aperiodic claim stays reported design intent, never a measurement', () => {
+    const ap = a35.find((f) => /aperiodic/.test(f.value));
+    expect(ap?.sourceClass).toBe('third_party_reported');
+    expect(ap?.state).toBe('reported');
+    expect(ap?.specRole).toBeUndefined();
+    expect(ap?.quotedText).toMatch(/unusually smooth impedance curve/);
+  });
+
+  it('the composer states the amp side on the record and the speaker side as the open question', async () => {
+    const comps = [
+      { name: 'Topping D70 Pro OCTO', role: 'dac' },
+      { name: 'Nad AV716', role: 'integrated' },
+      { name: 'Dynaco A35', role: 'speaker' },
+    ];
+    const ds = await buildServerDossiers(comps,
+      'assess my system: NAD AV716 Reciever. TOPPING D70 Pro OCTO DAC. Dynaco A35 Speakers');
+    const rc = ds.map((d) => ({ displayName: d.displayName, role: d.role ?? '' }));
+    const det = composeSystemReviewDetailed({
+      components: rc, dossiers: ds, synthesis: synthesiseChain(rc),
+      rawQuery: 'assess my system: NAD AV716 Reciever. TOPPING D70 Pro OCTO DAC. Dynaco A35 Speakers',
+    });
+    const fits = (det.sections ?? []).find((s) => /fits together/i.test(s.label))
+      ?.paragraphs.join('\n') ?? '';
+    expect(fits).toMatch(/Nad AV716’s side of that question is on the record/);
+    expect(fits).toMatch(/80W per channel into 8 ohms/);
+    expect(fits).toMatch(/Dynaco A35/);
+    expect(fits).toMatch(/stays open/);
+    // The closed evidence need no longer prints as a gap.
+    expect(det.paragraphs.join('\n')).not.toMatch(/NAD’s rated output for the AV716/);
+  }, 30000);
+
+  it('an unresolved amplifier elsewhere does not inherit the on-record framing', async () => {
+    const ds = await buildServerDossiers([
+      { name: 'Eversolo DMP-A6', role: 'streamer' }, { name: 'Chord Hugo', role: 'dac' },
+      { name: 'JOB Integrated', role: 'amplifier' }, { name: 'Boenicke W5', role: 'speaker' },
+    ]);
+    const rc = ds.map((d) => ({ displayName: d.displayName, role: d.role ?? '' }));
+    const det = composeSystemReviewDetailed({
+      components: rc, dossiers: ds, synthesis: synthesiseChain(rc),
+      rawQuery: 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB Integrated, Boenicke W5',
+    });
+    const fits = (det.sections ?? []).find((s) => /fits together/i.test(s.label))
+      ?.paragraphs.join('\n') ?? '';
+    // JOB's own rating is still unpublished: the speaker-side variant holds.
+    expect(fits).toMatch(/Boenicke W5’s side of that question is on the record/);
+    expect(fits).not.toMatch(/JOB INTegrated’s side of that question is on the record/);
+  }, 30000);
+});
+
+
+describe('7 — a sonic assertion in the system lead requires listening evidence', () => {
+  it('assertions are stripped without admitted listening observations', () => {
+    for (const sig of [
+      'The system leans towards a detailed and slightly bright character from the Topping DAC.',
+      'The system is coherent, showing complementary design tendencies despite the lack of specific sonic evidence.',
+      'Coherent, with a strong emphasis on balanced sound and synergy between components.',
+    ]) {
+      expect(sonicLeadRequiresListening(sig, false)).toBeUndefined();
+    }
+  });
+
+  it('refusals and electrical statements pass freely', () => {
+    for (const sig of [
+      'The system’s sonic character cannot be established without knowing which component handles digital conversion.',
+      'Indeterminate: the amplifier’s rated output into this load is unresolved.',
+      'The system is indeterminate due to unresolved power output and impedance matching concerns.',
+    ]) {
+      expect(sonicLeadRequiresListening(sig, false)).toBe(sig);
+    }
+  });
+
+  it('with admitted listening evidence, assertions pass to the existing guards', () => {
+    const sig = 'The chain leans towards a warm, relaxed presentation.';
+    expect(sonicLeadRequiresListening(sig, true)).toBe(sig);
   });
 });

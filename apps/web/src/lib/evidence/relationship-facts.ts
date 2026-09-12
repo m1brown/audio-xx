@@ -40,6 +40,8 @@ const F = (
 });
 
 const BOENICKE_W5 = 'https://boenicke-audio.ch/products/loudspeakers/w5/';
+const NAD_AV716_ARCHIVE = 'https://web.archive.org/web/19980129081443/http://www.nad.co.uk/Main/product/avrec/716.html';
+const DYNACO_BROCHURE = 'https://www.updatemydynaco.com/documents/dynaco_brochure.pdf';
 const JOB225_TECH = 'https://web.archive.org/web/20170413154118/http://jobsys.com/job225doc.htm';
 
 export const RELATIONSHIP_FACTS: ProductFact[] = [
@@ -91,6 +93,53 @@ export const RELATIONSHIP_FACTS: ProductFact[] = [
       quotedText: 'Nominal Power: 125W on 8 Ohms per channel … Power RMS (Goldmund FPP '
         + 'Standard): 200W on 8 Ohms each channel at nominal AC line voltage',
     }),
+
+  // ── NAD AV716 — maker's own archived product page ─────────────────
+  // Bears on: Topping D70 Pro OCTO → AV716 (line interface) and
+  // AV716 → Dynaco A35 (drive). Acquired 2026-09-12 from the Wayback
+  // capture of NAD's own product page — the JOB precedent: the maker's
+  // words, on the maker's page, preserved by the archive.
+  F('nad av716', 'specification',
+    '80W per channel into 8 ohms, continuous (20Hz–20kHz at rated distortion); '
+    + '145W IHF dynamic into 4 ohms', {
+      qualifier: 'power output', specRole: 'amplifier_output',
+      sourceUrl: NAD_AV716_ARCHIVE,
+      quotedText: 'Continuous average power output into 8 ohms 80W (19dBW) … '
+        + 'IHF dynamic power … 4 ohms 145W (21.6 dBW)',
+    }),
+  F('nad av716', 'architecture_element',
+    'Line inputs rated at 150mV sensitivity for full output into 47k ohms, '
+    + 'accepting over 6V — a conventional line-level interface for any '
+    + 'standard source output', {
+      sourceUrl: NAD_AV716_ARCHIVE,
+      qualifier: 'archived maker product page, captured 29 January 1998',
+      quotedText: 'Line Level Inputs (CD, Video, Tape, Aux) Input impedance (R and C) '
+        + '47k ohms + 200pF Input sensitivity ref. rated output 150mV Maximum input signal >6V',
+    }),
+  F('nad av716', 'architecture_element',
+    'Damping factor >60 (ref. 8 ohms, 50Hz); the maker states it drives 4-ohm '
+    + 'loudspeakers "with ease"', {
+      sourceUrl: NAD_AV716_ARCHIVE,
+      qualifier: 'archived maker product page, captured 29 January 1998',
+      quotedText: 'also driving 4 ohm loudspeakers with ease and great vivacity',
+    }),
+
+  // ── Dynaco A35 — maker literature, third-party hosted ─────────────
+  // Bears on: AV716 → A35 load behaviour. The 1972 Dynaco brochure (the
+  // same scan whose dimensions and weight the store already holds) states
+  // the aperiodic design's amplifier-matching intent for all four models,
+  // the A-35 named among them. Reported: the host is an enthusiast site,
+  // and a maker's design claim is intent, never a measurement.
+  F('dynaco a35', 'architecture_element',
+    'Two-way aperiodic design in Dynaco’s double-cabinet construction; the maker '
+    + 'states the aperiodic loading gives an unusually smooth impedance curve for '
+    + 'amplifier matching', {
+      sourceClass: 'third_party_reported', state: 'reported',
+      sourceUrl: DYNACO_BROCHURE,
+      quotedText: 'the patented Dynaco aperiodic design which affords an unusually '
+        + 'smooth impedance curve throughout the bass range, providing ideal '
+        + 'amplifier matching and power transfer characteristics',
+    }),
 ];
 
 /**
@@ -104,12 +153,8 @@ export const RELATIONSHIP_UNKNOWN_BY_PRODUCT: Record<string, UnknownField[]> = {
       + 'impedance only, and how far the real load dips below 4 ohms decides how much '
       + 'current the amplifier must actually deliver',
   }],
-  'nad av716': [{
-    predicate: 'specification', decisionRelevant: true, quantity: 'amplifier_rated_output',
-    wouldCloseWith: 'NAD’s rated output for the AV716 from its manual or archived '
-      + 'maker literature — without it the receiver’s side of the drive question '
-      + 'cannot be assessed',
-  }],
+  // 'nad av716' amplifier_rated_output: CLOSED 2026-09-12 — the archived
+  // maker page supplied it. The evidence need did exactly its job.
   'dynaco a35': [{
     predicate: 'specification', decisionRelevant: true, quantity: 'speaker_load_profile',
     wouldCloseWith: 'sensitivity and nominal impedance from Dynaco’s own literature '

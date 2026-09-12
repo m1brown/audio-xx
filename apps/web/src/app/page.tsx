@@ -222,6 +222,7 @@ import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/s
 import { composeSystemReview } from '@/lib/artifact/system-review';
 import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
+import { sonicLeadRequiresListening } from '@/lib/evidence/model-character-guard';
 import { displayDeviceClass, normalizeRole } from '@/lib/assessment/authoritative';
 import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import type { GlossaryResult } from '@/lib/glossary';
@@ -3564,7 +3565,10 @@ export default function Home() {
               // A standing engine constraint outranks the restrained action lead.
               constraintPresent: (provisional.systemRelations ?? [])
                 .some((r: { kind?: string }) => r.kind === 'constraint'),
-              modelLead: provisional.systemSignature ?? undefined,
+              modelLead: sonicLeadRequiresListening(
+                provisional.systemSignature ?? undefined,
+                Object.keys(reviewObservations).length > 0,
+              ),
               driveQualification: provisional.qualification,
               // The coverage statement is already inside `philosophy`, which
               // the conversation renders. Passing it here too would print it
@@ -3894,21 +3898,13 @@ export default function Home() {
             // 2026-09-12). The licence is the model-character guard the
             // provisional lane has always applied; a deterministic
             // constraint standfirst still outranks it in the snapshot.
-            modelSignature: (() => {
-              const sig = canonicalModel?.systemSignature;
-              if (!sig) return undefined;
-              // "Is the model allowed to say this?" — a system-level
-              // sonic/coherence claim requires admitted evidence to stand
-              // on. With an empty evidence base the guarded narrative may
-              // still describe components (labelled), but no synthesis of
-              // "how it all comes together" may lead the assessment; the
-              // licensed verdict stands down for nothing.
-              const evidenceEmpty = catalogDossiers.every((d) =>
-                (d.primary?.length ?? 0) === 0 && (d.secondary?.length ?? 0) === 0);
-              const sonicSystemClaim =
-                /coheren|synergy|balanc|voic|warm|bright|smooth|airy|musical|sound(?!s? like a question)/i.test(sig);
-              return evidenceEmpty && sonicSystemClaim ? undefined : sig;
-            })(),
+            // "Is the model allowed to say this?" — a sonic ASSERTION in
+            // the system lead requires admitted listening evidence;
+            // refusals and electrical statements pass freely.
+            modelSignature: sonicLeadRequiresListening(
+              canonicalModel?.systemSignature,
+              Object.keys(reviewObs).length > 0,
+            ),
           };
         }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
