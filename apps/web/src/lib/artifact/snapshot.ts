@@ -184,6 +184,8 @@ export function snapshotFromCanonical(
     statedSubstitution?: { incumbent: string; candidate: string };
     /** Listener's words, for stated-connection detection only (P1 2026-09-03). */
     rawQuery?: string;
+    /** Guarded model signature from the one reasoning pass (2026-09-12). */
+    modelSignature?: string;
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -259,7 +261,13 @@ export function snapshotFromCanonical(
       } | undefined)?.bottleneck?.category;
       const licensedStandfirst = category === 'power_match'
         || category === 'dac_limitation' || category === 'speaker_scale';
-      return licensedStandfirst ? cam.identity.signature : undefined;
+      if (licensedStandfirst) return cam.identity.signature;
+      // One reasoning pass (2026-09-12): the governed model's guarded
+      // signature leads when the conversation ran the pass — the same
+      // model-character licence the provisional lane has always used. A
+      // deterministic constraint standfirst outranks it above; with
+      // neither, no thesis is manufactured.
+      return meta.modelSignature || undefined;
     })(),
     driveQualification: undefined,
     coverageNote: meta.coverageNote,

@@ -822,7 +822,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + `loudspeakers would be invention. `)
         + `A published `
         + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
-        + `publication would change more of this assessment than any other single piece of evidence.`,
+        + `publication would establish what specifications cannot: how this combination actually sounds.`,
       );
     }
   }
@@ -1509,27 +1509,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           // "4 ohms" reads as "a 4-ohm nominal load" in running prose.
           const impProse = impLine.value.replace(/^(\d+(?:\.\d+)?)\s*ohms?$/i, '$1-ohm');
           fits.push(
-            `The relationship most likely to set this system’s practical ceiling is the `
-            + `${ampN} driving the ${spkN}, and the ${spkN}’s side of that question is `
-            + `on the record: the maker rates it at ${sensLine.value} into a `
-            + `${impProse} nominal load. Those figures decide how much amplifier `
-            + `power a given listening level actually demands — every 3dB of `
-            + `sensitivity is a doubling — so they are doing real work here. What still `
+            `The first relationship I would examine here is the ${ampN} driving the `
+            + `${spkN}, and the ${spkN}’s side of that question is on the record: the `
+            + `maker rates it at ${sensLine.value} into a ${impProse} nominal load. `
+            + `Those figures decide how much amplifier power a given listening level `
+            + `actually demands — every 3dB of sensitivity is a doubling. What still `
             + `cannot be established is ${listed}: until `
             + `${missing.length === 1 ? 'that figure is' : 'those figures are'} on the `
-            + `record, whether the amplifier is a limiting factor remains open, and `
-            + `${missing.length === 1 ? 'it' : 'each one'} would change the judgment `
-            + `more than any listening impression could.`,
+            + `record, whether the amplifier actually limits this system stays an `
+            + `open question.`,
           );
         } else if (missing.length > 0) {
           fits.push(
-            `The relationship most likely to set this system’s practical ceiling is the `
-            + `${ampN} driving the ${spkN} — and it cannot be assessed yet. Whether the `
-            + `amplifier is a limiting factor here turns on ${listed}, `
-            + `${missing.length === 1 ? 'which is not' : 'none of which is'} established in the `
-            + `evidence held. That is the uncertainty that most limits this assessment: `
-            + `${missing.length === 1 ? 'that figure' : 'those figures'} would change the `
-            + `judgment more than any listening impression could.`,
+            `The first relationship I would examine here is the ${ampN} driving the `
+            + `${spkN} — but the evidence held is not enough to say whether it is `
+            + `actually limiting anything. That turns on ${listed}, `
+            + `${missing.length === 1 ? 'which is not' : 'none of which is'} established. `
+            + `Until ${missing.length === 1 ? 'that figure is' : 'those figures are'} on `
+            + `the record, whether the amplifier limits this system stays an open `
+            + `question — the one that most limits this assessment.`,
           );
         }
       }

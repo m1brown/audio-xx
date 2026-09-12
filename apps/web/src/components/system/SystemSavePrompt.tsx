@@ -9,6 +9,7 @@
  */
 
 import type { ProposedSystem } from '@/lib/system-types';
+import { useAudioSession } from '@/lib/audio-session-context';
 
 interface SystemSavePromptProps {
   proposed: ProposedSystem;
@@ -17,6 +18,10 @@ interface SystemSavePromptProps {
 }
 
 export default function SystemSavePrompt({ proposed, onReviewAndSave, onDismiss }: SystemSavePromptProps) {
+  // Shown only when a saved/active system exists — that is the only case in
+  // which "did my saved system leak into this?" is a question worth answering.
+  const { state: sessionState } = useAudioSession();
+  const hasOtherSystem = sessionState.savedSystems.length > 0 || !!sessionState.activeSystemRef;
   const componentSummary = proposed.components
     .filter((c) => c.brand || c.name)
     .map((c) => {
@@ -66,7 +71,17 @@ export default function SystemSavePrompt({ proposed, onReviewAndSave, onDismiss 
       <div style={{ color: '#555', marginBottom: '0.4rem' }}>
         {proposed.knownSystemMatch
           ? <>This matches a known system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span></>
-          : <>You described a system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span></>
+          : <>You described a system: <span style={{ fontWeight: 500, color: '#333' }}>{componentSummary}</span>
+            {/* One reasoning pass (2026-09-12): a listener with a saved
+                system active should never wonder whether it leaked into
+                this assessment. It did not — the described system replaces
+                the saved one for the turn — and this says so where the
+                doubt arises. */}
+            {hasOtherSystem && (
+              <span style={{ display: 'block', fontSize: '0.86em', color: '#8C877F', marginTop: '0.15rem' }}>
+                This assessment reads these components only — not your saved system.
+              </span>
+            )}</>
         }
       </div>
       <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>

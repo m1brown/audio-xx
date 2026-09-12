@@ -69,14 +69,14 @@ describe('1 — unresolved defining relationship, stated as the decision it bloc
   });
   const fits = fitsOf(d);
 
-  it('names the amplifier→loudspeaker relationship as the likely ceiling', () => {
-    expect(fits).toMatch(/most likely to set this system’s practical ceiling/);
+  it('names the amplifier→loudspeaker relationship as the one to examine first', () => {
+    expect(fits).toMatch(/first relationship I would examine/);
     expect(fits).toMatch(/Nad AV716 driving the Dynaco A35/);
   });
 
   it('frames the uncertainty as the decision it prevents, naming the missing figures', () => {
-    expect(fits).toMatch(/cannot be assessed yet/);
-    expect(fits).toMatch(/Whether the amplifier is a limiting factor/);
+    expect(fits).toMatch(/not enough to say whether it is actually limiting/);
+    expect(fits).toMatch(/stays an open question/);
     expect(fits).toMatch(/rated output/);
     expect(fits).toMatch(/sensitivity/);
   });
@@ -164,7 +164,7 @@ describe('5 — the Boenicke control, end to end', () => {
     const fits = snap.reviewSections?.find((s) => /fits together/i.test(s.label));
     expect(fits).toBeTruthy();
     expect(fits!.paragraphs.join(' ')).toMatch(/JOB INTegrated driving the Boenicke W5/);
-    expect(fits!.paragraphs.join(' ')).toMatch(/cannot be assessed yet/);
+    expect(fits!.paragraphs.join(' ')).toMatch(/not enough to say whether it is actually limiting/);
   });
 
   it('the licensed verdict stands', () => {
