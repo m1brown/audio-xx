@@ -92,7 +92,7 @@ describe('STEP 2 — the verdict describes what Evaluate established', () => {
 
   it('says so plainly when nothing was established', () => {
     expect(verdictFromEvidence('indeterminate', []))
-      .toBe('No system-level interaction is established on the evidence held.');
+      .toBe('I can assess this system’s structure, but not yet how it performs together.');
   });
 });
 

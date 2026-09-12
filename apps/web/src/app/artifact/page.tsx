@@ -61,6 +61,7 @@ const dossiersCached = cache(async (text: string) => {
   } | null)?.findings?.systemChain;
   return buildServerDossiers(
     (chain?.names ?? []).map((name, i) => ({ name, role: chain?.roles?.[i] })),
+    text,
   );
 });
 

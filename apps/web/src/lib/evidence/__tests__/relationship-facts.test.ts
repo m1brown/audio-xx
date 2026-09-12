@@ -123,7 +123,7 @@ describe('4 — stronger evidence strengthens Explain without a licence leap', (
     expect(fits).toMatch(/shape of this system is not yet settled/);
     // …and no system sound is asserted from any of it.
     expect(fits).not.toMatch(/tonally|warm|bright|airy|spatially open|detail-forward/i);
-    expect(all).toMatch(/no admitted independent listening evidence for .* Boenicke W5/);
+    expect(all).toMatch(/exact-product listening evidence for .* Boenicke W5/);
   }, 30000);
 });
 

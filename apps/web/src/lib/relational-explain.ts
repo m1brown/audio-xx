@@ -1165,10 +1165,17 @@ export function verdictFromEvidence(
   openGap?: string,
 ): string {
   if (relations.length === 0) {
+    /*
+     * ADVISER VOICE, SAME LICENCE (beta polish, 2026-09-12). "No
+     * system-level interaction is established on the evidence held" was an
+     * internal evidence-state description standing where a judgment
+     * belongs. The claim is identical — structure is assessable, joint
+     * behaviour is not yet established — stated the way an adviser says it.
+     */
     return openGap
-      ? `No system-level interaction is established on the evidence held, and `
-        + `${openGap} remains unresolved.`
-      : 'No system-level interaction is established on the evidence held.';
+      ? `I can assess this system’s structure, but not yet how it performs `
+        + `together — ${openGap} remains unresolved.`
+      : 'I can assess this system’s structure, but not yet how it performs together.';
   }
 
   const kinds = new Set(relations.map((r) => r.kind));

@@ -168,7 +168,7 @@ describe('5 — the Boenicke control, end to end', () => {
   });
 
   it('the licensed verdict stands', () => {
-    expect(snap.verdict).toMatch(/No system-level interaction is established/);
+    expect(snap.verdict).toMatch(/I can assess this system’s structure, but not yet how it performs together/);
   }, 30000);
 
   it('a constraint standfirst still leads a constrained system', () => {

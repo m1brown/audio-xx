@@ -23,7 +23,7 @@ describe('a verdict is composed from established relations, never from a label',
     // system was examined and found sound; "no interaction is established"
     // reports the truth, which is that Audio XX could not examine it.
     const v = verdictFromEvidence('no_change', []);
-    expect(v).toMatch(/No system-level interaction is established/i);
+    expect(v).toMatch(/not yet how it performs together/i);
     expect(v).not.toMatch(/nothing here obviously needs changing/i);
   });
 

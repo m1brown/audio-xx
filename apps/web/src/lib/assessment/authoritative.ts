@@ -167,6 +167,28 @@ Array<{ kind: 'reinforcement' | 'constraint'; axis: string }> {
  * Every interface question this chain poses, and what the evidence settled.
  * Exposed so a surface can show its own coverage without recomputing it.
  */
+/**
+ * The listener's own device-class word, for DISPLAY beside a component
+ * (beta polish, 2026-09-12). "NAD AV716 Receiver" showed as "integrated":
+ * the reasoning layer rightly treats a receiver's active function as
+ * amplification, but device class and active role are different facts, and
+ * the listener-facing identity should keep their word. Read from the raw
+ * query only — never inferred from the product — and display-only: no
+ * reasoning consumer reads it.
+ */
+export function displayDeviceClass(
+  displayName: string,
+  role: string | undefined,
+  rawQuery: string | undefined,
+): string | undefined {
+  if (!rawQuery || !role) return undefined;
+  if (!/amp|integrated/i.test(role)) return undefined;
+  const idx = rawQuery.toLowerCase().indexOf(displayName.toLowerCase());
+  if (idx < 0) return undefined;
+  const tail = rawQuery.slice(idx + displayName.length, idx + displayName.length + 24);
+  return /^\s*rec(?:ei|ie)vers?\b/i.test(tail) ? 'receiver' : undefined;
+}
+
 export function coverageFor(input: LicenceInput): InterfaceCoverage[] {
   return causalCoverage({
     components: input.components.map((c) => ({
