@@ -134,3 +134,39 @@ export const AUTHORED_UNKNOWN_BY_PRODUCT: Record<string, UnknownField[]> = {
   ...NATHAN_UNKNOWN_BY_PRODUCT,
   ...RELATIONSHIP_UNKNOWN_BY_PRODUCT,
 };
+
+/**
+ * The authored record as evidence items for the model lane (convergence,
+ * 2026-09-11). The provisional prompt's evidence feed was a store fetch
+ * alone, so a fact admitted in this file could narrow the composed review
+ * while the model reasoned as if it did not exist — two evidence universes
+ * on one page. Only calculation-grade specification facts cross (maker or
+ * independently measured, established, quoted): the same admission bar the
+ * deterministic lane applies before arithmetic.
+ */
+export function authoredEvidenceItems(
+  displayNames: string[],
+  keyFor: (name: string) => string,
+): Array<{
+  productKey: string; evidenceClass: 'manufacturer'; tier: 'manufacturer';
+  scope: 'product'; field: string; value: string;
+  attribution?: { sourceUrl: string; quotedText: string }; retrievedAt: number;
+}> {
+  const keys = new Map(displayNames.map((n) => [keyFor(n), n] as const));
+  return AUTHORED_FACTS
+    .filter((f) => keys.has(f.productKey)
+      && f.predicate === 'specification'
+      && f.state === 'established'
+      && f.sourceClass === 'maker_published'
+      && !!f.qualifier && !!f.sourceUrl && !!f.quotedText)
+    .map((f) => ({
+      productKey: f.productKey,
+      evidenceClass: 'manufacturer' as const,
+      tier: 'manufacturer' as const,
+      scope: 'product' as const,
+      field: (f.qualifier as string).replace(/\s+/g, '_').toLowerCase(),
+      value: f.value,
+      attribution: { sourceUrl: f.sourceUrl as string, quotedText: f.quotedText as string },
+      retrievedAt: 0,
+    }));
+}

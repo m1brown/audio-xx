@@ -93,7 +93,8 @@ import { createArtifactSnapshot } from '@/product/create-artifact-snapshot';
 import { dossierFor } from '@/lib/evidence/product-dossier';
 import { presentDossier, worthRendering } from '@/lib/evidence/dossier-presentation';
 import { FRANCE_SUPERSEDED_HELD_SPECS } from '@/lib/evidence/france-product-facts';
-import { AUTHORED_FACTS, AUTHORED_UNKNOWN_BY_PRODUCT } from '@/lib/evidence/relationship-facts';
+import { AUTHORED_FACTS, AUTHORED_UNKNOWN_BY_PRODUCT, authoredEvidenceItems } from '@/lib/evidence/relationship-facts';
+import { buildSystemReasoningContext, serializeSystemReasoningContext } from '@/lib/assessment/system-reasoning-context';
 import {
   NATHAN_SUPERSEDED_HELD_SPECS,
 } from '@/lib/evidence/nathan-product-facts';
@@ -3479,6 +3480,33 @@ export default function Home() {
             reviewObservations as Record<string, Array<Record<string, unknown>>>);
 
           mark('evidence read');
+          /*
+           * ONE SUBSTRATE, TWO CONSUMERS (convergence, 2026-09-11).
+           *
+           * The model's evidence feed was the store fetch alone, so a fact
+           * admitted to the authored record could narrow the composed review
+           * while the model reasoned as if it did not exist. And the model
+           * had no topology authority and no view of the interface
+           * conclusions or decision gaps — the deterministic system facts
+           * lived only in the composer. Both now derive from the SAME
+           * dossiers this turn already built: the authored calculation-grade
+           * facts join the model's evidence, and the shared reasoning
+           * context (conversion path, interface conclusions, typed gaps) is
+           * serialized into the prompt as application-established fact.
+           */
+          const modelEvidence = [
+            ...manufacturerEvidence,
+            ...authoredEvidenceItems(
+              orderedComponents.map((c) => c.displayName),
+              (n) => resolveObservationKey(n, seedObservations().admitted)
+                ?? n.toLowerCase().trim(),
+            ) as unknown as Array<Record<string, unknown>>,
+          ];
+          const reasoningCtx = buildSystemReasoningContext(
+            orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+            dossierViews,
+            assessmentResult.query,
+          );
           const provisional = await inferProvisionalSystemAssessment(
             assessmentResult.query,
             componentNames,
@@ -3486,11 +3514,12 @@ export default function Home() {
             unresolvedRoster,
             corroborated,
             lookupUnknown,
-            manufacturerEvidence as never,
+            modelEvidence as never,
             reviewObservations as never,
             // Roles travel with the components so the publication boundary can
             // resolve "the amplifier" to the product holding that role.
             orderedComponents.map((c) => ({ name: c.displayName, role: c.role })),
+            serializeSystemReasoningContext(reasoningCtx),
           );
           if (provisional) {
             // Override source to provisional_system for distinct UI labeling

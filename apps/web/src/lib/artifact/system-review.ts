@@ -38,8 +38,7 @@ import {
 import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
-import { interfaceConclusions } from './interface-conclusions';
-import { analyzeConversionPath } from '../assessment/conversion-path';
+import { buildSystemReasoningContext } from '../assessment/system-reasoning-context';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
 import type { SonicRelation } from '../evidence/relational-synthesis';
@@ -606,13 +605,16 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * first. They are also the ones that changed most: three of these
    * interfaces were reported as unresolved until the figures were fetched.
    */
-  // Conversion-path authority (P1, 2026-09-03): computed once, consumed by the
-  // interface layer here and by the experiment/clarification blocks below.
-  // Known components do not imply a known signal path — see conversion-path.ts.
-  const conv = analyzeConversionPath(input.components, input.dossiers, input.rawQuery);
-  const conclusions = interfaceConclusions(input.components, input.dossiers, {
-    conversionPathAmbiguous: conv.ambiguous,
-  });
+  // ONE system reasoning context (convergence, 2026-09-11): the conversion
+  // path and interface conclusions are computed by the shared owner that the
+  // provisional model prompt also consumes — the composer projects them, it
+  // no longer owns them. Known components do not imply a known signal path —
+  // see conversion-path.ts.
+  const reasoningCtx = buildSystemReasoningContext(
+    input.components, input.dossiers, input.rawQuery,
+  );
+  const conv = reasoningCtx.conversion;
+  const conclusions = reasoningCtx.conclusions;
   const interfaceParas: string[] = conclusions.map((c) => c.statement);
   const engineeringCoherent = conclusions.length >= 2
     && conclusions.every((c) => c.status === 'established' && c.favourable !== false);

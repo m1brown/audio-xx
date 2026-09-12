@@ -357,14 +357,14 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       './sonic-synthesis',
       // Arithmetic over two published figures the snapshot has already frozen.
       // Reads no catalog, no engine, no network — the same terms as the rest.
-      './interface-conclusions',
-      // Conversion-path authority (P1, 2026-09-03): a pure predicate over the
-      // frozen components, dossiers and the listener's own words, deciding
-      // whether the conversion path is established or ambiguous. It asserts
-      // no topology, reads no catalog, calls no engine, and its only import
-      // is a type. Deciding what a review may NOT claim is the opposite of
-      // reassessment — it is the licensing rule applied to relationships.
-      '../assessment/conversion-path',
+      // ONE system reasoning context (convergence, 2026-09-12): the shared
+      // owner of conversion-path authority and interface conclusions — the
+      // same two pure modules this list carried individually (P1 2026-09-03
+      // justifications preserved below in spirit): predicates over frozen
+      // components, dossiers and the listener's words. No catalog, no
+      // engine, no network; deciding what a review may NOT claim is the
+      // opposite of reassessment.
+      '../assessment/system-reasoning-context',
       // Market evidence: verified prices and range positions, both frozen
       // data. Reads no catalog, no engine, no network.
       '../evidence/system-class',
