@@ -181,7 +181,7 @@ describe('LISTENER-ONLY — missing evidence produces bounded uncertainty', () =
     // An unrecognised chain may not resolve to an assessment at all, which is
     // itself correct. What must never happen is a confident reading of it.
     if (!s) return;
-    expect(s.verdict).toMatch(/No system-level interaction is established/i);
+    expect(s.verdict).toMatch(/not yet how it performs together/i);
     expect(prose(s)).not.toMatch(/leading edges|resolves cleanly|nothing here needs changing/i);
   });
 });

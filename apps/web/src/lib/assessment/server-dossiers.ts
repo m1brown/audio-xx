@@ -23,7 +23,7 @@ import { observationKeyFor } from '../reasoning/evidence-retrieval';
 import { readFacts } from '../evidence/manufacturer-fact-store';
 import { isMakerPublished, productKeyFor } from '../evidence/manufacturer-facts';
 import { getProductImageEntry } from '../product-images';
-import { normalizeRole } from './authoritative';
+import { displayDeviceClass, normalizeRole } from './authoritative';
 
 export interface ServerDossierInput {
   name: string;
@@ -39,6 +39,7 @@ export interface ServerDossierInput {
  */
 export async function buildServerDossiers(
   components: ServerDossierInput[],
+  rawQuery?: string,
 ): Promise<DossierView[]> {
   const now = Date.now();
 
@@ -87,6 +88,7 @@ export async function buildServerDossiers(
       .map((f) => (f.productKey !== key ? { ...f, productKey: key } : f));
     const unknowns = AUTHORED_UNKNOWN_BY_PRODUCT[key]
       ?? AUTHORED_UNKNOWN_BY_PRODUCT[factKey];
+    const deviceClass = displayDeviceClass(c.name, normalizeRole(c.role) ?? c.role ?? '', rawQuery);
     const view = presentDossier(dossierFor(key, c.name, {
       authoredFacts, heldSpecs, role, unknowns,
     } as never));
@@ -97,6 +99,8 @@ export async function buildServerDossiers(
      * admissible yields `undefined`, which every surface renders as nothing at
      * all — no frame, no placeholder.
      */
+    if (deviceClass) view.role = deviceClass; // display-only listener word
+
     const admitted = (c.canonicalName && getProductImageEntry(undefined, c.canonicalName))
       || getProductImageEntry(undefined, c.name);
 

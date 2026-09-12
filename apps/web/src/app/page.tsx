@@ -222,7 +222,7 @@ import { snapshotFromCanonical, snapshotFromProvisional } from '@/lib/artifact/s
 import { composeSystemReview } from '@/lib/artifact/system-review';
 import { synthesiseChain } from '@/lib/artifact/sonic-synthesis';
 import { synthesizeArtifact } from '@/lib/artifact/synthesizeArtifact';
-import { normalizeRole } from '@/lib/assessment/authoritative';
+import { displayDeviceClass, normalizeRole } from '@/lib/assessment/authoritative';
 import { toCanonicalAssessment } from '@/lib/artifact/canonical';
 import type { GlossaryResult } from '@/lib/glossary';
 import type { Message, ConversationState } from '@/lib/conversation-types';
@@ -3478,6 +3478,10 @@ export default function Home() {
             })),
             manufacturerEvidence as Array<Record<string, unknown>>,
             reviewObservations as Record<string, Array<Record<string, unknown>>>);
+          for (const dv of dossierViews) {
+            const dc = displayDeviceClass(dv.displayName, dv.role, assessmentResult.query);
+            if (dc) dv.role = dc; // display-only: the listener's own device-class word
+          }
 
           mark('evidence read');
           /*
@@ -3803,6 +3807,10 @@ export default function Home() {
           ].filter(Boolean) as Array<{ label: string; url: string }>;
           if (picked.length) dv.resources = picked;
         }
+        for (const dv of catalogDossiers) {
+          const dc = displayDeviceClass(dv.displayName, dv.role, accumulatedText);
+          if (dc) dv.role = dc; // display-only: the listener's own device-class word
+        }
         assessmentResult.response.componentDossiers = catalogDossiers;
 
         /*
@@ -3833,7 +3841,7 @@ export default function Home() {
           const pmFinal = assessmentResult.findings?.powerMatchAssessment;
           const constraintBlock = pmFinal?.compatibility === 'mismatched'
             ? `\nCONSTRAINT ESTABLISHED BY AUDIO XX from published figures: `
-              + `${assessmentResult.response.verdict ?? `${pmFinal.ampName} cannot adequately drive ${pmFinal.speakerName}`}. `
+              + `${(assessmentResult.response as { verdict?: string }).verdict ?? `${pmFinal.ampName} cannot adequately drive ${pmFinal.speakerName}`}. `
               + `Your assessment must incorporate this constraint; do not soften or re-litigate it.\n`
             : '';
           const canonicalEvidence = [

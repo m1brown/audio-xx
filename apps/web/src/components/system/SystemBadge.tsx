@@ -3,7 +3,8 @@
 /**
  * SystemBadge — compact indicator of the active system with dropdown chevron.
  *
- * Format: "System: <name> ▼"
+ * Format: "Saved system: <name> ▼" — the label says what the selector IS,
+ * so an inline-described assessment below it can never read as coming from it.
  * Always visible when systems exist. Chevron only when multiple systems exist.
  * When no system is active but saved systems exist, shows "Select system ▼".
  */
@@ -59,7 +60,7 @@ export default function SystemBadge({ onClick }: SystemBadgeProps) {
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#999'; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#D8D2C5'; }}
       >
-        <span style={{ fontSize: '0.72rem', color: '#8C877F', fontWeight: 400 }}>System:</span>
+        <span style={{ fontSize: '0.72rem', color: '#8C877F', fontWeight: 400 }}>Saved system:</span>
         <span>Select system</span>
         <span style={{ fontSize: '0.6rem', marginLeft: '0.1rem', opacity: 0.6 }}>&#9660;</span>
       </button>
@@ -91,7 +92,7 @@ export default function SystemBadge({ onClick }: SystemBadgeProps) {
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#999'; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#d5d5d0'; }}
     >
-      <span style={{ fontSize: '0.72rem', color: '#8C877F', fontWeight: 400 }}>System:</span>
+      <span style={{ fontSize: '0.72rem', color: '#8C877F', fontWeight: 400 }}>Saved system:</span>
       <span style={{ fontWeight: 500, color: '#1F1D1B' }}>{label}</span>
       {isDraft && (
         <span style={{ fontSize: '0.68rem', color: '#b08a00', fontWeight: 500 }}>draft</span>

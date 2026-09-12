@@ -369,6 +369,13 @@ const CANONICAL_BRANDS: Record<string, string> = {
   kef: 'KEF',
   wlm: 'WLM',
   arc: 'ARC',
+  nad: 'NAD',
+  wiim: 'WiiM',
+  smsl: 'SMSL',
+  svs: 'SVS',
+  rsl: 'RSL',
+  dcs: 'dCS',
+  atc: 'ATC',
 };
 
 const CANONICAL_NAMES: Record<string, string> = {

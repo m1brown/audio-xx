@@ -144,7 +144,7 @@ describe('CONTROL 2 — Leben/Cornwall may no longer publish an unlicensed essay
   const { cam, snap } = catalogSnapshot('Assess my system: Amp: Leben CS600 Speakers: Klipsch Cornwall IV');
 
   it('replaces an unlicensed no-change verdict with what is actually established', () => {
-    expect(snap.verdict).toMatch(/No system-level interaction is established/i);
+    expect(snap.verdict).toMatch(/not yet how it performs together/i);
     expect(snap.verdict).not.toMatch(/nothing here needs changing/i);
   });
 

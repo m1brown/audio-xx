@@ -646,6 +646,21 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * paragraphs return: a constraint deserves its full derivation in front of
    * the reader, and compression is earned by good news only.
    */
+  /*
+   * SHARED DRIVE-QUESTION STATE (beta polish, 2026-09-12): computed once,
+   * consumed by the typed-gap dedup in LIMITS and by HOW THIS SYSTEM FITS
+   * TOGETHER — so the same missing figure is stated to the listener exactly
+   * once, in the section that reasons about it.
+   */
+  const fitAmp = input.components.find((c) => /amp|integrated|receiver/i.test(c.role ?? ''));
+  const fitSpk = input.components.find((c) => /speaker|monitor|loudspeaker/i.test(c.role ?? ''));
+  const drivePwrLine = findLine(amp?.dossier, 'power output');
+  const driveSensLine = findLine(spk?.dossier, 'sensitivity');
+  const driveImpLine = findLine(spk?.dossier, 'nominal impedance')
+    ?? findLine(spk?.dossier, 'impedance');
+  const constraintStands = input.constraintPresent === true
+    || conclusions.some((c) => c.status === 'established' && c.favourable === false);
+
   const engineeringLead: string[] = [];
   if (engineeringCoherent) {
     const loadings = conclusions.filter((c) => c.kind === 'loading' && c.figures);
@@ -813,24 +828,26 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
       const names = missing.length === 1
         ? `the ${missing[0]}`
         : `the ${missing.slice(0, -1).join(', the ')} and the ${missing[missing.length - 1]}`;
+      /*
+       * ADVISER VOICE, SAME LICENCE (beta polish, 2026-09-12). The earlier
+       * paragraph narrated Audio XX's evidence machinery — admitted sources,
+       * publication policy, model-variant matching — where the listener
+       * needs one thing said once: how this combination sounds is not
+       * something I can tell you yet, and I will not guess. The detailed
+       * provenance lives where it belongs: the dossiers and the evidence
+       * ledger underneath.
+       */
+      // "The power question above" exists only when a power finding
+      // actually led — a guard verdict or tonal signature in
+      // `driveFinding` settled no power question (P1, 2026-09-11).
       limits.push(
-        `Audio XX holds no admitted independent listening evidence for ${names}. `
-        + `That is a gap in published coverage, not a judgement about `
-        + `${missing.length === 1 ? 'the component' : 'those components'}: the reviews that exist `
-        + `are either in publications Audio XX does not draw on or are of different models. `
-        // "The power question above" exists only when a power finding
-        // actually led — a guard verdict or tonal signature in
-        // `driveFinding` settled no power question (P1, 2026-09-11).
+        `I don’t have reliable exact-product listening evidence for ${names}, `
+        + `so I won’t pretend to know how this particular combination sounds`
         + (drivePowerFinding(input.driveFinding)
-          ? `The published figures are enough to settle the power question above; they are `
-            + `not enough to establish how this combination sounds, and Audio XX will not `
-            + `guess at voicing it has no evidence for. `
-          : `Because of it, any statement about how ${names} `
-            + `${missing.length === 1 ? 'colours' : 'colour'} what reaches the `
-            + `loudspeakers would be invention. `)
-        + `A published `
-        + `review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} in an approved `
-        + `publication would establish what specifications cannot: how this combination actually sounds.`,
+          ? ` — the figures settle the power question above, and only that. `
+          : `. `)
+        + `A published review of ${missing.length === 1 ? 'this exact unit' : 'these exact units'} `
+        + `would establish what specifications cannot.`,
       );
     }
   }
@@ -894,7 +911,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
   // string-only gap is still named — it just borrows no physics.
   const typedGap = input.dossiers.flatMap((d) =>
     d.typedGaps ?? (d.gaps ?? []).map((text) => ({ text, quantity: undefined })))[0];
-  if (typedGap) {
+  /*
+   * SAY AN UNCERTAINTY ONCE (beta polish, 2026-09-12). The drive figures a
+   * missing typed gap names are exactly the figures HOW THIS SYSTEM FITS
+   * TOGETHER states as the open question — printing both made the listener
+   * read the same epistemic state twice. When the fits section will carry
+   * that statement, the gap paragraph stands down; the dossier's own
+   * "Not established" line remains as the inspectable detail. A gap the
+   * fits section does NOT cover (an impedance curve, a constraint case)
+   * still prints here.
+   */
+  const fitsWillNameGap = (quantity?: string): boolean => {
+    if (!fitAmp || !fitSpk || constraintStands || engineeringCoherent) return false;
+    if (quantity === 'amplifier_rated_output') return !drivePwrLine;
+    if (quantity === 'speaker_load_profile' || quantity === 'speaker_sensitivity') {
+      return !driveSensLine || !driveImpLine;
+    }
+    return false;
+  };
+  if (typedGap && !fitsWillNameGap(typedGap.quantity)) {
     const gapText = typedGap.text.replace(/\.$/, '');
     const headroomBounded = !!findLine(spk?.dossier, 'sensitivity')
       && !!findLine(amp?.dossier, 'power output');
@@ -1398,8 +1433,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * here composes a global reassurance, because no licence at this authority
    * point is system-wide.
    */
-  const constraintStands = input.constraintPresent === true
-    || conclusions.some((c) => c.status === 'established' && c.favourable === false);
+  // constraintStands is computed once, above, with the shared drive state.
   const favourableInterfaces = conclusions.some(
     (c) => c.status === 'established' && c.favourable !== false);
   const scopes: string[] = [];
@@ -1451,8 +1485,8 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    */
   const fits: string[] = [];
   {
-    const ampComp = input.components.find((c) => /amp|integrated|receiver/i.test(c.role ?? ''));
-    const spkComp = input.components.find((c) => /speaker|monitor|loudspeaker/i.test(c.role ?? ''));
+    const ampComp = fitAmp;
+    const spkComp = fitSpk;
 
     // Topology: why the unstated path matters, or what the stated path fixes.
     if (conv.ambiguous) {
@@ -1476,6 +1510,27 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         `The signal path is established from your description, so what follows `
         + `reasons over the connections you actually use.`,
       );
+    } else {
+      /*
+       * EVERY MATERIAL COMPONENT IS ACCOUNTED FOR (beta polish,
+       * 2026-09-12). With one dedicated DAC and no competing conversion
+       * stage, the source's role was never mentioned at all — the
+       * assessment read as if the system were an amplifier and a
+       * loudspeaker. Its one natural place in the chain is stated AS the
+       * hypothesis it is (P1: identity does not license topology), with
+       * the invitation that corrects it.
+       */
+      const dacStage = conv.stages.find((st) => st.kind === 'dedicated_dac');
+      if (dacStage && ampComp
+        && dacStage.name.toLowerCase() !== ampComp.displayName.toLowerCase()) {
+        fits.push(
+          `The ${canonicalDisplayName(dacStage.name)} has one natural place in this `
+          + `chain — feeding the ${canonicalDisplayName(ampComp.displayName)} as the `
+          + `system’s conversion stage — and nothing here establishes a different `
+          + `path. If your connections differ, say so: it would change what is `
+          + `worth investigating.`,
+        );
+      }
     }
 
     // The defining relationship, and its actual state. A standing constraint
