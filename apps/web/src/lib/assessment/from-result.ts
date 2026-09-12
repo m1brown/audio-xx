@@ -78,5 +78,8 @@ export function authoritativeAssessment(
     // only for stated-connection/exclusion detection in the conversion-path
     // authority check (P1, 2026-09-03); absent, detection is structural only.
     rawQuery: (result as { query?: string }).query,
+    // The governed model pass's guarded signature (one reasoning pass,
+    // 2026-09-12) — carried when the conversation ran it, absent otherwise.
+    modelSignature: (result as { modelSignature?: string }).modelSignature,
   });
 }

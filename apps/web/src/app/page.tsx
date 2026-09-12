@@ -3560,7 +3560,7 @@ export default function Home() {
               // A standing engine constraint outranks the restrained action lead.
               constraintPresent: (provisional.systemRelations ?? [])
                 .some((r: { kind?: string }) => r.kind === 'constraint'),
-              driveFinding: provisional.systemSignature ?? undefined,
+              modelLead: provisional.systemSignature ?? undefined,
               driveQualification: provisional.qualification,
               // The coverage statement is already inside `philosophy`, which
               // the conversation renders. Passing it here too would print it
@@ -3804,7 +3804,70 @@ export default function Home() {
           if (picked.length) dv.resources = picked;
         }
         assessmentResult.response.componentDossiers = catalogDossiers;
+
+        /*
+         * ── ONE REASONING PASS (2026-09-12) ─────────────────────────────
+         *
+         * Canonical systems were authored by deterministic composition
+         * alone; provisional systems got the governed model pass. Same
+         * substrate, different intellectual capabilities — the last split.
+         * The SAME governed pass now runs here, over the SAME substrate the
+         * composer reads: admitted evidence (held + authored,
+         * calculation-grade), review observations, roles, and the serialized
+         * reasoning context. The catalog's trait priors are deliberately
+         * withheld — the model reasons from admitted evidence exactly as it
+         * does for uncatalogued systems, because that is what a licence is.
+         *
+         * A deterministic constraint travels as an application-established
+         * fact the model must incorporate, never soften. On failure or
+         * timeout the deterministic composition below stands, explicitly
+         * narrower — nothing is replaced after the fact.
+         */
+        let canonicalModel: Awaited<ReturnType<typeof inferProvisionalSystemAssessment>> = null;
+        try {
+          const canonicalCtx = buildSystemReasoningContext(
+            chainComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+            catalogDossiers,
+            accumulatedText,
+          );
+          const pmFinal = assessmentResult.findings?.powerMatchAssessment;
+          const constraintBlock = pmFinal?.compatibility === 'mismatched'
+            ? `\nCONSTRAINT ESTABLISHED BY AUDIO XX from published figures: `
+              + `${assessmentResult.response.verdict ?? `${pmFinal.ampName} cannot adequately drive ${pmFinal.speakerName}`}. `
+              + `Your assessment must incorporate this constraint; do not soften or re-litigate it.\n`
+            : '';
+          const canonicalEvidence = [
+            ...heldFacts,
+            ...authoredEvidenceItems(
+              chainComponents.map((c) => c.displayName),
+              (n) => resolveObservationKey(n, seedObservations().admitted) ?? n.toLowerCase().trim(),
+            ) as unknown as Array<Record<string, unknown>>,
+          ];
+          const t0 = performance.now();
+          canonicalModel = await inferProvisionalSystemAssessment(
+            accumulatedText,
+            chainComponents.map((c) => c.displayName),
+            [],
+            [],
+            chainComponents.map((c) => c.displayName),
+            [],
+            canonicalEvidence as never,
+            reviewObs as never,
+            chainComponents.map((c) => ({ name: c.displayName, role: c.role })),
+            serializeSystemReasoningContext(canonicalCtx) + constraintBlock,
+          );
+          console.warn('[one-pass] canonical model %s in %dms',
+            canonicalModel ? 'succeeded' : 'unavailable', Math.round(performance.now() - t0));
+        } catch { canonicalModel = null; }
+
         const deterministicAdvisory = consultationToAdvisory(assessmentResult.response, undefined, advisoryCtx);
+        if (canonicalModel?.philosophy) {
+          // The model's guarded narrative is the adviser's voice; the
+          // deterministic body it replaces remains the fallback author when
+          // the pass is unavailable.
+          deterministicAdvisory.philosophy = canonicalModel.philosophy;
+          if (canonicalModel.followUp) deterministicAdvisory.followUp = canonicalModel.followUp;
+        }
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and
         // no consumer reads it. On path: the chat-side dispatch consumes it
@@ -3815,7 +3878,30 @@ export default function Home() {
           // reach the same composer every surface renders through, or the
           // conversation asks a conversion-path question the listener already
           // answered (P1, 2026-09-03).
-          deterministicAdvisory.__rawAssessment = { ...assessmentResult, query: accumulatedText };
+          deterministicAdvisory.__rawAssessment = {
+            ...assessmentResult,
+            query: accumulatedText,
+            // The guarded model signature leads THE ASSESSMENT on every
+            // surface that renders this result (one reasoning pass,
+            // 2026-09-12). The licence is the model-character guard the
+            // provisional lane has always applied; a deterministic
+            // constraint standfirst still outranks it in the snapshot.
+            modelSignature: (() => {
+              const sig = canonicalModel?.systemSignature;
+              if (!sig) return undefined;
+              // "Is the model allowed to say this?" — a system-level
+              // sonic/coherence claim requires admitted evidence to stand
+              // on. With an empty evidence base the guarded narrative may
+              // still describe components (labelled), but no synthesis of
+              // "how it all comes together" may lead the assessment; the
+              // licensed verdict stands down for nothing.
+              const evidenceEmpty = catalogDossiers.every((d) =>
+                (d.primary?.length ?? 0) === 0 && (d.secondary?.length ?? 0) === 0);
+              const sonicSystemClaim =
+                /coheren|synergy|balanc|voic|warm|bright|smooth|airy|musical|sound(?!s? like a question)/i.test(sig);
+              return evidenceEmpty && sonicSystemClaim ? undefined : sig;
+            })(),
+          };
         }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);
 

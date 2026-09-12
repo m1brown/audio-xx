@@ -184,6 +184,8 @@ export function snapshotFromCanonical(
     statedSubstitution?: { incumbent: string; candidate: string };
     /** Listener's words, for stated-connection detection only (P1 2026-09-03). */
     rawQuery?: string;
+    /** Guarded model signature from the one reasoning pass (2026-09-12). */
+    modelSignature?: string;
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -259,8 +261,16 @@ export function snapshotFromCanonical(
       } | undefined)?.bottleneck?.category;
       const licensedStandfirst = category === 'power_match'
         || category === 'dac_limitation' || category === 'speaker_scale';
-      return licensedStandfirst ? cam.identity.signature : undefined;
+      if (licensedStandfirst) return cam.identity.signature;
+      return undefined;
     })(),
+    // One reasoning pass (2026-09-12): the governed model's guarded
+    // signature leads when the conversation ran the pass — through its OWN
+    // channel, because it is a judgment, not a power finding: it must never
+    // compose the power-scoped restraint or the settled-power premise. A
+    // deterministic constraint standfirst outranks it; with neither, no
+    // thesis is manufactured.
+    modelLead: meta.modelSignature || undefined,
     driveQualification: undefined,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
@@ -442,7 +452,7 @@ export function snapshotFromProvisional(
     components: metaComponents,
     synthesis: metaSynthesis,
     dossiers: meta.componentDossiers ?? [],
-    driveFinding: response.systemSignature ?? undefined,
+    modelLead: response.systemSignature ?? undefined,
     driveQualification: response.qualification,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,

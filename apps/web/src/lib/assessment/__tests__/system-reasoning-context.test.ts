@@ -95,7 +95,7 @@ describe('2 — the evidence loop is lane-independent', () => {
     });
     const fits = (d.sections ?? []).find((sec) => /fits together/i.test(sec.label))
       ?.paragraphs.join('\n') ?? '';
-    expect(fits).toMatch(/cannot be assessed yet/);
+    expect(fits).toMatch(/not enough to say whether it is actually limiting/);
     expect(fits).toMatch(/Nad AV716’s rated output/);
   });
 

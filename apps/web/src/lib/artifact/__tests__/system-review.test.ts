@@ -373,7 +373,7 @@ describe('a figure at SOME load does not license a claim about THIS load', () =>
     // different paragraph entirely.
     const paras = out.split('\n\n').filter(Boolean);
     expect(paras).toHaveLength(1);
-    expect(paras[0]).toMatch(/cannot be assessed yet/);
+    expect(paras[0]).toMatch(/not enough to say whether it is actually limiting/);
     expect(paras[0]).toMatch(/sensitivity/);
     expect(paras[0]).not.toMatch(/32W|watt|8-ohm|within the limits/);
   });
