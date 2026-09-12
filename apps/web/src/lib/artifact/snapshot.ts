@@ -262,13 +262,15 @@ export function snapshotFromCanonical(
       const licensedStandfirst = category === 'power_match'
         || category === 'dac_limitation' || category === 'speaker_scale';
       if (licensedStandfirst) return cam.identity.signature;
-      // One reasoning pass (2026-09-12): the governed model's guarded
-      // signature leads when the conversation ran the pass — the same
-      // model-character licence the provisional lane has always used. A
-      // deterministic constraint standfirst outranks it above; with
-      // neither, no thesis is manufactured.
-      return meta.modelSignature || undefined;
+      return undefined;
     })(),
+    // One reasoning pass (2026-09-12): the governed model's guarded
+    // signature leads when the conversation ran the pass — through its OWN
+    // channel, because it is a judgment, not a power finding: it must never
+    // compose the power-scoped restraint or the settled-power premise. A
+    // deterministic constraint standfirst outranks it; with neither, no
+    // thesis is manufactured.
+    modelLead: meta.modelSignature || undefined,
     driveQualification: undefined,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,
@@ -450,7 +452,7 @@ export function snapshotFromProvisional(
     components: metaComponents,
     synthesis: metaSynthesis,
     dossiers: meta.componentDossiers ?? [],
-    driveFinding: response.systemSignature ?? undefined,
+    modelLead: response.systemSignature ?? undefined,
     driveQualification: response.qualification,
     coverageNote: meta.coverageNote,
     statedSubstitution: meta.statedSubstitution,

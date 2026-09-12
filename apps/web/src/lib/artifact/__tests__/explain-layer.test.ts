@@ -182,3 +182,38 @@ describe('5 — the Boenicke control, end to end', () => {
     expect(assessment?.paragraphs[0]).toMatch(/The match is the problem/);
   }, 30000);
 });
+
+describe('6 — the model lead is a judgment channel, never a power finding', () => {
+  const COMPONENTS = [
+    { displayName: 'Amp X', role: 'amplifier' },
+    { displayName: 'Speaker Y', role: 'speaker' },
+  ];
+
+  it('a guarded model lead opens the assessment when nothing deterministic does', () => {
+    const d = composeSystemReviewDetailed({
+      components: COMPONENTS, dossiers: [],
+      modelLead: 'The system’s performance is indeterminate because its power output and load demands are unresolved.',
+    });
+    expect(d.paragraphs[0]).toMatch(/^The system’s performance is indeterminate/);
+  });
+
+  it('power vocabulary in the model lead licenses neither restraint nor a settled power premise', () => {
+    const d = composeSystemReviewDetailed({
+      components: COMPONENTS, dossiers: [],
+      synthesis: undefined,
+      modelLead: 'Power output remains unresolved for this amplifier.',
+    });
+    const all = d.paragraphs.join('\n');
+    expect(all).not.toMatch(/I wouldn't make a change based on amplifier power/);
+    expect(all).not.toMatch(/enough to settle the power question/);
+  });
+
+  it('a genuine drive finding outranks the model lead', () => {
+    const d = composeSystemReviewDetailed({
+      components: COMPONENTS, dossiers: [],
+      driveFinding: 'On the published figures, amplifier power is unlikely to be the constraint here.',
+      modelLead: 'A model judgment that must not displace the deterministic finding.',
+    });
+    expect(d.paragraphs[0]).toMatch(/amplifier power is unlikely/);
+  });
+});

@@ -3560,7 +3560,7 @@ export default function Home() {
               // A standing engine constraint outranks the restrained action lead.
               constraintPresent: (provisional.systemRelations ?? [])
                 .some((r: { kind?: string }) => r.kind === 'constraint'),
-              driveFinding: provisional.systemSignature ?? undefined,
+              modelLead: provisional.systemSignature ?? undefined,
               driveQualification: provisional.qualification,
               // The coverage statement is already inside `philosophy`, which
               // the conversation renders. Passing it here too would print it
@@ -3886,7 +3886,21 @@ export default function Home() {
             // 2026-09-12). The licence is the model-character guard the
             // provisional lane has always applied; a deterministic
             // constraint standfirst still outranks it in the snapshot.
-            modelSignature: canonicalModel?.systemSignature ?? undefined,
+            modelSignature: (() => {
+              const sig = canonicalModel?.systemSignature;
+              if (!sig) return undefined;
+              // "Is the model allowed to say this?" — a system-level
+              // sonic/coherence claim requires admitted evidence to stand
+              // on. With an empty evidence base the guarded narrative may
+              // still describe components (labelled), but no synthesis of
+              // "how it all comes together" may lead the assessment; the
+              // licensed verdict stands down for nothing.
+              const evidenceEmpty = catalogDossiers.every((d) =>
+                (d.primary?.length ?? 0) === 0 && (d.secondary?.length ?? 0) === 0);
+              const sonicSystemClaim =
+                /coheren|synergy|balanc|voic|warm|bright|smooth|airy|musical|sound(?!s? like a question)/i.test(sig);
+              return evidenceEmpty && sonicSystemClaim ? undefined : sig;
+            })(),
           };
         }
         dispatchAdvisory(deterministicAdvisory, assessmentMsgId);

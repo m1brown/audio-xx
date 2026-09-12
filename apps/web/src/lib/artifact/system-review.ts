@@ -55,6 +55,14 @@ export interface SystemReviewInput {
   /** Audio XX's own derived power conclusion, already licensed upstream. */
   driveFinding?: string;
   driveQualification?: string;
+  /**
+   * The governed model pass's guarded signature (one reasoning pass,
+   * 2026-09-12). Leads THE ASSESSMENT when no constraint standfirst and no
+   * power finding does — but it is NOT a power finding: it never composes
+   * the power-scoped restraint or the settled-power sufficiency premise,
+   * whatever vocabulary it happens to contain.
+   */
+  modelLead?: string;
   coverageNote?: string;
   /** The listener asked about a substitution; frame the review as the
    *  counterfactual it is, and say the saved system is untouched. */
@@ -1222,6 +1230,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    */
   if (thesis.length === 0 && input.driveFinding) {
     thesis.push(input.driveFinding);
+  } else if (thesis.length === 0 && input.modelLead) {
+    // The model's guarded judgment leads when nothing deterministic does.
+    thesis.push(input.modelLead);
   }
 
   /*
