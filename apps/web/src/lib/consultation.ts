@@ -9534,8 +9534,17 @@ export function buildSystemAssessment(
       // An empty brand is not an identity: checking/recording '' let the
       // first brandless component poison the set and every later one was
       // skipped — a two-unknown system collapsed to one (campaign, 2026-08-29).
-      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower)
-        || (brandLower !== '' && processedNames.has(brandLower))) continue;
+      /*
+       * A PROCESSED BRAND IS NOT AN IDENTITY (P1, 2026-09-13). The brand
+       * entry in `processedNames` exists to lock the bare-brand subject
+       * handler out (see the add below); treating it as component identity
+       * dropped the second product of the same maker — "Accuphase E-600,
+       * Accuphase DP-450" seeded only the E-600, and a three-component
+       * system reasoned as two. Identity is the model name; same-brand
+       * siblings with their own names seed, and
+       * `collapsePhysicalRepresentations` still reconciles true duplicates.
+       */
+      if (processedNames.has(nameLower) || processedNames.has(strippedNameLower)) continue;
 
       // Only seed if the component's brand or model name appears in the message.
       // Use word-boundary matching for short names (≤4 chars) to prevent

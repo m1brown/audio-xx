@@ -92,7 +92,7 @@ export function parseQuantities(
     // "minimum" and "typical" sit on either side of the number depending on the
     // manufacturer, and the difference between a guarantee and an average is
     // exactly what a listener needs, so both sides are captured.
-    const paired = /(?:(minimum|maximum|typical|continuous|peak|nominal)\s+)?(\d+(?:\.\d+)?)\s*(?:W\b|watts?)([^;.]{0,40}?)(?:@|at|into)\s*(\d+(?:\.\d+)?)\s*(?:ohms?|\u03a9)/gi;
+    const paired = /(?:(minimum|maximum|typical|continuous|peak|nominal)\s+)?(\d+(?:\.\d+)?)\s*(?:W\b|watts?)([^;.]{0,40}?)(?:@|at\s|into\s|\()\s*(\d+(?:\.\d+)?)\s*(?:ohms?|\u03a9)/gi;
     for (const m of text.matchAll(paired)) {
       out.push({
         ...base, quantity: field, value: Number(m[2]), unit: 'W',
@@ -160,14 +160,57 @@ export function parseQuantity(
  * specifications — which is a useful thing to tell a listener, and a specific
  * question worth asking their dealer.
  */
+/**
+ * ONE HEADROOM ARITHMETIC, ONE CALIBRATION (P1, 2026-09-13).
+ *
+ * Two owners computed acoustic headroom with different rules and different
+ * vocabularies, and a real listener's page said "amply powered" and
+ * "genuinely power-constrained" about the same pairing. The 2.83V-per-watt
+ * conversion and the banded judgment now live here — the physics home —
+ * and every consumer (the interface conclusions, the drive conclusion the
+ * model lead carries) reads this one function. The bands:
+ *
+ *   generous  ≥108dB   headroom is unlikely to be the limitation
+ *   workable  100–108  ordinary levels comfortable, high-level use taxed
+ *   modest     94–100  a real ceiling whose bite depends on seat and level
+ *   severe     <94     a genuine power deficit on the figures
+ *
+ * "modest" is deliberately CONDITION-DEPENDENT, never "a live constraint":
+ * a one-metre theoretical ceiling establishes arithmetic, not the
+ * listener's room, seat, or level.
+ */
+export interface HeadroomReading {
+  peakDb: number;
+  sensPerWatt: number;
+  band: 'generous' | 'workable' | 'modest' | 'severe';
+}
+
+export function acousticHeadroom(
+  watts: number,
+  loadOhms: number,
+  sensitivityRaw: string,
+): HeadroomReading | undefined {
+  const m = sensitivityRaw.match(/(\d+(?:\.\d+)?)\s*dB/i);
+  if (!m || !(watts > 0) || !(loadOhms > 0)) return undefined;
+  const sens = Number(m[1]);
+  const statedAt283 = /2\.83\s*v/i.test(sensitivityRaw);
+  const wattsAt283 = statedAt283 ? (2.83 * 2.83) / loadOhms : 1;
+  const sensPerWatt = statedAt283 ? sens - 10 * Math.log10(wattsAt283) : sens;
+  const peakDb = sensPerWatt + 10 * Math.log10(watts);
+  const band = peakDb >= 108 ? 'generous'
+    : peakDb >= 100 ? 'workable'
+      : peakDb >= 94 ? 'modest' : 'severe';
+  return { peakDb: Math.round(peakDb * 10) / 10, sensPerWatt, band };
+}
+
 export type DriveAssessment =
   /** A power figure applies to this load, and sensitivity is known. */
   | { status: 'assessable'; watts: number; sensitivityDb: number; intoOhms?: number;
-    qualifier?: string }
+    loadOhms?: number; qualifier?: string; sensitivityRaw?: string }
   /** Power is published, but only into loads this loudspeaker does not present. */
   | {
     status: 'load_mismatch';
-    watts: number; specifiedIntoOhms: number; loadOhms: number;
+    watts: number; specifiedIntoOhms?: number; loadOhms: number;
     /** What Audio XX would need in order to close the arithmetic. */
     missing: string;
   }
@@ -257,12 +300,24 @@ export function assessDriveCapability(
     };
   }
 
+  /*
+   * AN UNSTATED-LOAD FIGURE NEVER WEARS THE SPEAKER'S LOAD (P1,
+   * 2026-09-13). `intoOhms: … ?? load` relabelled an unqualified watt
+   * figure with the loudspeaker's nominal impedance, and a listener read
+   * "30 watts into 6 ohms" for an amplifier whose maker states no 6-ohm
+   * figure. The figure stays USABLE — watts are watts, and the established
+   * controls (a 5W SET into a Magnepan) depend on that — but the prose may
+   * only name a load the maker actually stated. `loadOhms` carries the
+   * loudspeaker's load separately, for the 2.83V sensitivity conversion.
+   */
   return {
     status: 'assessable',
     watts: applicable.value,
     sensitivityDb: speakerSensitivity.value,
-    intoOhms: applicable.specifiedIntoOhms ?? load,
+    intoOhms: applicable.specifiedIntoOhms,
+    loadOhms: load,
     qualifier: applicable.qualifier,
+    sensitivityRaw: speakerSensitivity.qualifier ?? `${speakerSensitivity.value} dB`,
   };
 }
 
@@ -402,6 +457,30 @@ export function driveConclusionFor(
  * Authored here rather than derived by splitting `sentence`, so the two stay
  * in step: a change to one is a change to the other in the same place.
  */
+
+/** The banded judgment clause for an assessable pairing — one vocabulary. */
+function headroomClause(drive: {
+  watts: number; intoOhms?: number; loadOhms?: number; sensitivityDb: number;
+  sensitivityRaw?: string;
+}): string {
+  const convAt = drive.loadOhms ?? drive.intoOhms;
+  const h = convAt != null
+    ? acousticHeadroom(drive.watts, convAt, drive.sensitivityRaw ?? `${drive.sensitivityDb} dB`)
+    : undefined;
+  if (!h) return 'the figures combine, and what they license is stated below.';
+  if (h.band === 'generous') return 'the pairing is amply powered.';
+  if (h.band === 'workable') {
+    return 'the pairing has workable headroom — ordinary levels are comfortable, '
+      + 'sustained high-level listening will use much of it.';
+  }
+  if (h.band === 'modest') {
+    return `headroom is limited on these figures (a theoretical ceiling near ${h.peakDb}dB `
+      + 'at one metre) — how much that matters depends on how far you sit and how loud '
+      + 'you listen, which only you can say.';
+  }
+  return 'the figures put this pairing at a genuine power deficit.';
+}
+
 function splitFindingAndQualification(
   drive: DriveAssessment,
   ampName: string,
@@ -413,9 +492,10 @@ function splitFindingAndQualification(
   if (drive.status === 'assessable') {
     return {
       finding: `${put(ampName, `${drive.watts} watts`
-        + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
-        + `the load the ${speakerName} presents, and the ${speakerName} at `
-        + `${drive.sensitivityDb} dB — the pairing is amply powered.`,
+        + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ' (load not stated)'))}`
+        + `${drive.intoOhms != null ? `, the load the ${speakerName} presents,` : ','} `
+        + `and the ${speakerName} at `
+        + `${drive.sensitivityDb} dB — ${headroomClause(drive)}`,
     };
   }
 
@@ -433,7 +513,9 @@ function splitFindingAndQualification(
 
   if (drive.status === 'load_mismatch') {
     return {
-      finding: `${put(ampName, `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`)}, `
+      finding: `${put(ampName, drive.specifiedIntoOhms != null
+        ? `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`
+        : `${drive.watts} watts, specified without a stated load`)}, `
         + `while the ${speakerName} presents ${ohms(drive.loadOhms)}.`,
       qualification: `What the amplifier delivers into ${ohms(drive.loadOhms)} is not `
         + `published, so drive cannot be established from the figures — worth `
@@ -458,9 +540,10 @@ export function driveSentence(
 
   if (drive.status === 'assessable') {
     return `${put(ampName, `${drive.watts} watts`
-      + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ''))}, `
-      + `the load the ${speakerName} presents, and the ${speakerName} at `
-      + `${drive.sensitivityDb} dB — the pairing is amply powered.`;
+      + (drive.intoOhms != null ? ` into ${ohms(drive.intoOhms)}` : ' (load not stated)'))}`
+      + `${drive.intoOhms != null ? `, the load the ${speakerName} presents,` : ','} `
+      + `and the ${speakerName} at `
+      + `${drive.sensitivityDb} dB — ${headroomClause(drive)}`;
   }
 
   if (drive.status === 'incomplete' && drive.watts != null) {
@@ -476,7 +559,9 @@ export function driveSentence(
   }
 
   if (drive.status === 'load_mismatch') {
-    return `${put(ampName, `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`)}, `
+    return `${put(ampName, drive.specifiedIntoOhms != null
+      ? `${drive.watts} watts into ${ohms(drive.specifiedIntoOhms)}`
+      : `${drive.watts} watts, specified without a stated load`)}, `
       + `while the ${speakerName} presents ${ohms(drive.loadOhms)}. What the `
       + `amplifier delivers into ${ohms(drive.loadOhms)} is not published, so `
       + `drive cannot be established from the figures — worth putting to the `

@@ -364,6 +364,10 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       // components, dossiers and the listener's words. No catalog, no
       // engine, no network; deciding what a review may NOT claim is the
       // opposite of reassessment.
+      // Watt-at-stated-load parsing (P1 2026-09-13): a pure string
+      // predicate over frozen dossier lines — the same class as the
+      // conversion-path justification above. No catalog, no engine.
+      './interface-conclusions',
       '../assessment/system-reasoning-context',
       // Market evidence: verified prices and range positions, both frozen
       // data. Reads no catalog, no engine, no network.

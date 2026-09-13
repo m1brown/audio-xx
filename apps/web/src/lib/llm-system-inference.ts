@@ -888,7 +888,9 @@ export function buildProvisionalPrompt(
 
   const driveLine = drive.status === 'load_mismatch'
     ? `\n\nAMPLIFIER / LOUDSPEAKER DRIVE — NOT ESTABLISHED. The amplifier's `
-      + `${drive.watts} W figure is specified into ${drive.specifiedIntoOhms}Ω, and the `
+      + `${drive.watts} W figure is ${drive.specifiedIntoOhms != null
+        ? `specified into ${drive.specifiedIntoOhms}Ω`
+        : 'specified without a stated load'}, and the `
       + `loudspeaker presents ${drive.loadOhms}Ω. Power into one load does NOT establish `
       + `power into another, so what this amplifier delivers into ${drive.loadOhms}Ω is `
       + `unknown from what we hold. Say this plainly as a gap in the evidence and name `
