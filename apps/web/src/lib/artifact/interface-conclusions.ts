@@ -20,6 +20,7 @@
  * not silently describe a listener who is running RCA.
  */
 
+import { acousticHeadroom } from '@/lib/evidence/physical-quantities';
 import type { DossierView, DossierLine } from '@/lib/evidence/dossier-presentation';
 
 export type ConclusionStatus = 'established' | 'unknown';
@@ -113,7 +114,16 @@ function decibels(value: string | undefined): number | undefined {
  * loudspeaker rather than whichever appeared first.
  */
 export function wattsAtStatedLoad(value: string, load: number): number | undefined {
-  const segments = value.split(/;/);
+  // Commas separate ladder entries as often as semicolons do — and a
+  // comma-separated ladder split only on ';' returned the FIRST wattage for
+  // whichever load matched anywhere in the string (30W for a 4-ohm query
+  // against "30 W/ch (8 ohms), 60 W/ch (4 ohms)"). A comma inside a
+  // parenthetical ("1 ohm, music signals") splits harmlessly: the fragment
+  // without a watt figure matches nothing (P1, 2026-09-13).
+  // A comma splits only where a NEW watt entry begins: Accuphase writes
+  // "30 W/ch (8 ohms), 60 W/ch (4 ohms)" (comma between entries) while
+  // Butler writes "128 Watts, RMS typical @ 8 Ohms" (comma inside one).
+  const segments = value.split(/;|,(?=[^,;]*?\d+(?:\.\d+)?\s*W)/i);
   const atLoad = segments.filter((seg) => new RegExp(`${load}\\s*ohm`, 'i').test(seg));
   if (atLoad.length === 0) return undefined;
   const chosen = atLoad.find((seg) => /typical/i.test(seg)) ?? atLoad[0];
@@ -269,8 +279,17 @@ function headroomConclusion(
    * put the theoretical peak at 113dB where the relevant figure gives 115.5.
    * Wrong quantity, wrong load, and wrong by more than the rounding hid.
    */
-  const atLoad = wattsAtStatedLoad(powerLine.value, load) ?? watts(powerLine.value);
-  const power = atLoad;
+  /*
+   * NO FIGURE AT THIS LOAD, NO HEADROOM CONCLUSION (P1, 2026-09-13). The
+   * `?? watts(value)` fallback did exactly what the comment above warns
+   * against: with no watt figure at the loudspeaker's stated load it took
+   * whatever number the string offered and reasoned as if it applied — an
+   * Accuphase whose maker states 30W/8Ω and 60W/4Ω was judged at "30W at
+   * the 6-ohm load". A ladder that brackets the load does not state it;
+   * the honest state is unresolved, and the unresolved path already says
+   * which figure would close it.
+   */
+  const power = wattsAtStatedLoad(powerLine.value, load);
   if (power === undefined || power <= 0) return undefined;
 
   /*
@@ -283,47 +302,54 @@ function headroomConclusion(
    * being told it had headroom to spare. Where the sensitivity line states
    * 2.83V, convert to per-watt at the stated load before any arithmetic.
    */
-  const statedAt283 = /2\.83\s*v/i.test(sensLine!.value);
-  const wattsAt283 = statedAt283 ? (2.83 * 2.83) / load : 1;
-  const sensPerWatt = statedAt283 ? sens - 10 * Math.log10(wattsAt283) : sens;
-
-  const peak = sensPerWatt + 10 * Math.log10(power);
   /*
-   * THE JUDGMENT FOLLOWS THE NUMBER (same control). "Substantial" was
-   * unconditional — a 98dB@1m ceiling was described in the same sentence
-   * that fits a 115dB one. Three bands, and the lowest is a finding of
-   * constraint, not comfort.
+   * ONE ARITHMETIC, ONE CALIBRATION (P1, 2026-09-13): the 2.83V conversion
+   * and banding moved to `acousticHeadroom`, which the drive-conclusion
+   * lane reads too — the same figures can no longer yield two verdicts.
+   * The modest band is CONDITION-DEPENDENT prose: a one-metre theoretical
+   * ceiling establishes arithmetic, never the listener's seat or level, so
+   * "a live constraint" is licensed only by the severe band.
    */
-  const generous = peak >= 108;
-  const modest = peak < 100;
-  const statement = generous
+  const h = acousticHeadroom(power, load, sensLine!.value);
+  if (!h) return undefined;
+  const { peakDb: peak, sensPerWatt, band } = h;
+  const statedAt283 = /2\.83\s*v/i.test(sensLine!.value);
+  const perWattNote = statedAt283
+    ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : '';
+  const statement = band === 'generous'
     ? `On the published figures the pairing has substantial acoustic headroom: `
-      + `${sensLine!.value}${statedAt283 ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : ''} `
+      + `${sensLine!.value}${perWattNote} `
       + `with the maker's ${power}W figure at the ${load}-ohm load this `
       + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
       + `— a ceiling that assumes rated power into the real load, before room and listening `
       + `distance take their share. The margin is large enough that running out of level is `
       + `unlikely to be this system's limitation.`
-    : modest
+    : band === 'severe'
       ? `On the published figures this pairing is genuinely power-constrained: `
-        + `${sensLine!.value}${statedAt283 ? ` is a 2.83V rating — about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms —` : ''} `
-        + `and the maker's ${power}W figure puts the theoretical ceiling near `
-        + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
-        + `their share. At a realistic seat that leaves little in reserve for dynamic `
-        + `peaks: the amplifier will spend real parts of ordinary listening near the top `
-        + `of its range, and running out of level is a live constraint of this pairing, `
-        + `not a theoretical one.`
-      : `On the published figures the pairing has workable but not generous headroom: `
-        + `${sensLine!.value}${statedAt283 ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : ''} `
-        + `with the maker's ${power}W figure puts the theoretical peak near `
-        + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
-        + `their share. Ordinary levels are comfortable; sustained high-level listening `
-        + `in a larger room will use much of what this amplifier has.`;
+        + `${sensLine!.value}${perWattNote} `
+        + `and the maker's ${power}W figure put the theoretical ceiling near `
+        + `${peak.toFixed(1)}dB at one metre — a deficit no ordinary room or seat `
+        + `recovers. Running out of level is a live constraint of this pairing.`
+      : band === 'modest'
+        ? `On the published figures headroom is a real question for this pairing: `
+          + `${sensLine!.value}${perWattNote} `
+          + `and the maker's ${power}W figure put the theoretical ceiling near `
+          + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
+          + `their share. Whether that bites depends on how far you sit and how loud `
+          + `you listen: near-field at moderate levels it may be sufficient; at a `
+          + `distant seat or high levels the amplifier will be working near the top `
+          + `of its range. The figures alone do not settle which is your case.`
+        : `On the published figures the pairing has workable but not generous headroom: `
+          + `${sensLine!.value}${perWattNote} `
+          + `with the maker's ${power}W figure puts the theoretical peak near `
+          + `${peak.toFixed(1)}dB at one metre, before room and listening distance take `
+          + `their share. Ordinary levels are comfortable; sustained high-level listening `
+          + `in a larger room will use much of what this amplifier has.`;
 
   return {
     upstream: amp.name, downstream: speaker.name, kind: 'headroom',
-    status: 'established', favourable: !modest,
-    figures: { peakDb: Math.round(peak * 10) / 10, watts: power, loadOhms: load, sensitivity: sensPerWatt },
+    status: 'established', favourable: band !== 'severe',
+    figures: { peakDb: peak, watts: power, loadOhms: load, sensitivity: sensPerWatt },
     restsOn: [
       `${speaker.name}: ${sensLine!.value}`,
       `${amp.name}: ${power}W at ${load} ohms (from ${powerLine.value})`,

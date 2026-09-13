@@ -38,6 +38,7 @@ import {
 import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
+import { wattsAtStatedLoad } from './interface-conclusions';
 import { buildSystemReasoningContext } from '../assessment/system-reasoning-context';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
@@ -1606,6 +1607,30 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + `how much of that power a given listening level actually demands, so `
             + `how much headroom this pairing has stays open.`,
           );
+        } else if (missing.length === 0 && pwrLine && sensLine && impLine) {
+          /*
+           * EVERY FIGURE HELD, THE LOAD UNSTATED (P1, 2026-09-13). An
+           * amplifier whose maker states a ladder of loads that BRACKETS
+           * the loudspeaker's nominal impedance without stating it is not
+           * assessable at that load — and not silently relabelled either.
+           * The state is named, with the condition that decides whether it
+           * matters, and no figure is invented across loads.
+           */
+          const nominal = Number((impLine.value.match(/(\d+(?:\.\d+)?)/) ?? [])[1]);
+          const atLoad = Number.isFinite(nominal)
+            ? wattsAtStatedLoad(pwrLine.value, nominal) : undefined;
+          if (atLoad === undefined) {
+            fits.push(
+              `The first relationship I would examine here is the ${ampN} driving the `
+              + `${spkN}. Both sides publish figures — the ${ampN} at `
+              + `${pwrLine.value}, the ${spkN} at ${sensLine.value} into a `
+              + `${impLine.value} nominal load — but the maker's stated loads do not `
+              + `include ${impLine.value}, and Audio XX does not infer output across `
+              + `loads. Whether headroom is generous or tight here depends on how far `
+              + `you sit and how loud you listen, and on a figure the maker has not `
+              + `stated.`,
+            );
+          }
         } else if (missing.length > 0) {
           fits.push(
             `The first relationship I would examine here is the ${ampN} driving the `
@@ -1618,6 +1643,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           );
         }
       }
+      /*
+       * AN UNCLASSIFIED COMPONENT IS ACKNOWLEDGED, NEVER DROPPED (P1,
+       * 2026-09-13). The listener's DP-450 survived extraction but carried
+       * no role word, so the reasoning simply never mentioned it. One
+       * sentence: its place is unestablished, and the listener can settle
+       * it — the same invitation the conversion question uses.
+       */
+      const unplaced = input.components.filter((c) =>
+        c !== ampComp && c !== spkComp
+        && !/dac|stream|source|turntable|cd|phono|pre/i.test(c.role ?? '')
+        && (!c.role || /other/i.test(c.role)));
+      for (const u of unplaced.slice(0, 2)) {
+        fits.push(
+          `The ${canonicalDisplayName(u.displayName)}’s place in this chain isn’t `
+          + `established by what you’ve written — tell me what it feeds and how it `
+          + `connects, and I can bring it into the assessment.`,
+        );
+      }
+
       // Settled ground that is NOT the ceiling: established favourable
       // line-level interfaces, stated as what they mean for attention.
       const settledLine = conclusions.filter(

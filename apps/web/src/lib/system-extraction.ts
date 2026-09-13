@@ -932,8 +932,32 @@ export function detectSystemDescription(
       // Star Quad" is a wire, not a component). Pass 3 never reads labels.
       if (seg.includes(':')) continue;
       const segLower = seg.toLowerCase();
-      if (components.some((c) => [c.brand, c.name].some((t) => t && t.length >= 3
-        && !isBareCategory(t) && segLower.includes(t.toLowerCase())))) continue;
+      /*
+       * A BRAND NAME ALONE DOES NOT CLAIM A SEGMENT (P1, 2026-09-13).
+       *
+       * "Accuphase E-600, Accuphase DP-450 and Harbeth SHL5 Plus" lost the
+       * DP-450: the brand pass emits ONE component per brand, and this
+       * check treated the word "Accuphase" in the second segment as proof
+       * the segment was already represented. A segment is claimed by a
+       * component's MODEL designation; a bare brand match claims it only
+       * when the segment carries no model morphology beyond the brand —
+       * otherwise it is a second product of the same maker, and dropping
+       * it silently turns a three-component system into two.
+       */
+      const claimedByName = components.some((c) => c.name
+        && (c.name.length >= 3 || /\d/.test(c.name))
+        && !isBareCategory(c.name) && segLower.includes(c.name.toLowerCase()));
+      const claimedByBareBrand = components.some((c) => {
+        const b = (c.brand ?? '').toLowerCase();
+        if (!b || b.length < 3 || !segLower.includes(b)) return false;
+        // Morphology is judged on the ORIGINAL casing, minus the brand.
+        const bi = segLower.indexOf(b);
+        const beyond = `${seg.slice(0, bi)} ${seg.slice(bi + b.length)}`
+          .trim().split(/\s+/).filter(Boolean);
+        return !beyond.some((t) => /\d/.test(t) || /^[A-Z]{2,}/.test(t)
+          || /[A-Za-z]-[A-Z0-9]/.test(t));
+      });
+      if (claimedByName || claimedByBareBrand) continue;
       /*
        * The role word may TRAIL ("Dynaco A35 Speakers"), LEAD with a copula
        * ("speakers are Dynaco A35"), or be ABSENT inside an explicit system
@@ -985,7 +1009,19 @@ export function detectSystemDescription(
       const dupKey = namePart.toLowerCase();
       if (seen.has(dupKey)) continue;
       seen.add(dupKey);
-      components.push({ brand: '', name: namePart, category: cat, role: null });
+      // A leading known brand is identity, not part of the model: "Accuphase
+      // DP-450" is brand Accuphase, model DP-450. The category is NOT taken
+      // from the brand default — a maker's second product may be anything,
+      // and the honest classification is the role word or none.
+      let segBrand = '';
+      let segName = namePart;
+      const first = namePart.split(/\s+/)[0]?.toLowerCase() ?? '';
+      if (first.length >= 3 && (first in BRAND_CATEGORY_MAP || first in CANONICAL_BRANDS)) {
+        segBrand = CANONICAL_BRANDS[first] ?? capitalize(first);
+        segName = namePart.split(/\s+/).slice(1).join(' ');
+      }
+      if (!segName) { segName = namePart; segBrand = ''; }
+      components.push({ brand: segBrand, name: segName, category: cat, role: null });
     }
   }
 
