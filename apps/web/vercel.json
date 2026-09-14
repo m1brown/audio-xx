@@ -1,4 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "bash -c 'if git diff --quiet HEAD^ HEAD -- . \":(exclude,top)docs\" \":(exclude,top)*.md\"; then exit 0; else exit 1; fi'"
+  "ignoreCommand": "bash -c 'parents=$(git rev-list --parents -n 1 HEAD | cut -d\" \" -f2-); [ -z \"$parents\" ] && exit 1; for p in $parents; do if ! git diff --quiet \"$p\" HEAD -- . \":(exclude,top)docs\" \":(exclude,top)*.md\"; then exit 1; fi; done; exit 0'"
 }
