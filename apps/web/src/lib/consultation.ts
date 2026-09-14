@@ -8756,6 +8756,24 @@ function countMeaningfulSegments(rawMessage: string): string[] {
     // Discourse filler split off by punctuation ("Actually, go back…")
     // carries no component identity and must not count as one.
     if (norm.split(' ').every((t) => GI_DISCOURSE_TOKENS.has(t))) continue;
+    /*
+     * A SEGMENT COUNTS ONLY IF IT COULD NAME A PRODUCT (P1, 2026-09-14).
+     *
+     * Widening the separator vocabulary (";", "?", "!", " and ") let the
+     * gate see through blobbed lists — but it also handed every ordinary
+     * follow-on clause its own segment, and each one was counted as a
+     * component the graph then "failed to match". "; I mostly listen to
+     * jazz" flipped a fully-recognised system from assessment to a
+     * wrong-premise clarification. The gate's question is "does this
+     * segment introduce another physical component?", so a clause counts
+     * only when it plausibly carries product identity: a known brand
+     * token, an equipment noun, or model morphology. Listener context and
+     * behaviour talk carry none of these and no longer inflate the count.
+     * The conservative direction is preserved: anything brand-shaped or
+     * model-shaped still counts, so "; Rega" and "; Chord Qutest" still
+     * preserve-or-ask.
+     */
+    if (!segmentCouldNameProduct(seg)) continue;
     seen.add(norm);
   }
   return [...seen];
@@ -8770,6 +8788,47 @@ const GI_DISCOURSE_TOKENS: ReadonlySet<string> = new Set([
   'hello', 'hi', 'hey', 'howdy', 'greetings', 'good', 'morning',
   'afternoon', 'evening',
 ]);
+
+/**
+ * Could this raw input segment be naming a product? (P1, 2026-09-14.)
+ *
+ * The graph-integrity count asks whether a segment INTRODUCES a physical
+ * component, not whether text follows a separator. Product identity shows
+ * itself three ways, all cheap and already in-vocabulary:
+ *
+ *   1. a known brand token (the same vocabulary the bare-brand gate reads);
+ *   2. an equipment noun ("…; some old speakers" is equipment talk);
+ *   3. model morphology — a letters+digits token (A35, E-600, V3), an
+ *      ALL-CAPS run (NDX, QRC-2, LRS+), or a bare number riding a
+ *      Capitalised word (SuperNait 3, Ref 5, Diamond 12.1).
+ *
+ * "; I mostly listen to jazz" and "; my room is about 20 square metres"
+ * carry none of these. "; Rega", "; Chord Qutest" and "; Zorblax Z9" carry
+ * at least one, and keep their preserve-or-ask behaviour.
+ */
+const GI_EQUIPMENT_NOUN =
+  /\b(?:speakers?|amp|amps|amplifiers?|integrated|dacs?|streamers?|pre[- ]?amp(?:lifier)?s?|receivers?|turntables?|subwoofers?|monitors?|cd\s*players?|phono|headphones?|cartridges?|tonearms?)\b/i;
+
+function segmentCouldNameProduct(rawSeg: string): boolean {
+  if (GI_EQUIPMENT_NOUN.test(rawSeg)) return true;
+  const cleanTok = (t: string) =>
+    t.replace(/^[^A-Za-z0-9+/]+/, '').replace(/[^A-Za-z0-9+/]+$/, '');
+  const tokens = rawSeg.split(/\s+/).map(cleanTok).filter(Boolean);
+  const normSeg = ` ${rawSeg.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+  for (const t of tokens) {
+    if (BARE_BRAND_NAMES.has(t.toLowerCase())) return true;
+    if (/[A-Za-z]/.test(t) && /\d/.test(t)) return true;
+    if (/^[A-Z]{2,}/.test(t)) return true;
+  }
+  for (let i = 1; i < tokens.length; i++) {
+    if (/^\d+(?:\.\d+)?$/.test(tokens[i]) && /^[A-Z]/.test(tokens[i - 1])) return true;
+  }
+  // Multi-word brands ("Wilson audio", "Q Acoustics") match as phrases.
+  for (const b of BARE_BRAND_NAMES) {
+    if (b.includes(' ') && normSeg.includes(` ${b.replace(/[^a-z0-9]+/g, ' ')} `)) return true;
+  }
+  return false;
+}
 
 /** Token set of a display name, minus trivial tokens. */
 function giTokens(name: string): Set<string> {
@@ -9210,6 +9269,35 @@ function checkGraphIntegrity(
   const segmentNamesResolved = (seg: string, name: string): boolean => {
     if (samePhysicalComponent({ brand: '', name: seg }, { brand: '', name: name })) return true;
     if (samePhysicalComponent({ brand: '', name: name }, { brand: '', name: seg })) return true;
+    /*
+     * A RE-MENTION CARRIES THE RESOLVED IDENTITY VERBATIM (P1, 2026-09-14).
+     *
+     * "the SuperNait 3 also takes a digital input" names the resolved
+     * "Naim Supernait 3" — but the token-overlap test below reads identity
+     * through `giTokens`, which drops one-character tokens, so the "3" that
+     * carries half the model designation vanished and the clause read as an
+     * unmatched component. Production then told a listener whose every
+     * component it had just ticked as RECOGNISED that one "couldn't
+     * match" — and the assessment never rendered.
+     *
+     * The generic fix is normalized-identity containment, not wider word
+     * overlap: when the segment contains the resolved component's full
+     * canonical name — or its model designation with the brand dropped,
+     * which is how prose naturally shortens a second mention — the segment
+     * is a re-mention of that box, whatever else the clause says about it.
+     * Token boundaries are preserved by space-normalising both sides, so
+     * "a3" still matches nothing inside "a35".
+     */
+    const normId = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const segN = ` ${normId(seg)} `;
+    const nameN = normId(name);
+    if (nameN.length >= 4 && segN.includes(` ${nameN} `)) return true;
+    const nameParts = nameN.split(' ');
+    if (nameParts.length >= 2) {
+      const remainder = nameParts.slice(1).join(' ');
+      if (remainder.length >= 3 && segN.includes(` ${remainder} `)) return true;
+    }
     /*
      * Overlap, not subset — in either direction. Subset-of-resolved failed
      * the moment identities were canonicalised: the listener types "DeVore

@@ -1022,7 +1022,22 @@ export function detectSystemDescription(
       } else if (lm) {
         namePart = lm[2].trim();
         roleWord = lm[1].toLowerCase();
-      } else if (systemListContext || pureDesignation) {
+      } else if (
+        /*
+         * A DESIGNATION CARRIES NO CLAUSE GRAMMAR (P1, 2026-09-14). The
+         * colon-list licence admitted any role-less segment with a digit,
+         * so a follow-on clause inside the list frame — "; my room is
+         * about 20 square metres" — became a phantom component the
+         * assessment then displayed. A product designation never contains
+         * copulas, clause verbs or adverbs of degree; a segment that does
+         * is the listener talking ABOUT the system, not naming a box.
+         * (The pure-designation licence already excludes these by
+         * construction — every token must be designation-like.)
+         */
+        (systemListContext
+          && !/\b(?:is|are|was|were|has|have|had|do|does|takes?|runs?|sounds?|about|also|mostly|usually|sometimes|it|there)\b/i.test(seg))
+        || pureDesignation
+      ) {
         namePart = seg;
         roleWord = null;
       } else {
