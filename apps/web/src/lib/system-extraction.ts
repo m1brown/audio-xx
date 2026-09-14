@@ -554,9 +554,27 @@ export function detectSystemDescription(
   subjectMatches: SubjectMatch[],
   audioState: AudioSessionState,
 ): ProposedSystem | null {
+  /*
+   * ONE FRAME VOCABULARY (P1, 2026-09-14). A colon-list headed by a system
+   * word ("system: A / B / C") or an assessment verb ("please assess: A; B;
+   * C") is an explicit statement that the listed items ARE the system under
+   * discussion. Gate 1 required an ownership pronoun before this evidence
+   * was even consulted, so semantically equivalent frames of one physical
+   * system diverged: some resolved fully, some returned null and fell
+   * through to weaker paths that silently reasoned over a reduced set.
+   * Frame wording may vary; the recognized description must not.
+   */
+  const systemListContext =
+    /\b(?:system|setup|rig|chain)\b\s*[:\-–—]/i.test(currentMessage)
+    // The verb form is imperative: it opens the message ("please assess: A;
+    // B; C"). Anchoring it there keeps a mid-sentence "review:" inside a
+    // shopping question from proposing a system.
+    || /^\s*(?:please\s+|kindly\s+)?(?:assess|evaluate|review|rate)\s*[:\-–—]/i.test(currentMessage);
+
   // ── Gate 1: ownership language required ──
   const hasOwnership = STRONG_OWNERSHIP_RE.some((re) => re.test(currentMessage));
-  if (!hasOwnership) return null;
+  if (!hasOwnership
+    && !(systemListContext && PROSE_LIST_SEPARATOR.test(currentMessage))) return null;
 
   // ── Gate 2: anti-patterns disqualify ──
   const hasHardAntiPattern = ANTI_OWNERSHIP_RE.some((re) => re.test(currentMessage));
@@ -584,7 +602,8 @@ export function detectSystemDescription(
   // The list-shape separator test speaks the shared vocabulary: a listener
   // separating items with periods, semicolons or spaced slashes has listed a
   // system exactly as much as one using commas (P1, 2026-09-11).
-  const systemListContext = /\b(?:system|setup|rig|chain)\b\s*[:\-\u2013\u2014]/i.test(currentMessage);
+  // `systemListContext` is declared once, above Gate 1, where the same frame
+  // evidence now also licenses recognition itself (P1, 2026-09-14).
   const hasListShape = systemListContext
     && PROSE_LIST_SEPARATOR.test(currentMessage);
   if (subjectMatches.length < 2 && labelledForGate.matches.length < 2 && !hasListShape) return null;
@@ -967,7 +986,32 @@ export function detectSystemDescription(
        * component is recorded unclassified (`category: null`), which is the
        * honest state; only an explicit list context may admit it, so prose
        * fragments never become components.
+       *
+       * A PURE DESIGNATION IS ITS OWN LIST CONTEXT (P1, 2026-09-14). "my
+       * system is Accuphase E-600, Accuphase DP-450 and Harbeth SHL5 Plus"
+       * carries no colon, so the DP-450 — role-less, uncatalogued — was
+       * admitted in the "assess my system:" frame and silently dropped in
+       * this one, and equivalent descriptions of one physical system
+       * resolved to different component sets. Inside a recognized system
+       * description, a segment consisting of NOTHING BUT a product
+       * designation (a brand or Capitalized run around a hard model token —
+       * a digit-bearing, ALL-CAPS, or hyphenated-model word) names a
+       * component in any frame. Prose fragments still fail the test: they
+       * carry function words, which are not designation tokens.
        */
+      const pureDesignation = (() => {
+        const toks = seg.split(/\s+/).filter(Boolean);
+        if (toks.length < 2 || toks.length > 6) return false;
+        const hardModel = toks.some((t) =>
+          /\d/.test(t) || /^[A-Z]{2,}/.test(t) || /[A-Za-z]-[A-Z0-9]/i.test(t));
+        if (!hardModel) return false;
+        return toks.every((t) => {
+          const tl = t.toLowerCase().replace(/[.,;:]+$/, '');
+          return tl in BRAND_CATEGORY_MAP || tl in CANONICAL_BRANDS
+            || /\d/.test(t) || /^[A-Z]/.test(t)
+            || /^(?:plus|mk\w{0,3}|se|ii|iii|iv|v|x|xe|evo|signature|edition|anniversary|special)$/.test(tl);
+        });
+      })();
       let namePart: string;
       let roleWord: string | null;
       const rm = ROLE_TAIL_RE.exec(seg);
@@ -978,7 +1022,7 @@ export function detectSystemDescription(
       } else if (lm) {
         namePart = lm[2].trim();
         roleWord = lm[1].toLowerCase();
-      } else if (systemListContext) {
+      } else if (systemListContext || pureDesignation) {
         namePart = seg;
         roleWord = null;
       } else {

@@ -198,13 +198,21 @@ describe('NEGATIVE CONTROLS — genuinely multiple components stay multiple', ()
     expect(g.names!.filter((n: string) => /denafrips/i.test(n))).toHaveLength(1);
   });
 
-  it('two bare brands with no model still ask for the models', () => {
-    // Regression for the repair itself: collapsing representations must not
-    // silence the case where the MODEL was never resolved. A multi-word brand
-    // ("Wilson audio") is still a bare brand.
+  it('a typed model is never shed to a bare brand — and a truly bare brand still asks', () => {
+    // This fixture used to clarify because resolution split "Wilson Audio
+    // Sasha DAW" into bare-brand records with the model lost. Canonical
+    // ingestion (P1, 2026-09-14) keeps the typed identity as the node, so
+    // there is no longer anything to ask about here...
     const g = graph('Assess my system: dCS Vivaldi, Boulder 866, Wilson Audio Sasha DAW');
-    expect(g.clarified).toBe(true);
-    expect(g.q).toMatch(/exact make and model/i);
+    expect(g.clarified).toBe(false);
+    expect(g.names!.filter((n: string) => /wilson/i.test(n))).toHaveLength(1);
+    expect(g.names!.some((n: string) => /sasha daw/i.test(n))).toBe(true);
+    // ...while a model the listener genuinely never typed still asks. The
+    // original invariant — collapsing representations must not silence the
+    // unresolved-model case — is protected on the input that actually has one.
+    const bare = graph('Assess my system: dCS Vivaldi, Boulder, Wilson Audio');
+    expect(bare.clarified).toBe(true);
+    expect(bare.q).toMatch(/exact make and model/i);
   });
 });
 

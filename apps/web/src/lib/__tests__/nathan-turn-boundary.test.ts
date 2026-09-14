@@ -128,7 +128,7 @@ describe('SEMANTIC MEMORY survives the parse boundary', () => {
     const r = assess(joined(NUMBERED, 'Actually, change the DAC to a Bartok'));
     const surface = JSON.stringify(r);
     expect(surface).toMatch(/rossini apex/i);
-    expect(surface).toMatch(/bartok/i);
+    expect(surface).toMatch(/bart[oó]k/i);
   });
 
   it('and two genuinely different DACs still clarify (invariant 4)', () => {
@@ -142,7 +142,7 @@ describe('SEMANTIC MEMORY survives the parse boundary', () => {
     const r = assess(joined(NUMBERED, 'Actually, change the DAC to a Bartok'));
     expect(r?.kind).toBe('clarification');
     expect(r.clarification.question).toMatch(/both appear as dacs/i);
-    expect(r.clarification.question).toMatch(/bartok/i);
+    expect(r.clarification.question).toMatch(/bart[oó]k/i);
     expect(r.clarification.question).not.toMatch(/you described the acora/i);
   });
 });

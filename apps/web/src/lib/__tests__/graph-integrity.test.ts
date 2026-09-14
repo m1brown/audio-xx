@@ -21,18 +21,65 @@ function clarification(text: string) {
   return r && r.kind === 'clarification' ? r.clarification : null;
 }
 
-describe('graph-integrity gate — known Gate 6 failures must clarify', () => {
-  it('dropped amplifier (WiiM / Fosi V3 / Wharfedale) clarifies, not assesses', () => {
-    expect(kindOf('Assess my system: WiiM Pro, Fosi Audio V3, Wharfedale Diamond 12.1')).toBe('clarification');
+/*
+ * CANONICAL INGESTION SUPERSEDES THE CLARIFY-ON-DROP SHAPE (P1, 2026-09-14).
+ *
+ * These three fixtures originally pinned `clarification` because resolution
+ * DROPPED a typed component (or shed its model down to a bare brand) and the
+ * gate's job was to refuse the reduced graph. The message parse is now the
+ * canonical component owner: every typed identity seeds the graph verbatim
+ * (opaque where the catalog is silent), so the graph these inputs produce is
+ * INTACT — and the honest outcome for an intact graph is an assessment that
+ * carries the listener's exact identities, not a question asking them to
+ * retype a model they already typed. The gate itself is unchanged and still
+ * refuses genuinely reduced graphs — see the bare-brand pins below, where the
+ * listener really did type only a brand.
+ */
+describe('graph-integrity — typed identities survive resolution intact', () => {
+  it('WiiM / Fosi V3 / Wharfedale assesses with every typed identity intact', () => {
+    const r = buildSystemAssessment(
+      'Assess my system: WiiM Pro, Fosi Audio V3, Wharfedale Diamond 12.1',
+      extractSubjectMatches('Assess my system: WiiM Pro, Fosi Audio V3, Wharfedale Diamond 12.1'),
+      null, []) as { kind: string; response?: { systemChain?: { names?: string[] } } };
+    expect(r.kind).toBe('assessment');
+    const names = (r.response?.systemChain?.names ?? []).map((n) => n.toLowerCase());
+    expect(names.some((n) => n.includes('wiim pro'))).toBe(true);
+    expect(names.some((n) => n.includes('fosi audio v3'))).toBe(true);
+    // The model must not be shed to a bare brand.
+    expect(names.some((n) => n.includes('wharfedale diamond 12.1'))).toBe(true);
   });
-  it('dropped speaker (Bluesound / Cambridge AXA35 / Q Acoustics) clarifies', () => {
-    expect(kindOf('Assess my system: Bluesound Node, Cambridge Audio AXA35, Q Acoustics 3030i')).toBe('clarification');
+  it('Bluesound / Cambridge AXA35 / Q Acoustics never assesses a reduced system', () => {
+    const M = 'Assess my system: Bluesound Node, Cambridge Audio AXA35, Q Acoustics 3030i';
+    const r = buildSystemAssessment(M, extractSubjectMatches(M), null, []) as {
+      kind: string; response?: { systemChain?: { names?: string[] } };
+    };
+    if (r.kind === 'assessment') {
+      const names = (r.response?.systemChain?.names ?? []).map((n) => n.toLowerCase());
+      expect(names.some((n) => n.includes('axa35'))).toBe(true);
+      expect(names.some((n) => n.includes('3030i'))).toBe(true);
+    } else {
+      // Preserve or ask: honest degradation is the other licensed outcome.
+      expect(['clarification', 'low_confidence']).toContain(r.kind);
+    }
   });
-  it('bare-brand amp+speaker (Denafrips Ares II / Rega Elex Mk4 / Spendor A7) clarifies', () => {
-    expect(kindOf('Assess my system: Denafrips Ares II, Rega Elex Mk4, Spendor A7')).toBe('clarification');
+  it('Denafrips Ares II / Rega Elex Mk4 / Spendor A7 keeps the typed models', () => {
+    const M = 'Assess my system: Denafrips Ares II, Rega Elex Mk4, Spendor A7';
+    const r = buildSystemAssessment(M, extractSubjectMatches(M), null, []) as {
+      kind: string; response?: { systemChain?: { names?: string[] } };
+    };
+    expect(r.kind).toBe('assessment');
+    const names = (r.response?.systemChain?.names ?? []).map((n) => n.toLowerCase());
+    expect(names.some((n) => n.includes('elex mk4'))).toBe(true);
+    expect(names.some((n) => n.includes('spendor a7'))).toBe(true);
+  });
+});
+
+describe('graph-integrity gate — genuinely bare brands still clarify', () => {
+  it('typed bare brands (Denafrips Ares II / Rega / Spendor) clarify, not assess', () => {
+    expect(kindOf('Assess my system: Denafrips Ares II, Rega, Spendor')).toBe('clarification');
   });
   it('the clarification names what was understood and asks for the exact model', () => {
-    const c = clarification('Assess my system: WiiM Pro, Fosi Audio V3, Wharfedale Diamond 12.1');
+    const c = clarification('Assess my system: Denafrips Ares II, Rega, Spendor');
     expect(c).not.toBeNull();
     expect(c!.question).toMatch(/exact make and model/i);
     // it must not generically ask the user to re-enter the whole system
@@ -59,7 +106,18 @@ describe('graph-integrity gate — controls must NOT over-block', () => {
 });
 
 describe('graph-integrity gate — genuine duplication still clarifies', () => {
-  it('two bare-brand duplicates with no cataloged model (Wilson) clarifies', () => {
-    expect(kindOf('Assess my system: dCS Vivaldi, Boulder 866, Wilson Audio Sasha DAW')).toBe('clarification');
+  it('the Wilson duplication no longer occurs: the typed identity survives whole', () => {
+    // This fixture used to clarify because resolution split "Wilson Audio
+    // Sasha DAW" into duplicate bare-brand records with the model lost.
+    // Under canonical ingestion (P1, 2026-09-14) the typed identity is the
+    // graph node, so there is nothing to ask about.
+    const M = 'Assess my system: dCS Vivaldi, Boulder 866, Wilson Audio Sasha DAW';
+    const r = buildSystemAssessment(M, extractSubjectMatches(M), null, []) as {
+      kind: string; response?: { systemChain?: { names?: string[] } };
+    };
+    expect(r.kind).toBe('assessment');
+    const names = (r.response?.systemChain?.names ?? []).map((n) => n.toLowerCase());
+    expect(names).toContain('wilson audio sasha daw');
+    expect(names.filter((n) => n.includes('wilson'))).toHaveLength(1);
   });
 });

@@ -8723,7 +8723,17 @@ function countMeaningfulSegments(rawMessage: string): string[] {
   // Split on component separators. NB: a bare "/" is NOT a separator — it
   // occurs inside model names (DeVore O/96, Spendor SP3/1R, LS3/5A) and
   // splitting on it would over-count and falsely report a dropped component.
-  const segs = msg.split(/[,\n]|→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|\s+-\s+/i);
+  //
+  // ";", "?", "!" and " and " joined the vocabulary with the ingestion
+  // canonicalization (P1, 2026-09-14): "Accuphase DP-450 and Harbeth SHL5
+  // Plus" read as ONE segment, so the Harbeth's tokens satisfied the
+  // identity test and the DP-450 hidden beside it never raised its hand —
+  // a blobbed segment could smuggle a dropped component past the gate.
+  // Likewise "…my system? Accuphase E-600" was one segment that the
+  // question filter then discarded WITH its component, deflating the
+  // expected count. A sentence boundary or list connector cannot be
+  // interior to a component designation.
+  const segs = msg.split(/[,\n;?!]|→|—>|-{1,3}>|={1,2}>|>{2,3}|\s+into\s+|\s+and\s+|\s+-\s+/i);
   const seen = new Set<string>();
   for (let seg of segs) {
     seg = seg.replace(
@@ -8755,6 +8765,10 @@ const GI_DISCOURSE_TOKENS: ReadonlySet<string> = new Set([
   'actually', 'anyway', 'also', 'ok', 'okay', 'right', 'well', 'sure',
   'thanks', 'thank', 'you', 'please', 'so', 'then', 'though', 'really',
   'yes', 'no', 'yeah', 'hmm', 'oh', 'now', 'instead', 'never', 'mind',
+  // Greetings split off by "!" (a segment boundary since 2026-09-14) name
+  // nobody's equipment.
+  'hello', 'hi', 'hey', 'howdy', 'greetings', 'good', 'morning',
+  'afternoon', 'evening',
 ]);
 
 /** Token set of a display name, minus trivial tokens. */
@@ -10187,6 +10201,60 @@ export function buildSystemAssessment(
         unresolved: true,
       });
     }
+  }
+
+  // ── The message parse is canonical: what it names, exists ──────────
+  //
+  // P1 (2026-09-14). Equivalent natural-language frames reached different
+  // component sets because THIS graph — the one that decides `kind`, the
+  // chain, and the integrity gate — was assembled from `subjectMatches`
+  // (curated names only), while the rendered assessment surface reads the
+  // message parse. A component the listener typed but the catalog does not
+  // know ("Accuphase DP-450") existed on one surface and was silently
+  // absent from the other, and the reduced graph still returned
+  // `kind: assessment`. One semantic owner: `detectSystemDescription`
+  // decides what the message names; the catalog governs what Audio XX may
+  // SAY about each node, never whether the node exists — the same rule the
+  // labelled path above established. Uncatalogued nodes seed opaque, and
+  // `collapsePhysicalRepresentations` below reconciles spelling overlap.
+  // Identity comparison folds diacritics: the listener's "Bartok" and the
+  // catalog's "Bartók" are one name, not siblings.
+  const foldName = (s: string): string =>
+    s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  for (const mc of messageComponents) {
+    // An empty name is not an identity (campaign, 2026-08-29): a bare-brand
+    // parse artifact must not seed a phantom node.
+    if (!mc.name || !mc.name.trim()) continue;
+    const mcDisplay = normalizeDisplayName(mc.brand ?? '', mc.name);
+    const mcLower = foldName(mcDisplay);
+    const mcNameLower = foldName(mc.name);
+    const existing = components.find((c) => {
+      const dn = foldName(c.displayName);
+      return dn === mcLower || dn.includes(mcLower) || mcLower.includes(dn)
+        || dn.includes(mcNameLower);
+    });
+    if (existing) {
+      // A node that resolved to LESS identity than the listener typed (bare
+      // brand "Wharfedale" beside "Wharfedale Diamond 12.1") represents the
+      // same box but has silently shed its model. Their words are the
+      // better record — same rule as the labelled path — unless a catalog
+      // product already anchors the identity.
+      const dnFold = foldName(existing.displayName);
+      if (!existing.product
+        && mcLower.includes(dnFold)
+        && mcLower.split(/\s+/).length > dnFold.split(/\s+/).filter(Boolean).length) {
+        existing.displayName = mcDisplay;
+      }
+      continue;
+    }
+    const mcRole = mc.category && mc.category !== 'other' ? mc.category : 'component';
+    components.push({
+      displayName: mcDisplay,
+      role: mcRole,
+      roles: [mcRole],
+      character: `${mcDisplay} — named in your system description; not identified in our catalog, so no sonic characteristics are claimed for it.`,
+      unresolved: true,
+    });
   }
 
   // ── One physical unit, however many records describe it ────────────
@@ -13221,6 +13289,9 @@ function extractFullChain(
   // Strip common framing phrases first, then split on commas.
   // Only activate when the message looks like a component list rather than prose.
   const framingStripped = rawMessage
+    // A leading interrogative clause frames the list; it is not part of it
+    // ("what do you think of my system? A, B, C" — P1, 2026-09-14).
+    .replace(/^\s*(?:what|how|do|does|can|could|would|should|is|are)\b[^?]*\?\s*/i, '')
     .replace(/^(?:evaluate|assess|review|analyze|analyse|check|rate)\s+(?:my\s+)?(?:system|setup|chain|rig)\s*:?\s*/i, '')
     .replace(/^(?:my\s+(?:system|setup|chain|rig)\s*(?:is|:)?\s*)/i, '')
     .replace(/^(?:i(?:'m|\s+am)\s+(?:running|using)\s*:?\s*)/i, '')
@@ -13235,6 +13306,9 @@ function extractFullChain(
     const expanded = expandSectionLabels(framingStripped);
     const segments = expanded
       .flatMap((s) => s.includes(',') ? s.split(/\s*,\s*/) : [s])
+      // "and" closes a list; left unsplit it blobbed two components into one
+      // chain entry ("Accuphase DP-450 and Harbeth SHL5 Plus" — P1, 2026-09-14).
+      .flatMap((s) => s.split(/\s+and\s+/i))
       .map((s) => s.trim())
       // Filter out conversational noise — keep segments that look like product/brand names
       // (short, not full sentences)
