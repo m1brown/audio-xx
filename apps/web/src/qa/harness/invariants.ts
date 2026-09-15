@@ -219,9 +219,12 @@ export function evaluateEvidence(c: GoldenCase, o: Observation): Failure[] {
 
 // ── TIER 1/2 · reasoning consistency ───────────────────────────────────
 
+// One calibration, two surface phrasings per pole: the interface owner says
+// "genuinely power-constrained", the drive lane says "a genuine power
+// deficit". The detector reads both owners.
 const STATE_RE = {
   generous: /amply powered|substantial acoustic headroom/i,
-  constrained: /genuinely power-constrained|a live constraint/i,
+  constrained: /genuinely power-constrained|a live constraint|genuine power deficit/i,
   'condition-dependent': /depends on how far you sit/i,
   unresolved: /stated loads do not include|not published, so drive cannot be established|does not infer output across loads/i,
 } as const;

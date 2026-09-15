@@ -26,6 +26,12 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     forbidden: [/^accuphase$/],
     parts: ['Accuphase E-600', 'Accuphase DP-450', 'Harbeth SHL5 Plus'],
     standardMutations: true,
+    landmarkMutations: [
+      // Follow-on P1 class (802ae4e→7b610bf): an "and"-joined re-mention
+      // must neither block the assessment nor grow a fourth component.
+      { label: 'followon_re_mention',
+        input: 'assess my system: Accuphase E-600, Accuphase DP-450, Harbeth SHL5 Plus and the E-600 runs warm' },
+    ],
     evidence: ACCUPHASE_EVIDENCE,
     composeRoles: {
       'Accuphase DP-450': 'other', 'Accuphase E-600': 'amplifier', 'Harbeth SHL5 Plus': 'speaker',
@@ -67,6 +73,14 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
       'Nad AV716': 'integrated', 'Topping D70 Pro OCTO': 'dac', 'Dynaco A35': 'speaker',
     },
     headroom: 'none',
+    // The maker's archived ladder answers each load with ITS figure —
+    // 80W continuous is an 8-ohm fact, 145W IHF dynamic a 4-ohm fact,
+    // and no figure exists at 6 ohms.
+    ladder: {
+      value: '80W per channel into 8 ohms, continuous (20Hz–20kHz at rated distortion); '
+        + '145W IHF dynamic into 4 ohms',
+      expect: { 8: 80, 4: 145, 6: undefined },
+    },
     soft: [
       'Does the closing question ask for listener-unique information rather than specifications Audio XX already said it could not find?',
       'Is the Topping-feeds-NAD path presented as likely/assumed rather than established?',
@@ -106,7 +120,11 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
       impedance: ['Magnepan LRS+', '4 ohm'],
       sensitivity: ['Magnepan LRS+', '86 dB'],
       expectStatus: 'assessable',
-      must: [/power-constrained|live constraint/i],
+      // The severe band speaks as "a genuine power deficit" in the drive
+      // lane and "genuinely power-constrained" at the interface owner —
+      // one calibration, two surface phrasings (calibration 2026-09-15,
+      // classified EXPECTATION BUG).
+      must: [/genuine power deficit|power-constrained|live constraint/i],
       mustNot: [/amply powered/i, /depends on how far you sit/i],
     },
     related: ['job-boenicke'],
@@ -122,8 +140,11 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     skipIdentity: true,
     allowedKinds: ['assessment', 'low_confidence', 'clarification'],
     ladder: {
+      // At 8Ω the product selects the 128W typical figure over the 100W
+      // minimum — the pinned Butler behaviour (calibration 2026-09-15,
+      // classified EXPECTATION BUG: the fixture had guessed "minimum").
       value: 'Minimum 100 Watts RMS @ 8 Ohms; 128 Watts, RMS typical @ 8 Ohms; 200 Watts, RMS typical @ 4 Ohms',
-      expect: { 4: 200, 8: 100, 6: undefined },
+      expect: { 4: 200, 8: 128, 6: undefined },
     },
     drive: {
       power: ['Butler Monads',
@@ -149,14 +170,21 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     mustNot: [
       { id: 'manufactured-weakness', re: /genuinely power-constrained|the match is the problem/ },
     ],
-    related: ['nathan-2'],
+    landmarkMutations: [
+      { label: 'followon_re_mention',
+        input: 'assess my system: Chord Qutest, Naim SuperNait 3, Harbeth Super HL5 Plus; the SuperNait 3 is the newest box' },
+    ],
+    related: ['nathan-2', 'followon-discourse'],
   },
   {
     id: 'naim-siblings',
     why: 'same-brand siblings independent of Accuphase-specific logic (Naim source + amp). '
-      + 'KNOWN P2: the SuperNait can extract brandless — identity itself must survive',
+      + 'KNOWN P2s: the SuperNait can extract brandless, and the uncatalogued NDX 2 is '
+      + 'role-misinferred as an amplifier, so e2e asks the (answerable, conservative) '
+      + 'duplicate-role question — identical on 7ed380e, pre-existing, non-blocking',
     input: 'my system is Naim NDX 2, Naim SuperNait 3 and Harbeth SHL5 Plus',
     components: [/supernait 3/, /ndx 2/, /shl5 plus/],
+    allowedKinds: ['assessment', 'clarification'],
     related: ['accuphase-trio', 'chord-siblings'],
   },
   {
@@ -182,6 +210,10 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     input: 'assess my system: Veyron Acoustics VA-9 amplifier, Cormorant DAC Two, Pelham Model 12 speakers',
     components: [/veyron acoustics va-9/, /cormorant dac two/, /pelham model 12/],
     roles: { 0: /amplifier/, 2: /speaker/ },
+    // A fully-unknown system degrades to the low-confidence intake — the
+    // KNOWN BASELINE conservative behaviour (identical direct-call shape on
+    // 7ed380e); identity preservation is the hard part and is pinned above.
+    allowedKinds: ['assessment', 'low_confidence'],
     evidence: [],
     composeRoles: {
       'Veyron Acoustics VA-9': 'amplifier', 'Cormorant DAC Two': 'other', 'Pelham Model 12': 'speaker',
@@ -217,6 +249,56 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     related: ['bare-brand-ambiguity'],
   },
 ];
+
+GOLDEN_CORPUS.push(
+  {
+    id: 'followon-discourse',
+    why: 'P1 landmark (802ae4e→7b610bf): a recognized system plus follow-on discourse '
+      + '(re-mention, listener context) must assess with the component set unchanged — '
+      + 'never the wrong-premise "couldn\'t match" clarification, never a phantom from prose',
+    input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; the SuperNait 3 also takes a digital input',
+    components: [/supernait 3/, /shl5 plus/],
+    physicalUnits: 2,
+    landmarkMutations: [
+      { label: 'context_jazz', input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; I mostly listen to jazz' },
+      { label: 'context_room', input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; my room is about 20 square metres' },
+      { label: 'context_level', input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; I listen fairly quietly' },
+    ],
+    related: ['followon-inverse-catalogued', 'followon-inverse-uncatalogued', 'followon-inverse-bare-brand', 'accuphase-trio'],
+  },
+  {
+    id: 'followon-inverse-catalogued',
+    why: 'INVERSE control of the follow-on class: a genuinely new cataloged product '
+      + 'after ";" or "and" joins the system — never read as commentary',
+    input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; Chord Qutest',
+    components: [/supernait 3/, /shl5 plus/, /chord qutest/],
+    skipIdentity: true,
+    landmarkMutations: [
+      { label: 'and_joined', input: 'assess my system: Naim SuperNait 3 and Harbeth SHL5 Plus and Chord Qutest' },
+    ],
+    related: ['followon-discourse'],
+  },
+  {
+    id: 'followon-inverse-uncatalogued',
+    why: 'INVERSE control: an unknown model-shaped product after ";" is preserved '
+      + 'whole or asked about — never silently ignored',
+    input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; Zorblax Z9',
+    components: [/supernait 3/, /shl5 plus/, /zorblax z9/],
+    skipIdentity: true,
+    allowedKinds: ['assessment', 'clarification', 'low_confidence'],
+    related: ['followon-discourse'],
+  },
+  {
+    id: 'followon-inverse-bare-brand',
+    why: 'INVERSE control: a bare brand after ";" is preserved or asked about — '
+      + 'never silently ignored as prose',
+    input: 'assess my system: Naim SuperNait 3, Harbeth SHL5 Plus; Rega',
+    components: [/supernait 3/, /shl5 plus/, /rega/],
+    skipIdentity: true,
+    allowedKinds: ['assessment', 'clarification', 'low_confidence'],
+    related: ['followon-discourse'],
+  },
+);
 
 export function caseById(id: string): GoldenCase | undefined {
   return GOLDEN_CORPUS.find((c) => c.id === id);

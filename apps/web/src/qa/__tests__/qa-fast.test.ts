@@ -82,6 +82,18 @@ describe('QA fast — golden corpus', () => {
         });
       }
 
+      for (const m of c.landmarkMutations ?? []) {
+        it(`landmark ${m.label}: set stable end-to-end`, () => {
+          mutationCount += 1;
+          const o = observeCase(c, m.label, m.input, { e2e: true });
+          const fails = [
+            ...(c.skipIdentity ? [] : evaluateMutationStability(c, o, m.lossy)),
+            ...evaluateKind(c, o),
+          ];
+          expect(formatFailures(record(fails, 2))).toBe('');
+        }, 90000);
+      }
+
       if (c.parts && c.standardMutations) {
         const muts = [
           ...standardMutations(c.parts, { roleByPart: { 0: 'amplifier', 2: 'speaker' } }),
