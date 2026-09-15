@@ -38,7 +38,8 @@ import {
 import type { SonicSynthesis } from './sonic-synthesis';
 import { DIMENSION_LABEL } from '../evidence/component-character';
 import { significantRelations, canonicalDisplayName } from './sonic-synthesis';
-import { wattsAtStatedLoad } from './interface-conclusions';
+import { wattsAtStatedLoad, statedPowerBracket } from './interface-conclusions';
+import { acousticHeadroom } from '../evidence/physical-quantities';
 import { buildSystemReasoningContext } from '../assessment/system-reasoning-context';
 import { classifySystem } from '../evidence/system-class';
 import { NATHAN_PRICES, NATHAN_POSITIONS } from '../evidence/nathan-market-facts';
@@ -1584,7 +1585,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + `cannot be established is ${listed}: until `
             + `${missing.length === 1 ? 'that figure is' : 'those figures are'} on the `
             + `record, whether the amplifier actually limits this system stays an `
-            + `open question.`,
+            + `open question on paper. At your listening seat it is answerable now: `
+            + `if your levels arrive without hardening or strain as you turn up, the `
+            + `amplifier is not limiting anything worth changing.`,
           );
         } else if (missing.length > 0 && pwrLine
           && /into\s+\d+(?:\.\d+)?\s*ohms?/i.test(pwrLine.value)) {
@@ -1599,13 +1602,29 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
            * whichever side the record settles is stated, and the open side
            * is framed as the question it leaves.
            */
+          /*
+           * BOUNDED SYSTEM JUDGMENT (capability, 2026-09-15). UNRESOLVED is
+           * acceptable; INERT is not. The missing speaker figures block the
+           * headroom CALCULATION — they do not block the headroom QUESTION,
+           * because its answer is directly observable at the listening seat.
+           * The uncertainty converts to the one observation only the
+           * listener can make, with the leave-alone conclusion each outcome
+           * licenses. No figure is invented and nothing about sound quality
+           * is claimed: strain at the onset of clipping is a fact about the
+           * quantity, not about these products.
+           */
           fits.push(
             `The first relationship I would examine here is the ${ampN} driving the `
             + `${spkN}, and the ${ampN}’s side of that question is on the record: `
             + `the maker rates it at ${pwrLine.value}. What still cannot be `
             + `established is ${listed} — ${missing.length === 1 ? 'it decides' : 'they decide'} `
             + `how much of that power a given listening level actually demands, so `
-            + `how much headroom this pairing has stays open.`,
+            + `how much headroom this pairing has stays open on paper. It does not `
+            + `stay open at your listening seat: if the levels you actually use `
+            + `arrive clean — no hardening or compression as you turn up — headroom `
+            + `is not this system’s problem, and nothing needs changing on power `
+            + `grounds. If loud passages harden or flatten, say so; that one `
+            + `observation settles what the missing figures cannot.`,
           );
         } else if (missing.length === 0 && pwrLine && sensLine && impLine) {
           /*
@@ -1620,15 +1639,72 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
           const atLoad = Number.isFinite(nominal)
             ? wattsAtStatedLoad(pwrLine.value, nominal) : undefined;
           if (atLoad === undefined) {
+            // The load in running prose is the DATUM, never the record's
+            // whole value ("6 ohms, easy to drive" is a figure plus a maker
+            // characterization, and only the figure belongs in a load
+            // clause).
+            const impQuant = (impLine.value.match(/\d+(?:\.\d+)?\s*ohms?/i)
+              ?? [impLine.value])[0];
+            const impAdj = impQuant.replace(/^(\d+(?:\.\d+)?)\s*ohms?$/i, '$1-ohm');
+            /*
+             * BOUNDED SYSTEM JUDGMENT (capability, 2026-09-15). A missing
+             * datum limits precision, not judgment. When the maker's stated
+             * loads BRACKET the loudspeaker's nominal impedance, the two
+             * neighbouring published figures are evidence about the drive
+             * relationship even though the exact at-load figure stays
+             * unpublished: the arithmetic is run at BOTH bracket endpoints —
+             * each a maker figure at its own stated load, no interpolation,
+             * no invented wattage — and what both endpoints agree on is
+             * licensed. The exact figure remains stated as unknown, and the
+             * uncertainty is handed to the listener as an observation only
+             * they can make, not as homework.
+             */
+            const bracket = Number.isFinite(nominal)
+              ? statedPowerBracket(pwrLine.value, nominal) : undefined;
+            const hi = bracket
+              ? acousticHeadroom(Math.max(bracket.above.watts, bracket.below.watts),
+                nominal, sensLine.value) : undefined;
+            const lo = bracket
+              ? acousticHeadroom(Math.min(bracket.above.watts, bracket.below.watts),
+                nominal, sensLine.value) : undefined;
+            let bounded = '';
+            if (bracket && hi && lo) {
+              const rises = bracket.below.watts > bracket.above.watts;
+              const shape = rises
+                ? ` — and the published output rises as the load falls, with no sign `
+                + `of collapse toward the lower load`
+                : '';
+              const bandVerdict = lo.band === 'severe' && hi.band === 'severe'
+                ? `at either published endpoint this pairing sits at a genuine power `
+                + `deficit, so the missing figure would not change the conclusion: `
+                + `amplifier capacity is a live constraint here.`
+                : (lo.band === 'generous' || lo.band === 'workable')
+                  ? `at either published endpoint the ceiling is comfortable, so `
+                  + `wherever in that bracket the true figure falls, amplifier `
+                  + `capacity is unlikely to be the first constraint in this system.`
+                  : lo.band === 'severe'
+                    ? `the published endpoints span too wide a range to settle it — `
+                    + `the missing figure genuinely matters here.`
+                    : `wherever in that bracket the true figure falls, the arithmetic `
+                    + `lands in the same territory: headroom that is adequate at `
+                    + `moderate listening levels, and in question only if you sit far `
+                    + `away or listen loud.`;
+              bounded = ` The stated loads do bracket it, though${shape} — so ${bandVerdict}`
+                + ((lo.band === 'modest' || lo.band === 'workable') && hi.band !== 'severe'
+                  ? ` That is directly observable at your listening seat: if music at `
+                  + `your level arrives without hardening or strain, amplifier capacity `
+                  + `is not the first thing to change here.`
+                  : '');
+            }
             fits.push(
               `The first relationship I would examine here is the ${ampN} driving the `
               + `${spkN}. Both sides publish figures — the ${ampN} at `
               + `${pwrLine.value}, the ${spkN} at ${sensLine.value} into a `
-              + `${impLine.value} nominal load — but the maker's stated loads do not `
-              + `include ${impLine.value}, and Audio XX does not infer output across `
-              + `loads. Whether headroom is generous or tight here depends on how far `
-              + `you sit and how loud you listen, and on a figure the maker has not `
-              + `stated.`,
+              + `${impAdj} nominal load — but the maker's stated loads do not `
+              + `include ${impQuant}, and Audio XX does not infer output across `
+              + `loads.${bounded !== '' ? bounded : ` Whether headroom is generous or `
+              + `tight here depends on how far you sit and how loud you listen, and `
+              + `on a figure the maker has not stated.`}`,
             );
           }
         } else if (missing.length > 0) {

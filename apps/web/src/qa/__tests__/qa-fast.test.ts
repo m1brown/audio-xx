@@ -16,7 +16,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { wattsAtStatedLoad } from '@/lib/artifact/interface-conclusions';
 import { buildTurnContext } from '@/lib/turn-context';
 import type { AudioSessionState } from '@/lib/system-types';
-import { GOLDEN_CORPUS, caseById } from '../harness/corpus';
+import { GOLDEN_CORPUS, caseById, TARGET_GROUPS } from '../harness/corpus';
 import { observeCase, observeE2E } from '../harness/observe';
 import { standardMutations, omittedBrandMutation } from '../harness/mutate';
 import {
@@ -28,7 +28,11 @@ import type { Failure, GoldenCase } from '../harness/schema';
 
 const TARGET = process.env.QA_P1;
 const SELECTED: Set<string> | null = TARGET
-  ? new Set([TARGET, ...(caseById(TARGET)?.related ?? [])])
+  ? new Set(
+    TARGET in TARGET_GROUPS
+      ? TARGET_GROUPS[TARGET].flatMap((id) => [id, ...(caseById(id)?.related ?? [])])
+      : [TARGET, ...(caseById(TARGET)?.related ?? [])],
+  )
   : null;
 const runs = (c: GoldenCase) => !SELECTED || SELECTED.has(c.id);
 

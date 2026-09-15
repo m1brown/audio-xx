@@ -41,6 +41,11 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
       { id: 'third-state', re: /stated loads do not include/ },
       { id: 'no-cross-load-inference', re: /does not infer output across loads/ },
       { id: 'dp450-acknowledged', re: /DP-450(?:'|’)s place in this chain isn(?:'|’)t established/ },
+      // BOUNDED SYSTEM JUDGMENT (capability escalation, 2026-09-15): the
+      // bracketing published loads must yield a bounded judgment and a
+      // listener-observable test — not only the named gap.
+      { id: 'bounded-bracket', re: /bracket/i },
+      { id: 'listener-test', re: /hardening|strain|compress/i },
     ],
     mustNot: [
       { id: 'false-6ohm', re: /30 watts into 6 ohms|30W (?:at|into) the 6-ohm/ },
@@ -68,11 +73,26 @@ export const GOLDEN_CORPUS: GoldenCase[] = [
     // measured pre- and post-ingestion-repair; the production surface renders
     // the review from the same canonical parse. Safe degradation, not a drop.
     allowedKinds: ['assessment', 'low_confidence'],
-    evidence: [],
+    // The maker's archived amplifier facts — the speaker side stays absent,
+    // which is the one-sided condition this case exists for.
+    evidence: [
+      { component: 'Nad AV716', label: 'power output',
+        value: '80W per channel into 8 ohms, continuous (20Hz–20kHz at rated distortion); '
+          + '145W IHF dynamic into 4 ohms' },
+    ],
     composeRoles: {
       'Nad AV716': 'integrated', 'Topping D70 Pro OCTO': 'dac', 'Dynaco A35': 'speaker',
     },
     headroom: 'none',
+    must: [
+      { id: 'amp-on-record', re: /side of that question is on the record/ },
+      // BOUNDED SYSTEM JUDGMENT: when the public path is exhausted, the
+      // uncertainty converts to a listener-observable diagnostic.
+      { id: 'listener-test', re: /hardening|strain|compress|listening seat/i },
+    ],
+    mustNot: [
+      { id: 'no-spec-homework', re: /as per their specifications|look up the|check the (?:maker|manufacturer)/i },
+    ],
     // The maker's archived ladder answers each load with ITS figure —
     // 80W continuous is an 8-ohm fact, 145W IHF dynamic a 4-ohm fact,
     // and no figure exists at 6 ohms.
@@ -303,3 +323,21 @@ GOLDEN_CORPUS.push(
 export function caseById(id: string): GoldenCase | undefined {
   return GOLDEN_CORPUS.find((c) => c.id === id);
 }
+
+/**
+ * Named targeted-P1 groups: `qa-harness.mjs p1 <group>` runs every member
+ * (plus their `related` controls) when the argument names a group rather
+ * than a case.
+ */
+export const TARGET_GROUPS: Record<string, string[]> = {
+  'bounded-system-judgment': [
+    'accuphase-trio', 'nad-vintage', 'job-boenicke', 'decware-magnepan',
+    'restraint-trio', 'fictional-unknown',
+  ],
+  'follow_on_clause': [
+    'followon-discourse', 'followon-inverse-catalogued',
+    'followon-inverse-uncatalogued', 'followon-inverse-bare-brand',
+  ],
+  'accuphase_same_brand': ['accuphase-trio', 'naim-siblings', 'chord-siblings'],
+  'a35_a3': ['nad-vintage'],
+};

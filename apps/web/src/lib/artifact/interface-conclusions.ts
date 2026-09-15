@@ -130,6 +130,47 @@ export function wattsAtStatedLoad(value: string, load: number): number | undefin
   return watts(chosen);
 }
 
+/** One rung of a maker's power ladder: a stated load and its stated output. */
+export interface StatedPowerEntry { ohms: number; watts: number }
+
+/**
+ * Every load the maker actually states, with its own figure.
+ *
+ * BOUNDED SYSTEM JUDGMENT (capability, 2026-09-15). When a ladder's stated
+ * loads BRACKET a loudspeaker's nominal impedance without including it,
+ * `wattsAtStatedLoad` rightly returns nothing — no figure may be invented
+ * across loads. But the bracket itself is a derived relationship the
+ * published facts fully support, and reasoning FROM the two neighbouring
+ * published figures (never interpolating between them) is what turns "the
+ * maker has not stated it" into a bounded judgment. Same segment vocabulary
+ * as `wattsAtStatedLoad`, so the two readings cannot diverge.
+ */
+export function statedPowerEntries(value: string): StatedPowerEntry[] {
+  const segments = value.split(/;|,(?=[^,;]*?\d+(?:\.\d+)?\s*W)/i);
+  const out: StatedPowerEntry[] = [];
+  for (const seg of segments) {
+    const lm = /(\d+(?:\.\d+)?)\s*ohms?/i.exec(seg);
+    const w = watts(seg);
+    if (lm && w !== undefined) out.push({ ohms: Number(lm[1]), watts: w });
+  }
+  return out;
+}
+
+/**
+ * The nearest stated loads either side of an unstated one — or undefined
+ * when the published ladder does not actually bracket it.
+ */
+export function statedPowerBracket(
+  value: string,
+  load: number,
+): { above: StatedPowerEntry; below: StatedPowerEntry } | undefined {
+  const entries = statedPowerEntries(value);
+  const above = entries.filter((e) => e.ohms > load).sort((a, b) => a.ohms - b.ohms)[0];
+  const below = entries.filter((e) => e.ohms < load).sort((a, b) => b.ohms - a.ohms)[0];
+  if (!above || !below) return undefined;
+  return { above, below };
+}
+
 /** Watts at a stated load from "200 Watts into 4 ohm loads". */
 function watts(value: string | undefined): number | undefined {
   if (!value) return undefined;

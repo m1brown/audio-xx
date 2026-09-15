@@ -922,12 +922,30 @@ const DIRECTIONAL_MARKERS =
 /** Third person about the listener, in a document addressed to them. */
 const THIRD_PERSON_MARKERS = /\bthe listener\b/i;
 
+/**
+ * A published-specification request is homework, not a question (capability,
+ * 2026-09-15). The QUESTION RULE has always said it — "finding published
+ * figures is Audio XX's job, not theirs" — but nothing ENFORCED it, and a
+ * real beta listener was asked "What is the sensitivity and nominal
+ * impedance of the Dynaco A35 speakers as per their specifications?" for the
+ * very figures Audio XX had just declared it could not find. Structural, not
+ * a vocabulary list: a request for a named ratable quantity, or any appeal
+ * to specs/datasheets/maker literature as the source the listener should
+ * consult. The manual-in-the-drawer exception survives as a CLAUSE inside a
+ * listener-unique question, which this shape does not match.
+ */
+const SPEC_HOMEWORK =
+  /\b(?:what (?:is|are) (?:the|its|their|your) (?:rated |nominal |published |quoted )?(?:sensitivity|impedance|power(?: rating| output)?|wattage|frequency response)|as per (?:the|their|its) spec|per the (?:maker|manufacturer)|according to (?:the|their|its) (?:spec\w*|manual|maker|manufacturer|literature)|published spec\w*|spec(?:ification)? sheet|datasheet|look up the)\b/i;
+
 export function questionViolations(question: string, required: QuestionType): string[] {
   const out: string[] = [];
   if (!question?.trim()) return out;
   if ((required === 'open_diagnostic' || required === 'diagnostic')
     && DIRECTIONAL_MARKERS.test(question)) {
     out.push('directional question emitted under a no-change verdict');
+  }
+  if (required === 'missing_evidence' && SPEC_HOMEWORK.test(question)) {
+    out.push('asks the listener to research published specifications');
   }
   if (required === 'open_diagnostic' && questionIntroducesConcern(question)) {
     out.push('question seeds a concern the assessment did not establish');

@@ -225,7 +225,7 @@ export function evaluateEvidence(c: GoldenCase, o: Observation): Failure[] {
 const STATE_RE = {
   generous: /amply powered|substantial acoustic headroom/i,
   constrained: /genuinely power-constrained|a live constraint|genuine power deficit/i,
-  'condition-dependent': /depends on how far you sit/i,
+  'condition-dependent': /depends on how far you sit|in question only if you sit far/i,
   unresolved: /stated loads do not include|not published, so drive cannot be established|does not infer output across loads/i,
 } as const;
 
@@ -319,7 +319,7 @@ export function evaluateDrive(c: GoldenCase): Failure[] {
       d.expectStatus, a.status, QUANTITIES));
     return out;
   }
-  const prose = driveConclusionFor(a, d.power[0], d.impedance[0]).sentence ?? '';
+  const prose = driveConclusionFor(a, d.power[0], d.impedance[0])?.sentence ?? '';
   for (const re of d.must ?? []) {
     if (!re.test(prose)) {
       out.push(fail(o, 'reasoning', 'D-MUST · drive conclusion holds its state',

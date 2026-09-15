@@ -69,10 +69,15 @@ export const SPEC_MEANINGS: SpecMeaning[] = [
       + 'volume control will operate low in its range.',
   },
   {
+    // Basis-honest (capability, 2026-09-15): a 2.83V figure is one watt only
+    // into 8 ohms — into a lower impedance the same voltage draws more than
+    // a watt, so describing every sensitivity datum as "for one watt" quietly
+    // overstated lower-impedance loudspeakers.
     match: /^sensitivity/i,
-    meaning: 'How loud the loudspeaker plays for one watt at one metre. Every 3dB here is '
-      + 'worth a doubling of amplifier power, so a sensitive loudspeaker needs far less '
-      + 'power for the same level.',
+    meaning: 'How loud the loudspeaker plays for a standard input at one metre — quoted '
+      + 'either per watt or for 2.83V (one watt into 8 ohms; into a lower impedance, '
+      + '2.83V draws more than a watt). Every 3dB here is worth a doubling of amplifier '
+      + 'power.',
   },
   {
     match: /\bgain\b/i,
@@ -80,10 +85,15 @@ export const SPEC_MEANINGS: SpecMeaning[] = [
       + '12dB is four times.',
   },
   {
+    // Basis-honest (capability, 2026-09-15): the old wording implied a maker
+    // figure necessarily exists at the loudspeaker's exact load. Often none
+    // does — the honest instruction is to read the ladder against that load,
+    // not to assume a matching rung.
     match: /power output/i,
-    meaning: 'What the amplifier delivers, at the loads the maker states. The figure that '
-      + 'applies is the one at your loudspeaker’s nominal impedance — not the largest '
-      + 'number on the list.',
+    meaning: 'What the amplifier delivers, at the loads the maker states. Read it against '
+      + 'your loudspeaker’s nominal impedance — the maker may or may not state a figure '
+      + 'at that exact load, and the largest number on the list is rarely the one that '
+      + 'applies.',
   },
   {
     match: /^impedance/i,
