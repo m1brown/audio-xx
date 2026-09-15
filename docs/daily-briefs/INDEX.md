@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-09-15 | A8: behavioral-regression.test.ts — one file, one it.todo, commit · A7: ConfidenceLevel type + one test committed | [2026-09-15.md](./2026-09-15.md) |
 | 2026-09-14 | A8: behavioral-regression.test.ts skeleton committed · A7: ConfidenceLevel type + one test committed | [2026-09-14.md](./2026-09-14.md) |
 | 2026-09-11 | A8: one file + one it.todo committed · A7: ConfidenceLevel type + one test committed | [2026-09-11.md](./2026-09-11.md) |
 | 2026-09-10 | A8: one file + one test committed · A7: ConfidenceLevel type + one test committed | [2026-09-10.md](./2026-09-10.md) |
