@@ -67,3 +67,4 @@ dist/
 .vercel
 /dist/
 .env*
+apps/web/src/qa/captures/

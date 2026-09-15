@@ -1841,7 +1841,13 @@ function parseSystemInferenceResponse(
     if (qIssues.length > 0) {
       console.warn('[llm-system-inference] question violated %s: %s', required, qIssues.join('; '));
       questionOut = required === 'missing_evidence'
-        ? 'What would help most is knowing more about the components I could not identify — do you have the exact models to hand?'
+        // A spec-homework question is replaced by the listener-unique
+        // observation that tests the same relationship (capability,
+        // 2026-09-15): the answer advances the decision even if the
+        // specification never appears.
+        ? (qIssues.some((i) => i.includes('published specifications'))
+          ? 'Are you running into any limit on volume or dynamic range at the levels you actually use?'
+          : 'What would help most is knowing more about the components I could not identify — do you have the exact models to hand?')
         // The old fallback named four candidate faults and was itself
         // hypothesis-seeding under a no-change verdict.
         : OPEN_DIAGNOSTIC_QUESTION;

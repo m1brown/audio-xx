@@ -368,6 +368,11 @@ describe('ZERO REASONING — opening a snapshot cannot reassess', () => {
       // predicate over frozen dossier lines — the same class as the
       // conversion-path justification above. No catalog, no engine.
       './interface-conclusions',
+      // Bounded system judgment (capability 2026-09-15): acousticHeadroom is
+      // pure arithmetic over figures already frozen in the dossier lines —
+      // the 2.83V conversion and the band calibration. Same class again:
+      // no catalog, no engine, no network.
+      '../evidence/physical-quantities',
       '../assessment/system-reasoning-context',
       // Market evidence: verified prices and range positions, both frozen
       // data. Reads no catalog, no engine, no network.

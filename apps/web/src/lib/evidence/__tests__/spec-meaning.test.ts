@@ -33,8 +33,16 @@ describe('spec glosses explain the quantity, never the product', () => {
     expect(meaningFor('Tube complement')).toMatch(/does not say where in the circuit/i);
   });
 
-  it('tells the reader which power figure applies', () => {
-    expect(meaningFor('Power output')).toMatch(/not the largest number on the list/i);
+  it('steers the reader off the headline figure without asserting a matching rung exists', () => {
+    // Basis-honest since the bounded-judgment capability (2026-09-15): the
+    // old wording ("the figure that applies is the one at your loudspeaker's
+    // nominal impedance") implied the maker necessarily states a figure at
+    // that exact load. Often none exists — the Accuphase ladder brackets 6Ω
+    // without stating it.
+    const gloss = meaningFor('Power output')!;
+    expect(gloss).toMatch(/largest number on the list is rarely the one/i);
+    expect(gloss).toMatch(/may or may not state a figure/i);
+    expect(gloss).not.toMatch(/the figure that applies is the one at/i);
   });
 
   it('returns nothing for labels that need no explaining', () => {
