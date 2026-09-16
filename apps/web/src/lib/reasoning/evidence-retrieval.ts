@@ -112,15 +112,40 @@ export async function retrieveEvidenceFor(
     ? obsKey : singularKey(obsKey);
   items.push(...authoredItemsFor(obsKeyEffective));
 
-  // Admitted independent listening observations, condition attached.
+  // Admitted independent observations, condition attached.
+  //
+  // LOSSLESS PROJECTION (vNext audit finding, corrected 2026-09-15 before
+  // the Phase-0.1 run): the observation record carries sourceUrl, the
+  // observation TYPE (a publication's measurement is not a listening
+  // impression), and — where present — the explicit family bridge with the
+  // maker's own statement. All three were being dropped, which stripped
+  // provenance the model is required to preserve and flattened family
+  // evidence into apparent exact-product evidence. A whole-field-class
+  // drop is an architectural defect, not a tuning choice.
   for (const o of seedObservationsFor(obsKeyEffective)) {
-    const oo = o as { publication?: string; claim?: string; condition?: { description?: string } };
+    const oo = o as {
+      publication?: string; claim?: string; sourceUrl?: string;
+      observationType?: string;
+      condition?: { description?: string };
+      familyBridge?: { referenceName?: string; makerStatementUrl?: string };
+    };
     if (!oo.claim) continue;
+    const qualifierParts: string[] = [];
+    if (oo.observationType === 'measurement') {
+      qualifierParts.push("publication's own measurement, on its sample");
+    }
+    if (oo.familyBridge?.referenceName) {
+      qualifierParts.push(`family evidence — the publication reviewed the ${oo.familyBridge.referenceName}; `
+        + 'the maker itself states the relationship between the models'
+        + (oo.familyBridge.makerStatementUrl ? ` (${oo.familyBridge.makerStatementUrl})` : ''));
+    }
     items.push({
       class: 'independent_listening',
       text: oo.claim,
       publication: oo.publication,
       condition: oo.condition?.description,
+      sourceUrl: oo.sourceUrl,
+      qualifier: qualifierParts.length ? qualifierParts.join('; ') : undefined,
     });
   }
 

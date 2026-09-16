@@ -120,3 +120,57 @@ export function strayFigures(answer: string, allowedSources: string[]): string[]
   const allowed = new Set(allowedSources.flatMap((s) => [...nums(s)]));
   return [...nums(answer)].filter((n) => n.length > 1 && !allowed.has(n));
 }
+
+/**
+ * Phase 0.1 — deterministic trust layer, reported SEPARATELY from the
+ * semantic checker (whose ±1 run variance Phase 0 measured). Everything
+ * here is computed, repeatable, and identical across arms.
+ */
+export interface DeterministicTrust {
+  strayFigures: string[];
+  /** "N watts into/at M ohms" claims whose (N, M) pairing has no source in
+   *  the frozen package or the conversation — the wrong-load class. */
+  unlicensedWattLoad: string[];
+  /** Product-shaped names in the answer with no occurrence in the package
+   *  or the conversation — the invented/phantom-product class. */
+  noSourceNames: string[];
+}
+
+function wattLoadPairs(text: string): Array<{ w: string; ohms: string; span: string }> {
+  const out: Array<{ w: string; ohms: string; span: string }> = [];
+  // The connective set mirrors the product's paired-power parser: "into",
+  // "at", "@", "/", AND a parenthesized load — "30 W/ch (8 ohms)" is how the
+  // frozen store states the Accuphase ladder, and omitting "(" made every
+  // licensed restatement look unlicensed (instrument defect, 2026-09-15).
+  const re = /(\d+(?:\.\d+)?)\s*(?:W|watts?)\b[^.;\n]{0,40}?(?:\b(?:into|at)\s+|[@/(]\s*)(?:the\s+)?(\d+(?:\.\d+)?)(?:\s*|-)(?:ohms?|Ω)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) out.push({ w: m[1], ohms: m[2], span: m[0] });
+  return out;
+}
+
+export function deterministicTrust(
+  answer: string,
+  frozenBlock: string,
+  conversationText: string,
+): DeterministicTrust {
+  const sources = [frozenBlock, conversationText];
+  const sourcePairs = sources.flatMap((s) => wattLoadPairs(s));
+  const pairKey = (p: { w: string; ohms: string }) => `${p.w}@${p.ohms}`;
+  const licensed = new Set(sourcePairs.map(pairKey));
+  const unlicensedWattLoad = wattLoadPairs(answer)
+    .filter((p) => !licensed.has(pairKey(p)))
+    .map((p) => p.span);
+
+  const hay = (frozenBlock + '\n' + conversationText).toLowerCase();
+  const nameRe = /\b([A-Z][A-Za-z0-9&.-]+\s+(?:[A-Z]?[A-Za-z0-9/+.-]*\d[A-Za-z0-9/+.-]*|[A-Z][A-Za-z0-9.-]+))\b/g;
+  const noSourceNames = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = nameRe.exec(answer)) !== null) {
+    if (!hay.includes(m[1].toLowerCase())) noSourceNames.add(m[1]);
+  }
+  return {
+    strayFigures: strayFigures(answer, sources),
+    unlicensedWattLoad,
+    noSourceNames: [...noSourceNames].slice(0, 20),
+  };
+}

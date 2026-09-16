@@ -23,7 +23,10 @@ import { runArmTurn, newArmState } from '../arms';
 
 const RUN = process.env.QA_VNEXT === '1';
 const MODELS = (process.env.QA_VNEXT_MODELS ?? 'gpt-6-astra').split(',').map((s) => s.trim()).filter(Boolean);
-const ARMS = (process.env.QA_VNEXT_ARMS ?? 'A,B').split(',').map((s) => s.trim()) as Array<'A' | 'B'>;
+/** Arm labels: 'A', 'B1' (governed evidence only), 'B2' (+ bounded model
+ *  knowledge). Legacy 'B' is accepted as 'B1'. */
+const ARMS = (process.env.QA_VNEXT_ARMS ?? 'A,B1').split(',')
+  .map((s) => (s.trim() === 'B' ? 'B1' : s.trim())) as Array<'A' | 'B1' | 'B2'>;
 const REPEAT = Number(process.env.QA_VNEXT_REPEAT ?? '1');
 const RUN_ID = process.env.QA_VNEXT_RUN ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 17);
 const OUT_DIR = join(__dirname, '..', 'results', RUN_ID);
@@ -74,8 +77,9 @@ describe.runIf(RUN)('vNext Phase 0 bake-off', () => {
             for (let i = 0; i < script.length; i++) {
               const turn = script[i];
               const res = await runArmTurn(
-                arm, system, state, i, turn.user, !!turn.observation, model,
-                { apiKey, maxCompletionTokens: 4096, timeoutMs: 180000 },
+                arm === 'A' ? 'A' : 'B', system, state, i, turn.user, !!turn.observation, model,
+                { apiKey, maxCompletionTokens: 4096, timeoutMs: 180000,
+                  variant: arm === 'B2' ? 'B2' : 'B1' },
               );
               appendFileSync(file, `${JSON.stringify(res)}\n`);
               if (res.failed) failures++;

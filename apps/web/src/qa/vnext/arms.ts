@@ -33,8 +33,26 @@ RULES
 
 export type ValidationStatus = 'CHECKED' | 'REPAIRED' | 'INCOMPLETE';
 
+/**
+ * Phase 0.1 — quiet governance is the B DEFAULT (experimentally validated in
+ * Phase 0: the round-1 judge repeatedly cited discipline narration as A's
+ * edge; one register line flipped NATURALNESS to B). The discipline itself
+ * is unchanged — only its visibility.
+ */
+export const QUIET_STYLE_RULE = `- STYLE: practice the evidence discipline SILENTLY. Never mention evidence classes, verification, documentation, provenance labels, or what the application holds, unless the listener explicitly asks about sourcing — or a limitation materially affects the judgment, in which case state it in plain adviser language ("I don't know how these behave at volume"), never by naming the discipline. Speak as one adviser who simply knows what he knows.`;
+
+/**
+ * Phase 0.1 — B2: bounded model knowledge. The smallest licence that lets
+ * the model use its ordinary audio/product knowledge where the package is
+ * incomplete, without letting that knowledge masquerade as verified fact.
+ */
+export const B2_KNOWLEDGE_RULE = `- MODEL KNOWLEDGE (this refines the "do not invent product facts" rule above): where the supplied evidence is silent or incomplete, you MAY draw on your own general knowledge of audio and of these products to serve the listener — as your own knowledge, never as established fact. Keep four kinds of ground distinct: (1) evidence supplied below, (2) what the listener has stated, (3) application-computed facts, (4) your own knowledge and inference. Kind 4 must never be presented as kinds 1–3. From your own knowledge you may reason, compare, and point at what is worth checking — but you may NOT assert exact numerical specifications, exact load ratings, measurements, exact feature availability on the listener's specific unit, exact-product sonic character as established observation, or attribute any claim to a publication or source. Where such a specific fact would help and the evidence does not hold it, say what is typical and how the listener can confirm it on their own unit ("worth checking whether yours has…"). Never imply the application verified something it did not.`;
+
 export interface TurnResult {
   arm: 'A' | 'B';
+  /** Substrate variant for arm B: 'B1' governed-evidence-only (default),
+   *  'B2' governed + bounded model knowledge. */
+  variant?: 'B1' | 'B2';
   model: string;
   turnIndex: number;
   question: string;
@@ -62,6 +80,8 @@ export interface ModelCallOptions {
   apiKey: string;
   maxCompletionTokens?: number;
   timeoutMs?: number;
+  /** Arm-B substrate variant (default 'B1'). */
+  variant?: 'B1' | 'B2';
 }
 
 export async function callOpenAI(
@@ -142,23 +162,12 @@ export async function runArmTurn(
     base.hypothetical = ctx.currentHypothetical;
     const block = serializeGovernedContext(ctx);
     base.contextChars = block.length;
-    systemPrompt = `${REASONING_RULES}\n\n=== APPLICATION CONTEXT FOR THIS TURN ===\n${block}`;
-    /*
-     * Experimental register variant (QA_VNEXT_B_STYLE=quiet): the first
-     * bake-off round's blind judge repeatedly cited B's narration of its own
-     * evidence discipline ("sounds like an evidence audit") as the reason A
-     * read better. This variant tests whether the loss is a REGISTER
-     * property of the prompt rather than a property of the substrate:
-     * identical rules, identical context, plus an instruction to practice
-     * the discipline silently.
-     */
-    if (process.env.QA_VNEXT_B_STYLE === 'quiet') {
-      systemPrompt = `${REASONING_RULES}
-- STYLE: practice the evidence discipline SILENTLY. Never mention evidence classes, verification, documentation, provenance labels, or what the application holds, unless the listener explicitly asks about sourcing. Express uncertainty in plain adviser language ("I don't know how these behave at volume") rather than by naming the discipline. Speak as one adviser who simply knows what he knows.
-
-=== APPLICATION CONTEXT FOR THIS TURN ===
-${block}`;
-    }
+    base.variant = opts.variant ?? 'B1';
+    // Quiet governance is the Phase-0.1 default; QA_VNEXT_B_STYLE=loud
+    // reproduces the Phase-0 round-1 register for reference runs.
+    const styleRule = process.env.QA_VNEXT_B_STYLE === 'loud' ? '' : `\n${QUIET_STYLE_RULE}`;
+    const knowledgeRule = base.variant === 'B2' ? `\n${B2_KNOWLEDGE_RULE}` : '';
+    systemPrompt = `${REASONING_RULES}${styleRule}${knowledgeRule}\n\n=== APPLICATION CONTEXT FOR THIS TURN ===\n${block}`;
   }
 
   const messages = [
