@@ -62,6 +62,18 @@ export function deriveHypothetical(
   // Reverts clear the slot: "keep the <incumbent>", "go back", "revert",
   // "my real/original system".
   if (/\bgo(?:ing)?\s+back\b|\brevert\b|\b(?:real|original)\s+system\b/.test(lower)) return null;
+  /*
+   * "FORGET" IS A CLEARING RULE (vNext audit finding, 2026-09-15).
+   * "Actually forget the Hegel — what about the DAC instead?" dismissed the
+   * live hypothetical in plain words, and the slot carried it forward
+   * anyway. Clearing applies when the listener forgets the CANDIDATE (or
+   * says "forget it/that" with a slot live); the model still reads richer
+   * dismissals from the raw turns.
+   */
+  if (incoming && /\bforget\b|\bnever\s+mind\b/.test(lower)) {
+    if (/\bforget\s+(?:it|that|this)\b|\bnever\s+mind\s+(?:it|that|this)?\b/.test(lower)) return null;
+    if (tokensOf(incoming.candidate).some((t) => lower.includes(t))) return null;
+  }
   const keep = /\bkeep\s+(?:the\s+|my\s+)?([a-z0-9][a-z0-9 +/-]{2,30})/.exec(lower);
   if (keep && incoming) {
     const kept = keep[1];
@@ -82,7 +94,10 @@ export function deriveHypothetical(
     // "…a Hegel H590 instead?" — same slot, new candidate.
     return { candidate: cand, incumbent: incoming.incumbent };
   }
-  const repl = /\breplac(?:e|ing)\b|\bswap(?:ping)?\b/.exec(lower);
+  // Past-tense morphology included ("What if I replaced…", "Say I swapped
+  // in…") — the Phase-0 dry runs showed these are how listeners actually
+  // phrase substitution, and the slot silently never set (2026-09-15).
+  const repl = /\breplac(?:e|ed|ing)\b|\bswap(?:s|ped|ping)?\b/.exec(lower);
   if (repl && cand) {
     const inc = componentNear(repl.index, 60, true);
     if (inc) return { candidate: cand, incumbent: inc.displayName };
