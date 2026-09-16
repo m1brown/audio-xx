@@ -211,3 +211,57 @@ describe('production-path ordering — the real handleSubmit source', () => {
     expect(SRC).toContain('const laneMessageComponents = detectSystemDescription(');
   });
 });
+
+describe('fallback authority invariant — a lane-owned turn never leaks to legacy (M1 plumbing)', () => {
+  const SRC = readFileSync(join(__dirname, '../../../app/page.tsx'), 'utf8');
+  const at = (marker: string): number => {
+    const i = SRC.indexOf(marker);
+    expect(i, `marker not found: ${marker}`).toBeGreaterThan(-1);
+    return i;
+  };
+
+  it('one bounded retry absorbs checker nondeterminism', () => {
+    expect(SRC).toContain('for (let laneTry = 0; laneTry < 2');
+  });
+
+  it('a failed lane turn ends in a safe failure BEFORE any legacy author', () => {
+    // Live P1: a REJECTED candidate turn fell through to the rules engine,
+    // which reinterpreted it as an "improvement" diagnosis (Partial
+    // Recognition). The safe-failure return must sit between the lane
+    // attempt and the first legacy intercept (glossary).
+    const attempt = at('FALLBACK AUTHORITY INVARIANT');
+    const safeFailure = at('safe failure — turn retained, legacy suppressed');
+    const glossary = at('checkGlossaryQuestion(submittedText)');
+    expect(attempt).toBeLessThan(safeFailure);
+    expect(safeFailure).toBeLessThan(glossary);
+    const block = SRC.slice(safeFailure, glossary);
+    expect(block).toContain("dispatch({ type: 'SET_LOADING', value: false });");
+    expect(block).toContain('return;');
+  });
+
+  it('only structural unavailability (403 cohort / 503 unconfigured) releases the turn to legacy', () => {
+    expect(SRC).toContain('res.status === 403 || res.status === 503');
+    expect(SRC).toContain('laneUnavailable = true;');
+    // 403 also stands the client eligibility down so later turns stop attempting.
+    expect(SRC).toContain('if (res.status === 403) laneEligibleRef.current = false;');
+  });
+
+  it('first and repeated turns receive identical authority (no cross-turn attempt memory)', () => {
+    // laneAttempted is per-invocation local state — a failed turn leaves
+    // nothing behind that would route the literal re-ask differently.
+    expect(SRC).toContain('let laneAttempted = false;');
+  });
+
+  it.each([
+    'Which DAC of the three should be best for me if I want the most intimacy and connection?',
+    'What upgrade would give me the most bang for the buck if I want more of the same?',
+    'Can you suggest a component in each category?',
+  ])('founder retest turn is lane-owned: %s', (turn) => {
+    expect(laneFirstAuthority({
+      laneActive: true,
+      laneComponents: ROSTER,
+      hasImages: false,
+      messageSystemComponents: messageComponents(turn),
+    })).toBe(true);
+  });
+});
