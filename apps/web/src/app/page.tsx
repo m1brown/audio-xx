@@ -697,6 +697,11 @@ export default function Home() {
   const laneStateRef = useRef<{
     components: Array<{ displayName: string; role: string }>;
     hypothetical: { candidate: string; incumbent: string } | null;
+    /** Listener-stated observations, verbatim (Migration 1 §3): distance,
+     *  level, room, symptoms, stated preferences. Conservative detection —
+     *  a missed observation still reaches the model through raw history;
+     *  a false add is only a harmless verbatim quote of the listener. */
+    observations: string[];
   } | null>(null);
   /** Founder-cohort eligibility, decided SERVER-side (REASONING_LANE_USERS).
    *  Fetched once; false until the server says otherwise. The build-time
@@ -711,6 +716,21 @@ export default function Home() {
     return () => { cancelled = true; };
   }, []);
   const laneActive = () => REASONING_LANE_ENABLED || laneEligibleRef.current;
+
+  /**
+   * Listener-observation detection (Migration 1 §3). Deliberately
+   * conservative and structural: a first-person, non-question statement
+   * carrying situational/experiential vocabulary (distance, level, room,
+   * symptoms, stated preference). Missed observations still travel to the
+   * model in raw history; matches are stored VERBATIM — no inference, no
+   * durable-preference promotion, no new ontology.
+   */
+  const isListenerObservation = (text: string): boolean => {
+    const t = text.trim();
+    if (!t || t.endsWith('?') || t.length > 300) return false;
+    if (!/\b(?:i|my|our|we)\b/i.test(t)) return false;
+    return /\b(?:sit|sitting|seat|listen|hear|hearing|find|prefer|room|feet|foot|meters?|metres?|level|volume|loud|quiet|softly|bright|harsh|strain|strained|compress\w*|soft|thin|boomy|fatigu\w*|desk|night|apartment)\b/i.test(t);
+  };
 
   /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
   const onboardingContextRef = useRef<{
@@ -1908,6 +1928,16 @@ export default function Home() {
                       : (own || (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n')),
                   };
                 }).filter((t) => t.content.trim().length > 0);
+                // Migration 1 §3: an observation-shaped turn joins the
+                // durable verbatim list BEFORE the call, exactly as the
+                // validated experiment did.
+                if (isListenerObservation(submittedText)
+                  && !laneStateRef.current.observations.includes(submittedText)) {
+                  laneStateRef.current = {
+                    ...laneStateRef.current,
+                    observations: [...laneStateRef.current.observations, submittedText].slice(-12),
+                  };
+                }
                 const res = await fetchWithTimeout('/api/reasoning-lane', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -1916,11 +1946,19 @@ export default function Home() {
                     currentHypothetical: laneStateRef.current.hypothetical,
                     question: submittedText,
                     recentTurns,
+                    userObservations: laneStateRef.current.observations,
                   }),
                 }, 60000);
                 if (res.ok) {
                   const data = await res.json();
-                  if (typeof data?.answer === 'string' && data.answer.trim()) {
+                  /*
+                   * PUBLICATION BOUNDARY (Migration 1 §6): only CHECKED or
+                   * REPAIRED answers display. INCOMPLETE/REJECTED responses
+                   * carry no answer and this branch falls through to the
+                   * existing legacy path — the narrowest safe fallback.
+                   */
+                  const publishable = data?.status === 'CHECKED' || data?.status === 'REPAIRED';
+                  if (publishable && typeof data?.answer === 'string' && data.answer.trim()) {
                     if (data?.contextMeta?.hypothetical !== undefined) {
                       laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
                     }
@@ -3553,6 +3591,7 @@ export default function Home() {
               // The low_confidence union carries no findings; a provisional
               // assessment has no stated substitution to carry either.
               hypothetical: null,
+              observations: [],
             };
             provisionalAdvisory.systemReview = convStateRef.current.facts.lastSystemReview = composeSystemReview({
               components: reviewComponents,
@@ -3931,6 +3970,7 @@ export default function Home() {
           laneStateRef.current = {
             components: chainComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
             hypothetical: assessmentResult.findings?.statedSubstitution ?? null,
+            observations: [],
           };
           void createArtifactSnapshot(canonicalSnap).then((viewToken) => {
             if (viewToken) {

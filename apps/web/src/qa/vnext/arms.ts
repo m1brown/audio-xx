@@ -17,7 +17,10 @@
 import {
   assembleGovernedContext, type ConversationTurn,
 } from '@/lib/reasoning/context-assembly';
-import { serializeGovernedContext, REASONING_RULES } from '@/lib/reasoning/governed-context';
+import {
+  serializeGovernedContext, REASONING_RULES, REASONING_RULES_CORE,
+  QUIET_GOVERNANCE_RULE,
+} from '@/lib/reasoning/governed-context';
 import { validateClaims, type ClaimViolation } from '@/lib/reasoning/claim-validation';
 import type { ExperimentSystem } from './frozen-evidence';
 
@@ -34,19 +37,14 @@ RULES
 export type ValidationStatus = 'CHECKED' | 'REPAIRED' | 'INCOMPLETE';
 
 /**
- * Phase 0.1 — quiet governance is the B DEFAULT (experimentally validated in
- * Phase 0: the round-1 judge repeatedly cited discipline narration as A's
- * edge; one register line flipped NATURALNESS to B). The discipline itself
- * is unchanged — only its visibility.
+ * The two validated rules now LIVE in the lane (`governed-context.ts`) as
+ * production behavior — Migration 1. The arms construct experiment variants
+ * from that single source so a drift between experiment and product is
+ * impossible: B1 = core + quiet governance; B2 = the full production rules.
  */
-export const QUIET_STYLE_RULE = `- STYLE: practice the evidence discipline SILENTLY. Never mention evidence classes, verification, documentation, provenance labels, or what the application holds, unless the listener explicitly asks about sourcing — or a limitation materially affects the judgment, in which case state it in plain adviser language ("I don't know how these behave at volume"), never by naming the discipline. Speak as one adviser who simply knows what he knows.`;
-
-/**
- * Phase 0.1 — B2: bounded model knowledge. The smallest licence that lets
- * the model use its ordinary audio/product knowledge where the package is
- * incomplete, without letting that knowledge masquerade as verified fact.
- */
-export const B2_KNOWLEDGE_RULE = `- MODEL KNOWLEDGE (this refines the "do not invent product facts" rule above): where the supplied evidence is silent or incomplete, you MAY draw on your own general knowledge of audio and of these products to serve the listener — as your own knowledge, never as established fact. Keep four kinds of ground distinct: (1) evidence supplied below, (2) what the listener has stated, (3) application-computed facts, (4) your own knowledge and inference. Kind 4 must never be presented as kinds 1–3. From your own knowledge you may reason, compare, and point at what is worth checking — but you may NOT assert exact numerical specifications, exact load ratings, measurements, exact feature availability on the listener's specific unit, exact-product sonic character as established observation, or attribute any claim to a publication or source. Where such a specific fact would help and the evidence does not hold it, say what is typical and how the listener can confirm it on their own unit ("worth checking whether yours has…"). Never imply the application verified something it did not.`;
+export const QUIET_STYLE_RULE = QUIET_GOVERNANCE_RULE;
+export const B1_RULES = `${REASONING_RULES_CORE}\n${QUIET_GOVERNANCE_RULE}`;
+export const B2_RULES = REASONING_RULES;
 
 export interface TurnResult {
   arm: 'A' | 'B';
@@ -163,11 +161,12 @@ export async function runArmTurn(
     const block = serializeGovernedContext(ctx);
     base.contextChars = block.length;
     base.variant = opts.variant ?? 'B1';
-    // Quiet governance is the Phase-0.1 default; QA_VNEXT_B_STYLE=loud
-    // reproduces the Phase-0 round-1 register for reference runs.
-    const styleRule = process.env.QA_VNEXT_B_STYLE === 'loud' ? '' : `\n${QUIET_STYLE_RULE}`;
-    const knowledgeRule = base.variant === 'B2' ? `\n${B2_KNOWLEDGE_RULE}` : '';
-    systemPrompt = `${REASONING_RULES}${styleRule}${knowledgeRule}\n\n=== APPLICATION CONTEXT FOR THIS TURN ===\n${block}`;
+    // QA_VNEXT_B_STYLE=loud reproduces the Phase-0 round-1 register (core
+    // rules only, no quiet line) for reference runs.
+    const rules = process.env.QA_VNEXT_B_STYLE === 'loud'
+      ? REASONING_RULES_CORE
+      : base.variant === 'B2' ? B2_RULES : B1_RULES;
+    systemPrompt = `${rules}\n\n=== APPLICATION CONTEXT FOR THIS TURN ===\n${block}`;
   }
 
   const messages = [
