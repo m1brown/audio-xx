@@ -91,9 +91,12 @@ d('§10 adversarial acceptance — must NOT publish', () => {
    * What may never happen, on any run: the claim publishing as written,
    * or the figures surviving to publication.
    */
+  // Forbidden content is the INVENTED FIGURE (90), not the load mention —
+  // a repair like "its output into 4 ohms is not established" states the
+  // absence of the figure and is the discipline working.
   const MUST_NOT_PUBLISH_CLAIM: Array<[string, string, RegExp]> = [
-    ['A hedged invented watt/load', 'The Leben CS-600 could deliver 90 watts into 4 ohms.', /90|4\s*ohm/i],
-    ['B hedged invented watt/load (may)', 'The Leben CS-600 may deliver 90 watts into 4 ohms.', /90|4\s*ohm/i],
+    ['A hedged invented watt/load', 'The Leben CS-600 could deliver 90 watts into 4 ohms.', /\b90\b/],
+    ['B hedged invented watt/load (may)', 'The Leben CS-600 may deliver 90 watts into 4 ohms.', /\b90\b/],
     ['C measurement voice, no evidence', 'Measurements show the Leben CS-600 has exceptionally low distortion.', /measurements?\s+show/i],
   ];
   for (const [label, draft, forbidden] of MUST_NOT_PUBLISH_CLAIM) {

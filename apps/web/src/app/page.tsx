@@ -1433,84 +1433,112 @@ export default function Home() {
      * ── B2 lane attempt — FIRST AUTHORITY (Migration 1 P1 repair) ──
      * The founder's post-assessment turn enters the reasoning lane HERE,
      * before glossary, beta intercepts, the pivot guards, the state
-     * machine and every legacy advisory author. The live P1 this fixes:
-     * "which dac of the three should be the best…" matched
-     * detectExplicitCategoryPivot, which reset the assessment state and
-     * handed the turn to the legacy shopping tower (catalog DAC picks,
-     * then a budget-solicitation loop) — the lane, nested inside the
-     * state machine's ready_to_assess branch, never saw the turn.
+     * machine and every legacy advisory author.
      *
-     * On publish (CHECKED/REPAIRED): display verbatim and return —
-     * conversation state is left untouched, so the assessment context
-     * survives the turn. On any decline (miss, INCOMPLETE/REJECTED,
-     * transport failure): fall through to the legacy pipeline exactly as
-     * designed, and never re-attempt the lane this turn.
+     * FALLBACK AUTHORITY INVARIANT (M1 plumbing, 2026-09-16): once the
+     * lane owns a turn, a non-publishable result must NOT hand the SAME
+     * turn to a legacy adviser that interprets it under a different
+     * semantic model. Live P1: a candidate-solicitation turn whose lane
+     * attempt failed fell through to the rules engine, which reinterpreted
+     * it as an "improvement" diagnosis and answered with the Partial
+     * Recognition surface — an unrelated answer to a question the founder
+     * asked B2. Checker/model nondeterminism makes single-attempt failures
+     * transient (the founder's literal re-ask succeeded), so: one bounded
+     * retry, then an explicit safe failure that ends the turn in the
+     * lane's own voice. Only STRUCTURAL unavailability — 403 (not in
+     * cohort) or 503 (lane unconfigured) — releases the turn to legacy,
+     * because there the lane was never this user's adviser at all.
      */
     if (laneFirst && laneStateRef.current) {
       laneAttempted = true;
-      try {
-        // RAW recent turns — same referent substrate as the nested site:
-        // a user turn is its text; an assistant turn is its own content,
-        // else the standing review's opening.
-        const recentTurns = messages.slice(-10).map((m) => {
-          const own = 'content' in m ? String((m as { content?: unknown }).content ?? '') : '';
-          return {
-            role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.role === 'user'
-              ? own
-              : (own || (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n')),
-          };
-        }).filter((t) => t.content.trim().length > 0);
-        // An observation-shaped turn joins the durable verbatim list
-        // BEFORE the call, exactly as the validated experiment did.
-        if (isListenerObservation(submittedText)
-          && !laneStateRef.current.observations.includes(submittedText)) {
-          laneStateRef.current = {
-            ...laneStateRef.current,
-            observations: [...laneStateRef.current.observations, submittedText].slice(-12),
-          };
-        }
-        console.warn('[lane-authority] first-authority turn: comps=%d obs=%d hyp=%s',
-          laneStateRef.current.components.length,
-          laneStateRef.current.observations.length,
-          laneStateRef.current.hypothetical ? 'set' : 'none');
-        const res = await fetchWithTimeout('/api/reasoning-lane', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildLaneRequest(
-            {
-              components: laneStateRef.current.components,
-              source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated',
-              hypothetical: laneStateRef.current.hypothetical,
-              observations: laneStateRef.current.observations,
-            },
-            submittedText,
-            recentTurns,
-          )),
-        }, 60000);
-        if (res.ok) {
-          const data = await res.json();
-          // PUBLICATION BOUNDARY (Migration 1 §6): only CHECKED or
-          // REPAIRED answers display; other statuses carry no answer.
-          const publishable = data?.status === 'CHECKED' || data?.status === 'REPAIRED';
-          if (publishable && typeof data?.answer === 'string' && data.answer.trim()) {
-            if (data?.contextMeta?.hypothetical !== undefined) {
-              laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
-            }
-            // A published lane answer supersedes any legacy ask still
-            // pending — the next turn must not be reunited with it.
-            pendingClarificationRef.current = null;
-            console.warn('[lane-authority] published status=%s', data.status);
-            dispatch({ type: 'ADD_NOTE', content: data.answer });
-            dispatch({ type: 'SET_LOADING', value: false });
-            return;
+      // RAW recent turns — same referent substrate as the nested site:
+      // a user turn is its text; an assistant turn is its own content,
+      // else the standing review's opening.
+      const recentTurns = messages.slice(-10).map((m) => {
+        const own = 'content' in m ? String((m as { content?: unknown }).content ?? '') : '';
+        return {
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.role === 'user'
+            ? own
+            : (own || (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n')),
+        };
+      }).filter((t) => t.content.trim().length > 0);
+      // An observation-shaped turn joins the durable verbatim list
+      // BEFORE the call, exactly as the validated experiment did.
+      if (isListenerObservation(submittedText)
+        && !laneStateRef.current.observations.includes(submittedText)) {
+        laneStateRef.current = {
+          ...laneStateRef.current,
+          observations: [...laneStateRef.current.observations, submittedText].slice(-12),
+        };
+      }
+      console.warn('[lane-authority] first-authority turn: comps=%d obs=%d hyp=%s',
+        laneStateRef.current.components.length,
+        laneStateRef.current.observations.length,
+        laneStateRef.current.hypothetical ? 'set' : 'none');
+      let laneUnavailable = false;
+      for (let laneTry = 0; laneTry < 2 && !laneUnavailable; laneTry++) {
+        try {
+          const res = await fetchWithTimeout('/api/reasoning-lane', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildLaneRequest(
+              {
+                components: laneStateRef.current.components,
+                source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated',
+                hypothetical: laneStateRef.current.hypothetical,
+                observations: laneStateRef.current.observations,
+              },
+              submittedText,
+              recentTurns,
+            )),
+          }, 60000);
+          if (res.status === 403 || res.status === 503) {
+            // Structural: this user has no lane (cohort) or the deployment
+            // has none (unconfigured). Legacy is their real adviser.
+            if (res.status === 403) laneEligibleRef.current = false;
+            laneUnavailable = true;
+            console.warn('[lane-authority] lane unavailable (http=%d) — legacy fallthrough', res.status);
+            break;
           }
-          console.warn('[lane-authority] fallback → legacy (status=%s)', data?.status ?? 'none');
-        } else {
-          console.warn('[lane-authority] fallback → legacy (http=%d)', res.status);
+          if (res.ok) {
+            const data = await res.json();
+            // PUBLICATION BOUNDARY (Migration 1 §6): only CHECKED or
+            // REPAIRED answers display; other statuses carry no answer.
+            const publishable = data?.status === 'CHECKED' || data?.status === 'REPAIRED';
+            if (publishable && typeof data?.answer === 'string' && data.answer.trim()) {
+              if (data?.contextMeta?.hypothetical !== undefined) {
+                laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
+              }
+              // A published lane answer supersedes any legacy ask still
+              // pending — the next turn must not be reunited with it.
+              pendingClarificationRef.current = null;
+              console.warn('[lane-authority] published status=%s try=%d', data.status, laneTry);
+              dispatch({ type: 'ADD_NOTE', content: data.answer });
+              dispatch({ type: 'SET_LOADING', value: false });
+              return;
+            }
+            console.warn('[lane-authority] non-publishable (status=%s try=%d)', data?.status ?? 'none', laneTry);
+          } else {
+            console.warn('[lane-authority] upstream failure (http=%d try=%d)', res.status, laneTry);
+          }
+        } catch {
+          console.warn('[lane-authority] transport failure (try=%d)', laneTry);
         }
-      } catch {
-        console.warn('[lane-authority] fallback → legacy (transport)');
+      }
+      if (!laneUnavailable) {
+        // Both attempts failed. The lane still owns the turn: end it with
+        // an honest safe failure in plain adviser voice — never let a
+        // legacy adviser reinterpret the question under different
+        // semantics. The listener's natural re-ask gets a fresh attempt.
+        console.warn('[lane-authority] safe failure — turn retained, legacy suppressed');
+        dispatch({
+          type: 'ADD_NOTE',
+          content: 'I could not put together an answer I am confident in just now. '
+            + 'Ask me that once more — or narrow it slightly — and I will take another run at it.',
+        });
+        dispatch({ type: 'SET_LOADING', value: false });
+        return;
       }
     }
 
@@ -1701,6 +1729,9 @@ export default function Home() {
         subjectCount: earlyTurnCtx.subjectMatches.length,
         detectedIntent: earlyIntent,
         injectedSystemText,
+        // New-system isolation (M1 plumbing): an explicit complete system
+        // statement replaces the assessment accumulation in the machine.
+        statesNewSystem: !!userStatedSystemWarm,
       });
       convStateRef.current = convResult.state;
 
@@ -1751,6 +1782,7 @@ export default function Home() {
               subjectCount: earlyTurnCtx.subjectMatches.length,
               detectedIntent: earlyIntent,
               injectedSystemText,
+              statesNewSystem: !!userStatedSystemWarm,
             });
             convStateRef.current = rerun.state;
             convResult = rerun;

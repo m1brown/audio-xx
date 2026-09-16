@@ -735,6 +735,19 @@ export function transition(
      * instead of asking the user to list components.
      */
     injectedSystemText?: string;
+    /**
+     * M1 plumbing (2026-09-16): THIS turn explicitly states a complete
+     * system (message-level proposedSystem, ≥2 components, not a
+     * restatement of the saved system — the caller computes it from
+     * turn context). An explicit complete statement creates a
+     * CONVERSATION-LOCAL system: the assessment accumulation RESETS to
+     * this turn instead of appending, so components from the previous
+     * roster can never merge into the new one. (Live P1: with France II
+     * accumulated, "Assess this system: dCS Rossini Apex, ARC Ref 5,
+     * Butler Monads, Acora QRC-2" inherited Chord Hugo from the earlier
+     * text and asked a false duplicate-DAC clarification.)
+     */
+    statesNewSystem?: boolean;
   },
 ): ConvTransition {
   // ── Intent-change detection ────────────────────────────
@@ -1521,14 +1534,21 @@ export function transition(
 
       // ── Assembling system: user is adding components turn by turn ──
       if (current.stage === 'assembling_system') {
-        // Accumulate new component text
-        const priorComponents = facts.systemComponents ?? [];
-        facts.systemComponents = [...priorComponents, text];
-        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
-        // not a turn boundary — one turn contains several — so the parser could not
-        // tell where a turn ended and ran a component name into the next turn's
-        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
+        if (context.statesNewSystem) {
+          // Explicit complete system statement — conversation-local roster
+          // replaces the accumulation; nothing from before may merge in.
+          facts.systemComponents = [text];
+          facts.systemAssessmentText = text;
+        } else {
+          // Accumulate new component text
+          const priorComponents = facts.systemComponents ?? [];
+          facts.systemComponents = [...priorComponents, text];
+          // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+          // not a turn boundary — one turn contains several — so the parser could not
+          // tell where a turn ended and ran a component name into the next turn's
+          // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+          facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
+        }
         facts.hasSystem = true;
 
         // Check if user explicitly asked for evaluation now
@@ -1651,14 +1671,23 @@ export function transition(
         }
 
         // User is adding/clarifying components after assessment already ran.
-        // Accumulate and re-assess.
-        const priorComponents = facts.systemComponents ?? [];
-        facts.systemComponents = [...priorComponents, text];
-        // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
-        // not a turn boundary — one turn contains several — so the parser could not
-        // tell where a turn ended and ran a component name into the next turn's
-        // opening prose. See TURN_SEPARATOR in labelled-components.ts.
-        facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
+        // Accumulate and re-assess — UNLESS this turn explicitly states a
+        // complete NEW system, which replaces the accumulation outright
+        // (new-system isolation invariant, M1 plumbing 2026-09-16): the
+        // conversation-local roster is exactly what this turn states, and
+        // the previously assessed components must not merge into it.
+        if (context.statesNewSystem) {
+          facts.systemComponents = [text];
+          facts.systemAssessmentText = text;
+        } else {
+          const priorComponents = facts.systemComponents ?? [];
+          facts.systemComponents = [...priorComponents, text];
+          // Turns are joined with a STRUCTURAL separator, not a newline. A newline is
+          // not a turn boundary — one turn contains several — so the parser could not
+          // tell where a turn ended and ran a component name into the next turn's
+          // opening prose. See TURN_SEPARATOR in labelled-components.ts.
+          facts.systemAssessmentText = (facts.systemAssessmentText ? facts.systemAssessmentText + TURN_SEPARATOR : '') + text;
+        }
 
         // Check for explicit mode changes.
         //
