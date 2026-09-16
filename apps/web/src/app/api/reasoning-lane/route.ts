@@ -16,6 +16,7 @@ import { getSession } from '@/lib/session';
 import { assembleGovernedContext, type ConversationTurn } from '@/lib/reasoning/context-assembly';
 import { serializeGovernedContext, REASONING_RULES } from '@/lib/reasoning/governed-context';
 import { validateClaims, computeValidationStatus } from '@/lib/reasoning/claim-validation';
+import { deterministicTrustCheck } from '@/lib/reasoning/deterministic-trust';
 
 const TIMEOUT_MS = 30000;
 const MAX_TURNS = 12;
@@ -142,21 +143,46 @@ export async function POST(req: NextRequest) {
      * for every other non-answer — takes the turn. No unchecked draft
      * reaches a listener as though it had passed.
      */
-    const status = computeValidationStatus(validated);
-    // Observability (§10): one structured line per turn, no content.
-    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d totalMs=%d model=%s comps=%d hyp=%s',
-      status, validated.violations.length, validated.repaired, Date.now() - t0,
-      getModel(), components.length, ctx.currentHypothetical ? 'set' : 'none');
+    let status = computeValidationStatus(validated);
+    /*
+     * DETERMINISTIC TRUST GATE (M1 quality correction, 2026-09-16).
+     * Externally verifiable exact claims — figures, watt/load pairings,
+     * evidence-voiced statements — are enforced on the FINAL candidate
+     * text, independent of prose style and independent of the semantic
+     * checker (which adversarial probes showed passing a hedged invented
+     * watt-load and a measurement-voice claim). A violation here is not
+     * advisory: the answer does not publish while one stands.
+     */
+    const det = deterministicTrustCheck(
+      validated.answer,
+      serialized,
+      [...recentTurns.map((t) => t.content), question].join('\n'),
+    );
+    if ((status === 'CHECKED' || status === 'REPAIRED') && !det.clean) status = 'REJECTED';
+    const deletionRequired = validated.violations.some((v) => v.rewrite === null);
+    // Observability (§14): one structured line per turn, no content.
+    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d delReq=%s det=%s(w=%d,f=%d,v=%d) pub=%s totalMs=%d model=%s comps=%d cand=%d hyp=%s',
+      status, validated.violations.length, validated.repaired, deletionRequired,
+      det.clean ? 'clean' : 'viol', det.unlicensedWattLoad.length, det.strayFigures.length, det.unlicensedEvidenceVoice.length,
+      status === 'CHECKED' || status === 'REPAIRED',
+      Date.now() - t0, getModel(), components.length, ctx.candidates.length,
+      ctx.currentHypothetical ? 'set' : 'none');
     if (status === 'INCOMPLETE' || status === 'REJECTED') {
       return NextResponse.json({
         status,
-        error: 'validation did not pass',
+        error: det.clean ? 'validation did not pass' : 'deterministic trust violation',
         validation: {
           violations: validated.violations.map((v) => ({
             type: v.type, sentence: v.sentence.slice(0, 300),
           })),
           repaired: validated.repaired,
           unchecked: validated.unchecked,
+          deletionRequired,
+        },
+        deterministic: {
+          unlicensedWattLoad: det.unlicensedWattLoad.slice(0, 6),
+          strayFigures: det.strayFigures.slice(0, 12),
+          unlicensedEvidenceVoice: det.unlicensedEvidenceVoice.slice(0, 6),
         },
       });
     }
@@ -180,6 +206,7 @@ export async function POST(req: NextRequest) {
         repaired: validated.repaired,
         unchecked: validated.unchecked,
       },
+      deterministic: { clean: true },
       // Trace for QA and the validator: what the model was allowed to know.
       contextMeta: {
         candidates: ctx.candidates.map((c) => ({ name: c.displayName, identity: c.identity, items: c.items.length })),

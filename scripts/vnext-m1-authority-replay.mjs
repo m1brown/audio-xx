@@ -35,7 +35,15 @@ const TURNS = [
   'which do you suggest of the three?',
   'so not the internal dac in the job integrated?',
   'the job integrated includes an internal dac',
+  // M1 quality correction — the candidate-solicitation turns that produced
+  // the blank recommendations. Properties asserted, never prose.
+  'what about an upgrade - would be the most bang for the buck upgrade if i want more of the same?',
+  'can you suggest a component in each category?',
+  'can i see the actual components? for example, amplifier: kinki dazzle, leben cs-600, etc',
 ];
+
+/** Blank-item artifacts that must never render (deletion-repair holes). */
+const HOLE_RE = /:\s*-\s*$|:\s*-\s+It\b|^\s*\d+\.\s+It\s+could\b/m;
 
 /** Legacy-surface markers that must NOT render on a lane-owned turn. */
 const LEGACY_MARKERS = [
@@ -168,6 +176,14 @@ for (let i = 0; i < TURNS.length; i++) {
   const hit = LEGACY_MARKERS.find((m) => region.includes(m));
   if (hit) fail(`legacy surface rendered on a lane turn: "${hit}"`);
   else ok('no legacy shopping/budget surface rendered');
+
+  if (HOLE_RE.test(region)) fail('deletion-repair hole rendered (blank item / orphaned pronoun)');
+  else ok('no blank-item/orphan artifacts');
+
+  // The listener-named products are legitimate referents: when the turn
+  // names them, the published answer must not have lost them.
+  if (/leben/i.test(q) && !/leben/i.test(region)) fail('listener-named product (Leben) lost from the answer');
+  else if (/leben/i.test(q)) ok('listener-named products survive publication');
 
   if (region.trim().length < 40) fail('displayed answer suspiciously short');
 }

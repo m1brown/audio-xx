@@ -76,7 +76,7 @@ import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '@/lib/assessment-followup';
 import { REASONING_LANE_ENABLED } from '@/lib/feature-flags';
-import { laneFirstAuthority, buildLaneRequest } from '@/lib/reasoning/lane-authority';
+import { laneFirstAuthority, buildLaneRequest, statesNewSystem } from '@/lib/reasoning/lane-authority';
 import { detectSystemDescription } from '@/lib/system-extraction';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
@@ -1200,13 +1200,26 @@ export default function Home() {
      * exception: a turn stating a genuinely NEW system re-enters the
      * assessment pipeline that (re)arms the lane. See lane-authority.ts.
      */
+    const laneMessageComponents = detectSystemDescription(
+      inputText, extractSubjectMatches(inputText), audioState,
+    )?.components ?? [];
+    const laneRoster = laneStateRef.current?.components ?? [];
+    /*
+     * A turn that states a genuinely NEW system is declined by lane
+     * authority — and the SAME decision must bind every later lane site
+     * this turn (M1 quality correction, independent-review P1: the nested
+     * ready_to_assess site previously took such a turn and called B2 with
+     * the OLD roster as ACTIVE SYSTEM, never re-arming). The legacy
+     * assessment pipeline owns the turn and re-arms the lane with the new
+     * roster when the assessment composes.
+     */
+    const turnStatesNewSystem = laneRoster.length >= 2
+      && statesNewSystem(laneMessageComponents, laneRoster);
     const laneFirst = laneFirstAuthority({
       laneActive: laneActive(),
-      laneComponents: laneStateRef.current?.components ?? [],
+      laneComponents: laneRoster,
       hasImages: hasPendingImagesForTurn,
-      messageSystemComponents: detectSystemDescription(
-        inputText, extractSubjectMatches(inputText), audioState,
-      )?.components ?? [],
+      messageSystemComponents: laneMessageComponents,
     });
     let laneAttempted = false;
 
@@ -2026,12 +2039,13 @@ export default function Home() {
              * to the deterministic path below.
              */
             /* Migration 1 P1 repair: the first-authority block above now
-             * owns founder turns; this nested site remains for the
-             * residual ready_to_assess paths that the early predicate
-             * excludes (e.g. a turn stating a new system that transition()
-             * kept in the assessment). `!laneAttempted` prevents a second
-             * model call after an early decline. */
-            if (!laneAttempted && laneActive() && laneStateRef.current
+             * owns founder turns; `!laneAttempted` prevents a second model
+             * call after an early decline. `!turnStatesNewSystem` binds the
+             * early authority decision to this site too (M1 quality
+             * correction): a turn stating a genuinely new system must never
+             * reach ANY lane site with the old roster — it proceeds through
+             * the assessment path below, which re-arms the lane. */
+            if (!laneAttempted && !turnStatesNewSystem && laneActive() && laneStateRef.current
               && laneStateRef.current.components.length >= 2) {
               laneAttempted = true;
               try {

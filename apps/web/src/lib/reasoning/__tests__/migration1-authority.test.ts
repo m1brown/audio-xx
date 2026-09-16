@@ -190,11 +190,24 @@ describe('production-path ordering — the real handleSubmit source', () => {
   });
 
   it('a declined turn is never re-attempted at the nested site', () => {
-    expect(SRC).toContain('if (!laneAttempted && laneActive() && laneStateRef.current');
+    expect(SRC).toContain('if (!laneAttempted && !turnStatesNewSystem && laneActive() && laneStateRef.current');
+  });
+
+  it('a new-system statement is barred from EVERY lane site by the same decision', () => {
+    // Independent-review P1: "Assess this system: dCS Rossini Apex, ARC
+    // ref 5, Butler Monads, Acora QRC-2" was declined by the early block
+    // but reached the nested ready_to_assess site with the OLD roster as
+    // ACTIVE SYSTEM. The one authority decision now binds both sites.
+    expect(SRC).toContain('const turnStatesNewSystem = laneRoster.length >= 2');
+    expect(SRC).toContain('&& statesNewSystem(laneMessageComponents, laneRoster)');
+    const decision = SRC.indexOf('const turnStatesNewSystem');
+    const nested = SRC.indexOf('!laneAttempted && !turnStatesNewSystem');
+    expect(decision).toBeGreaterThan(-1);
+    expect(nested).toBeGreaterThan(decision);
   });
 
   it('the authority decision uses the pure, tested predicate', () => {
     expect(SRC).toContain('const laneFirst = laneFirstAuthority({');
-    expect(SRC).toContain('messageSystemComponents: detectSystemDescription(');
+    expect(SRC).toContain('const laneMessageComponents = detectSystemDescription(');
   });
 });

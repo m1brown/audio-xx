@@ -77,6 +77,25 @@ describe('§6 — publication status', () => {
     })).toBe('REJECTED');
   });
 
+  it('DELETION IS NOT A REPAIR: rewrite-null finding with the sentence removed → REJECTED', () => {
+    // The live blank-recommendation failure: the sentence was deleted, the
+    // amputated answer counted as REPAIRED, and the listener saw
+    // "Amplifier: —". A deletion-required finding never publishes.
+    expect(computeValidationStatus({
+      answer: 'Category list with a hole where the product name was.',
+      violations: [v({ rewrite: null, sentence: 'Consider the Hegel H190.' })],
+      repaired: 1, unchecked: false,
+    })).toBe('REJECTED');
+  });
+
+  it('mixed findings: one rewrite applied + one deletion-required → still REJECTED', () => {
+    expect(computeValidationStatus({
+      answer: 'Weakened text without either offending sentence.',
+      violations: [v({}), v({ rewrite: null, sentence: 'The Y is measured to be warm.' })],
+      repaired: 2, unchecked: false,
+    })).toBe('REJECTED');
+  });
+
   it('a non-consequential violation left unrepaired → INCOMPLETE (not publishable)', () => {
     expect(computeValidationStatus({
       answer: 'The X sounds warm.',
