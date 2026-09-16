@@ -76,6 +76,8 @@ import type { ConversationMode } from '@/lib/conversation-router';
 import { buildConsultationResponse, buildComparisonRefinement, buildContextRefinement, classifySubjectAsContext, buildConsultationFollowUp, buildSystemAssessment, buildConsultationEntry, buildCableAdvisory, buildSystemDiagnosis } from '@/lib/consultation';
 import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '@/lib/assessment-followup';
 import { REASONING_LANE_ENABLED } from '@/lib/feature-flags';
+import { laneFirstAuthority, buildLaneRequest } from '@/lib/reasoning/lane-authority';
+import { detectSystemDescription } from '@/lib/system-extraction';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
 import { ASSESSMENT_ARTIFACT_V2_ENABLED } from '@/lib/feature-flags';
@@ -1186,6 +1188,28 @@ export default function Home() {
     let submittedText = inputText;
     const isFollowUp = options?.source === 'follow-up';
 
+    /*
+     * ── Founder lane authority (Migration 1 P1 repair, 2026-09-16) ──
+     * Decided FIRST, from the raw turn, before any legacy semantic step
+     * can consume or mutate it. When true, this turn belongs to the B2
+     * reasoning lane: the pending-clarification reunite, the review-
+     * anchored net, A3, glossary, beta intercepts, the pivot guards and
+     * the state machine are all bypassed — the model resolves referents
+     * and intent over the raw conversation. Legacy runs only if the lane
+     * declines. The message-level system parse is the one non-semantic
+     * exception: a turn stating a genuinely NEW system re-enters the
+     * assessment pipeline that (re)arms the lane. See lane-authority.ts.
+     */
+    const laneFirst = laneFirstAuthority({
+      laneActive: laneActive(),
+      laneComponents: laneStateRef.current?.components ?? [],
+      hasImages: hasPendingImagesForTurn,
+      messageSystemComponents: detectSystemDescription(
+        inputText, extractSubjectMatches(inputText), audioState,
+      )?.components ?? [],
+    });
+    let laneAttempted = false;
+
     // ── Consume pending clarification ─────────────────────────────
     // If the previous assistant turn asked for specific information, this
     // turn answers it. Reunite the answer with the original request so the
@@ -1193,7 +1217,12 @@ export default function Home() {
     // Guard: if the user ignored the question and pivoted to a standalone
     // request (shopping, comparison, an assessment of something else…),
     // honour the pivot — reuniting would contaminate it with the stale ask.
-    if (pendingClarificationRef.current && !hasPendingImagesForTurn) {
+    // Lane-owned turns are never reunited: B2 reads the raw turn against
+    // the raw history — prepending a stale legacy ask would contaminate
+    // exactly the semantic interpretation the lane owns. (The live budget
+    // loop was this: a legacy budget question left pending, then every
+    // founder reply re-entered shopping intake as a "budget answer".)
+    if (pendingClarificationRef.current && !hasPendingImagesForTurn && !laneFirst) {
       const pending = pendingClarificationRef.current;
       pendingClarificationRef.current = null;
       const STANDALONE_PIVOT_INTENTS = new Set([
@@ -1246,9 +1275,9 @@ export default function Home() {
       // evidence WITH reasoning, instead of quoting paragraphs (preview
       // battery: the net intercepted "Should I replace the Rossini…" before
       // the lane could reason about it).
-      const laneWillOwnTurn = laneActive()
+      const laneWillOwnTurn = laneFirst || (laneActive()
         && convStateRef.current.mode === 'system_assessment'
-        && (laneStateRef.current?.components.length ?? 0) >= 2;
+        && (laneStateRef.current?.components.length ?? 0) >= 2);
       if (!laneWillOwnTurn && standingReviewEarly.length > 0 && isReviewDirectedFollowUp(submittedText)) {
         const anchoredEarly = composeReviewAnchoredAnswer(submittedText, standingReviewEarly);
         if (anchoredEarly) {
@@ -1261,7 +1290,7 @@ export default function Home() {
       }
     }
 
-    if (a3Enabled() && !hasPendingImagesForTurn && a3IsAdvisoryQuestion(submittedText)) {
+    if (a3Enabled() && !laneFirst && !hasPendingImagesForTurn && a3IsAdvisoryQuestion(submittedText)) {
       const a3Ctx = buildTurnContext(
         submittedText,
         audioState,
@@ -1387,6 +1416,91 @@ export default function Home() {
       dispatch({ type: 'UPDATE_LISTENER_PROFILE', signals: turnPreferenceSignals });
     }
 
+    /*
+     * ── B2 lane attempt — FIRST AUTHORITY (Migration 1 P1 repair) ──
+     * The founder's post-assessment turn enters the reasoning lane HERE,
+     * before glossary, beta intercepts, the pivot guards, the state
+     * machine and every legacy advisory author. The live P1 this fixes:
+     * "which dac of the three should be the best…" matched
+     * detectExplicitCategoryPivot, which reset the assessment state and
+     * handed the turn to the legacy shopping tower (catalog DAC picks,
+     * then a budget-solicitation loop) — the lane, nested inside the
+     * state machine's ready_to_assess branch, never saw the turn.
+     *
+     * On publish (CHECKED/REPAIRED): display verbatim and return —
+     * conversation state is left untouched, so the assessment context
+     * survives the turn. On any decline (miss, INCOMPLETE/REJECTED,
+     * transport failure): fall through to the legacy pipeline exactly as
+     * designed, and never re-attempt the lane this turn.
+     */
+    if (laneFirst && laneStateRef.current) {
+      laneAttempted = true;
+      try {
+        // RAW recent turns — same referent substrate as the nested site:
+        // a user turn is its text; an assistant turn is its own content,
+        // else the standing review's opening.
+        const recentTurns = messages.slice(-10).map((m) => {
+          const own = 'content' in m ? String((m as { content?: unknown }).content ?? '') : '';
+          return {
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.role === 'user'
+              ? own
+              : (own || (convStateRef.current.facts.lastSystemReview ?? []).slice(0, 2).join('\n')),
+          };
+        }).filter((t) => t.content.trim().length > 0);
+        // An observation-shaped turn joins the durable verbatim list
+        // BEFORE the call, exactly as the validated experiment did.
+        if (isListenerObservation(submittedText)
+          && !laneStateRef.current.observations.includes(submittedText)) {
+          laneStateRef.current = {
+            ...laneStateRef.current,
+            observations: [...laneStateRef.current.observations, submittedText].slice(-12),
+          };
+        }
+        console.warn('[lane-authority] first-authority turn: comps=%d obs=%d hyp=%s',
+          laneStateRef.current.components.length,
+          laneStateRef.current.observations.length,
+          laneStateRef.current.hypothetical ? 'set' : 'none');
+        const res = await fetchWithTimeout('/api/reasoning-lane', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildLaneRequest(
+            {
+              components: laneStateRef.current.components,
+              source: audioState.activeSystemRef?.kind === 'saved' ? 'saved' : 'stated',
+              hypothetical: laneStateRef.current.hypothetical,
+              observations: laneStateRef.current.observations,
+            },
+            submittedText,
+            recentTurns,
+          )),
+        }, 60000);
+        if (res.ok) {
+          const data = await res.json();
+          // PUBLICATION BOUNDARY (Migration 1 §6): only CHECKED or
+          // REPAIRED answers display; other statuses carry no answer.
+          const publishable = data?.status === 'CHECKED' || data?.status === 'REPAIRED';
+          if (publishable && typeof data?.answer === 'string' && data.answer.trim()) {
+            if (data?.contextMeta?.hypothetical !== undefined) {
+              laneStateRef.current = { ...laneStateRef.current, hypothetical: data.contextMeta.hypothetical };
+            }
+            // A published lane answer supersedes any legacy ask still
+            // pending — the next turn must not be reunited with it.
+            pendingClarificationRef.current = null;
+            console.warn('[lane-authority] published status=%s', data.status);
+            dispatch({ type: 'ADD_NOTE', content: data.answer });
+            dispatch({ type: 'SET_LOADING', value: false });
+            return;
+          }
+          console.warn('[lane-authority] fallback → legacy (status=%s)', data?.status ?? 'none');
+        } else {
+          console.warn('[lane-authority] fallback → legacy (http=%d)', res.status);
+        }
+      } catch {
+        console.warn('[lane-authority] fallback → legacy (transport)');
+      }
+    }
+
     // Check for glossary questions first — no API call needed.
     // Skip when the submission originated from a clicked follow-up CTA:
     // advisor-emitted follow-ups are conversational, not definitional, so
@@ -1490,7 +1604,10 @@ export default function Home() {
       // so the message reaches the standard pipeline instead of being
       // absorbed as continuation context.
       if (detectExplicitCategoryPivot(submittedText)) {
-        console.log('[pivot-reset] resetting convState to idle for explicit category pivot');
+        // console.warn so the intercept is visible in the production
+        // bundle — this guard consumed the founder's post-assessment
+        // turns (Migration 1 P1) and its firing must be observable.
+        console.warn('[pivot-reset] resetting convState to idle for explicit category pivot');
         convStateRef.current = INITIAL_CONV_STATE;
       }
     }
@@ -1908,8 +2025,15 @@ export default function Home() {
              * Wave-2 behavior is byte-identical. Any failure falls through
              * to the deterministic path below.
              */
-            if (laneActive() && laneStateRef.current
+            /* Migration 1 P1 repair: the first-authority block above now
+             * owns founder turns; this nested site remains for the
+             * residual ready_to_assess paths that the early predicate
+             * excludes (e.g. a turn stating a new system that transition()
+             * kept in the assessment). `!laneAttempted` prevents a second
+             * model call after an early decline. */
+            if (!laneAttempted && laneActive() && laneStateRef.current
               && laneStateRef.current.components.length >= 2) {
+              laneAttempted = true;
               try {
                 /*
                  * RAW recent turns — the referent substrate. A user turn is
