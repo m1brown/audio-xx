@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { assembleGovernedContext, type ConversationTurn } from '@/lib/reasoning/context-assembly';
 import { serializeGovernedContext, REASONING_RULES } from '@/lib/reasoning/governed-context';
-import { validateClaims } from '@/lib/reasoning/claim-validation';
+import { validateClaims, computeValidationStatus } from '@/lib/reasoning/claim-validation';
 
 const TIMEOUT_MS = 30000;
 const MAX_TURNS = 12;
@@ -134,7 +134,34 @@ export async function POST(req: NextRequest) {
     });
 
     const tValidator = Date.now() - t0 - tAssembly - tPrimary;
+    /*
+     * PUBLICATION BOUNDARY (Migration 1, §6). Only CHECKED and REPAIRED
+     * answers publish. INCOMPLETE (assurance unknown) and REJECTED
+     * (consequential violation survived) return status WITHOUT an answer,
+     * and the caller's existing legacy fallback — already the failure path
+     * for every other non-answer — takes the turn. No unchecked draft
+     * reaches a listener as though it had passed.
+     */
+    const status = computeValidationStatus(validated);
+    // Observability (§10): one structured line per turn, no content.
+    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d totalMs=%d model=%s comps=%d hyp=%s',
+      status, validated.violations.length, validated.repaired, Date.now() - t0,
+      getModel(), components.length, ctx.currentHypothetical ? 'set' : 'none');
+    if (status === 'INCOMPLETE' || status === 'REJECTED') {
+      return NextResponse.json({
+        status,
+        error: 'validation did not pass',
+        validation: {
+          violations: validated.violations.map((v) => ({
+            type: v.type, sentence: v.sentence.slice(0, 300),
+          })),
+          repaired: validated.repaired,
+          unchecked: validated.unchecked,
+        },
+      });
+    }
     return NextResponse.json({
+      status,
       answer: validated.answer,
       timing: {
         assemblyMs: tAssembly,

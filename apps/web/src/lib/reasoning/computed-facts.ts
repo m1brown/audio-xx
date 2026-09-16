@@ -93,8 +93,18 @@ export async function buildComputedFacts(input: ComputedFactsInput): Promise<Com
   }
 
   // 2. Hypothetical power delta at the loudspeaker's stated load.
+  //
+  // Amplifier-position substitutions only (vNext audit finding, 2026-09-15):
+  // the slot itself is role-agnostic, and computing a "power delta" for a
+  // DAC or speaker substitution would manufacture an irrelevant arithmetic
+  // fact. When the displaced incumbent is not in an amplification role, no
+  // power fact is computed.
   const hyp = input.hypothetical;
-  if (hyp) {
+  const hypIncumbent = hyp
+    ? input.components.find((c) => c.displayName === hyp.incumbent) : undefined;
+  const hypIsAmplification = !hypIncumbent
+    || /amp|receiver|integrated/i.test(hypIncumbent.role);
+  if (hyp && hypIsAmplification) {
     const speaker = input.components.find((c) => /speaker/i.test(c.role));
     const load = speakerLoad(speaker ? views.get(speaker.displayName) : undefined);
     const candView = await viewFor(hyp.candidate, 'amplifier', now);

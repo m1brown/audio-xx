@@ -136,6 +136,42 @@ function numberSet(text: string): Set<string> {
   return new Set((text.match(/\d[\d,.]*/g) ?? []).map((n) => n.replace(/[,.]+$/, '')));
 }
 
+/**
+ * Publication status — Migration 1 (§6): validation must be REAL. A failed
+ * or incomplete check may not silently count as passed.
+ *
+ *   CHECKED    ran clean — publish.
+ *   REPAIRED   violations found, every one repaired (weakening-only) —
+ *              publish the repaired text.
+ *   REJECTED   a violation of a consequential class (mutated figure,
+ *              strengthened provenance, invented attribution) or an
+ *              unrepairable sentence survived in the text — do not publish.
+ *   INCOMPLETE the checker itself failed or a non-consequential violation
+ *              remained unrepaired — assurance unknown; do not publish.
+ *
+ * Non-publishable outcomes fall back to the existing legacy path at the
+ * caller — the narrowest safe fallback that already exists.
+ */
+export type PublicationStatus = 'CHECKED' | 'REPAIRED' | 'INCOMPLETE' | 'REJECTED';
+
+const CONSEQUENTIAL: ReadonlySet<ClaimViolation['type']> = new Set([
+  'mutated_spec', 'provenance_strengthened', 'unsupported_attribution',
+]);
+
+export function computeValidationStatus(v: ValidationResult): PublicationStatus {
+  if (v.unchecked) return 'INCOMPLETE';
+  if (v.violations.length === 0) return 'CHECKED';
+  const stripEm = (x: string) => x.replace(/\*\*/g, '');
+  const answerStripped = stripEm(v.answer);
+  const unrepaired = v.violations.filter((x) =>
+    v.answer.includes(x.sentence) || answerStripped.includes(stripEm(x.sentence)));
+  if (unrepaired.length === 0) return 'REPAIRED';
+  if (unrepaired.some((x) => CONSEQUENTIAL.has(x.type) || x.rewrite === null)) {
+    return 'REJECTED';
+  }
+  return 'INCOMPLETE';
+}
+
 export async function validateClaims(input: ValidationInput): Promise<ValidationResult> {
   const { answer, contextBlock } = input;
   const timeoutMs = input.timeoutMs ?? 20000;
