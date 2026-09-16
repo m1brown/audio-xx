@@ -55,21 +55,24 @@ export interface ValidationResult {
   unchecked: boolean;
 }
 
-const VALIDATOR_CONTRACT = `You are an evidence-licensing checker for an audio advisor. You are NOT an advisor: never judge whether advice is good, never change recommendations, structure, or reasoning.
+const VALIDATOR_CONTRACT = `You are an evidence-licensing checker for an audio advisor. The advisor holds a BOUNDED-KNOWLEDGE LICENCE: where the supplied evidence is silent, it may draw on ordinary knowledge of audio and of products IN ITS OWN ADVISER VOICE — to compare, suggest audition candidates, describe reputation and typical character, and form bounded hypotheses. That is licensed and is NOT a violation. You are NOT an advisor: never judge whether advice is good, never change recommendation strength, structure, or reasoning, and never delete a suggestion the licence permits.
 
-Given the LICENSED EVIDENCE PACKAGE and a DRAFT ANSWER, list every sentence in the draft that makes an externally checkable, product-specific claim WITHOUT a sufficient licensed basis. Exactly these violation types:
+Given the LICENSED EVIDENCE PACKAGE and a DRAFT ANSWER, list every sentence whose EPISTEMIC STATUS exceeds its basis — the boundary is what the sentence claims as its basis (its voice), never its hedge words. Exactly these violation types:
 
-- unsupported_character: sonic/character description attributed to a NAMED product with no matching evidence item. (Class-level reasoning — "tube designs typically…", "if it follows this trend…" — is legitimate inference, not a violation.)
+- unsupported_character: a NAMED product's sonic character or behaviour presented AS ESTABLISHED OR VERIFIED FACT (evidence voice: "is confirmed to", "is measured as", "is documented", "reviewers found") with no matching evidence item. Adviser-owned character in the adviser's own voice — reputation, expectation, comparison, hypothesis ("is often associated with", "has a reputation for", "I'd expect", "may suit you if") — is LICENSED even with no evidence item, provided it carries no exact figures, no measurement claims, and no maker/reviewer/publication attribution. (Class-level reasoning — "tube designs typically…" — is always legitimate.)
 - condition_dropped: an evidence item carries a condition or a relative frame ("under these tubes", "versus its predecessor", "at a show, in an unfamiliar room") and the draft restates the claim without it as plain product character.
-- mutated_spec: a figure in the draft differs from the evidence it echoes.
+- mutated_spec: an exact figure, specification, or load pairing in the draft that differs from — or has no source in — the licensed package, the listener's own statements, or application-computed facts. A hedge ("could", "may", "about") does NOT license a figure.
 - provenance_strengthened: reported/maker-claim/family evidence restated as established/independent/exact.
-- unsupported_attribution: the draft attributes a claim to a publication or source the package does not show.
+- unsupported_attribution: the draft voices a claim as coming from measurements, tests, reviewers, a publication, or the maker, when the package shows no such source.
 
-For each violation output a JSON object {"type", "sentence", "rewrite"}. The rewrite must be the SAME sentence weakened just enough to be licensed — attach the condition, restore the relative frame, hedge to class-level, or state that the application holds nothing — and must never add facts, figures, or strength. Use rewrite null only when no weakening can save the sentence (it should be removed).
+LISTENER-NAMED PRODUCTS: a product the listener themselves named is a legitimate referent — its appearance in the draft is never itself a violation; claims about it follow the same rules above.
+
+For each violation output a JSON object {"type", "sentence", "rewrite"}. The rewrite must be the SAME sentence weakened just enough to be licensed — re-voice established-fact claims as adviser knowledge, attach the condition, restore the relative frame, or strip the unlicensed figure/attribution — keeping the product name and the recommendation intact wherever the licence permits them. Never add facts, figures, or strength. Use rewrite null ONLY when the sentence's core content is an unlicensed exact fact or invented attribution that no re-voicing can save; null means the answer will NOT be published, so prefer a licensed rewrite whenever one exists.
 
 PRECISION RULES (added after live false-positive review):
 - A sentence that itself STATES the absence or limits of evidence ("no independent evidence is held for X's bass behaviour") is never a violation — it is the discipline working.
 - A claim with a matching evidence item of the same strength is licensed AS WRITTEN: do not hedge it further, and do not soften "praised for" into "noted for" when the package holds the praise.
+- Recommendation strength ("likely the better choice", "definitely the weak link") is the adviser's own judgment: flag it only when its stated BASIS is itself a violation, and even then repair the basis, not the strength.
 - Only flag what genuinely exceeds the package.
 
 Output ONLY a JSON array (possibly empty). No commentary.`;
@@ -110,17 +113,18 @@ function preFlags(answer: string, contextBlock: string): string {
       + strayNums.slice(0, 12).join('; '));
   }
   if (names.size) {
-    parts.push('NAMED PRODUCTS WITH NO EVIDENCE IN THE PACKAGE (any product-specific character claim about these is a violation): '
+    parts.push('NAMED PRODUCTS WITH NO EVIDENCE IN THE PACKAGE (adviser-voiced reputation/suggestion about these is LICENSED bounded knowledge; a violation only when voiced as established/verified fact, carrying a figure, or attributed to measurements/reviewers/the maker): '
       + [...names].slice(0, 12).join('; '));
     // Forced adjudication: sentences pairing a no-evidence name with
-    // character vocabulary must each receive an explicit verdict — this is
-    // what holds the checker's recall steady on list-style answers.
+    // character vocabulary must each receive an explicit VERDICT — licensed
+    // adviser voice, or a violation — this holds the checker's recall
+    // steady on list-style answers without inviting blanket flagging.
     const CHAR = /(warm|dark|organic|rich|lush|sweet|musical|engaging|involving|smooth|refined|transparent|neutral|clean|uncolou?red|detailed|resolv|airy|punchy|dynamic|tight|controlled|harmonic|purity|pace|rhythm)/i;
     const mustReview = answer.split(/(?<=[.!?])\s+|\n/)
       .filter((sent) => CHAR.test(sent) && [...names].some((n) => sent.toLowerCase().includes(n.toLowerCase())))
       .slice(0, 10);
     if (mustReview.length) {
-      parts.push('SENTENCES REQUIRING EXPLICIT ADJUDICATION (each pairs a no-evidence product with character vocabulary; emit a violation for each unless it is genuinely class-level reasoning):\n'
+      parts.push('SENTENCES REQUIRING EXPLICIT ADJUDICATION (each pairs a no-evidence product with character vocabulary; adjudicate the VOICE of each — adviser-owned bounded knowledge is licensed; established-fact voice, figures, or attribution are violations):\n'
         + mustReview.map((x) => `• ${x.trim().slice(0, 220)}`).join('\n'));
     }
   }
@@ -141,13 +145,20 @@ function numberSet(text: string): Set<string> {
  * or incomplete check may not silently count as passed.
  *
  *   CHECKED    ran clean — publish.
- *   REPAIRED   violations found, every one repaired (weakening-only) —
- *              publish the repaired text.
- *   REJECTED   a violation of a consequential class (mutated figure,
- *              strengthened provenance, invented attribution) or an
- *              unrepairable sentence survived in the text — do not publish.
+ *   REPAIRED   violations found, every one repaired by REWRITE (weakening
+ *              only) — publish the repaired text.
+ *   REJECTED   a deletion-required finding (rewrite null), a violation of a
+ *              consequential class surviving in the text, or an
+ *              unrepairable sentence — do not publish.
  *   INCOMPLETE the checker itself failed or a non-consequential violation
  *              remained unrepaired — assurance unknown; do not publish.
+ *
+ * DELETION IS NOT A REPAIR (M1 quality correction, 2026-09-16). The live
+ * blank-recommendation failure was exactly this: rewrite-null findings had
+ * their sentences removed, the amputated answer counted as REPAIRED, and
+ * the listener saw "Amplifier: —" and orphaned "It could…" prose. Any
+ * finding the checker could only resolve by deletion now makes the answer
+ * non-publishable; the caller's legacy fallback takes the turn instead.
  *
  * Non-publishable outcomes fall back to the existing legacy path at the
  * caller — the narrowest safe fallback that already exists.
@@ -161,12 +172,15 @@ const CONSEQUENTIAL: ReadonlySet<ClaimViolation['type']> = new Set([
 export function computeValidationStatus(v: ValidationResult): PublicationStatus {
   if (v.unchecked) return 'INCOMPLETE';
   if (v.violations.length === 0) return 'CHECKED';
+  // A deletion-required finding is never publishable — whether or not the
+  // deletion was applied, the answer either carries the violation or a hole.
+  if (v.violations.some((x) => x.rewrite === null)) return 'REJECTED';
   const stripEm = (x: string) => x.replace(/\*\*/g, '');
   const answerStripped = stripEm(v.answer);
   const unrepaired = v.violations.filter((x) =>
     v.answer.includes(x.sentence) || answerStripped.includes(stripEm(x.sentence)));
   if (unrepaired.length === 0) return 'REPAIRED';
-  if (unrepaired.some((x) => CONSEQUENTIAL.has(x.type) || x.rewrite === null)) {
+  if (unrepaired.some((x) => CONSEQUENTIAL.has(x.type))) {
     return 'REJECTED';
   }
   return 'INCOMPLETE';

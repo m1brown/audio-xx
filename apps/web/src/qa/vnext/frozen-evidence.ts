@@ -178,4 +178,21 @@ export const EXPERIMENT_SYSTEMS: ExperimentSystem[] = [
     ],
     statement: 'What do you think of my setup? Peachtree Nova 300, Totem Arro floorstanders, iFi Zen Stream.',
   },
+  /*
+   * CANDIDATE-SOLICITATION shape (M1 quality correction, 2026-09-16).
+   * The Phase-0.1 corpus never asked the adviser to NAME candidate
+   * products, so the validator's B1-era stripping of hedged bounded-
+   * knowledge recommendations stayed invisible until a real founder
+   * session hit it. Same frozen Accuphase evidence, different
+   * conversation shape — see CONVERSATIONS['accuphase-candidates'].
+   */
+  {
+    id: 'accuphase-candidates',
+    components: [
+      { displayName: 'Accuphase E-600', role: 'amplifier' },
+      { displayName: 'Accuphase DP-450', role: 'cd player' },
+      { displayName: 'Harbeth SHL5 Plus', role: 'speaker' },
+    ],
+    statement: 'Assess my system: Accuphase E-600, Accuphase DP-450 and Harbeth SHL5 Plus.',
+  },
 ];

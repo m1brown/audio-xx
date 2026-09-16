@@ -94,4 +94,21 @@ export const CONVERSATIONS: Record<string, ScriptTurn[]> = {
     { user: 'What would you change first, if anything?' },
     { user: 'And if the answer is nothing, tell me why.' },
   ],
+  /*
+   * Candidate-solicitation shape (M1 quality correction) — the founder
+   * conversation class the Phase-0.1 corpus missed: the listener asks the
+   * adviser to NAME candidate products, including products Audio XX holds
+   * no exact-product evidence for. No answers are fixtured; runners and
+   * audits assert properties (names survive publication, no unlicensed
+   * figures, no evidence-voiced fabrication).
+   */
+  'accuphase-candidates': [
+    { user: 'Assess my system: Accuphase E-600, Accuphase DP-450 and Harbeth SHL5 Plus.' },
+    { user: 'Which of my two Accuphase sources would you choose for more intimacy and connection?' },
+    { user: 'What upgrade gives me the most bang for the buck if I want more of the same?' },
+    { user: 'Can you suggest a component in each category?' },
+    { user: 'Can you give me actual components — something like a Kinki Studio or a Leben CS-600?' },
+    { user: 'Is the Leben CS-600 worth auditioning here, even if you have no data on it?' },
+    { user: 'Give me one concrete next step if I make a single change.' },
+  ],
 };
