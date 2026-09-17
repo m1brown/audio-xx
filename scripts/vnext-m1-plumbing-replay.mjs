@@ -152,7 +152,14 @@ console.log('new-system turn');
   if (CLARIFICATION_LEAK.test(region)) fail('false role-collision clarification rendered');
   else ok('no false duplicate-role clarification');
   const upper = region.toUpperCase();
-  if (upper.includes('ROSSINI') && upper.includes('ACORA')) ok('new roster assessed');
+  // Roster-rendered check scans the WHOLE post-turn page, not the
+  // chrome-cut region: the RECENT sidebar marker can precede the artifact
+  // in the innerText diff and truncate the assessment out of `region`
+  // (instrument artifact observed 2026-09-17 — the follow-up's lane POST
+  // independently proves the conversation-local roster). Leak checks stay
+  // on the cut region so sidebar titles of PRIOR turns cannot false-flag.
+  const fullUpper = full.toUpperCase();
+  if (fullUpper.includes('ROSSINI') && fullUpper.includes('ACORA')) ok('new roster assessed');
   else fail('new roster not rendered');
   for (const leaked of ['EVERSOLO', 'WLM DIVA']) {
     if (upper.includes(leaked)) fail(`France II component leaked into new assessment: ${leaked}`);

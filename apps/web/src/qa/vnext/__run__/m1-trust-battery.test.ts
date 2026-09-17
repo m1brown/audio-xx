@@ -162,6 +162,24 @@ d('§10 adversarial acceptance — must publish (bounded adviser reasoning)', ()
   }
 });
 
+d('money-shorthand equivalence — the listener\'s budget restates freely (M1 astra release)', () => {
+  it('a "$5k" budget restated as "$5,000" publishes through the full pipeline', async () => {
+    const draft = 'With your $5,000 budget I would audition speakers first, keeping the rest of the chain unchanged.';
+    for (let r = 0; r < REPS; r++) {
+      const conv = `${CONV}\nuser: if i were to upgrade one component with a $5k budget, what do you recommend?`;
+      const validated = await validateClaims({
+        answer: draft, contextBlock: CTX, conversationText: conv, apiKey, model: MODEL,
+      });
+      let status: string = computeValidationStatus(validated);
+      const det = deterministicTrustCheck(validated.answer, CTX, conv);
+      if ((status === 'CHECKED' || status === 'REPAIRED') && !det.clean) status = 'REJECTED';
+      console.warn(`[battery] money-equivalence r${r}: status=${status} det=${det.clean ? 'clean' : 'viol'}`);
+      expect(det.clean, `r${r}: budget restatement deterministically rejected`).toBe(true);
+      expect(status === 'CHECKED' || status === 'REPAIRED', `r${r}: status=${status}`).toBe(true);
+    }
+  }, TIMEOUT * REPS);
+});
+
 d('§10 H — a candidate list keeps its product names', () => {
   const LIST_DRAFT = `Here are candidates worth considering, based on reputation rather than anything Audio XX has verified:
 

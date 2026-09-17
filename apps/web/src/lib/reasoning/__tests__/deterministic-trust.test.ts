@@ -131,6 +131,49 @@ describe('evidence voice — voiced basis requires matching evidence', () => {
   });
 });
 
+describe('monetary-shorthand equivalence — one stated amount, one license (M1 astra release)', () => {
+  const CONV_5K = 'user: if i were to upgrade one component with a $5k budget, what do you recommend?';
+
+  it.each([
+    ['$5k → $5,000', 'A $5,000 budget gives you real options at speaker level.'],
+    ['$5k → 5,000', 'With 5,000 to spend, I would audition speakers first.'],
+    ['$5k → $5000', 'Your $5000 budget is best spent on one component.'],
+    ['$5k → 5000', 'A 5000 budget covers a serious speaker audition.'],
+  ])('%s is licensed', (_label, answer) => {
+    const r = deterministicTrustCheck(answer, CTX, CONV_5K);
+    expect(r.strayFigures).toEqual([]);
+    expect(r.clean).toBe(true);
+  });
+
+  it('bare "5k" and decimal shorthand license their exact expansions', () => {
+    expect(deterministicTrustCheck('Spend the $5000 wisely.', CTX, 'user: my budget is 5k').strayFigures).toEqual([]);
+    expect(deterministicTrustCheck('That is $1,500 well spent.', CTX, 'user: around $1.5k to spend').strayFigures).toEqual([]);
+    expect(deterministicTrustCheck('About 2500 covers it.', CTX, 'user: 2.5k max').strayFigures).toEqual([]);
+    expect(deterministicTrustCheck('Roughly 500 for cables.', CTX, 'user: 0.5k tops').strayFigures).toEqual([]);
+  });
+
+  it('reverse direction holds by construction: answer-side "$5k" is shorthand, not a flagged figure', () => {
+    const r = deterministicTrustCheck('Keep it to $5k and audition at home.', CTX, 'user: my budget is $5,000');
+    expect(r.strayFigures).toEqual([]);
+    expect(r.clean).toBe(true);
+  });
+
+  it('NEGATIVE: the expansion licenses only the stated amount', () => {
+    expect(deterministicTrustCheck('Consider spending $6,000 instead.', CTX, CONV_5K).strayFigures).toContain('6000');
+    expect(deterministicTrustCheck('Something around $4,500 would do.', CTX, CONV_5K).strayFigures).toContain('4500');
+    expect(deterministicTrustCheck('That model costs $50,000.', CTX, CONV_5K).strayFigures).toContain('50000');
+  });
+
+  it('NEGATIVE: a money license never leaks into watt/load or unit domains', () => {
+    // "5" is single-digit (never counted) but the PAIRING net is
+    // independent of single-number licenses: an invented load pairing
+    // stays blocked whatever the budget licensed.
+    const r = deterministicTrustCheck('It could deliver 5000 watts into 4 ohms.', CTX, CONV_5K);
+    expect(r.unlicensedWattLoad.length).toBe(1);
+    expect(r.clean).toBe(false);
+  });
+});
+
 describe('what this layer never judges', () => {
   it('bounded adviser character, suggestions, and conclusions pass untouched', () => {
     for (const s of [
