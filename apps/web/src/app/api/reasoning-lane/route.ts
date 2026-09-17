@@ -17,8 +17,17 @@ import { assembleGovernedContext, type ConversationTurn } from '@/lib/reasoning/
 import { serializeGovernedContext, REASONING_RULES } from '@/lib/reasoning/governed-context';
 import { validateClaims, computeValidationStatus } from '@/lib/reasoning/claim-validation';
 import { deterministicTrustCheck } from '@/lib/reasoning/deterministic-trust';
+import { generationParams } from '@/lib/reasoning/model-params';
 
-const TIMEOUT_MS = 30000;
+/*
+ * Generation timeout (M1 astra promotion, 2026-09-17): raised 30s → 90s
+ * to cover gpt-6-astra's measured tail (p99 ~40s, max observed ~64s over
+ * 250 experiment turns). This bounds ONE generation; the validator keeps
+ * its own budget, and the client's bounded retry issues a separate
+ * request. Not an unlimited request — 90s is the measured tail plus
+ * margin, nothing more.
+ */
+const TIMEOUT_MS = 90000;
 const MAX_TURNS = 12;
 const MAX_TURN_CHARS = 6000;
 const MAX_COMPONENTS = 10;
@@ -112,7 +121,11 @@ export async function POST(req: NextRequest) {
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: getModel(), temperature: 0.4, messages }),
+      // Parameter compatibility (M1 astra promotion): the gpt-4 family
+      // keeps its historical temperature 0.4; other models (gpt-6-astra)
+      // run at API default — exactly the winning experimental arm's
+      // configuration, and reasoning models may reject the parameter.
+      body: JSON.stringify({ model: getModel(), ...generationParams(getModel()), messages }),
       signal: controller.signal,
     });
     clearTimeout(timer);
@@ -124,14 +137,16 @@ export async function POST(req: NextRequest) {
     if (!draft) return NextResponse.json({ error: 'no answer' }, { status: 502 });
 
     // Narrow D-7 validation: licensed-basis check with weakening-only repair.
+    // The checker model is pinned independently of generation (M1 astra
+    // promotion: REASONING_VALIDATOR_MODEL=gpt-4o in production, so a
+    // generation-model change never silently changes the checker).
+    const validatorModel = process.env.REASONING_VALIDATOR_MODEL ?? getModel();
     const validated = await validateClaims({
       answer: draft,
       contextBlock: serialized,
       conversationText: [...recentTurns.map((t) => t.content), question].join('\n'),
       apiKey,
-      // The checker is a constrained adjudication task; a lighter model may
-      // serve it. Default unchanged — this knob exists for latency work.
-      model: process.env.REASONING_VALIDATOR_MODEL ?? getModel(),
+      model: validatorModel,
     });
 
     const tValidator = Date.now() - t0 - tAssembly - tPrimary;
@@ -161,11 +176,11 @@ export async function POST(req: NextRequest) {
     if ((status === 'CHECKED' || status === 'REPAIRED') && !det.clean) status = 'REJECTED';
     const deletionRequired = validated.violations.some((v) => v.rewrite === null);
     // Observability (§14): one structured line per turn, no content.
-    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d delReq=%s det=%s(w=%d,f=%d,v=%d) pub=%s totalMs=%d model=%s comps=%d cand=%d hyp=%s',
+    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d delReq=%s det=%s(w=%d,f=%d,v=%d) pub=%s totalMs=%d model=%s vmodel=%s comps=%d cand=%d hyp=%s',
       status, validated.violations.length, validated.repaired, deletionRequired,
       det.clean ? 'clean' : 'viol', det.unlicensedWattLoad.length, det.strayFigures.length, det.unlicensedEvidenceVoice.length,
       status === 'CHECKED' || status === 'REPAIRED',
-      Date.now() - t0, getModel(), components.length, ctx.candidates.length,
+      Date.now() - t0, getModel(), validatorModel, components.length, ctx.candidates.length,
       ctx.currentHypothetical ? 'set' : 'none');
     if (status === 'INCOMPLETE' || status === 'REJECTED') {
       return NextResponse.json({

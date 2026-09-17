@@ -85,11 +85,29 @@ export function quantitativeFigures(text: string): string[] {
 }
 
 /** Liberal number harvest from LICENSED sources — any digit run counts,
- *  so "JOB 225" licenses 225 and "30 W/ch (8 ohms)" licenses 30 and 8. */
+ *  so "JOB 225" licenses 225 and "30 W/ch (8 ohms)" licenses 30 and 8.
+ *
+ *  MONETARY-SHORTHAND EQUIVALENCE (M1 astra release, 2026-09-17): a
+ *  listener's "$5k" and an answer's "$5,000" are the SAME stated amount,
+ *  but the digit harvest alone kept only "5" — so the model's natural
+ *  restatement of the listener's own budget read as an unlicensed stray
+ *  figure and was deterministically rejected (reproduced 4/5 on the
+ *  France II $5k turn). Source-side k-shorthand therefore ALSO licenses
+ *  its expanded value: 5k→5000, 1.5k→1500, 0.5k→500. This is an
+ *  equivalence of one stated number, never a widening: only the exact
+ *  expansion is licensed ($5k licenses 5000 — not 6000, not 50000, not
+ *  4500), answer-side detection is untouched, and watt/load pairing
+ *  licenses remain pair-exact regardless of any single-number license. */
 function sourceNumbers(texts: string[]): Set<string> {
   const s = new Set<string>();
+  const K_SHORTHAND = /(?<![A-Za-z0-9])\$?(\d+(?:\.\d+)?)\s*[kK](?![A-Za-z0-9])/g;
   for (const t of texts) {
     for (const m of t.match(/\d[\d,]*(?:\.\d+)?/g) ?? []) s.add(m.replace(/,/g, ''));
+    let km: RegExpExecArray | null;
+    while ((km = K_SHORTHAND.exec(t)) !== null) {
+      const expanded = Math.round(parseFloat(km[1]) * 1000);
+      if (Number.isFinite(expanded) && expanded > 0) s.add(String(expanded));
+    }
   }
   return s;
 }

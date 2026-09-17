@@ -719,6 +719,17 @@ export default function Home() {
   }, []);
   const laneActive = () => REASONING_LANE_ENABLED || laneEligibleRef.current;
 
+  /*
+   * Client budget for ONE reasoning-lane request (M1 astra promotion,
+   * 2026-09-17): must exceed the server's worst-case path — 90s generation
+   * timeout + ~20s validator budget + assembly/trust-gate overhead ≈ 112s.
+   * 120s covers it with margin. The bounded retry is a SEPARATE request,
+   * so the pathological ceiling is two such requests; the ordinary path is
+   * governed by measured astra latency (p50 ~9s, p99 ~40s), not by this
+   * bound. Applies only to the lane fetches — no other timeout changes.
+   */
+  const LANE_FETCH_TIMEOUT_MS = 120000;
+
   /**
    * Listener-observation detection (Migration 1 §3). Deliberately
    * conservative and structural: a first-person, non-question statement
@@ -1492,7 +1503,7 @@ export default function Home() {
               submittedText,
               recentTurns,
             )),
-          }, 60000);
+          }, LANE_FETCH_TIMEOUT_MS);
           if (res.status === 403 || res.status === 503) {
             // Structural: this user has no lane (cohort) or the deployment
             // has none (unconfigured). Legacy is their real adviser.
@@ -2118,7 +2129,7 @@ export default function Home() {
                     recentTurns,
                     userObservations: laneStateRef.current.observations,
                   }),
-                }, 60000);
+                }, LANE_FETCH_TIMEOUT_MS);
                 if (res.ok) {
                   const data = await res.json();
                   /*
