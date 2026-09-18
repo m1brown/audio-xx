@@ -195,4 +195,21 @@ export const EXPERIMENT_SYSTEMS: ExperimentSystem[] = [
     ],
     statement: 'Assess my system: Accuphase E-600, Accuphase DP-450 and Harbeth SHL5 Plus.',
   },
+  /*
+   * FRANCE II (M1 model selection, 2026-09-16): the founder's real system,
+   * with the conversation shapes from the actual founder sessions.
+   * Evidence comes from the production store (authored/catalog items for
+   * all four components — the same package the released lane assembles);
+   * no frozen seeding is required or added.
+   */
+  {
+    id: 'france-ii',
+    components: [
+      { displayName: 'Eversolo DMP-A6', role: 'source' },
+      { displayName: 'Chord Hugo', role: 'dac' },
+      { displayName: 'JOB INTegrated', role: 'amplifier' },
+      { displayName: 'WLM Diva Monitor', role: 'speaker' },
+    ],
+    statement: 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB INTegrated, WLM Diva Monitor.',
+  },
 ];

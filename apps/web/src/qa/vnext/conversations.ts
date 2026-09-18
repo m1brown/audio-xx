@@ -111,4 +111,20 @@ export const CONVERSATIONS: Record<string, ScriptTurn[]> = {
     { user: 'Is the Leben CS-600 worth auditioning here, even if you have no data on it?' },
     { user: 'Give me one concrete next step if I make a single change.' },
   ],
+  /*
+   * France II — the founder's actual conversation shapes (M1 model
+   * selection). Nothing is fixtured: which DAC, which upgrade, which
+   * candidates, and whether to change anything at all are the model's
+   * questions to answer. The final turn is a genuine leave-it-alone
+   * opportunity so recommending purchases is not implicitly rewarded.
+   */
+  'france-ii': [
+    { user: 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB INTegrated, WLM Diva Monitor.' },
+    { user: 'Which DAC of the three should be best for me if I want the most intimacy and connection?' },
+    { user: 'What upgrade would give me the most bang for the buck if I want more of the same?' },
+    { user: 'Can you suggest a component in each category?' },
+    { user: 'Can I see actual components? For example Kinki Dazzle, Leben CS-600, etc.' },
+    { user: 'Of those candidates, which single one would you prioritize for me, and why that one first?' },
+    { user: 'Or is this a system I should simply leave alone?' },
+  ],
 };

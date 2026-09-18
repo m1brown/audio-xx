@@ -69,3 +69,4 @@ dist/
 .env*
 apps/web/src/qa/captures/
 apps/web/src/qa/vnext/results/
+apps/web/src/qa/golden/results/

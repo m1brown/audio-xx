@@ -21,7 +21,10 @@ import {
   serializeGovernedContext, REASONING_RULES, REASONING_RULES_CORE,
   QUIET_GOVERNANCE_RULE,
 } from '@/lib/reasoning/governed-context';
-import { validateClaims, type ClaimViolation } from '@/lib/reasoning/claim-validation';
+import {
+  validateClaims, computeValidationStatus, type ClaimViolation, type PublicationStatus,
+} from '@/lib/reasoning/claim-validation';
+import { deterministicTrustCheck } from '@/lib/reasoning/deterministic-trust';
 import type { ExperimentSystem } from './frozen-evidence';
 
 export const ARM_A_RULES = `You are Audio XX, a system-level hi-fi advisor.
@@ -72,6 +75,33 @@ export interface TurnResult {
   };
   contextChars?: number;
   hypothetical?: { candidate: string; incumbent: string } | null;
+  /**
+   * M1 model selection (evaluation-only): the CURRENT production
+   * publication boundary applied to this turn — computeValidationStatus
+   * (deletion-is-not-a-repair) + deterministic trust gate on the final
+   * text + one bounded retry + safe failure, mirroring the released lane.
+   * Absent for arm A and for legacy runs.
+   */
+  publication?: {
+    status: PublicationStatus | 'SAFE_FAILURE';
+    published: boolean;
+    retries: number;
+    deletionRequired: boolean;
+    detRawDraft: { wattLoad: number; strayFigures: number; evidenceVoice: number };
+    detFinal: { wattLoad: number; strayFigures: number; evidenceVoice: number; clean: boolean };
+    attempts: Array<{
+      genLatencyMs: number;
+      valLatencyMs: number;
+      status: PublicationStatus;
+      detClean: boolean;
+      violations: number;
+      repaired: number;
+      deletionRequired: boolean;
+      promptTokens?: number;
+      completionTokens?: number;
+      genError?: string;
+    }>;
+  };
 }
 
 export interface ModelCallOptions {
@@ -80,6 +110,17 @@ export interface ModelCallOptions {
   timeoutMs?: number;
   /** Arm-B substrate variant (default 'B1'). */
   variant?: 'B1' | 'B2';
+  /**
+   * M1 model selection (evaluation-only): apply the CURRENT production
+   * publication boundary — computeValidationStatus + deterministic trust
+   * gate + one bounded retry + safe failure — instead of the Phase-0
+   * validation semantics. Off by default so historical runners are
+   * untouched.
+   */
+  productionBoundary?: boolean;
+  /** Checker model (held constant across generation models; default gpt-4o
+   *  — the Phase-0.1 and current-production validator). */
+  validatorModel?: string;
 }
 
 export async function callOpenAI(
@@ -174,6 +215,100 @@ export async function runArmTurn(
     ...state.history.map((t) => ({ role: t.role, content: t.content })),
     { role: 'user', content: question },
   ];
+  /*
+   * ── M1 model selection: CURRENT production publication boundary ──
+   * Mirrors the released lane exactly: computeValidationStatus (deletion
+   * is not a repair) + deterministic trust gate on the FINAL text + one
+   * bounded retry (full regeneration) + safe failure in the lane's own
+   * voice. Every attempt is recorded — a retry or safe failure is an
+   * experimental outcome, never hidden.
+   */
+  if (arm === 'B' && opts.productionBoundary) {
+    const ctxBlock = systemPrompt.split('=== APPLICATION CONTEXT FOR THIS TURN ===\n')[1] ?? '';
+    const conversationText = [...state.history.map((t) => t.content), question].join('\n');
+    const detCounts = (d: ReturnType<typeof deterministicTrustCheck>) => ({
+      wattLoad: d.unlicensedWattLoad.length,
+      strayFigures: d.strayFigures.length,
+      evidenceVoice: d.unlicensedEvidenceVoice.length,
+    });
+    const attempts: NonNullable<TurnResult['publication']>['attempts'] = [];
+    let published = false;
+    for (let attempt = 0; attempt < 2 && !published; attempt++) {
+      const g = await callOpenAI(model, messages, opts);
+      if (attempt === 0) {
+        base.latencyMs = g.latencyMs;
+        base.promptTokens = g.promptTokens;
+        base.completionTokens = g.completionTokens;
+        base.finishReason = g.finishReason;
+      }
+      if (g.error || !g.content) {
+        attempts.push({
+          genLatencyMs: g.latencyMs, valLatencyMs: 0, status: 'INCOMPLETE',
+          detClean: true, violations: 0, repaired: 0, deletionRequired: false,
+          promptTokens: g.promptTokens, completionTokens: g.completionTokens,
+          genError: g.error ?? 'empty completion',
+        });
+        continue;
+      }
+      if (attempt === 0) base.rawDraft = g.content;
+      const vt0 = Date.now();
+      const v = await validateClaims({
+        answer: g.content,
+        contextBlock: ctxBlock,
+        conversationText,
+        apiKey: opts.apiKey,
+        model: opts.validatorModel ?? 'gpt-4o',
+        timeoutMs: 30000,
+      });
+      const valLatencyMs = Date.now() - vt0;
+      let status = computeValidationStatus(v);
+      const det = deterministicTrustCheck(v.answer, ctxBlock, conversationText);
+      if ((status === 'CHECKED' || status === 'REPAIRED') && !det.clean) status = 'REJECTED';
+      const deletionRequired = v.violations.some((x) => x.rewrite === null);
+      attempts.push({
+        genLatencyMs: g.latencyMs, valLatencyMs, status,
+        detClean: det.clean, violations: v.violations.length, repaired: v.repaired,
+        deletionRequired,
+        promptTokens: g.promptTokens, completionTokens: g.completionTokens,
+      });
+      if (attempt === 0) {
+        base.validation = {
+          status: (status === 'REJECTED' ? 'INCOMPLETE' : status) as ValidationStatus,
+          violations: v.violations, repaired: v.repaired, validatorLatencyMs: valLatencyMs,
+        };
+      }
+      if (status === 'CHECKED' || status === 'REPAIRED') {
+        published = true;
+        base.text = v.answer;
+        base.publication = {
+          status, published: true, retries: attempt, deletionRequired,
+          detRawDraft: detCounts(deterministicTrustCheck(base.rawDraft, ctxBlock, conversationText)),
+          detFinal: { ...detCounts(det), clean: det.clean },
+          attempts,
+        };
+      }
+    }
+    if (!published) {
+      // Production safe failure — the lane keeps the turn; the safe-failure
+      // note is what the listener sees and what later turns see as history.
+      base.text = 'I could not put together an answer I am confident in just now. '
+        + 'Ask me that once more — or narrow it slightly — and I will take another run at it.';
+      const last = attempts[attempts.length - 1];
+      base.publication = {
+        status: 'SAFE_FAILURE', published: false, retries: attempts.length - 1,
+        deletionRequired: last?.deletionRequired ?? false,
+        detRawDraft: base.rawDraft
+          ? detCounts(deterministicTrustCheck(base.rawDraft, ctxBlock, conversationText))
+          : { wattLoad: 0, strayFigures: 0, evidenceVoice: 0 },
+        detFinal: { wattLoad: 0, strayFigures: 0, evidenceVoice: 0, clean: true },
+        attempts,
+      };
+    }
+    state.history.push({ role: 'user', content: question });
+    state.history.push({ role: 'assistant', content: base.text });
+    return base;
+  }
+
   const r = await callOpenAI(model, messages, opts);
   base.latencyMs = r.latencyMs;
   base.promptTokens = r.promptTokens;
