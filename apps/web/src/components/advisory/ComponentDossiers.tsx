@@ -20,6 +20,7 @@ import { synthesiseChain, canonicalDisplayName } from '@/lib/artifact/sonic-synt
 import { COLOR } from '@/lib/editorial-tokens';
 import { meaningFor } from '@/lib/evidence/spec-meaning';
 import { describePhrase } from '@/lib/evidence/component-character';
+import SuggestEdit from '@/components/SuggestEdit';
 
 const label: React.CSSProperties = {
   fontFamily: 'var(--face-grotesque, sans-serif)',
@@ -404,6 +405,19 @@ export default function ComponentDossiers({ dossiers, showEvidence = true }: {
               </p>
             </div>
           )}
+
+          {/* SUGGESTED EDITS (Slice 1) — the correction door, last and
+            * quietest element on the card. Capture only: a submission is an
+            * inert pending record reviewed by a person; nothing typed here
+            * changes what Audio XX knows. The sparse variant invites help on
+            * cards where Audio XX itself just said it holds little. */}
+          <div style={{ marginTop: '0.8rem' }}>
+            <SuggestEdit
+              productName={d.displayName}
+              surface={d.primary.length === 0 && d.secondary.length === 0 ? 'dossier_card_sparse' : 'dossier_card'}
+              sparse={d.primary.length === 0 && d.secondary.length === 0}
+            />
+          </div>
         </div>
       ))}
 
