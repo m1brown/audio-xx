@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-09-18 | A8 disposition — decide today (seventeenth brief) · A7: ConfidenceLevel committed · Log M1 P1 in issues-log | [2026-09-18.md](./2026-09-18.md) |
 | 2026-09-17 | Log M1 P1 in issues-log · A8 disposition (sixteenth brief — decide today) · A7: ConfidenceLevel type committed | [2026-09-17.md](./2026-09-17.md) |
 | 2026-09-16 | Triage P1 from harness WIP · Close or redirect A8 (qa/harness vs behavioral-regression.test.ts) · A7: ConfidenceLevel type committed | [2026-09-16.md](./2026-09-16.md) |
 | 2026-09-15 | A8: behavioral-regression.test.ts — one file, one it.todo, commit · A7: ConfidenceLevel type + one test committed | [2026-09-15.md](./2026-09-15.md) |
