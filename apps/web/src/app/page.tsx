@@ -77,6 +77,7 @@ import { buildConsultationResponse, buildComparisonRefinement, buildContextRefin
 import { composeAssessmentFollowUp, composeReviewAnchoredAnswer, isReviewDirectedFollowUp } from '@/lib/assessment-followup';
 import { REASONING_LANE_ENABLED } from '@/lib/feature-flags';
 import { laneFirstAuthority, buildLaneRequest, statesNewSystem } from '@/lib/reasoning/lane-authority';
+import { isListenerObservation } from '@/lib/reasoning/listener-observation';
 import { detectSystemDescription } from '@/lib/system-extraction';
 import SystemBuilder from '@/product/SystemBuilder';
 import { track as trackProduct } from '@/product/analytics';
@@ -730,20 +731,9 @@ export default function Home() {
    */
   const LANE_FETCH_TIMEOUT_MS = 120000;
 
-  /**
-   * Listener-observation detection (Migration 1 §3). Deliberately
-   * conservative and structural: a first-person, non-question statement
-   * carrying situational/experiential vocabulary (distance, level, room,
-   * symptoms, stated preference). Missed observations still travel to the
-   * model in raw history; matches are stored VERBATIM — no inference, no
-   * durable-preference promotion, no new ontology.
-   */
-  const isListenerObservation = (text: string): boolean => {
-    const t = text.trim();
-    if (!t || t.endsWith('?') || t.length > 300) return false;
-    if (!/\b(?:i|my|our|we)\b/i.test(t)) return false;
-    return /\b(?:sit|sitting|seat|listen|hear|hearing|find|prefer|room|feet|foot|meters?|metres?|level|volume|loud|quiet|softly|bright|harsh|strain|strained|compress\w*|soft|thin|boomy|fatigu\w*|desk|night|apartment)\b/i.test(t);
-  };
+  /* Listener-observation detection lives in lib/reasoning/listener-observation
+   * (Migration 1 §3; widened 2026-09-19 to stated preferences and prior
+   * reference systems). Structural and verbatim — see the module doctrine. */
 
   /** Tracks accumulated onboarding context across the music → path → follow-up sequence. */
   const onboardingContextRef = useRef<{

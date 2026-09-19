@@ -1044,6 +1044,9 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
    * whole of the bounding a reader needs at this altitude. The machinery
    * that enforces the rest works underneath.
    */
+  /** Set when the thesis states a bounded amplifier-power judgment, so the
+   *  relationship section coheres with it instead of reopening it. */
+  let powerJudgmentStands = false;
   {
     const relations = input.synthesis?.relations ?? [];
     const established = relations.filter((r) => ESTABLISHED.has(r.kind));
@@ -1166,6 +1169,7 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             + (established
               ? `. The architecture is established by the published figures; how this combination voices is a separate question, taken up below.`
               : `. That is a supported reading rather than an established one: ${caveats.join('; ')}. How this combination voices is a separate question, taken up below.`);
+          powerJudgmentStands = true;
         }
       }
     }
@@ -1394,19 +1398,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
     }
   }
   if (conv.ambiguous) {
+    /*
+     * STATED ONCE (composition repair, 2026-09-19). The conversion
+     * ambiguity is one finding, and it was rendered twice: "How this
+     * system fits together" carried the full statement, then this section
+     * restated it nearly verbatim with only the closing question added.
+     * The structural finding lives above; this section's job is the
+     * action — the question, naming the stages in question, without the
+     * reprise of why.
+     */
     const stageNames = conv.stages.map((s) => (s.kind === 'amp_with_dac'
       ? `the ${canonicalDisplayName(s.name)}’s onboard conversion`
       : `the ${canonicalDisplayName(s.name)}`));
     const listed = stageNames.length > 1
-      ? `${stageNames.slice(0, -1).join(', ')} and ${stageNames[stageNames.length - 1]}`
+      ? `${stageNames.slice(0, -1).join(', ')} or ${stageNames[stageNames.length - 1]}`
       : stageNames[0];
     next.push(
-      `One thing this component list does not tell me is where digital-to-analogue `
-      + `conversion actually happens: ${listed} ${stageNames.length > 1 ? 'are all' : 'is'} `
-      + `capable of performing it, and which one sits in the signal path depends on `
-      + `how they are connected — something I will not guess from a component list. `
-      + `Any advice about the conversion stage would change with that answer, so `
-      + `before offering it: how are you connecting them?`,
+      `Where conversion actually happens — ${listed} — decides any advice `
+      + `about the digital side, and I will not guess it from a component `
+      + `list. So before offering that advice: how are you connecting them?`,
     );
   }
 
@@ -1708,15 +1718,42 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
             );
           }
         } else if (missing.length > 0) {
-          fits.push(
-            `The first relationship I would examine here is the ${ampN} driving the `
-            + `${spkN} — but the evidence held is not enough to say whether it is `
-            + `actually limiting anything. That turns on ${listed}, `
-            + `${missing.length === 1 ? 'which is not' : 'none of which is'} established. `
-            + `Until ${missing.length === 1 ? 'that figure is' : 'those figures are'} on `
-            + `the record, whether the amplifier limits this system stays an open `
-            + `question — the one that most limits this assessment.`,
-          );
+          /*
+           * ONE COHERENT BOUNDED JUDGMENT (composition repair, 2026-09-19).
+           * When the architecture pass has already stated a supported power
+           * judgment ("amplifier power is very unlikely to be this
+           * system's constraint"), this branch used to re-open the same
+           * question — "stays an open question — the one that most limits
+           * this assessment" — three paragraphs later. Both sentences were
+           * individually licensed (different epistemic grades of one
+           * question), and together they read as a judgment followed by
+           * its retraction. The judgment stands at its stated strength;
+           * this paragraph now names what would FIRM it rather than
+           * contradicting it. Where no architecture judgment stands, the
+           * open-question prose is unchanged.
+           */
+          if (powerJudgmentStands) {
+            fits.push(
+              `The relationship to firm up is the ${ampN} driving the ${spkN}. `
+              + `The read above rests on the figures available rather than on `
+              + `${listed} — ${missing.length === 1 ? 'that figure' : 'those figures'} `
+              + `would move it from a supported reading to an established one, but `
+              + `${missing.length === 1 ? 'its' : 'their'} absence does not reopen it. `
+              + `The practical check needs no specification at all: if music at your `
+              + `level arrives without strain, amplifier power is not the thing to `
+              + `change here.`,
+            );
+          } else {
+            fits.push(
+              `The first relationship I would examine here is the ${ampN} driving the `
+              + `${spkN} — but the evidence held is not enough to say whether it is `
+              + `actually limiting anything. That turns on ${listed}, `
+              + `${missing.length === 1 ? 'which is not' : 'none of which is'} established. `
+              + `Until ${missing.length === 1 ? 'that figure is' : 'those figures are'} on `
+              + `the record, whether the amplifier limits this system stays an open `
+              + `question — the one that most limits this assessment.`,
+            );
+          }
         }
       }
       /*
@@ -1753,6 +1790,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
         );
       }
     }
+  }
+
+  /*
+   * NO STUB OPENERS (composition repair, 2026-09-19). When the only thesis
+   * material is the engine's bare-figures drive line ("Published figures
+   * put the X at 30 watts…, while the Y presents 6 ohms.") AND the
+   * relationship section below carries the actual bounded judgment over
+   * the same figures, the stub adds nothing a reader can act on — it
+   * restates two numbers the judgment paragraph is about to use. The
+   * assessment then opens with the judgment itself. Nothing is claimed or
+   * lost: the figures remain in the relationship paragraph and on the
+   * dossier. A drive finding that carries a verdict of its own is not a
+   * stub and stays.
+   */
+  if (thesis.length === 1 && thesis[0] === input.driveFinding
+    && /^Published figures put /.test(thesis[0])
+    && !/\b(?:headroom|comfortabl\w+|unlikely|adequate|constraint|deficit|easy|easily)\b/i.test(thesis[0])
+    && fits.some((p) => /relationship/i.test(p))) {
+    thesis.length = 0;
   }
 
   /*

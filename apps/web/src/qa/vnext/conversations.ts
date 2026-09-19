@@ -118,6 +118,25 @@ export const CONVERSATIONS: Record<string, ScriptTurn[]> = {
    * questions to answer. The final turn is a genuine leave-it-alone
    * opportunity so recommending purchases is not implicitly rewarded.
    */
+  /*
+   * FRANCE GROK BENCHMARK (Grok-parity mission, 2026-09-19). The adversarial
+   * UX benchmark conversation: full listener context (stated preferences,
+   * aversions, reference systems) plus on-hand substitution candidates in
+   * three categories (DAC, amplifier, cable). The cable turn is the
+   * overclaim trap: no exact-product evidence licenses tonal claims about
+   * either cable, and the benchmark's competitor asserted them as fact.
+   * Nothing is fixtured; the runner records what publishes.
+   */
+  'france-grok-benchmark': [
+    { user: 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB INTegrated, WLM Diva Monitor. I also use a TotalDac D1 USB cable and Tellurium Q Black II speaker cables.' },
+    { user: 'I value sweetness, flow, elasticity, detail, air, sparkle. I don’t like fatigue, glare, harshness, or excessive damping.', observation: true },
+    { user: 'My reference system in the US was a Scott 222B EL-84 tube amp with Hornshoppe Horns, and also Boenicke W5 speakers. All excellent.', observation: true },
+    { user: 'Given all that, how well does this system fit what I value?' },
+    { user: 'I have on hand a Goldmund SDRA DAC, a Crayon CIA integrated amp, and Canare 4S11G speaker cable. Would swapping any of these in be an improvement?' },
+    { user: 'What would change if I used the Crayon instead of the JOB?' },
+    { user: 'And would the Canare speaker cable change the sound versus the Tellurium Q?' },
+    { user: 'Or should I leave the system exactly as it is?' },
+  ],
   'france-ii': [
     { user: 'Assess my system: Eversolo DMP-A6, Chord Hugo, JOB INTegrated, WLM Diva Monitor.' },
     { user: 'Which DAC of the three should be best for me if I want the most intimacy and connection?' },
