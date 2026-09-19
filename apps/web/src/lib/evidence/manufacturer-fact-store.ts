@@ -18,6 +18,7 @@
 import { prisma } from '../prisma';
 import { isAdmissible, type EvidenceItem, type EvidenceTier } from './evidence-types';
 import { isFirstPartySource } from './manufacturer-facts';
+import { identityEstablished } from './identity-admission';
 
 /** Facts age slowly; a published specification does not change quietly. */
 export const FACT_TTL_MS = 180 * 24 * 60 * 60 * 1000;
@@ -104,6 +105,24 @@ export async function readFacts(productKey: string, now: number): Promise<Eviden
       // manualzz.com specs from cache after the write-side fix landed. This
       // retires them as they are read rather than by deleting anything.
       .filter((i) => isFirstPartySource(i.attribution?.sourceUrl ?? '', productKey));
+    /*
+     * IDENTITY GATE ON THE DURABLE TIER (P1 repair, 2026-09-18). Exact-
+     * product facts are exposed only for a sufficiently established
+     * identity (catalog or corroborated). Rows cached under a raw,
+     * unresolved key — the REF 330M tube complement stored under
+     * "arc ref" — stay in the table but are suppressed on read, the same
+     * retire-on-read pattern as the first-party rule above. Should the
+     * identity later be established, the rows return on their own; no
+     * data is destroyed. The in-process tier above is deliberately
+     * ungated: in production it only ever holds facts written through the
+     * identity-checked acquisition route in this same process, and in QA
+     * it is the frozen-evidence seam, trusted by construction.
+     */
+    if (items.length > 0 && !(await identityEstablished(productKey))) {
+      console.warn('[manufacturer-facts] suppress key=%s (identity not established, %d rows held)',
+        productKey, items.length);
+      return [];
+    }
     if (items.length > 0) memory.set(productKey, items);
     return items;
   } catch (err) {
