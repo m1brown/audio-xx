@@ -29,6 +29,7 @@ import {
   MANUFACTURER_FACT_FIELDS, isManufacturerFactField,
 } from '@/lib/evidence/manufacturer-facts';
 import { readFacts, writeFacts, getFactStoreState } from '@/lib/evidence/manufacturer-fact-store';
+import { identityEstablished } from '@/lib/evidence/identity-admission';
 
 const TIMEOUT_MS = 9000;
 const RETRY_TIMEOUT_MS = 7000;
@@ -82,7 +83,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
     name = typeof body?.name === 'string' ? body.name.slice(0, 120) : '';
-    heldOnly = body?.heldOnly === true;
+    // `mode: 'read'` is honored as read-only too (P1 repair, 2026-09-18):
+    // the independent-reviews route uses that spelling and callers sent it
+    // here as well — the mismatch silently turned the "read-only lookup for
+    // unverified identities" into acquisition, which is how the REF 330M
+    // complement was harvested under the unresolved key "arc ref".
+    heldOnly = body?.heldOnly === true || body?.mode === 'read';
   } catch { /* fall through */ }
 
   const productKey = productKeyFor(name);
@@ -103,6 +109,24 @@ export async function POST(req: NextRequest) {
   // the lookup it asked for (a store read) genuinely completed.
   if (heldOnly) {
     return NextResponse.json({ productKey, status: 'none' as const, facts: [], store: store() });
+  }
+
+  /*
+   * WRITE-TIME IDENTITY GATE (P1 repair, 2026-09-18). Acquisition is a
+   * web search keyed by whatever string arrives here; for an identity that
+   * is not sufficiently established (catalog or corroborated), a search
+   * for "ARC ref" lands on whatever the manufacturer's most prominent
+   * "Reference" page is today and caches ANOTHER PRODUCT's facts under the
+   * raw key. Enforced server-side so no client filter is load-bearing.
+   * The refusal is a completed store read, not an error — absence is the
+   * safe finished state, and the identity can be established later.
+   */
+  if (!(await identityEstablished(name))) {
+    console.warn('[manufacturer-facts] acquisition refused key=%s (identity not established)', productKey);
+    return NextResponse.json({
+      productKey, status: 'none' as const, facts: [],
+      identity: 'not_established' as const, store: store(),
+    });
   }
 
   const key = process.env.OPENAI_API_KEY;
