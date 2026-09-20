@@ -3854,7 +3854,12 @@ export default function Home() {
              * with the assessment above it. The graph is authoritative.
              */
             {
-              const prior = audioState.proposedSystem;
+              // `turnCtx.proposedSystem` first: the proposal this turn just
+              // dispatched is not yet visible through the closure's
+              // `audioState`, so reading state alone reconciled every turn
+              // EXCEPT the assessment turn itself — the one whose save sheet
+              // the listener actually opens.
+              const prior = turnCtx.proposedSystem ?? audioState.proposedSystem;
               if (prior && !dismissedFingerprintsRef.current.has(prior.fingerprint)) {
                 audioDispatch({
                   type: 'SET_PROPOSED_SYSTEM',
@@ -4231,8 +4236,11 @@ export default function Home() {
           }
         }
         // The save proposal inherits the assessment's graph here too.
+        // `turnCtx.proposedSystem` first — same closure-staleness reason as
+        // the provisional branch: this turn's own dispatch is not yet
+        // visible through `audioState`.
         {
-          const prior = audioState.proposedSystem;
+          const prior = turnCtx.proposedSystem ?? audioState.proposedSystem;
           if (prior && !dismissedFingerprintsRef.current.has(prior.fingerprint)) {
             audioDispatch({
               type: 'SET_PROPOSED_SYSTEM',

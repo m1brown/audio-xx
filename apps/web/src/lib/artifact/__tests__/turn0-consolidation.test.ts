@@ -114,4 +114,14 @@ describe('one turn-0 architecture — both branches, same governed path', () => 
   it('the v2 prose carrier yields to a published governed review', () => {
     expect(page).toMatch(/ASSESSMENT_ARTIFACT_V2_ENABLED && !governedParas/);
   });
+
+  it('reconciliation reads the TURN\'s own proposal, not the stale closure state', () => {
+    // `audioState.proposedSystem` is null in the handler closure on the
+    // assessment turn itself (this turn's dispatch is not yet visible), so
+    // reading state alone reconciled every turn EXCEPT the one whose save
+    // sheet the listener actually opens. Both branches must consult the
+    // turn context first.
+    const reads = page.match(/const prior = turnCtx\.proposedSystem \?\? audioState\.proposedSystem/g) ?? [];
+    expect(reads.length).toBe(2);
+  });
 });
