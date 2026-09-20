@@ -95,6 +95,17 @@ describe('the save proposal inherits the assessment graph', () => {
     expect(d.category).toBe('other');
     expect(d.name).toBe('Mystery Box');
   });
+
+  it('a brand-only prior row (empty model) glues its brand onto nothing', () => {
+    // Live 2026-09-20: extraction produced { brand: 'ARC', name: '' }, and
+    // ''.includes matched every assessed component — the roster then carried
+    // "ARC Acora QRC-2".
+    const drafts = draftComponentsFromAssessed(
+      [{ displayName: 'Acora QRC-2', role: 'speaker' }],
+      [{ name: '', brand: 'ARC', category: 'other', role: null }],
+    );
+    expect(drafts[0]).toMatchObject({ name: 'Acora QRC-2', brand: '', category: 'speaker' });
+  });
 });
 
 describe('one turn-0 architecture — both branches, same governed path', () => {
