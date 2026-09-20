@@ -38,6 +38,14 @@ const BANNED = [
   // Affirmative guarantees only — "does not guarantee synergy" is the
   // discipline itself and must stay permitted.
   /\b(?:is|are) guaranteed\b|\bguaranteed to\b|\bI guarantee\b/i,
+  // RESTRAINT RUNG (consolidation, 2026-09-20): at turn 0, absence of a
+  // demonstrated problem licenses "no evidence a change is necessary" —
+  // never an affirmative keep-everything / change-nothing recommendation.
+  // ("I wouldn't change anything based on <licence>" is scoped and allowed;
+  // these forms are the unscoped verdicts.)
+  /\bchange nothing\b/i,
+  /\bkeep (?:the )?(?:hardware|system|everything) (?:in place|as it is|unchanged|alone)\b/i,
+  /\brecommendation is (?:therefore )?to keep\b/i,
 ];
 
 interface Fixture {

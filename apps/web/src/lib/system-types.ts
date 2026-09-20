@@ -43,6 +43,53 @@ export type SystemComponentRole =
   | 'phono_stage'
   | null;
 
+/**
+ * Draft components from the ASSESSMENT's own component graph (turn-0
+ * consolidation, 2026-09-20).
+ *
+ * The save-flow proposal was built by a parallel brand-map extraction that
+ * defaulted unknown brands to category 'other' and could drop components
+ * the assessment resolved perfectly well — the listener then reviewed a
+ * save sheet showing "Butler Monads — Other" beneath an assessment that
+ * had just typed it as an amplifier and reasoned from its power figures.
+ * The assessment graph is the authority on what each box is; the proposal
+ * inherits it. Brand text from the original extraction is preserved where
+ * a name matches.
+ */
+export function draftComponentsFromAssessed(
+  assessed: Array<{ displayName: string; role?: string | null }>,
+  prior?: DraftSystemComponent[],
+): DraftSystemComponent[] {
+  const toDraft = (role: string | null | undefined): { category: ProductCategory; role: SystemComponentRole } => {
+    const r = (role ?? '').toLowerCase();
+    if (r === 'preamplifier' || r === 'preamp') return { category: 'amplifier', role: 'preamp' };
+    if (r === 'amplifier' || r === 'power_amp' || r === 'power-amp') return { category: 'amplifier', role: null };
+    if (r === 'integrated') return { category: 'integrated', role: null };
+    if (r === 'speaker' || r === 'loudspeaker') return { category: 'speaker', role: null };
+    if (r === 'subwoofer') return { category: 'subwoofer', role: null };
+    if (r === 'dac') return { category: 'dac', role: null };
+    if (r === 'streamer' || r === 'source') return { category: 'streamer', role: null };
+    if (r === 'streamer_dac') return { category: 'streamer_dac', role: null };
+    if (r === 'turntable') return { category: 'turntable', role: null };
+    if (r === 'cartridge') return { category: 'cartridge', role: null };
+    if (r === 'phono') return { category: 'phono', role: 'phono_stage' };
+    if (r === 'headphone') return { category: 'headphone', role: null };
+    return { category: 'other', role: null };
+  };
+  return assessed.map((c) => {
+    const match = prior?.find((p) => {
+      const full = `${p.brand} ${p.name}`.trim().toLowerCase();
+      const dn = c.displayName.toLowerCase();
+      return full === dn || p.name.trim().toLowerCase() === dn || dn.includes(p.name.trim().toLowerCase());
+    });
+    return {
+      name: match?.name?.trim() || c.displayName,
+      brand: match?.brand?.trim() ?? '',
+      ...toDraft(c.role),
+    };
+  });
+}
+
 // ── Draft system (guest, in-session) ────────────────────
 
 export interface DraftSystemComponent {

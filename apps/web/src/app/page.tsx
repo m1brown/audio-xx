@@ -258,6 +258,7 @@ import RightRail from '@/components/workspace/RightRail';
 import SystemEditor from '@/components/system/SystemEditor';
 import SystemSavePrompt from '@/components/system/SystemSavePrompt';
 import type { DraftSystem } from '@/lib/system-types';
+import { draftComponentsFromAssessed } from '@/lib/system-types';
 import { EDITORIAL } from '@/lib/editorial-tokens';
 import ListenerProfileBadge, { buildProfileSnapshot, type ListenerProfileSnapshot } from '@/components/ListenerProfileBadge';
 
@@ -3798,6 +3799,7 @@ export default function Home() {
              * fallback is the MORE conservative composer, never weaker
              * epistemic behavior.
              */
+            let governedParas: string[] | undefined;
             if (laneActive()) {
               const st0 = Date.now();
               try {
@@ -3819,7 +3821,17 @@ export default function Home() {
                     ? j.answer.split(/\n{2,}/).map((p: string) => p.trim()).filter(Boolean)
                     : [];
                   if ((j.status === 'CHECKED' || j.status === 'REPAIRED') && paras.length > 0) {
+                    governedParas = paras;
                     provisionalAdvisory.systemReview = convStateRef.current.facts.lastSystemReview = paras;
+                    /*
+                     * ONE OWNER OF THE HANDOFF (turn-0 consolidation,
+                     * 2026-09-20): the published governed review closes
+                     * with its own question, so the legacy follow-up is
+                     * not rendered after it. Ownership is publication
+                     * state, never text matching. On fallback the legacy
+                     * follow-up remains the handoff, unchanged.
+                     */
+                    provisionalAdvisory.followUp = undefined;
                     console.warn('[assessment-synthesis] published status=%s paras=%d ms=%d',
                       j.status, paras.length, Date.now() - st0);
                   } else {
@@ -3832,6 +3844,28 @@ export default function Home() {
               } catch (err) {
                 console.warn('[assessment-synthesis] fallback error=%s ms=%d',
                   String(err).slice(0, 120), Date.now() - st0);
+              }
+            }
+            /*
+             * THE SAVE PROPOSAL INHERITS THE ASSESSMENT'S GRAPH (turn-0
+             * consolidation, 2026-09-20). The brand-map extraction typed
+             * unknown brands as 'other' and could drop resolved
+             * components entirely; the review-save sheet then disagreed
+             * with the assessment above it. The graph is authoritative.
+             */
+            {
+              const prior = audioState.proposedSystem;
+              if (prior && !dismissedFingerprintsRef.current.has(prior.fingerprint)) {
+                audioDispatch({
+                  type: 'SET_PROPOSED_SYSTEM',
+                  proposed: {
+                    ...prior,
+                    components: draftComponentsFromAssessed(
+                      orderedComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+                      prior.components,
+                    ),
+                  },
+                });
               }
             }
             // Per-component provenance — computed by Audio XX from what it
@@ -3912,6 +3946,8 @@ export default function Home() {
               })),
               componentDossiers: dossierViews,
               rawQuery: assessmentResult.query,
+              // The frozen review is the one the listener actually read.
+              publishedReview: governedParas,
             });
             // The snapshot's review is the one the listener actually reads;
             // follow-up continuity answers from the same text.
@@ -4140,11 +4176,83 @@ export default function Home() {
           deterministicAdvisory.philosophy = canonicalModel.philosophy;
           if (canonicalModel.followUp) deterministicAdvisory.followUp = canonicalModel.followUp;
         }
+        /*
+         * ONE TURN-0 ARCHITECTURE (consolidation, 2026-09-20). Catalog
+         * state may change the evidence available to reasoning; it must
+         * not select the reasoning architecture. The cataloged branch now
+         * runs the SAME governed synthesis over the same publication
+         * boundary as the provisional branch. On publish: the governed
+         * prose is the review on every surface, it owns the handoff, and
+         * the legacy v2 prose carrier is not attached (the deterministic
+         * artifact — dossiers, calculations, ledger — still renders and
+         * still freezes). On fallback (ineligible, failure, or
+         * non-publication) everything below behaves exactly as before.
+         */
+        let governedParas: string[] | undefined;
+        if (laneActive()) {
+          const st0 = Date.now();
+          try {
+            const res = await fetchWithTimeout('/api/reasoning-lane', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mode: 'assessment',
+                activeSystem: {
+                  components: chainComponents.map((c) => ({ displayName: c.displayName, role: c.role ?? '' })),
+                  source: 'stated',
+                },
+                currentHypothetical: null,
+                question: accumulatedText,
+                recentTurns: [],
+                userObservations: [],
+              }),
+            }, 75000);
+            if (res.ok) {
+              const j = await res.json();
+              const paras = typeof j.answer === 'string'
+                ? j.answer.split(/\n{2,}/).map((p: string) => p.trim()).filter(Boolean)
+                : [];
+              if ((j.status === 'CHECKED' || j.status === 'REPAIRED') && paras.length > 0) {
+                governedParas = paras;
+                deterministicAdvisory.systemReview = paras;
+                deterministicAdvisory.followUp = undefined;
+                console.warn('[assessment-synthesis] published (catalog path) status=%s paras=%d ms=%d',
+                  j.status, paras.length, Date.now() - st0);
+              } else {
+                console.warn('[assessment-synthesis] fallback (catalog path) status=%s ms=%d',
+                  j.status ?? 'no-status', Date.now() - st0);
+              }
+            } else {
+              console.warn('[assessment-synthesis] fallback (catalog path) http=%d ms=%d', res.status, Date.now() - st0);
+            }
+          } catch (err) {
+            console.warn('[assessment-synthesis] fallback (catalog path) error=%s ms=%d',
+              String(err).slice(0, 120), Date.now() - st0);
+          }
+        }
+        // The save proposal inherits the assessment's graph here too.
+        {
+          const prior = audioState.proposedSystem;
+          if (prior && !dismissedFingerprintsRef.current.has(prior.fingerprint)) {
+            audioDispatch({
+              type: 'SET_PROPOSED_SYSTEM',
+              proposed: {
+                ...prior,
+                components: draftComponentsFromAssessed(
+                  chainComponents.map((c) => ({ displayName: c.displayName, role: c.role })),
+                  prior.components,
+                ),
+              },
+            });
+          }
+        }
         // v2 Assessment Artifact carrier — flag-gated, presentation-only.
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and
         // no consumer reads it. On path: the chat-side dispatch consumes it
         // via synthesizeArtifact() to render the v2 editorial artifact.
-        if (ASSESSMENT_ARTIFACT_V2_ENABLED) {
+        // A published governed review REPLACES the v2 prose surface — the
+        // carrier stays off so both catalog states render one architecture.
+        if (ASSESSMENT_ARTIFACT_V2_ENABLED && !governedParas) {
           // The listener's own words travel WITH the result: stated
           // connections and exclusions ("the Hugo isn't being used") must
           // reach the same composer every surface renders through, or the
@@ -4185,6 +4293,8 @@ export default function Home() {
             // This branch's result shape carries no `query`; the turn's raw
             // text is the same message buildSystemAssessment consumed.
             rawQuery: accumulatedText,
+            // The frozen review is the one the listener actually read.
+            publishedReview: governedParas,
           });
           trackEvent('unmatched_model', { model: 'PROBE-w3', reason: 'probe' });
           convStateRef.current.facts.lastSystemReview = canonicalSnap.systemReview ?? [];
