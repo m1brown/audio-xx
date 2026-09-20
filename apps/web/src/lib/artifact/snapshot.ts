@@ -186,6 +186,15 @@ export function snapshotFromCanonical(
     rawQuery?: string;
     /** Guarded model signature from the one reasoning pass (2026-09-12). */
     modelSignature?: string;
+    /**
+     * The governed turn-0 synthesis the listener actually read (turn-0
+     * consolidation, 2026-09-20). When present it IS the frozen review —
+     * "reason once → freeze → render many times" means the artifact must
+     * carry the published prose, not a second deterministic composition.
+     * The published prose owns the conversational handoff, so no separate
+     * question is frozen alongside it.
+     */
+    publishedReview?: string[];
   },
 ): AssessmentSnapshotV1 {
   const sections: SnapshotSection[] = [];
@@ -299,9 +308,11 @@ export function snapshotFromCanonical(
       // reopened artifact can still say what each box does in the chain.
       ...(roleByName.get(c.name) ? { role: roleByName.get(c.name) } : {}),
     })),
-    systemReview: reviewDetail.paragraphs,
-    reviewNextIndex: reviewDetail.nextIndex,
-    reviewSections: reviewDetail.sections,
+    systemReview: meta.publishedReview ?? reviewDetail.paragraphs,
+    reviewNextIndex: meta.publishedReview ? meta.publishedReview.length : reviewDetail.nextIndex,
+    reviewSections: meta.publishedReview
+      ? [{ label: 'System review', paragraphs: meta.publishedReview }]
+      : reviewDetail.sections,
     verdict: cam.identity.verdict,
     standfirst: cam.identity.signature,
     actionVerdict: meta.actionVerdict,
@@ -338,6 +349,7 @@ export function snapshotFromCanonical(
     })),
     dossiers: meta.componentDossiers ?? [],
     traitAuthored: true,
+    governedReview: !!meta.publishedReview,
     engineRelations: engineRelationsFrom(meta.findings),
   });
 }
@@ -366,6 +378,9 @@ export function snapshotFromProvisional(
     componentDossiers?: DossierView[];
     /** Listener's words, for stated-connection detection only (P1 2026-09-03). */
     rawQuery?: string;
+    /** The governed turn-0 synthesis the listener actually read (turn-0
+     *  consolidation, 2026-09-20) — see snapshotFromCanonical. */
+    publishedReview?: string[];
   },
 ): AssessmentSnapshotV1 {
   const basisFor = new Map(
@@ -473,15 +488,20 @@ export function snapshotFromProvisional(
     qualification: response.qualification,
     actionVerdict: response.actionVerdict,
     sections,
-    question: response.followUp,
+    // ONE OWNER OF THE HANDOFF (turn-0 consolidation, 2026-09-20): a
+    // published governed review closes with its own question, so the
+    // legacy follow-up is not frozen beside it.
+    question: meta.publishedReview ? undefined : response.followUp,
     relations: (response.systemRelations ?? []).map((r) => ({
       components: r.components, axis: r.axis, kind: r.kind, tier: r.tier,
     })),
     componentDossiers: dossiers,
     coverageNote: meta.coverageNote,
-    systemReview: reviewDetail.paragraphs,
-    reviewNextIndex: reviewDetail.nextIndex,
-    reviewSections: reviewDetail.sections,
+    systemReview: meta.publishedReview ?? reviewDetail.paragraphs,
+    reviewNextIndex: meta.publishedReview ? meta.publishedReview.length : reviewDetail.nextIndex,
+    reviewSections: meta.publishedReview
+      ? [{ label: 'System review', paragraphs: meta.publishedReview }]
+      : reviewDetail.sections,
     // DERIVED, not fixed. The previous fixed string was chosen because
     // asserting source classes the path does not hold would be a false claim —
     // correct reasoning, wrong remedy. The path DOES hold evidence: its
@@ -504,6 +524,7 @@ export function snapshotFromProvisional(
     components: meta.components,
     dossiers: meta.componentDossiers ?? [],
     traitAuthored: false,
+    governedReview: !!meta.publishedReview,
     // The inference lane records what it established; those are licensed
     // relationships and are exactly what the verdict must be composed from.
     engineRelations: (response.systemRelations ?? [])

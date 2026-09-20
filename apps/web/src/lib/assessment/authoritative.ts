@@ -59,6 +59,16 @@ export interface LicenceInput {
    */
   traitAuthored: boolean;
   /**
+   * True when the review is the PUBLISHED governed synthesis (turn-0
+   * consolidation, 2026-09-20). Governed prose states its own material
+   * uncertainty under the composition contract and closes with its own
+   * question, so the deterministic unresolved statement is not spliced
+   * into it — the same missing fact must not be re-encountered in a
+   * second voice after the handoff. The per-component "Not established"
+   * lines remain on the dossiers, inspectable as ever.
+   */
+  governedReview?: boolean;
+  /**
    * Relationships the ENGINE established from published data — a power
    * mismatch between a rated amplifier and a rated loudspeaker, for instance.
    *
@@ -332,7 +342,7 @@ export function licenseAssessment(
   const at = typeof snapshot.reviewNextIndex === 'number'
     ? Math.min(Math.max(snapshot.reviewNextIndex, 0), base.length)
     : base.length;
-  const systemReview = unresolved
+  const systemReview = unresolved && !input.governedReview
     ? [...base.slice(0, at), unresolved, ...base.slice(at)]
     : [...base];
 
