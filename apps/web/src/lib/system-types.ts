@@ -78,9 +78,15 @@ export function draftComponentsFromAssessed(
   };
   return assessed.map((c) => {
     const match = prior?.find((p) => {
+      // A prior row with an EMPTY model name matches nothing: ''.includes
+      // is vacuously true, and a brand-only row ("ARC", "") would glue its
+      // brand onto whichever assessed component happened to be compared
+      // first ("ARC Acora QRC-2", live 2026-09-20).
+      const pname = p.name.trim().toLowerCase();
       const full = `${p.brand} ${p.name}`.trim().toLowerCase();
       const dn = c.displayName.toLowerCase();
-      return full === dn || p.name.trim().toLowerCase() === dn || dn.includes(p.name.trim().toLowerCase());
+      if (pname === '') return false;
+      return full === dn || pname === dn || dn.includes(pname);
     });
     return {
       name: match?.name?.trim() || c.displayName,
