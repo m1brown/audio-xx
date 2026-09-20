@@ -3784,6 +3784,56 @@ export default function Home() {
               // the conversation renders. Passing it here too would print it
               // twice on one surface.
             });
+            /*
+             * GOVERNED TURN-0 SYNTHESIS (founder decision, 2026-09-19).
+             * The user-facing prose of the initial assessment is the
+             * governed lane's reasoning over the SAME admitted substrate
+             * the artifact renders. The deterministic review above remains
+             * composed first and stands as (a) the artifact's reproducible
+             * evidence state and (b) the fallback prose. Fallback occurs
+             * under exactly these conditions, each logged: lane not
+             * eligible for this account; HTTP/timeout failure; or the
+             * synthesis did not publish (INCOMPLETE/REJECTED — the same
+             * publication boundary as every conversational turn). The
+             * fallback is the MORE conservative composer, never weaker
+             * epistemic behavior.
+             */
+            if (laneActive()) {
+              const st0 = Date.now();
+              try {
+                const res = await fetchWithTimeout('/api/reasoning-lane', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    mode: 'assessment',
+                    activeSystem: { components: laneStateRef.current.components, source: 'stated' },
+                    currentHypothetical: null,
+                    question: assessmentResult.query,
+                    recentTurns: [],
+                    userObservations: laneStateRef.current.observations,
+                  }),
+                }, 75000);
+                if (res.ok) {
+                  const j = await res.json();
+                  const paras = typeof j.answer === 'string'
+                    ? j.answer.split(/\n{2,}/).map((p: string) => p.trim()).filter(Boolean)
+                    : [];
+                  if ((j.status === 'CHECKED' || j.status === 'REPAIRED') && paras.length > 0) {
+                    provisionalAdvisory.systemReview = convStateRef.current.facts.lastSystemReview = paras;
+                    console.warn('[assessment-synthesis] published status=%s paras=%d ms=%d',
+                      j.status, paras.length, Date.now() - st0);
+                  } else {
+                    console.warn('[assessment-synthesis] fallback status=%s ms=%d (deterministic prose retained)',
+                      j.status ?? 'no-status', Date.now() - st0);
+                  }
+                } else {
+                  console.warn('[assessment-synthesis] fallback http=%d ms=%d', res.status, Date.now() - st0);
+                }
+              } catch (err) {
+                console.warn('[assessment-synthesis] fallback error=%s ms=%d',
+                  String(err).slice(0, 120), Date.now() - st0);
+              }
+            }
             // Per-component provenance — computed by Audio XX from what it
             // actually holds, so the model cannot promote its own knowledge to
             // curated authority. This is the rendering layer the original

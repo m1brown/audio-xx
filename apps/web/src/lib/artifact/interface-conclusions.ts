@@ -357,14 +357,27 @@ function headroomConclusion(
   const statedAt283 = /2\.83\s*v/i.test(sensLine!.value);
   const perWattNote = statedAt283
     ? ` (about ${sensPerWatt.toFixed(1)}dB per watt into ${load} ohms)` : '';
+  /*
+   * THE ARITHMETIC LICENSES A CEILING, NOT A SEAT (regression repair,
+   * 2026-09-19). The generous band closed with "running out of level is
+   * unlikely to be this system's limitation" — a system-level verdict the
+   * one-metre theoretical ceiling cannot carry: it assumes rated power
+   * into the real load and knows nothing of room, distance, impedance
+   * behaviour or the listener's level. The narrowed close keeps the
+   * useful margin statement at its true scope and hands the last step to
+   * the one measurement that settles it — the listener's own levels. The
+   * severe band is untouched: a deficit no room recovers IS a system
+   * conclusion the arithmetic licenses.
+   */
   const statement = band === 'generous'
     ? `On the published figures the pairing has substantial acoustic headroom: `
       + `${sensLine!.value}${perWattNote} `
       + `with the maker's ${power}W figure at the ${load}-ohm load this `
       + `loudspeaker presents puts a theoretical peak near ${peak.toFixed(1)}dB at one metre `
       + `— a ceiling that assumes rated power into the real load, before room and listening `
-      + `distance take their share. The margin is large enough that running out of level is `
-      + `unlikely to be this system's limitation.`
+      + `distance take their share. The arithmetic licenses that ceiling, not your seat: `
+      + `on figures this favourable a level shortfall would be surprising, and it is easy `
+      + `to rule out — if your normal listening arrives clean, power is settled.`
     : band === 'severe'
       ? `On the published figures this pairing is genuinely power-constrained: `
         + `${sensLine!.value}${perWattNote} `

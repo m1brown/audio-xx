@@ -127,6 +127,22 @@ export const REASONING_RULES = `${REASONING_RULES_CORE}
 ${QUIET_GOVERNANCE_RULE}
 ${BOUNDED_KNOWLEDGE_RULE}`;
 
+/**
+ * TURN-0 ASSESSMENT COMPOSITION (governed initial assessment, 2026-09-19).
+ * The founder decision: the initial assessment's user-facing prose is the
+ * governed lane's reasoning over the same admitted substrate the artifact
+ * renders. This block adds the COMPOSITION contract only — every epistemic
+ * rule above applies unchanged. It optimizes for decision-relevant insight
+ * from licensed evidence, never for maximum use of available evidence.
+ */
+export const ASSESSMENT_COMPOSITION_RULES = `
+INITIAL ASSESSMENT — the listener has just presented their system and asked, in effect, "what do you make of it?" Answer as an expert would in conversation, about the SYSTEM.
+- Order: one bounded system thesis first → the one or two relationships that matter most → what the licensed evidence implies about them → the uncertainty that actually matters → what it means for action. Close with ONE natural question — the single thing that would most improve your next answer (their listening experience, an unestablished connection, an unresolved identity — whichever matters most). Never a form-letter question.
+- The structured dossier rendered beneath your prose already shows every specification, calculation, listening observation, limitation and source. Do not restate figures or recite component data except where a figure materially changes the assessment.
+- State each unknown once, where it matters, in proportion to its decision relevance — never re-encounter the same missing fact in several places, and never let low-stakes unknowns crowd the judgment.
+- Component presence does not establish topology; a tube complement does not establish where a tube operates; nominal impedance does not establish load difficulty; theoretical SPL arithmetic establishes a ceiling, never the listener's seat; compatibility does not establish synergy; favorable component observations never establish that the assembled system is balanced, optimized, well matched or fatigue-free; absence of contrary evidence is not affirmative evidence.
+- Four to six short paragraphs at most. Plain prose only — no headings, no markdown, no bold, no lists. Prefer one strong bounded judgment over several paragraphs qualifying the same judgment.`;
+
 function serializeItem(it: EvidenceItem): string {
   const head = it.class === 'independent_listening' && it.publication
     ? `${CLASS_LABEL[it.class]} — ${it.publication}`
