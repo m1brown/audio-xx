@@ -14,10 +14,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/session';
 import { assembleGovernedContext, type ConversationTurn } from '@/lib/reasoning/context-assembly';
-import { serializeGovernedContext, REASONING_RULES } from '@/lib/reasoning/governed-context';
+import {
+  serializeGovernedContext, REASONING_RULES, ASSESSMENT_COMPOSITION_RULES,
+} from '@/lib/reasoning/governed-context';
 import { validateClaims, computeValidationStatus } from '@/lib/reasoning/claim-validation';
 import { deterministicTrustCheck } from '@/lib/reasoning/deterministic-trust';
 import { generationParams } from '@/lib/reasoning/model-params';
+import { establishedIdentity } from '@/lib/evidence/identity-admission';
+import { buildServerDossiers } from '@/lib/assessment/server-dossiers';
+import { analyzeConversionPath } from '@/lib/assessment/conversion-path';
 
 /*
  * Generation timeout (M1 astra promotion, 2026-09-17): raised 30s → 90s
@@ -76,8 +81,12 @@ export async function POST(req: NextRequest) {
     question?: string;
     recentTurns?: Array<{ role?: string; content?: string }>;
     userObservations?: string[];
+    /** 'assessment' = governed TURN-0 synthesis over the same substrate
+     *  (founder decision, 2026-09-19); anything else = conversational turn. */
+    mode?: string;
   };
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
+  const assessmentMode = body.mode === 'assessment';
 
   const question = typeof body.question === 'string' ? body.question.slice(0, MAX_TURN_CHARS) : '';
   const rawComponents = Array.isArray(body.activeSystem?.components) ? body.activeSystem!.components! : [];
@@ -108,10 +117,53 @@ export async function POST(req: NextRequest) {
       userObservations: (body.userObservations ?? []).filter((o) => typeof o === 'string').slice(0, 12),
     });
 
+    /*
+     * TURN-0 INPUT CONTRACT (governed initial assessment, 2026-09-19).
+     * The assessment mode receives ONLY admitted material, and two
+     * deterministic sections the conversational lane leaves to raw
+     * history because turn 0 has none:
+     *
+     *   IDENTITY STATUS — each component's identity basis from the same
+     *   admission lattice that gates the fact store. An unresolved
+     *   description is explicitly marked so the model may treat it as the
+     *   listener's words, never as a resolvable product.
+     *
+     *   TOPOLOGY — analyzeConversionPath over the server dossiers: the
+     *   application's deterministic reading of what the component list
+     *   does and does not establish about the signal path.
+     *
+     * No new acquisition path: dossiers read the identity-gated store,
+     * and everything else is arithmetic over the roster.
+     */
+    let assessmentContext = '';
+    if (assessmentMode) {
+      const idLines: string[] = [];
+      for (const c of components) {
+        const id = await establishedIdentity(c.displayName);
+        idLines.push(id
+          ? `- ${c.displayName}: identity established (${id.basis}${id.canonicalName ? ` — ${id.canonicalName}` : ''})`
+          : `- ${c.displayName}: the listener's description only — identity NOT established. Do not assign it a specific model, exact facts, or a product-specific character; asking which model it is may be the most useful question in this assessment.`);
+      }
+      const dossiers = await buildServerDossiers(
+        components.map((c) => ({ name: c.displayName, role: c.role })), question,
+      );
+      const conv = analyzeConversionPath(components, dossiers, question);
+      const stageNames = (conv.stages ?? []).map((s: { name: string }) => s.name);
+      const topology = conv.ambiguous
+        ? `the component list does NOT establish where digital-to-analogue conversion happens (capable stages: ${stageNames.join(', ') || 'multiple'}); the connections are the listener's to state`
+        : conv.explicit
+          ? 'the signal path is established from the listener’s own description'
+          : 'no competing conversion stages; the nominal chain order applies';
+      assessmentContext = `\nCOMPONENT IDENTITY STATUS (from the application's identity admission; authoritative)\n${idLines.join('\n')}\n\nAPPLICATION TOPOLOGY ANALYSIS (deterministic)\n- ${topology}`;
+    }
+
     const tAssembly = Date.now() - t0;
-    const serialized = serializeGovernedContext(ctx);
+    const serialized = serializeGovernedContext(ctx) + assessmentContext;
+    const rules = assessmentMode
+      ? `${REASONING_RULES}\n${ASSESSMENT_COMPOSITION_RULES}`
+      : REASONING_RULES;
     const messages = [
-      { role: 'system', content: `${REASONING_RULES}\n\n${serialized}` },
+      { role: 'system', content: `${rules}\n\n${serialized}` },
       ...recentTurns,
       { role: 'user', content: question },
     ];
@@ -176,7 +228,8 @@ export async function POST(req: NextRequest) {
     if ((status === 'CHECKED' || status === 'REPAIRED') && !det.clean) status = 'REJECTED';
     const deletionRequired = validated.violations.some((v) => v.rewrite === null);
     // Observability (§14): one structured line per turn, no content.
-    console.warn('[reasoning-lane] result status=%s viol=%d repaired=%d delReq=%s det=%s(w=%d,f=%d,v=%d) pub=%s totalMs=%d model=%s vmodel=%s comps=%d cand=%d hyp=%s',
+    console.warn('[reasoning-lane] result mode=%s status=%s viol=%d repaired=%d delReq=%s det=%s(w=%d,f=%d,v=%d) pub=%s totalMs=%d model=%s vmodel=%s comps=%d cand=%d hyp=%s',
+      assessmentMode ? 'assessment' : 'turn',
       status, validated.violations.length, validated.repaired, deletionRequired,
       det.clean ? 'clean' : 'viol', det.unlicensedWattLoad.length, det.strayFigures.length, det.unlicensedEvidenceVoice.length,
       status === 'CHECKED' || status === 'REPAIRED',

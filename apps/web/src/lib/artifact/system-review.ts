@@ -272,11 +272,25 @@ export function composeSystemReviewDetailed(input: SystemReviewInput): {
 ,
     );
   } else if (tubeStages.length === 1) {
+    /*
+     * THE SAME RULE APPLIES TO ONE TUBE STAGE (P1 regression repair,
+     * 2026-09-19). This branch said "is a valve design — <complement>",
+     * which is the exact Describe → Explain promotion block C above was
+     * repaired for: the Butler MONAD A100 carries a 300B in its published
+     * complement and is a hybrid whose signal does not pass through a
+     * valve output stage. A parts list licenses containment; topology is
+     * stated only where an architecture fact establishes it.
+     */
     const t = tubeStages[0];
     const tubes = findLine(t.dossier, 'tube complement')?.value;
+    const topology = findLine(t.dossier, 'output stage') ?? findLine(t.dossier, 'topology');
     architecture.push(
-      `The ${canonicalDisplayName(t.component.displayName)} is a valve design${tubes ? ` — ${tubes.replace(/\.$/, '')}` : ''}, `
-      + `and it is the only published tube stage in the chain.`,
+      `The ${canonicalDisplayName(t.component.displayName)} carries the chain’s only `
+      + `published tube complement${tubes ? ` — ${tubes.replace(/\.$/, '')}` : ''}. `
+      + (topology
+        ? `Where those valves sit is on the record: ${topology.value.replace(/\.$/, '')}. `
+        : `A published tube complement establishes that the unit contains these `
+          + `valves, not where in its circuit they operate.`),
     );
   }
 
