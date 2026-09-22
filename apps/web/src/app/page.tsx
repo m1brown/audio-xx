@@ -4221,6 +4221,10 @@ export default function Home() {
                 governedParas = paras;
                 deterministicAdvisory.systemReview = paras;
                 deterministicAdvisory.followUp = undefined;
+                // The embedded artifact renders the governed prose INSIDE the
+                // structured document — one interpretive authority over the
+                // same evidence surfaces (integration cleanup, 2026-09-21).
+                deterministicAdvisory.__governedReview = paras;
                 console.warn('[assessment-synthesis] published (catalog path) status=%s paras=%d ms=%d',
                   j.status, paras.length, Date.now() - st0);
               } else {
@@ -4258,9 +4262,13 @@ export default function Home() {
         // Off path: deterministicAdvisory.__rawAssessment stays undefined and
         // no consumer reads it. On path: the chat-side dispatch consumes it
         // via synthesizeArtifact() to render the v2 editorial artifact.
-        // A published governed review REPLACES the v2 prose surface — the
-        // carrier stays off so both catalog states render one architecture.
-        if (ASSESSMENT_ARTIFACT_V2_ENABLED && !governedParas) {
+        // A published governed review rides INSIDE the carrier's document
+        // (integration cleanup, 2026-09-21): the embedded artifact keeps the
+        // structured evidence surfaces and the snapshot builder makes the
+        // governed prose its one interpretive account. Dropping the carrier
+        // here instead sent publish-path assessments to the legacy editorial
+        // artifact — the competing interpretation this cleanup retires.
+        if (ASSESSMENT_ARTIFACT_V2_ENABLED) {
           // The listener's own words travel WITH the result: stated
           // connections and exclusions ("the Hugo isn't being used") must
           // reach the same composer every surface renders through, or the

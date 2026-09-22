@@ -56,7 +56,7 @@ describe('one owner of the conversational handoff', () => {
     const snap = snapshotFromProvisional(RESPONSE, { ...META, publishedReview: GOVERNED });
     expect(snap.question).toBeUndefined();
     expect(snap.systemReview).toEqual(GOVERNED);
-    expect(snap.reviewSections).toEqual([{ label: 'System review', paragraphs: GOVERNED }]);
+    expect(snap.reviewSections).toEqual([{ label: 'The assessment', paragraphs: GOVERNED }]);
   });
 
   it('a fallback snapshot keeps the legacy follow-up as its handoff', () => {
@@ -122,8 +122,14 @@ describe('one turn-0 architecture — both branches, same governed path', () => 
     expect(page).toMatch(cataloged);
   });
 
-  it('the v2 prose carrier yields to a published governed review', () => {
-    expect(page).toMatch(/ASSESSMENT_ARTIFACT_V2_ENABLED && !governedParas/);
+  it('the v2 carrier travels WITH a published governed review (integration cleanup, 2026-09-21)', () => {
+    // Superseded decision, recorded: the consolidation originally dropped the
+    // carrier on publish, which sent publish-path assessments to the LEGACY
+    // editorial artifact — a second interpretive voice. The carrier is now
+    // attached whenever the flag is on, and the governed prose rides inside
+    // the structured document via __governedReview.
+    expect(page).not.toMatch(/ASSESSMENT_ARTIFACT_V2_ENABLED && !governedParas/);
+    expect(page).toMatch(/deterministicAdvisory\.__governedReview = paras/);
   });
 
   it('reconciliation reads the TURN\'s own proposal, not the stale closure state', () => {

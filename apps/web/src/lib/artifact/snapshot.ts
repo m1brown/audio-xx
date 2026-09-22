@@ -311,17 +311,29 @@ export function snapshotFromCanonical(
     systemReview: meta.publishedReview ?? reviewDetail.paragraphs,
     reviewNextIndex: meta.publishedReview ? meta.publishedReview.length : reviewDetail.nextIndex,
     reviewSections: meta.publishedReview
-      ? [{ label: 'System review', paragraphs: meta.publishedReview }]
+      // 'The assessment' rather than 'System review': the section heading
+      // above this slot already says "System review", and the label doubles
+      // as the verdict stand-down cue in the renderer.
+      ? [{ label: 'The assessment', paragraphs: meta.publishedReview }]
       : reviewDetail.sections,
-    verdict: cam.identity.verdict,
-    standfirst: cam.identity.signature,
-    actionVerdict: meta.actionVerdict,
-    recognition: cam.identity.recognition || undefined,
+    /*
+     * ONE INTERPRETIVE AUTHORITY (integration cleanup, 2026-09-21). When a
+     * governed review was published, every deterministic system-level
+     * interpretation stands down: verdict, standfirst, recognition,
+     * recommendation, operating condition and the engine's reading prose.
+     * The governed prose IS the account of the assembled system; the
+     * document keeps facts, evidence, provenance and dossiers. On fallback
+     * (no publishedReview) everything below behaves exactly as before.
+     */
+    verdict: meta.publishedReview ? '' : cam.identity.verdict,
+    standfirst: meta.publishedReview ? undefined : cam.identity.signature,
+    actionVerdict: meta.publishedReview ? undefined : meta.actionVerdict,
+    recognition: meta.publishedReview ? undefined : (cam.identity.recognition || undefined),
     tonalSignature: cam.identity.tonalSignature,
-    recommendation: cam.guidance.recommendation,
-    cost: cam.guidance.oneCost,
-    sections,
-    operatingCondition: cam.reading.operatingCondition,
+    recommendation: meta.publishedReview ? undefined : cam.guidance.recommendation,
+    cost: meta.publishedReview ? undefined : cam.guidance.oneCost,
+    sections: meta.publishedReview ? [] : sections,
+    operatingCondition: meta.publishedReview ? undefined : cam.reading.operatingCondition,
     componentDossiers: meta.componentDossiers,
     evidenceStatement: cam.evidence.statement,
     primarySources: cam.evidence.primarySources,
@@ -484,10 +496,14 @@ export function snapshotFromProvisional(
     components: meta.components.map((c) => ({
       name: c.name, role: c.role, basis: basisFor.get(c.name),
     })),
-    verdict: response.systemSignature ?? '',
-    qualification: response.qualification,
-    actionVerdict: response.actionVerdict,
-    sections,
+    // ONE INTERPRETIVE AUTHORITY (integration cleanup, 2026-09-21): a
+    // published governed review displaces the deterministic signature,
+    // qualification and action verdict on this path too. Facts, dossiers
+    // and evidence are untouched.
+    verdict: meta.publishedReview ? '' : (response.systemSignature ?? ''),
+    qualification: meta.publishedReview ? undefined : response.qualification,
+    actionVerdict: meta.publishedReview ? undefined : response.actionVerdict,
+    sections: meta.publishedReview ? [] : sections,
     // ONE OWNER OF THE HANDOFF (turn-0 consolidation, 2026-09-20): a
     // published governed review closes with its own question, so the
     // legacy follow-up is not frozen beside it.
@@ -500,7 +516,10 @@ export function snapshotFromProvisional(
     systemReview: meta.publishedReview ?? reviewDetail.paragraphs,
     reviewNextIndex: meta.publishedReview ? meta.publishedReview.length : reviewDetail.nextIndex,
     reviewSections: meta.publishedReview
-      ? [{ label: 'System review', paragraphs: meta.publishedReview }]
+      // 'The assessment' rather than 'System review': the section heading
+      // above this slot already says "System review", and the label doubles
+      // as the verdict stand-down cue in the renderer.
+      ? [{ label: 'The assessment', paragraphs: meta.publishedReview }]
       : reviewDetail.sections,
     // DERIVED, not fixed. The previous fixed string was chosen because
     // asserting source classes the path does not hold would be a false claim —

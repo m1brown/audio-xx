@@ -28,6 +28,14 @@ export interface FromResultOptions {
   engineVersion?: string;
   createdAt?: string;
   coverageNote?: string;
+  /**
+   * The governed lane's published review, when one was published for this
+   * assessment. Passing it makes the governed prose the document's ONE
+   * interpretive account: the snapshot builder replaces the deterministic
+   * review with it and stands down verdict, standfirst, recognition,
+   * recommendation and reading prose (integration cleanup, 2026-09-21).
+   */
+  publishedReview?: string[];
 }
 
 /**
@@ -81,5 +89,6 @@ export function authoritativeAssessment(
     // The governed model pass's guarded signature (one reasoning pass,
     // 2026-09-12) — carried when the conversation ran it, absent otherwise.
     modelSignature: (result as { modelSignature?: string }).modelSignature,
+    publishedReview: options.publishedReview,
   });
 }

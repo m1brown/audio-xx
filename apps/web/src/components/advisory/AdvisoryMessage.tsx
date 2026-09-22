@@ -40,6 +40,7 @@ import AdvisoryLinks, { hasDisplayableLinks } from './AdvisoryLinks';
 import AdvisorySources from './AdvisorySources';
 import BrandAuthorityPreview from './BrandAuthorityPreview';
 import SystemAssessmentArtifact from './SystemAssessmentArtifact';
+import SystemHero from './SystemHero';
 import ArtifactActionsInline from './ArtifactActionsInline';
 import ComponentDossiers from './ComponentDossiers';
 import SnapshotArtifact from '../../app/artifact/SnapshotArtifact';
@@ -5525,12 +5526,30 @@ export default function AdvisoryMessage({ advisory: rawAdvisory, onIntakeSubmit,
        */
       const assessment = authoritativeAssessment(advisory.__rawAssessment, {
         dossiers: advisory.componentDossiers,
+        // A published governed review becomes the document's ONE interpretive
+        // account; the deterministic interpretation stands down inside the
+        // snapshot builder (integration cleanup, 2026-09-21).
+        publishedReview: advisory.__governedReview,
       });
       // Funnel (certification Gate 3, G3-D1): the embedded assessment IS
       // a completed assessment — tracked at the embed site so every
       // branch of this dispatch counts. Deduped per page load.
       content = assessment ? (
         <>
+          {/* The Audio XX-native sound graph and signal chain keep their
+              place at the top of the governed assessment (§ integration
+              cleanup, 2026-09-21). KNOWN LIMITATION, recorded rather than
+              redesigned: spiderChartData derives from the categorical axis
+              read plus a listener-priority boost, and cannot yet distinguish
+              evidence-supported dimensions from unsupported ones. Rendered
+              for the governed experience only — fallback documents are
+              byte-identical to before. */}
+          {advisory.__governedReview && (
+            <SystemHero
+              spiderChartData={advisory.spiderChartData}
+              systemChain={advisory.systemChain}
+            />
+          )}
           <SnapshotArtifact snapshot={assessment} embedded />
           <TrackAssessmentEmbed />
         </>
