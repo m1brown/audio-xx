@@ -716,6 +716,17 @@ export interface AdvisoryResponse {
   __rawAssessment?: unknown;
 
   /**
+   * The governed lane's PUBLISHED review paragraphs for this assessment
+   * (CHECKED/REPAIRED only). Same transport-lane rules as __rawAssessment:
+   * the embedded artifact passes it to the snapshot builder, which makes it
+   * the document's one interpretive account (integration cleanup,
+   * 2026-09-21). Absent on fallback — the deterministic document renders
+   * exactly as before.
+   */
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  __governedReview?: string[];
+
+  /**
    * Reasoning mode that produced this response. Optional — omitted = 'core'.
    * Only 'expanded' triggers a visible UI indicator + caption; 'hybrid' is
    * internal observability only. See {@link ReasoningMode} for semantics.

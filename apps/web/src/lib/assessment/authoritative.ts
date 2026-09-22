@@ -324,9 +324,18 @@ export function licenseAssessment(
   const engineCovered = (input.engineRelations ?? []).length > 0;
   const gap = namedGap(rows, engineCovered);
 
-  const verdict = input.traitAuthored && !constrained
-    ? verdictFromEvidence(undefined, established, gap)
-    : snapshot.verdict || verdictFromEvidence(undefined, established, gap);
+  /*
+   * ONE INTERPRETIVE AUTHORITY (integration cleanup, 2026-09-21). A verdict
+   * is a one-line account of the assembled system, and when a governed
+   * review was published that account already exists — recomposing a
+   * deterministic verdict above it restores the second interpretive voice
+   * this gate exists to prevent. Facts and dossiers are not affected.
+   */
+  const verdict = input.governedReview
+    ? ''
+    : input.traitAuthored && !constrained
+      ? verdictFromEvidence(undefined, established, gap)
+      : snapshot.verdict || verdictFromEvidence(undefined, established, gap);
 
   const unresolved = composeUnresolved(rows, engineCovered);
   /*
@@ -373,9 +382,11 @@ export function licenseAssessment(
     // something and recomposed when it did not.
     return {
       ...snapshot,
-      verdict: established.length > 0
-        ? (snapshot.verdict || verdict)
-        : verdictFromEvidence(undefined, [], gap),
+      verdict: input.governedReview
+        ? ''
+        : established.length > 0
+          ? (snapshot.verdict || verdict)
+          : verdictFromEvidence(undefined, [], gap),
       systemReview,
     };
   }

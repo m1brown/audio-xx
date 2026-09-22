@@ -122,12 +122,23 @@ export const NATHAN_FACTS: ProductFact[] = [
   // class says so — an independent measurement is a different kind of evidence
   // from a published specification, and merging them would hide which one this
   // conclusion rests on.
+  // ONE FACT PER ROW (integration cleanup, 2026-09-21). The single-ended
+  // figure rode inside the balanced row's qualifier, so the card rendered
+  // "output impedance … 51 ohms single-ended" as the LABEL above the value
+  // "2 ohms" — two measurements fused into one internally contradictory
+  // datum. Same source, same measurement session; each figure now carries
+  // its own condition.
   F('dcs rossini apex', '2 ohms', {
     specRole: 'source_output', sourceClass: 'independently_measured',
     sourceUrl: STEREOPHILE_MEASURED, publication: 'Stereophile',
-    qualifier: 'output impedance, balanced, measured 20Hz–20kHz; 51 ohms single-ended',
+    qualifier: 'output impedance, balanced, measured 20Hz–20kHz',
     quotedText: 'The balanced output impedance was an extraordinarily low 2 ohms '
       + 'from 20Hz to 20kHz.',
+  }),
+  F('dcs rossini apex', '51 ohms', {
+    specRole: 'source_output', sourceClass: 'independently_measured',
+    sourceUrl: STEREOPHILE_MEASURED, publication: 'Stereophile',
+    qualifier: 'output impedance, single-ended, as measured',
   }),
   F('dcs rossini apex', '6V / 2V / 0.6V / 0.2V', {
     specRole: 'other', sourceClass: 'independently_measured',
