@@ -20,6 +20,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getSession } from '@/lib/session';
+import { writeFeedback } from '@/lib/feedback/feedback-store';
 
 /** Allowlisted validation events. Anything else is logged as 'other'. */
 const KNOWN_EVENTS = new Set([
@@ -51,6 +53,22 @@ export async function POST(req: NextRequest) {
         ua: req.headers.get('user-agent') ?? null,
       })}`,
     );
+
+    /*
+     * DURABLE FEEDBACK (human-beta readiness, 2026-09-22). The log line
+     * above lives only as long as Vercel's runtime-log retention — hours,
+     * not weeks — which fails the beta's minimum requirement that Mike can
+     * reliably retrieve what a listener told us. Feedback answers are
+     * therefore ALSO written to the BetaFeedbackV1 table, associated with
+     * the signed-in account for follow-up. Every other event class stays
+     * log-only, exactly as before; a storage failure never reaches the
+     * user (fire-and-forget inside the same try).
+     */
+    if (event === 'feedback_submitted') {
+      const session = await getSession().catch(() => null);
+      const email = ((session?.user as { email?: string } | undefined)?.email ?? null);
+      await writeFeedback(email, props as Record<string, unknown>);
+    }
   } catch {
     // Telemetry must never surface an error to the user session.
   }
