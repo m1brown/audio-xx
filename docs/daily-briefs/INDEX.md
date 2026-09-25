@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-09-25 | A8 final disposition (twenty-second brief) · A7: ConfidenceLevel committed · Log M1 P1 | [2026-09-25.md](./2026-09-25.md) |
 | 2026-09-24 | A8 final disposition (twenty-first brief) · A7: ConfidenceLevel committed · Log M1 P1 | [2026-09-24.md](./2026-09-24.md) |
 | 2026-09-23 | A8 final disposition (twentieth brief) · A7: ConfidenceLevel committed · Log M1 P1 | [2026-09-23.md](./2026-09-23.md) |
 | 2026-09-22 | A8 final disposition (nineteenth brief) · A7: ConfidenceLevel committed · Log M1 P1 | [2026-09-22.md](./2026-09-22.md) |
