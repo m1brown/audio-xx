@@ -34,6 +34,25 @@ No numerical thresholds yet — first beta generates observations.
 - disposition: recorded | escalated | fixed(<commit>) | wontfix(<why>)
 ```
 
+## Known going in (founder-accepted, 2026-10-02 — observations to watch, not tasks)
+
+These are pre-beta conditions accepted at the `fc62c09` baseline. They are
+recorded so real-user signal lands against them; neither is current
+engineering work.
+
+### K-1 — Conversation persistence
+Saved systems and assessment artifacts persist; conversations do not
+survive a reload. Acceptable for first beta. **Watch:** do real users
+naturally expect conversational continuity (reopening the site and
+resuming), or does save-system + artifact cover their mental model?
+Record every instance where a user is surprised by a fresh conversation.
+
+### K-2 — Observability window
+Vercel turn-level logs are short-lived (hours). **Operating rule:** review
+feedback rows + lane logs + Sentry the SAME DAY as each beta session
+(runbook §3/§5). Do not build additional observability unless actual beta
+experience shows we need it.
+
 ## Findings
 
 (none yet)
