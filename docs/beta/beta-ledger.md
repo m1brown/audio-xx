@@ -55,4 +55,80 @@ experience shows we need it.
 
 ## Findings
 
-(none yet)
+### 2026-10-02 — F-1 · One-authority integration passes first real use
+- user: brownmike@gmail.com · sha fc62c09
+- system: dCS Rossini Apex / Audio Research Reference 5 / Butler Monads / Acora QRC-2
+- attempted: initial assessment + "anything seem off?" follow-up
+- observed: fact → relationship → implication → boundary-of-knowledge
+  reasoning; no manufactured weak link; gain structure identified as the
+  concrete setup item; "I wouldn't change anything just from this list."
+- reaction: founder — "that response is a pass."
+- class: (positive observation) · severity: — · disposition: recorded
+- runtime: assessment REPAIRED 2→2 det-clean 20.6s; follow-up turns
+  CHECKED/REPAIRED, all published, 0 fallbacks (lane logs captured same-day)
+
+### 2026-10-02 — F-2 · Excessive epistemic restraint on France II
+- user: brownmike@gmail.com · sha fc62c09
+- system: Eversolo DMP-A6 / Chord Hugo / JOB INTegrated / WLM Diva Monitor
+- attempted: initial assessment
+- observed: correct but compatibility-heavy — amplifier adequacy +
+  conversion-path determination dominated; less system insight than the
+  US assessment, which proves bounded positive inference is possible
+  within existing doctrine.
+- class: reasoning (product/reasoning finding, NOT a bug)
+- severity: P2 · reproducible: likely · disposition: recorded — the open
+  question is "say everything the evidence licenses," never loosening
+  evidence standards. Await more sessions before any change.
+
+### 2026-10-02 — F-3 · Brand-only candidate turn is generic — DIAGNOSED: evidence routing, not reasoning policy
+- user: brownmike@gmail.com · sha fc62c09 · turn ~15:38 UTC+2 (mode=turn CHECKED cand=3)
+- attempted: "how would goldmund amps pair?" (US system active)
+- observed: safe but generic — model-matters / check-impedance / audition.
+- DIAGNOSIS (read-only reproduction of the context assembly): for this
+  question the candidate detector yields exactly one candidate,
+  `goldmund`, resolution AMBIGUOUS, **0 evidence items**. The entire
+  Goldmund content of the governed context is two lines:
+  `## Candidate …: goldmund` + `[IDENTITY — AMBIGUOUS] "goldmund" names
+  a brand, not a model…`. No Goldmund brand/manufacturer evidence and no
+  JOB↔Goldmund relationship reached the lane (that relationship lives in
+  catalog/legacy layers the candidate retriever does not read, and the
+  JOB system evidence wasn't in context — JOB isn't in this system).
+  Given that substrate, the generic answer is close to the best licensed
+  answer: **cause B (evidence retrieval/utilization), not cause A
+  (restraint policy)**.
+- PREDICTION for the §8 A/B: a specific model will NOT help much —
+  probing "Goldmund Telos 300" yields resolution UNKNOWN, 0 items ("no
+  catalog or evidence identity held"). The substrate holds no Goldmund
+  product or evidence rows at all; only the B2 bounded-knowledge licence
+  (model knowledge-as-knowledge, hedged) could enrich the answer, and
+  the [IDENTITY — UNKNOWN] marking steers composition away from it.
+- class: evidence (acquisition/coverage + candidate-retrieval scope)
+- severity: P2 · disposition: recorded — awaiting founder's
+  specific-model experiment; no retrieval or prompt changes made.
+
+### 2026-10-02 — F-4 · Data-quality: role labels + merged condition/value facts
+- user: brownmike@gmail.com · sha fc62c09 · system: US reference system
+- observed: (a) Reference 5 card shows role `amplifier` (should read as
+  preamplifier/linestage); Butler Monads and Acora QRC-2 show `other`
+  (should read power amplifier / speaker). Root-cause note: with an
+  unlabelled comma roster, roles type only from catalog identity or
+  stated labels; Butler/Acora are not ALL_PRODUCTS rows, so `other` is
+  the extraction's honest ignorance (known limitation, 2026-09-20) — but
+  the DISPLAY reads as wrong metadata rather than honest absence.
+  (b) Reference 5 facts merge balanced/single-ended into one row
+  ("output impedance, balanced; 300 ohms single-ended" above "600 ohms";
+  same for input impedance 60K/120K) — same class as the repaired
+  Rossini row; likely eventual treatment is separate per-condition
+  facts. (c) Reference 5 frequency-response row embeds the Ref 5 vs
+  Ref 5 SE variant distinction in its label — audit eventually.
+- class: evidence/data-quality + ux · severity: P2 · disposition:
+  recorded, NOT implemented (founder: wait).
+
+### 2026-10-02 — F-5 · Sound graph vs. stated uncertainty (K-debt observed in anger)
+- user: brownmike@gmail.com · sha fc62c09 · system: France II
+- observed: seven-axis graph renders above prose that says tonal balance
+  is not established — the finished experience makes the mismatch more
+  noticeable. Known limitation (documented at the render site,
+  2026-09-21). Watch whether other beta users perceive it or find the
+  graph useful regardless.
+- class: ux/evidence · severity: P3 · disposition: recorded — observe.
