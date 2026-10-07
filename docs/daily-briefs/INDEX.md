@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-10-07 | A7: ConfidenceLevel type + one test (thirtieth brief) · Log M1 P1 · DST action 18 days | [2026-10-07.md](./2026-10-07.md) |
 | 2026-10-06 | A7: ConfidenceLevel type + one test (twenty-ninth brief) · Log M1 P1 · DST action 19 days | [2026-10-06.md](./2026-10-06.md) |
 | 2026-10-05 | A7: ConfidenceLevel type + one test (twenty-eighth brief) | [2026-10-05.md](./2026-10-05.md) |
 | 2026-10-02 | Name the block (twenty-seventh brief) · A7: ConfidenceLevel committed · Log M1 P1 | [2026-10-02.md](./2026-10-02.md) |
