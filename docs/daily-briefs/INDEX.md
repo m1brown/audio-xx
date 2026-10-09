@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-10-09 | A7: ConfidenceLevel type + one test (thirty-second brief) · DST cron update Oct 20–24 | [2026-10-09.md](./2026-10-09.md) |
 | 2026-10-08 | A7: ConfidenceLevel type + one test (thirty-first brief) · Log M1 P1 · DST action 17 days | [2026-10-08.md](./2026-10-08.md) |
 | 2026-10-07 | A7: ConfidenceLevel type + one test (thirtieth brief) · Log M1 P1 · DST action 18 days | [2026-10-07.md](./2026-10-07.md) |
 | 2026-10-06 | A7: ConfidenceLevel type + one test (twenty-ninth brief) · Log M1 P1 · DST action 19 days | [2026-10-06.md](./2026-10-06.md) |
