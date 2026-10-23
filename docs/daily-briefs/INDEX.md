@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-10-23 | DST cron update (WINDOW CLOSED after today) · A7: ConfidenceLevel type (forty-second brief) | [2026-10-23.md](./2026-10-23.md) |
 | 2026-10-22 | DST cron update (LAST DAY, deadline Oct 23) · A7: ConfidenceLevel type (forty-first brief) | [2026-10-22.md](./2026-10-22.md) |
 | 2026-10-21 | DST cron update (3 days left, deadline Oct 23) · A7: ConfidenceLevel type (fortieth brief) | [2026-10-21.md](./2026-10-21.md) |
 | 2026-10-20 | DST cron update (final window, deadline Oct 23) · A7: ConfidenceLevel type (thirty-ninth brief) | [2026-10-20.md](./2026-10-20.md) |
