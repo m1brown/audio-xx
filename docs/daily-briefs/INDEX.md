@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-10-27 | DST cron update (drift live, day 3) · A7: ConfidenceLevel type (forty-fourth brief) | [2026-10-27.md](./2026-10-27.md) |
 | 2026-10-26 | DST cron update (drift is live, restore 8am Paris) · A7: ConfidenceLevel type (forty-third brief) | [2026-10-26.md](./2026-10-26.md) |
 | 2026-10-23 | DST cron update (WINDOW CLOSED after today) · A7: ConfidenceLevel type (forty-second brief) | [2026-10-23.md](./2026-10-23.md) |
 | 2026-10-22 | DST cron update (LAST DAY, deadline Oct 23) · A7: ConfidenceLevel type (forty-first brief) | [2026-10-22.md](./2026-10-22.md) |
