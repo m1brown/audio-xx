@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-11-03 | Close DST flag · A7: ConfidenceLevel type (forty-ninth brief) | [2026-11-03.md](./2026-11-03.md) |
 | 2026-11-02 | Close DST flag · A7: ConfidenceLevel type (forty-eighth brief) | [2026-11-02.md](./2026-11-02.md) |
 | 2026-10-30 | Verify DST cron state · A7: ConfidenceLevel type (forty-seventh brief, Friday retrospective) | [2026-10-30.md](./2026-10-30.md) |
 | 2026-10-29 | DST cron update (drift live, day 5) · A7: ConfidenceLevel type (forty-sixth brief) | [2026-10-29.md](./2026-10-29.md) |
