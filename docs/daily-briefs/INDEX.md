@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-11-06 | A7: ConfidenceLevel type (fifty-second brief, Friday retrospective) | [2026-11-06.md](./2026-11-06.md) |
 | 2026-11-05 | A7: ConfidenceLevel type (fifty-first brief) | [2026-11-05.md](./2026-11-05.md) |
 | 2026-11-04 | A7: ConfidenceLevel type (fiftieth brief — DST flag permanently closed) | [2026-11-04.md](./2026-11-04.md) |
 | 2026-11-03 | Close DST flag · A7: ConfidenceLevel type (forty-ninth brief) | [2026-11-03.md](./2026-11-03.md) |
