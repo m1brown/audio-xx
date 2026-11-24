@@ -2,6 +2,7 @@
 
 | Date | Today's focus | Link |
 |---|---|---|
+| 2026-11-24 | A7: ConfidenceLevel type (sixty-fourth brief) | [2026-11-24.md](./2026-11-24.md) |
 | 2026-11-23 | A7: ConfidenceLevel type (sixty-third brief) | [2026-11-23.md](./2026-11-23.md) |
 | 2026-11-20 | A7: ConfidenceLevel type (sixty-second brief, Friday retrospective) | [2026-11-20.md](./2026-11-20.md) |
 | 2026-11-19 | A7: ConfidenceLevel type (sixty-first brief) | [2026-11-19.md](./2026-11-19.md) |
